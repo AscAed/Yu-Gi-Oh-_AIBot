@@ -1,67 +1,83 @@
 # 本机验证记录
 
-最后复验：2026-10-07，Windows x64。引擎固定为 Project Ignis core API 11.0；数据快照为 OCG 2026-10-01；请求使用 initializer=fixed-hand-shuffle-v1。以下是本机证据，不代表远程 CI 已运行。
+最后复验：2026-10-14，Windows x64，Python 3.14.7。以下为实际本机与独立 checkout 结果，不代表远程 CI。2026-10-07 的 Python 依赖阻塞已解决，不再是当前阻塞。
 
-## 1. 源码与测试验证
+## 源码、测试与审查
 
-| 命令/检查 | 本轮结果 | 说明 |
-|---|---|---|
-| cargo fmt --all -- --check | 通过 | Rust 格式一致 |
-| cargo clippy --workspace --all-targets --offline -- -D warnings | 通过 | 无警告 |
-| cargo test --workspace --offline | 35 通过、0 失败、1 ignored | ignored 是需要本机真实引擎资产的测试 |
-| cargo test -p ygo-engine-adapter --test live_engine --offline -- --ignored --nocapture | 1 通过 | 显式启用真实引擎测试；约 2.19 秒 |
-| Python focused suites | 4 通过 | 数据合同 2 项、源码适配守卫 1 项、固定运行时 manifest 1 项 |
-| Python unittest 全量发现 | 未完成 | tests/test_schemas.py 导入失败：当前 Python 环境缺少 jsonschema |
+源码基线提交 `1db8cd8`；语义规划实现提交 `e43ab7594aa4e8b8d4be612e26344e6ab0b93950`。源码、锁文件、脚本、Schema、CI、文档和可分发夹具进入 Git；本机配置、数据库、Lua、DLL、快照、部署包和运行报告仍忽略。
 
-尝试安装项目的 test extra 时，pip 以及 venv ensurepip 都在临时文件写入阶段收到 PermissionDenied；repo 内临时目录方案也未解决。因此本轮没有声称 Python Schema 校验通过。之前部署记录中曾有 6 项 Python 测试通过，那是另一运行环境的历史记录，不能替代本轮复验。
-
-实际引擎用例覆盖固定 seed 重放、不同 seed 的牌库顺序变化、救援兔路线（通常召唤、超量/连接结果、结束阶段）、提示类型不匹配、错误资产哈希及缺脚本等边界。默认 workspace 测试会跳过它，复验需显式传 --ignored。
-
-## 2. 部署包与数据检查
-
-| 检查 | 本轮结果 |
+| 检查 | 结果 |
 |---|---|
-| dist/ygo-local/ygo.cmd engine doctor | exit 0；assets_ok=true、abi_ok=true、issues=[]、ready=true；doctor 尚未执行 smoke，故 smoke_ok=null |
-| catalog status | 13,665 张；snapshot ID catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d；本机 CDB SHA-256 c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225 |
-| banlist status | 203 项；有效日期 2026-10-01；snapshot ID banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783 |
-| Rabbit YDK/deck validate | legal=true；无违规；报告包含 catalog 与 banlist snapshot ID |
-| engine smoke | 通过；3 条完整且可重放线路，368 节点，约 27.2 秒，终止原因 time_budget |
+| `cargo fmt --all -- --check` | 通过 |
+| `cargo clippy --workspace --all-targets --offline --locked -- -D warnings` | 通过 |
+| `cargo test --workspace --offline --locked` | 58 passed、0 failed、4 ignored |
+| opt-in `live_engine` / `live_planner` / API `planning` | 分别 1 / 1 / 2 passed |
+| Python 默认 unittest discovery | 7 项：5 passed、2 skipped |
+| `YGO_LIVE_ENGINE=1` Python 全量 | 7 passed、0 skipped |
+| Python 卡片夹具 validate | 2 张通过 |
+| 新知识、请求及实际规划报告 Schema | 通过；缺理由、缺事前局面、伪造 outcome 三项负例拒绝 |
 
-引擎构建 manifest 声明 x64、API 11.0 和 ABI probe 通过；运行 DLL 哈希匹配 manifest。dist 包中的 ygo.exe 与 worker 哈希也与 build-hashes.json 一致。注意 Project Ignis 安装根目录中已有的 stock ocgcore.dll 是 x86；运行时必须使用本地构建并部署的 x64 DLL。
+默认 Rust/Python 测试不携带本机资产；真实引擎和实际快照/报告检查必须显式启用。Python 环境需要项目 test extra 中的 jsonschema；本轮使用已安装依赖，未升级冻结引擎或数据。
 
-## 3. Combo 搜索与独立重放
+回归覆盖：检索/送墓过滤及剩余资源、等级与阶级/连接区别、费用与效果送墓、墓地主动与事件触发、次数共享、Shade 墓地限制、素材消耗、Rusty 素材限制及复活后离场除外；同卡效果编号/实例位置、费用与对象提示、洗牌身份不确定、安全降级；v2 请求/预算/版本/验证状态和决策一致性，v1 原始选择与语义标签/事前证据绑定。
 
-本轮从默认配置重新分析 tests/fixtures/rabbit.request.json，之后用 combo replay 对生成报告再执行独立验证。
+一次独立审查发现四项重要问题：预算或 worker 失败丢失未观察预测、线路重放绕过共享限额、语义标签未严格绑定实际动作、手牌洗牌位置过期。四项均先复现失败，再修复并通过回归。部分嵌套观察消息与旧 v2 Schema 较宽松这一小项保留后续处理，Rust 合同与实际重放提供更严格检查。修复后执行者复验全部检查，没有再进行第二轮审查。
 
-| 指标 | 本轮结果 |
-|---|---:|
-| 完整前缀节点 | 721 |
-| 引擎调用（含重放） | 726 |
-| 已完成候选 | 69 |
-| 输出且独立重放通过 | 5 |
-| 总耗时 | 约 54,426 ms |
-| 重放耗时 | 364 ms |
-| 终止原因 | time_budget |
+## 冻结版本与独立干净 checkout
 
-五条返回线路的 replay_verified 均为 true，verification 为 engine_verified。最高排名的兔子→通常怪兽→希望皇霍普路线得分 19.5；该分数类型为 heuristic，衡量当前 rabbit-v1 规则覆盖下的终场偏好，不是胜率或全局最优证明。
+在独立目录本地 clone 实现提交，确认 tracked 工作树干净。仅准备这些明确的外部前提：冻结 `cards.cdb`、`scripts.json`、`script/`、x64 `engine/` 及固定 LFLists Git 缓存。未复制旧 target、dist、个人配置或快照。随后独立执行默认测试、格式/Clippy、`deploy-local.ps1 -Offline -FrozenRuntime`，重新生成 release CLI/worker、本机配置和数据快照。
 
-先前部署验收记录的一次默认预算分析为 723 个节点、728 次引擎调用、69 条完成线路和 5 条输出线路。721 与 723 的微小差别来自 60 秒墙钟截止附近的执行量变化。固定 512 node budget 的两次历史运行得到相同节点数和线路 ID；这比墙钟时限更适合确定性搜索回归。
+这次验证重新编译了 Rust CLI/worker，复用了冻结 DLL；没有声称从零编译 ocgcore 或在无资产/无 Cargo 缓存的机器上完成联网安装。首次 engine 编译和联网准备前提见 [DEPLOYMENT.md](DEPLOYMENT.md)。复制尚未结束时部署拒绝缺少 manifest；资产就绪后完整重跑成功。
 
-## 4. 复验命令
+| 资产/检查 | 固定值或结果 |
+|---|---|
+| core / Lua | `38d04c9feb1a26617407091380634c87262fe3f8` / `6e22fedb74cf0c9b6656e9fce8b7331db847c605` |
+| core ABI | API 11.0、x64；doctor assets_ok=true、abi_ok=true、ready=true、issues=[] |
+| LFLists | `1051a65ab853fd84521aa919d1859f9468816c56`；OCG 2026-10-01 |
+| catalog | 13,665 张；`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d` |
+| banlist | 203 项；`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783` |
+| knowledge | 12 张、21 条效果、14 支持；`knowledge-f6b43abb829ce5f6b25e1a77d5840604edd1afeb837b04a9bfaaf799750e4f73` |
+| 独立来源校验 | CDB、脚本 manifest、DLL 哈希与原工作区一致；12 张效果正文/脚本引用校验通过 |
+| 独立 engine smoke | 3 条完整重放线路；墙钟截断，只作为可用性检查 |
+| Rabbit 固定 512 节点分析 | 512 节点、517 次调用、5 条线路独立 replay 通过，终止 node_budget |
+| Phantom 固定 512 调用预算 | 8 个事前方案、224 次调用、2 条目标达成且独立重放线路 |
+| Phantom 再次 plan-replay | 2 条线路、29 个去重前缀见证、31 次共享预算调用，通过 |
 
-从仓库根目录运行：
+独立 checkout 的 Phantom 知识/快照及线路 ID 与原工作区相同：
 
-    cargo fmt --all -- --check
-    cargo clippy --workspace --all-targets --offline -- -D warnings
-    cargo test --workspace --offline
-    cargo test -p ygo-engine-adapter --test live_engine --offline -- --ignored --nocapture
+- `3f2695617463042fffe688ac4eb568a63874a8f6848e3af50752d07e2fcac3d5`
+- `939ce100f739993ba3831f3e45064e4d41a8b2d274d0b36c43798ca18bfc7817`
 
-Python 全量测试需要安装项目 test extra。CLI 安装、运行和数据要求见 DEPLOYMENT.md；本地资产被忽略或具有许可/体积限制，不应把它们当成可由干净 Git checkout 自动取得的测试依赖。
+原工作区既有 Rabbit v2 报告的五条线路也再次重放通过。独立 checkout 同样通过 58 项默认 Rust、4 项 opt-in Rust 和 Python 7 项全量检查。临时 checkout 验收后清理；当前工作区运行报告保存于忽略的 `data/runtime/`。
 
-## 5. 验证边界
+## 固定预算对照
 
-- CI workflow 已存在，但这里记录的是本机运行证据；不宣称远程 CI 成功。
-- 默认搜索可能因 time_budget 提前结束，只对已完成候选承诺报告和重放结果。
-- Beam pruning 可能丢弃最终看来更优的前缀；预算内排名不是穷举最优。
-- 未知决策停止对应分支；未覆盖信息保留 raw 并降级 partial。特定卡组投入前须增补消息、提示、效果及评分回归。
-- combo-result JSON Schema 部分嵌套结构较宽松，Rust 反序列化、报告一致性检查和真实重放提供更严格约束；schema 负例仍是后续任务。
+同一 Phantom 输入、seed=1、冻结版本和配置 node_budget=512：
+
+| 入口 | 返回的验证线路 | Rusty 在场且 Fog 盖放 | 总引擎调用 |
+|---|---:|---:|---:|
+| `combo plan` | 2 | 2 | 224 |
+| 旧 `combo analyze` beam | 5 | 0 | 517 |
+
+旧 beam 的 rabbit-v1 评分没有该终场目标，且其节点预算不含最终重放；新规划预算含执行和重放。这是目标闭环能力对照，不是相同目标评分下的算法优劣证明。未把墙钟耗时波动当作性能改善。有限方案/frontier/符号展开可能遗漏有效线路，不保证全局最优。
+
+## 复验命令
+
+```powershell
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --offline --locked -- -D warnings
+cargo test --workspace --offline --locked
+cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored
+cargo test -p ygo-planner --test live_planner --offline --locked -- --ignored
+cargo test -p ygo-api --test planning --offline --locked -- --ignored
+$env:PYTHONPATH='python'
+py -m unittest discover -s tests -p 'test_*.py'
+$env:YGO_LIVE_ENGINE='1'
+py -m unittest discover -s tests -p 'test_*.py'
+./scripts/deploy-local.ps1 -Offline -FrozenRuntime
+./dist/ygo-local/ygo.cmd knowledge validate
+./dist/ygo-local/ygo.cmd combo plan --input tests/fixtures/phantom.request.json --output data/runtime/phantom-plan-report.json
+./dist/ygo-local/ygo.cmd combo plan-replay --input data/runtime/phantom-plan-report.json
+```
+
+首版范围、未支持效果及报告证据区别见 [SEMANTIC_PLANNING.md](SEMANTIC_PLANNING.md)。实际执行成功不能证明全部人工语义条目正确，固定起手验收也不代表所有合法起手、对手回合或手坑处理。

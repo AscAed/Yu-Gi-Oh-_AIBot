@@ -50,6 +50,6 @@ $env:YGO_LIVE_ENGINE='1'
 py -m unittest discover -s tests -p 'test_runtime_build.py'
 ```
 
-CI 不携带真实资产，Rust live_engine 被明确标记 ignored，Python 引擎用例明确 skipped。真实黄金线路 fixture 验证救援兔未使用怪兽的结束阶段破坏、霍普两张超量素材、LAN 连接终场，以及提示编号不匹配失败。
+CI 不携带真实资产，四项 Rust 引擎测试明确标记 ignored；Python 引擎和本机报告用例默认 skipped。真实黄金线路 fixture 验证救援兔未使用怪兽的结束阶段破坏、霍普两张超量素材、LAN 连接终场及提示编号不匹配；规划测试验证 Phantom 目标、来源与报告伪造拒绝和预算降级。完整命令与当前结果见 [TESTING.md](TESTING.md)。
 
-首版未知决策停止分支，未知信息帧保留原始字节、结果为 partial；只有完全解码、终场已结算且独立重放一致的线路才能标记 engine_verified。评分总为 heuristic。默认只覆盖救援兔、霍普、宝石骑士珍珠及 LAN 的小型验收场景；其余卡效强度列为覆盖缺口、计零，不代表实际弱度。
+首版未知决策停止分支，未知信息帧保留原始字节、结果为 partial；只有完全解码、终场已结算且独立重放一致的线路才能标记 engine_verified。评分总为 heuristic。旧 rabbit-v1 评分只覆盖救援兔、霍普、宝石骑士珍珠及 LAN 的小型验收场景；其余卡效强度列为覆盖缺口、计零，不代表实际弱度。新规划入口使用 rusty-fog 目标和资源/决策排序，逐效果范围见 SEMANTIC_PLANNING.md。
