@@ -13,6 +13,10 @@ pub enum Command {
     EngineSmoke,
     EngineWorker,
     EvalRun,
+    KnowledgeValidate,
+    CardExplain,
+    ComboPlan,
+    ComboPlanReplay,
 }
 
 impl Command {
@@ -26,6 +30,10 @@ impl Command {
             .map(|arg| arg.as_ref().to_string())
             .collect();
         match &args[..args.len().min(2)] {
+            [a, b] if a == "knowledge" && b == "validate" => Some(Self::KnowledgeValidate),
+            [a, b] if a == "card" && b == "explain" => Some(Self::CardExplain),
+            [a, b] if a == "combo" && b == "plan" => Some(Self::ComboPlan),
+            [a, b] if a == "combo" && b == "plan-replay" => Some(Self::ComboPlanReplay),
             [a, b] if a == "catalog" && b == "import" => Some(Self::CatalogImport),
             [a, b] if a == "banlist" && b == "import" => Some(Self::BanlistImport),
             [a, b] if a == "banlist" && b == "status" => Some(Self::BanlistStatus),

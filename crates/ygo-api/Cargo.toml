@@ -12,3 +12,5 @@ ygo-engine-adapter = { path = "../ygo-engine-adapter" }
 ygo-storage = { path = "../ygo-storage" }
 ygo-domain = { path = "../ygo-domain" }
 ygo-search = { path = "../ygo-search" }
+ygo-knowledge = { path = "../ygo-knowledge" }
+ygo-planner = { path = "../ygo-planner" }

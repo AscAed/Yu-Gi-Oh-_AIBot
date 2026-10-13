@@ -410,6 +410,8 @@ dependencies = [
  "serde_json",
  "ygo-domain",
  "ygo-engine-adapter",
+ "ygo-knowledge",
+ "ygo-planner",
  "ygo-search",
  "ygo-storage",
 ]
@@ -423,6 +425,7 @@ dependencies = [
  "ygo-api",
  "ygo-domain",
  "ygo-engine-adapter",
+ "ygo-knowledge",
  "ygo-search",
  "ygo-storage",
 ]
@@ -446,6 +449,30 @@ dependencies = [
  "sha2",
  "toml",
  "ygo-domain",
+]
+
+[[package]]
+name = "ygo-knowledge"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "ygo-domain",
+]
+
+[[package]]
+name = "ygo-planner"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "ygo-domain",
+ "ygo-engine-adapter",
+ "ygo-knowledge",
+ "ygo-search",
 ]
 
 [[package]]

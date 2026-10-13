@@ -1,0 +1,370 @@
+[
+  {
+    "case_id": "phantom-mill-25538345",
+    "effect_id": "25538345:mill",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        25538345,
+        4
+      ],
+      [
+        2964201,
+        2
+      ],
+      [
+        36426778,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        2964201,
+        16
+      ],
+      [
+        36426778,
+        16
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-revive-25538345",
+    "effect_id": "25538345:revive",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        25538345,
+        16
+      ]
+    ],
+    "pending": [
+      [
+        25538345,
+        0
+      ]
+    ],
+    "expected": [
+      [
+        25538345,
+        4
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-summon-36426778",
+    "effect_id": "36426778:summon",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        36426778,
+        2
+      ],
+      [
+        25538345,
+        4
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        36426778,
+        4
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-search-36426778",
+    "effect_id": "36426778:search",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        36426778,
+        16
+      ],
+      [
+        25542642,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        36426778,
+        32
+      ],
+      [
+        25542642,
+        2
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-search-90432163",
+    "effect_id": "90432163:search",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        90432163,
+        16
+      ],
+      [
+        36426778,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        90432163,
+        32
+      ],
+      [
+        36426778,
+        2
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-mill-63821877",
+    "effect_id": "63821877:mill",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        63821877,
+        16
+      ],
+      [
+        90432163,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        63821877,
+        32
+      ],
+      [
+        90432163,
+        16
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-summon-88544390",
+    "effect_id": "88544390:summon",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        88544390,
+        2
+      ],
+      [
+        36426778,
+        4
+      ]
+    ],
+    "pending": [
+      [
+        88544390,
+        0
+      ]
+    ],
+    "expected": [
+      [
+        88544390,
+        4
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-revive-88544390",
+    "effect_id": "88544390:revive",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        88544390,
+        16
+      ],
+      [
+        25538345,
+        2
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        88544390,
+        32
+      ],
+      [
+        25538345,
+        4
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-summon-98827725",
+    "effect_id": "98827725:summon",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        98827725,
+        8
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        98827725,
+        4
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-revive-25542642",
+    "effect_id": "25542642:revive",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        25542642,
+        16
+      ],
+      [
+        25538345,
+        16
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        25542642,
+        32
+      ],
+      [
+        25538345,
+        4
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-search-32807846",
+    "effect_id": "32807846:search",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        32807846,
+        2
+      ],
+      [
+        36426778,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        32807846,
+        16
+      ],
+      [
+        36426778,
+        2
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-mill-81439173",
+    "effect_id": "81439173:mill",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        81439173,
+        2
+      ],
+      [
+        63821877,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        81439173,
+        16
+      ],
+      [
+        63821877,
+        16
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-mill-58699500",
+    "effect_id": "58699500:mill",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        58699500,
+        4
+      ],
+      [
+        90432163,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        90432163,
+        16
+      ]
+    ]
+  },
+  {
+    "case_id": "phantom-mill_set-26692769",
+    "effect_id": "26692769:mill_set",
+    "verification": "symbolic_hypothesis",
+    "test_name": "curated_primary_rules_produce_the_declared_resource_changes",
+    "before": [
+      [
+        26692769,
+        4
+      ],
+      [
+        36426778,
+        1
+      ],
+      [
+        25542642,
+        1
+      ]
+    ],
+    "pending": [],
+    "expected": [
+      [
+        36426778,
+        16
+      ],
+      [
+        25542642,
+        8
+      ]
+    ]
+  }
+]

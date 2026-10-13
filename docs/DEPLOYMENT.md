@@ -1,5 +1,7 @@
 # Windows 本机部署与验收
 
+2026-10-14：新增知识/规划 CLI，见 [SEMANTIC_PLANNING.md](SEMANTIC_PLANNING.md)。已有冻结资产使用 `./scripts/deploy-local.ps1 -Offline -FrozenRuntime`，保留 CDB、Lua、core 版本，重新构建 CLI/worker 并验证知识来源。普通部署会从 Ignis 准备资产；冻结部署不会覆盖资产。包内新增 knowledge 与 Phantom 请求 fixture，wrapper 设置知识路径。
+
 运行范围：OCG/MR5，双方 8000 LP，先攻首回合，固定五张手牌、seed 初始化剩余牌库，无对手干扰。对手使用相同主卡组作为惰性占位库、初始手牌为空，只在可选响应窗口选择不响应；尚不支持指定对手卡组、手坑、后攻或构筑。
 
 ## 环境准备

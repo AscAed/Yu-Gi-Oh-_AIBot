@@ -1,5 +1,9 @@
 # 紧接着的工作
 
+## 2026-10-14 更新后的优先级
+
+源码基线、Python 全量验证和 Phantom 目标规划已有交付。下一步优先增加不同起手与逐效果真实引擎回归，处理当前明确 unsupported 的超量/破坏、保护及对手回合效果；然后引入一个指定手坑与恢复规划。多起手评估用于验证规划，构筑诊断使用已验证关系。详见 SEMANTIC_PLANNING.md。下文为上一轮工作清单，已完成项以 TASKS.md 和 TESTING.md 的当前记录为准。
+
 当前可用基线是 M0–M4 本机 MVP。审查结论和路线阶段见 [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) 与 [ROADMAP.md](ROADMAP.md)。以下按依赖关系排序；先把现有纵向闭环固化，再扩大功能面。
 
 ## 1. 建立可审阅的源码基线

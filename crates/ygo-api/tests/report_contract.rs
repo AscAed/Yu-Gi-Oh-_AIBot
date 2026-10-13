@@ -67,3 +67,23 @@ fn refuses_partial_prompt_or_falsely_verified_report_contracts() {
     });
     assert!(validate_report_contract(&r).is_err());
 }
+
+#[test]
+fn refuses_engine_verified_lines_with_unparsed_evidence() {
+    let mut r = report();
+    r.search.lines[0]
+        .result
+        .coverage_gaps
+        .push("unknown opcode".into());
+    assert!(validate_report_contract(&r).is_err());
+}
+
+#[test]
+fn refuses_mismatched_search_budget_and_fabricated_score() {
+    let mut r = report();
+    r.search.budget.node_budget += 1;
+    assert!(validate_report_contract(&r).is_err());
+    r = report();
+    r.search.lines[0].evaluation.total += 100.0;
+    assert!(validate_report_contract(&r).is_err());
+}

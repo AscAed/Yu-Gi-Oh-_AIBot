@@ -6,6 +6,8 @@ members = [
     "crates/ygo-storage",
     "crates/ygo-api",
     "crates/ygo-cli",
+    "crates/ygo-knowledge",
+    "crates/ygo-planner",
 ]
 resolver = "2"
 

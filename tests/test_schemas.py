@@ -22,6 +22,16 @@ def validator(name):
 
 
 class Schemas(unittest.TestCase):
+    def test_planning_request_limits_and_unknown_fields(self):
+        import copy
+        request = json.loads((ROOT / 'tests/fixtures/phantom.request.json').read_text())
+        check = validator('plan-request.schema.json')
+        check.validate(request)
+        for field, value in [('max_proposals', 9), ('max_steps', 33), ('goal', 'win_probability'), ('schema_version', 2), ('hidden_policy', True)]:
+            invalid = copy.deepcopy(request)
+            invalid[field] = value
+            self.assertTrue(list(check.iter_errors(invalid)), field)
+
     def test_card_and_request_fixtures(self):
         for schema, fixture in [('card.schema.json', 'cards.sample.json'), ('combo-request.schema.json', 'rabbit.request.json')]:
             validator(schema).validate(json.loads((ROOT / 'tests/fixtures' / fixture).read_text()))

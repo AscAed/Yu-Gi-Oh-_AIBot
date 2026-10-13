@@ -13,3 +13,4 @@ ygo-domain = { path = "../ygo-domain" }
 ygo-storage = { path = "../ygo-storage" }
 ygo-search = { path = "../ygo-search" }
 ygo-api = { path = "../ygo-api" }
+ygo-knowledge = { path = "../ygo-knowledge" }

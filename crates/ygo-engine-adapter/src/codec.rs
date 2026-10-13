@@ -368,6 +368,21 @@ pub fn decode_frame(sequence: u64, raw: &[u8]) -> Result<CoreEventFrame, String>
     let mut r = Reader::new(raw);
     let opcode = r.u8()?;
     let (supported, fields) = match opcode {
+        160 => (
+            true,
+            json!({"location":r.loc()?,"hint_type":r.u8()?,"value":r.u64()?}),
+        ),
+        31 => {
+            let player = r.u8()?;
+            if player > 1 {
+                return Err("invalid confirmation player".into());
+            }
+            let mut cards = vec![];
+            for _ in 0..r.count()? {
+                cards.push(json!({"code":r.u32()?,"player":r.u8()?,"location":r.u8()?,"sequence":r.u32()?}));
+            }
+            (true, json!({"player":player,"cards":cards}))
+        }
         2 => (
             true,
             json!({"hint_type":r.u8()?,"player":r.u8()?,"value":r.u64()?}),

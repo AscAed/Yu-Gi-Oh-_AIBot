@@ -42,45 +42,10 @@ pub fn analyze(
     active_catalog: &str,
     weights: &ScoringConfig,
 ) -> Result<AnalysisReport, String> {
-    if request.rules != "ocg-mr5" {
-        return Err("only ocg-mr5 is supported".into());
-    }
-    request.search.validate()?;
-    ygo_storage::validate_date(&request.as_of)?;
-    let catalog = store.catalog(request.catalog_id.as_deref().unwrap_or(active_catalog))?;
-    let banlist = if request.banlist_id == "latest-ocg" {
-        store.latest_ocg(&request.as_of)?
-    } else {
-        store.banlist(&request.banlist_id)?
-    };
-    if banlist
-        .effective_date
-        .as_deref()
-        .map_or(true, |d| d > request.as_of.as_str())
-    {
-        return Err("banlist not effective for analysis date".into());
-    }
-    let legal = validate_catalog_deck(&request.deck, &banlist.data, &catalog.data);
-    if !legal.is_legal() {
-        return Err(serde_json::to_string(&legal).map_err(|e| e.to_string())?);
-    }
-    validate_hand(&request.deck, &request.opening_hand)?;
-    let mut runtime = runtime_request(
-        engine.clone(),
-        request.deck.clone(),
-        request.opening_hand.clone(),
-        request.seed,
-    )
-    .map_err(|e| e.message)?;
-    if catalog.source_sha256 != runtime.versions.cdb_sha256 {
-        return Err("catalog snapshot does not match engine CDB".into());
-    }
-    runtime.versions.catalog = catalog.id.clone();
-    runtime.versions.banlist = banlist.id.clone();
+    let (request, runtime, catalog_data) = prepare(request, engine.clone(), store, active_catalog)?;
     let adapter = ProcessEngineAdapter::new(engine);
     let report = search(&adapter, &runtime, &request.search, weights)?;
-    let card_names = catalog
-        .data
+    let card_names = catalog_data
         .values()
         .filter(|c| {
             request
@@ -97,9 +62,7 @@ pub fn analyze(
         })
         .map(|c| (c.id.0, c.name.clone()))
         .collect();
-    let mut resolved = request;
-    resolved.catalog_id = Some(catalog.id);
-    resolved.banlist_id = banlist.id;
+    let resolved = request;
     Ok(AnalysisReport {
         schema_version: 2,
         request: resolved,
@@ -173,6 +136,12 @@ pub fn validate_report_contract(report: &AnalysisReport) -> Result<(), String> {
     let q = &report.request;
     ygo_storage::validate_date(&q.as_of)?;
     validate_hand(&r.deck, &r.opening_hand)?;
+    q.search.validate()?;
+    if serde_json::to_value(&q.search).map_err(|e| e.to_string())?
+        != serde_json::to_value(&report.search.budget).map_err(|e| e.to_string())?
+    {
+        return Err("report search budget mismatch".into());
+    }
     if report.schema_version != 2
         || r.protocol_version != 2
         || r.probe_only
@@ -201,6 +170,15 @@ pub fn validate_report_contract(report: &AnalysisReport) -> Result<(), String> {
             || line.result.resolved_decisions != line.decisions
             || line.id != prefix_key(&prefix)
             || line.evaluation.decisions != line.decisions.len()
+            || line.evaluation
+                != evaluate(
+                    &line.result.checkpoint,
+                    line.decisions.len(),
+                    &report.search.scoring,
+                )
+            || (line.result.status == DuelStatus::EngineVerified
+                && (!line.result.coverage_gaps.is_empty()
+                    || line.result.events.iter().any(|event| !event.supported)))
         {
             return Err("report line verification contract mismatch".into());
         }
@@ -210,4 +188,51 @@ pub fn validate_report_contract(report: &AnalysisReport) -> Result<(), String> {
 pub fn read_report(path: &Path) -> Result<AnalysisReport, String> {
     serde_json::from_slice(&std::fs::read(path).map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())
+}
+
+pub fn prepare(
+    request: ComboAnalyzeRequest,
+    engine: ProcessEngineConfig,
+    store: &SnapshotStore,
+    active_catalog: &str,
+) -> Result<(ComboAnalyzeRequest, RunDuelRequest, ygo_domain::Catalog), String> {
+    if request.rules != "ocg-mr5" {
+        return Err("only ocg-mr5 is supported".into());
+    }
+    request.search.validate()?;
+    ygo_storage::validate_date(&request.as_of)?;
+    let catalog = store.catalog(request.catalog_id.as_deref().unwrap_or(active_catalog))?;
+    let banlist = if request.banlist_id == "latest-ocg" {
+        store.latest_ocg(&request.as_of)?
+    } else {
+        store.banlist(&request.banlist_id)?
+    };
+    if banlist
+        .effective_date
+        .as_deref()
+        .map_or(true, |d| d > request.as_of.as_str())
+    {
+        return Err("banlist not effective for analysis date".into());
+    }
+    let legal = validate_catalog_deck(&request.deck, &banlist.data, &catalog.data);
+    if !legal.is_legal() {
+        return Err(serde_json::to_string(&legal).map_err(|e| e.to_string())?);
+    }
+    validate_hand(&request.deck, &request.opening_hand)?;
+    let mut runtime = runtime_request(
+        engine.clone(),
+        request.deck.clone(),
+        request.opening_hand.clone(),
+        request.seed,
+    )
+    .map_err(|e| e.message)?;
+    if catalog.source_sha256 != runtime.versions.cdb_sha256 {
+        return Err("catalog snapshot does not match engine CDB".into());
+    }
+    runtime.versions.catalog = catalog.id.clone();
+    runtime.versions.banlist = banlist.id.clone();
+    let mut resolved = request;
+    resolved.catalog_id = Some(catalog.id);
+    resolved.banlist_id = banlist.id;
+    Ok((resolved, runtime, catalog.data))
 }

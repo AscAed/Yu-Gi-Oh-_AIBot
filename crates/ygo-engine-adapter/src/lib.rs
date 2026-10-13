@@ -1,8 +1,10 @@
 mod codec;
 mod ffi;
+mod metadata;
 mod process;
 mod worker;
 pub use codec::*;
+pub use metadata::*;
 pub use process::*;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;

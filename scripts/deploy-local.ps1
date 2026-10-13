@@ -1,4 +1,4 @@
-param([switch]$BuildEngine, [switch]$Offline, [string]$Ignis='C:/ProjectIgnis')
+param([switch]$BuildEngine, [switch]$Offline, [switch]$FrozenRuntime, [string]$Ignis='C:/ProjectIgnis')
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -8,7 +8,9 @@ $env:all_proxy='socks5://127.0.0.1:7897'
 function Check-Exit {if($LASTEXITCODE -ne 0){throw "Command failed: $LASTEXITCODE"}}
 if($BuildEngine){& "$PSScriptRoot/build-engine.ps1" -Offline:$Offline; Check-Exit}
 if(!(Test-Path data/runtime/engine/manifest.json)){throw 'Run scripts/build-engine.ps1 first'}
-py scripts/prepare-runtime.py --ignis $Ignis; Check-Exit
+if($FrozenRuntime){
+    foreach($asset in @('data/runtime/cards.cdb','data/runtime/scripts.json','data/runtime/script/official')){if(!(Test-Path -LiteralPath $asset)){throw "Frozen asset missing: $asset"}}
+} else {py scripts/prepare-runtime.py --ignis $Ignis; Check-Exit}
 if($Offline){cargo build --release --workspace --locked --offline; Check-Exit}
 else {cargo build --release --workspace --locked; Check-Exit}
 $commit='1051a65ab853fd84521aa919d1859f9468816c56'
@@ -19,13 +21,17 @@ if(!(Test-Path data/tmp/lflists-source/OCG.lflist.conf)){
 git -C data/tmp/lflists-source checkout $commit; Check-Exit
 if((git -C data/tmp/lflists-source rev-parse HEAD) -ne $commit){throw 'LFLists commit mismatch'}
 $dest=Join-Path $root 'dist/ygo-local'
-New-Item -ItemType Directory -Force "$dest/configs","$dest/fixtures" | Out-Null
+New-Item -ItemType Directory -Force "$dest/configs","$dest/fixtures","$dest/knowledge" | Out-Null
 Copy-Item target/release/ygo-cli.exe "$dest/ygo.exe"
 Copy-Item target/release/ygo-engine-worker.exe "$dest/ygo-engine-worker.exe"
 Copy-Item configs/engine.example.toml "$dest/configs/engine.example.toml"
 Copy-Item configs/scoring.toml "$dest/configs/scoring.toml"
 Copy-Item tests/fixtures/rabbit.request.json "$dest/fixtures/rabbit.request.json"
+Copy-Item tests/fixtures/phantom.request.json "$dest/fixtures/phantom.request.json"
+Copy-Item knowledge/phantom-v1.json "$dest/knowledge/phantom-v1.json"
 Copy-Item docs/DEPLOYMENT.md "$dest/DEPLOYMENT.md"
+Copy-Item docs/SEMANTIC_PLANNING.md "$dest/SEMANTIC_PLANNING.md"
+Copy-Item docs/TESTING.md "$dest/TESTING.md"
 $config=@"
 worker_path = '$($dest.Replace('\','/'))/ygo-engine-worker.exe'
 ocgcore_path = '$($root.Replace('\','/'))/data/runtime/engine/ocgcore.dll'
@@ -44,11 +50,13 @@ set "YGO_SNAPSHOT_STORE=$root\data\snapshots"
 set "YGO_ACTIVE_SNAPSHOT=$root\data\snapshots\active.json"
 set "YGO_SCORING_CONFIG=%~dp0configs\scoring.toml"
 set "YGO_SMOKE_REQUEST=%~dp0fixtures\rabbit.request.json"
+set "YGO_KNOWLEDGE_CONFIG=%~dp0knowledge\phantom-v1.json"
 "%~dp0ygo.exe" %*
 "@
 [IO.File]::WriteAllText("$dest/ygo.cmd",$launcher,[Text.UTF8Encoding]::new($false))
 & "$dest/ygo.cmd" catalog import --input "$root/data/runtime/cards.cdb"; Check-Exit
 & "$dest/ygo.cmd" banlist import --input "$root/data/tmp/lflists-source/OCG.lflist.conf" --commit $commit; Check-Exit
 & "$dest/ygo.cmd" engine doctor; Check-Exit
+& "$dest/ygo.cmd" knowledge validate; Check-Exit
 Get-FileHash "$dest/ygo.exe","$dest/ygo-engine-worker.exe" -Algorithm SHA256 | Select-Object Path,Hash | ConvertTo-Json | Set-Content "$dest/build-hashes.json"
 Write-Output "Local package: $dest (external engine/data referenced by local config)"

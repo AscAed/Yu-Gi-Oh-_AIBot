@@ -27,6 +27,25 @@ fn json(v: &serde_json::Value) -> Result<(), String> {
     );
     Ok(())
 }
+fn knowledge(opts: &BTreeMap<String, String>) -> Result<ygo_knowledge::KnowledgePack, String> {
+    let path = opts
+        .get("--knowledge")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("YGO_KNOWLEDGE_CONFIG").map(PathBuf::from))
+        .unwrap_or_else(|| "knowledge/phantom-v1.json".into());
+    ygo_knowledge::KnowledgePack::read(&path)
+}
+fn output(opts: &BTreeMap<String, String>, value: &serde_json::Value) -> Result<(), String> {
+    if let Some(path) = opts.get("--output") {
+        fs::write(
+            path,
+            serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())
+    } else {
+        json(value)
+    }
+}
 fn options(args: &[String]) -> Result<BTreeMap<String, String>, String> {
     let mut opts = BTreeMap::new();
     for pair in args.chunks(2) {
@@ -79,6 +98,10 @@ fn execute(args: &[String]) -> Result<(), String> {
     }
     let opts = options(&args[2..])?;
     let allowed = match command {
+        Command::KnowledgeValidate => vec!["--knowledge"],
+        Command::CardExplain => vec!["--knowledge", "--id", "--output", "--store"],
+        Command::ComboPlan => vec!["--input", "--output", "--store", "--scoring", "--knowledge"],
+        Command::ComboPlanReplay => vec!["--input", "--store"],
         Command::CatalogImport => vec!["--input", "--store"],
         Command::BanlistImport => vec!["--input", "--store", "--commit"],
         Command::CatalogStatus | Command::BanlistStatus => vec!["--store", "--id"],
@@ -115,6 +138,88 @@ fn execute(args: &[String]) -> Result<(), String> {
             .unwrap_or_else(|| store.root.join("active.json"))
     };
     match command {
+        Command::KnowledgeValidate => {
+            let k = knowledge(&opts)?;
+            let cfg = engine()?;
+            k.validate_sources(
+                &cfg.catalog_path,
+                &cfg.scripts_path,
+                &cfg.script_manifest_path,
+            )?;
+            json(
+                &serde_json::json!({"schema_version":1,"knowledge_id":k.id(),"cards":k.cards.len(),"sources_verified":true,"semantic_status":k.evidence_status}),
+            )?;
+        }
+        Command::CardExplain => {
+            let k = knowledge(&opts)?;
+            let cfg = engine()?;
+            k.validate_sources(
+                &cfg.catalog_path,
+                &cfg.scripts_path,
+                &cfg.script_manifest_path,
+            )?;
+            let id = need(&opts, "--id")?
+                .parse::<u32>()
+                .map_err(|_| "card ID must be an unsigned integer")?;
+            let pointer = active(&pointer_path)?;
+            let catalog = store.catalog(
+                pointer["catalog_id"]
+                    .as_str()
+                    .ok_or("catalog not imported")?,
+            )?;
+            if catalog.source_sha256 != k.cdb_sha256 {
+                return Err("explanation catalog/source mismatch".into());
+            }
+            let mut explanation = k.explain_catalog(id, &catalog.data)?;
+            explanation["catalog_id"] = catalog.id.into();
+            output(&opts, &explanation)?;
+        }
+        Command::ComboPlan => {
+            let q: ygo_api::planning::PlanRequest = serde_json::from_slice(
+                &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            let catalog_id = if let Some(id) = q.analysis.catalog_id.clone() {
+                id
+            } else {
+                active(&pointer_path)?["catalog_id"]
+                    .as_str()
+                    .ok_or("catalog not imported")?
+                    .to_string()
+            };
+            let weights = if let Some(path) = opts
+                .get("--scoring")
+                .map(PathBuf::from)
+                .or_else(|| std::env::var_os("YGO_SCORING_CONFIG").map(PathBuf::from))
+            {
+                ScoringConfig::from_toml(&fs::read_to_string(path).map_err(|e| e.to_string())?)?
+            } else {
+                ScoringConfig::default()
+            };
+            let r = ygo_api::planning::plan(
+                q,
+                engine()?,
+                &store,
+                &catalog_id,
+                &weights,
+                knowledge(&opts)?,
+            )?;
+            eprintln!(
+                "因果规划：{} 个预测方案，{} 条目标达成且独立重放成功线路；{} 次引擎调用；{}。",
+                r.proposals.plans.len(),
+                r.analysis.search.lines.len(),
+                r.analysis.search.stats.engine_calls,
+                r.analysis.search.termination
+            );
+            output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?)?;
+        }
+        Command::ComboPlanReplay => {
+            let r: ygo_api::planning::PlanReport = serde_json::from_slice(
+                &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            json(&ygo_api::planning::replay(&r, engine()?, &store)?)?;
+        }
         Command::EngineDoctor => {
             let r = ProcessEngineAdapter::new(engine()?).doctor();
             json(&serde_json::to_value(&r).map_err(|e| e.to_string())?)?;
