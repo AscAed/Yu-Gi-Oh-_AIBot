@@ -1,0 +1,5 @@
+rule_set = "ocg-mr5-2020"
+banlist = "latest-ocg"
+top_k = 5
+search_budget = 10000
+engine_adapter = "process"

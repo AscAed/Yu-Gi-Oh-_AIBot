@@ -1,0 +1,5 @@
+[weights]
+board_interaction = 5.0
+resource_advantage = 3.0
+follow_up = 2.0
+complexity = -0.25

@@ -1,0 +1,14 @@
+[package]
+name = "ygo-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+ygo-engine-adapter = { path = "../ygo-engine-adapter" }
+ygo-storage = { path = "../ygo-storage" }
+ygo-domain = { path = "../ygo-domain" }
+ygo-search = { path = "../ygo-search" }

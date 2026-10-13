@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnalysisReport v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request",
+    "runtime_request",
+    "card_names",
+    "search"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "request": {
+      "$ref": "combo-request.schema.json"
+    },
+    "runtime_request": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "versions",
+        "deck",
+        "opening_hand",
+        "seed",
+        "decisions"
+      ],
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "versions": {
+          "type": "object"
+        }
+      }
+    },
+    "card_names": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "search": {
+      "type": "object",
+      "required": [
+        "termination",
+        "lines",
+        "stats",
+        "diagnostics",
+        "scoring",
+        "budget"
+      ],
+      "properties": {
+        "termination": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "replay_verified",
+              "decisions",
+              "evaluation",
+              "result"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "replay_verified": {
+                "const": true
+              },
+              "decisions": {
+                "type": "array"
+              },
+              "evaluation": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "profile_version",
+                  "total",
+                  "coverage_gaps"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "heuristic"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "checkpoint",
+                  "events",
+                  "versions",
+                  "loaded_scripts",
+                  "steps",
+                  "resolved_decisions"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "engine_verified",
+                      "partial"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "stats": {
+          "type": "object"
+        },
+        "diagnostics": {
+          "type": "array"
+        },
+        "scoring": {
+          "type": "object"
+        },
+        "budget": {
+          "$ref": "combo-request.schema.json#/properties/search"
+        }
+      }
+    }
+  }
+}

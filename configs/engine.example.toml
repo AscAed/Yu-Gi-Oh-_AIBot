@@ -1,0 +1,7 @@
+worker_path = "target/debug/ygo-engine-worker.exe"
+ocgcore_path = "data/runtime/engine/ocgcore.dll"
+catalog_path = "data/runtime/cards.cdb"
+scripts_path = "data/runtime/script"
+script_manifest_path = "data/runtime/scripts.json"
+engine_manifest_path = "data/runtime/engine/manifest.json"
+timeout_ms = 30000
