@@ -410,6 +410,7 @@ dependencies = [
  "serde_json",
  "ygo-domain",
  "ygo-engine-adapter",
+ "ygo-goal",
  "ygo-knowledge",
  "ygo-planner",
  "ygo-search",
@@ -452,6 +453,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ygo-goal"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "ygo-domain",
+ "ygo-engine-adapter",
+ "ygo-knowledge",
+]
+
+[[package]]
 name = "ygo-knowledge"
 version = "0.1.0"
 dependencies = [
@@ -471,6 +484,7 @@ dependencies = [
  "sha2",
  "ygo-domain",
  "ygo-engine-adapter",
+ "ygo-goal",
  "ygo-knowledge",
  "ygo-search",
 ]

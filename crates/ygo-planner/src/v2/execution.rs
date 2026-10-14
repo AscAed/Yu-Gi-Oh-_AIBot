@@ -399,16 +399,42 @@ pub fn execute<A: EngineAdapter>(
     weights: &ScoringConfig,
     pack: &KnowledgePack,
 ) -> Result<PlanningOutput, String> {
+    execute_general(
+        adapter,
+        request,
+        proposals,
+        budget,
+        weights,
+        pack,
+        false,
+        |r| checkpoint_goal(&r.checkpoint),
+    )
+}
+/// Shared binder, with an explicitly supplied terminal predicate and prefix policy.
+#[allow(clippy::too_many_arguments)]
+pub fn execute_general<A: EngineAdapter, F: Fn(&DuelResult) -> bool>(
+    adapter: &A,
+    request: &RunDuelRequest,
+    proposals: Proposals,
+    budget: &SearchBudget,
+    weights: &ScoringConfig,
+    pack: &KnowledgePack,
+    allow_prefix: bool,
+    terminal: F,
+) -> Result<PlanningOutput, String> {
     budget.validate()?;
     pack.validate()?;
-    if !request.decisions.is_empty() || request.probe_only || request.protocol_version != 3 {
+    if (!allow_prefix && !request.decisions.is_empty())
+        || request.probe_only
+        || request.protocol_version != 3
+    {
         return Err("planning requires a fresh protocol v2 duel".into());
     }
     if proposals.plans.len() > 8
         || proposals
             .plans
             .iter()
-            .any(|p| p.steps.is_empty() || p.steps.len() > 32)
+            .any(|p| (!allow_prefix && p.steps.is_empty()) || p.steps.len() > 32)
     {
         return Err("invalid proposal limits".into());
     }
@@ -465,7 +491,7 @@ pub fn execute<A: EngineAdapter>(
             let Some(prompt) = result.prompt.as_ref() else {
                 if step_index >= proposal.steps.len()
                     && result.status == DuelStatus::EngineVerified
-                    && checkpoint_goal(&result.checkpoint)
+                    && terminal(&result)
                 {
                     let replay_start = Instant::now();
                     match run(adapter, &q, budget, start, &mut stats) {

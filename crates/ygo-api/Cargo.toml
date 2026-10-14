@@ -14,3 +14,5 @@ ygo-domain = { path = "../ygo-domain" }
 ygo-search = { path = "../ygo-search" }
 ygo-knowledge = { path = "../ygo-knowledge" }
 ygo-planner = { path = "../ygo-planner" }
+
+ygo-goal = { path = "../ygo-goal" }

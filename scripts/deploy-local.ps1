@@ -37,6 +37,10 @@ Copy-Item docs/DEPLOYMENT.md "$dest/DEPLOYMENT.md"
 Copy-Item docs/SEMANTIC_PLANNING.md "$dest/SEMANTIC_PLANNING.md"
 Copy-Item docs/TESTING.md "$dest/TESTING.md"
 Copy-Item docs/BREAK_SWORD_VERIFICATION.md "$dest/BREAK_SWORD_VERIFICATION.md"
+Copy-Item docs/GOAL_PLANNING.md "$dest/GOAL_PLANNING.md"
+Copy-Item tests/fixtures/goal-*.request.json "$dest/fixtures/"
+New-Item -ItemType Directory -Force "$dest/schemas" | Out-Null
+Copy-Item schemas/*.json "$dest/schemas/"
 $config=@"
 worker_path = '$($dest.Replace('\','/'))/ygo-engine-worker.exe'
 ocgcore_path = '$($root.Replace('\','/'))/data/runtime/engine/ocgcore.dll'

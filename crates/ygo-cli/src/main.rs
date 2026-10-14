@@ -27,6 +27,19 @@ fn json(v: &serde_json::Value) -> Result<(), String> {
     );
     Ok(())
 }
+fn scoring(opts: &BTreeMap<String, String>) -> Result<ScoringConfig, String> {
+    let path = opts
+        .get("--scoring")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("YGO_SCORING_CONFIG").map(PathBuf::from));
+    if let Some(path) = path {
+        ScoringConfig::from_toml(
+            &fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?,
+        )
+    } else {
+        Ok(ScoringConfig::default())
+    }
+}
 fn knowledge(opts: &BTreeMap<String, String>) -> Result<ygo_knowledge::KnowledgePack, String> {
     let path = opts
         .get("--knowledge")
@@ -203,10 +216,43 @@ fn execute(args: &[String]) -> Result<(), String> {
             output(&opts, &explanation)?;
         }
         Command::ComboPlan => {
+            let weights = scoring(&opts)?;
             let value: serde_json::Value = serde_json::from_slice(
                 &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
             )
             .map_err(|e| e.to_string())?;
+            if ![
+                serde_json::json!(1),
+                serde_json::json!(2),
+                serde_json::json!(3),
+            ]
+            .contains(&value["schema_version"])
+            {
+                return Err("unsupported planning schema_version".into());
+            }
+            if value["schema_version"] == 3 {
+                let q: ygo_api::planning_v3::PlanRequest =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                let id = q
+                    .analysis
+                    .catalog_id
+                    .clone()
+                    .or_else(|| {
+                        active(&pointer_path)
+                            .ok()
+                            .and_then(|v| v["catalog_id"].as_str().map(String::from))
+                    })
+                    .ok_or("catalog not imported")?;
+                let r = ygo_api::planning_v3::plan(
+                    q,
+                    engine()?,
+                    &store,
+                    &id,
+                    &weights,
+                    knowledge_v2(&opts)?,
+                )?;
+                return output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?);
+            }
             if value["schema_version"] == 2 {
                 let q: ygo_api::planning_v2::PlanRequest =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
@@ -221,14 +267,7 @@ fn execute(args: &[String]) -> Result<(), String> {
                     })
                     .ok_or("catalog not imported")?;
                 let pack = knowledge_v2(&opts)?;
-                let r = ygo_api::planning_v2::plan(
-                    q,
-                    engine()?,
-                    &store,
-                    &id,
-                    &ScoringConfig::default(),
-                    pack,
-                )?;
+                let r = ygo_api::planning_v2::plan(q, engine()?, &store, &id, &weights, pack)?;
                 eprintln!(
                     "v2 planning: {} lines, {} engine calls",
                     r.analysis.search.lines.len(),
@@ -280,6 +319,20 @@ fn execute(args: &[String]) -> Result<(), String> {
                 &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
             )
             .map_err(|e| e.to_string())?;
+            if ![
+                serde_json::json!(1),
+                serde_json::json!(2),
+                serde_json::json!(3),
+            ]
+            .contains(&value["schema_version"])
+            {
+                return Err("unsupported planning schema_version".into());
+            }
+            if value["schema_version"] == 3 {
+                let r: ygo_api::planning_v3::PlanReport =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                return json(&ygo_api::planning_v3::replay(&r, engine()?, &store)?);
+            }
             if value["schema_version"] == 2 {
                 let r: ygo_api::planning_v2::PlanReport =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
