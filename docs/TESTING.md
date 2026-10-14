@@ -1,5 +1,41 @@
 # 本机验证记录
 
+## 2026-10-14 第二阶段：逐效果验真与 Break Sword v2
+
+实现提交 `51a62a4`，审查修复提交 `ffaa1e5`。Windows x64、Python 3.14.7；复用原冻结 core、Lua、CDB、禁限表。没有升级资产，没有重新编译 ocgcore；独立 checkout 重新编译 Rust CLI/worker。本机结果不代表远程 CI。
+
+| 本轮检查 | 结果 |
+|---|---|
+| Rust fmt / Clippy（offline、locked、warnings denied） | 通过 |
+| 默认 Rust workspace | 67 passed、0 failed、9 ignored |
+| 显式真实引擎 workspace `--ignored` | 9 passed、0 failed |
+| Python 全量 `YGO_LIVE_ENGINE=1` | 9 passed、0 skipped |
+| Python 默认 | 6 passed、3 skipped（本机资产/报告用例） |
+| `knowledge verify` | 16个支持效果逐例通过，含结算后反例及独立重放 |
+| 固定16起手 | 8个正例达标并重放；4个受限未找到方案；4个覆盖/预算降级分类正确 |
+| 原生同名素材专项 | 两张 Boots 叠 Break、取除、自毁、复活并继续达标及重放通过 |
+| 报告篡改 | 场景、等级、阶级、素材宿主、超量历史拒绝；嵌套 runtime/deck/stats/decisions/versions 损坏拒绝 |
+
+默认测试不要求本机引擎/数据库。显式测试前需 `cargo build --release --workspace --offline --locked`，提供当前 worker；案例使用完整合法牌组、固定起手和实际引擎准备过程，不直接注入己方墓地、次数或召唤历史。
+
+知识 profile：`knowledge-c2c93bf5222e30a45cb600e3b2cc120a4c83a5162d8e37ce28eef4ad3e41cc43`。12张卡、21条效果中16条支持范围内的效果有真实操作案例。符号假设、来源哈希、逐案例证据和完整线路证明分开保存。Greaves 可选增级分支仍不在规划范围；反例覆盖所列条件，不等于所有条件组合验证。
+
+受控 Ryu-Ran 场景、无 Cherubini 额外牌组的默认请求产生8个方案、224次引擎调用、2条独立目标线路。其中完整 Break Sword 链为：
+
+- `cb4cd1cb331628addc375d0589e44528300ca62bc8bf0cb9be214495b6444617`：超量、取除、双方破坏、自身复活触发、两体等级增加、继续做出 Rusty 并盖放 Fog。
+- `4fefaaf4236ebdf1edd52fb745eed36f1cb2c1a9fa9be8b970be8be0e7b0bbe8`：直接 Rusty 路线，作为同一场景的候选对照。
+
+再次 `plan-replay` 检查2条线路与42个去重前缀见证，共44次调用。固定起手的人工基准、规划和外部重放合计均不超过512次：正例213–303次，深度截断16次，其他无方案/覆盖/符号深度案例0次。有限搜索未找到方案不是证明无解；本轮没有用墙钟变化声称性能改善。
+
+一次独立整分支审查发现并修复三项重要问题：同名 overlay MOVE 丢失 position、v3关键嵌套 Schema 过宽、worker异常误归为预测不符。每项均先复现失败再通过回归，修复后全量测试通过；未发起第二轮审查。预算截止导致的 timeout 与 worker 自身 timeout 也分别测试。
+
+保留小项：v2 CLI 接受 `--scoring` 但使用默认旧诊断评分；它不改变目标/资源排序。基准步骤由实施代理手工整理、独立于规划器生成，尚无人类决斗专家策略审阅。
+
+独立干净 checkout 在 `ffaa1e5` 上重新构建并部署，67项默认 Rust、9项显式引擎、Python9项全量、fmt/Clippy 全部通过。重新执行验真 CLI、v2规划/重放；16个效果案例、16个起手结果通过，知识 ID、两条线路 ID 与原工作区一致，CDB/脚本 manifest/DLL 哈希一致。Rabbit 固定512节点重新分析返回5条可重放线路；另外重放既有 Rabbit v2与 Phantom v1报告均通过。临时副本仅携带明确冻结前提和兼容性参考报告，没有复用原 target/dist；验收后清理。使用方法与约束见 [BREAK_SWORD_VERIFICATION.md](BREAK_SWORD_VERIFICATION.md)。详细运行报告保持在忽略的 data/runtime/，数据库、Lua、DLL、个人配置及报告均不进入 Git。
+
+## 首版验收记录（历史）
+
+
 最后复验：2026-10-14，Windows x64，Python 3.14.7。以下为实际本机与独立 checkout 结果，不代表远程 CI。2026-10-07 的 Python 依赖阻塞已解决，不再是当前阻塞。
 
 ## 源码、测试与审查
