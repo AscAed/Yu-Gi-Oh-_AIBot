@@ -247,7 +247,7 @@ impl EngineAdapter for ProcessEngineAdapter {
             .map_err(|e| WorkerError::new("reader_failed", "stdout", e.to_string()))?;
         let result: DuelResult = serde_json::from_slice(&bytes)
             .map_err(|e| WorkerError::new("invalid_response", "decode", e.to_string()))?;
-        if result.protocol_version != 2 {
+        if result.protocol_version != input.protocol_version {
             return Err(WorkerError::new(
                 "protocol_version",
                 "decode",

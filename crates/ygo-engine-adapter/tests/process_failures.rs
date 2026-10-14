@@ -9,6 +9,7 @@ fn request() -> RunDuelRequest {
         decisions: vec![],
         versions: Default::default(),
         probe_only: true,
+        scenario: None,
     }
 }
 fn check(mode: &str, code: &str) {

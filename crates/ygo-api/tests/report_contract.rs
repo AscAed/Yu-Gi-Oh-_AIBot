@@ -20,6 +20,7 @@ fn report() -> AnalysisReport {
             ..Default::default()
         },
         probe_only: false,
+        scenario: None,
     };
     let mut result = DuelResult::failure(WorkerError::new("fake", "test", ""));
     result.status = DuelStatus::EngineVerified;

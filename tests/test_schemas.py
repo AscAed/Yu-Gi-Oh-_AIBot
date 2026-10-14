@@ -32,6 +32,23 @@ class Schemas(unittest.TestCase):
             invalid[field] = value
             self.assertTrue(list(check.iter_errors(invalid)), field)
 
+    def test_v2_planning_and_effect_coverage(self):
+        import copy
+        check = validator('plan-request-v2.schema.json')
+        request = json.loads((ROOT / 'tests/fixtures/break-sword.request.json').read_text())
+        check.validate(request)
+        invalid = copy.deepcopy(request)
+        invalid['scenario'] = 'arbitrary_opponent'
+        self.assertTrue(list(check.iter_errors(invalid)))
+        validator('knowledge-v2.schema.json').validate(json.loads((ROOT / 'knowledge/phantom-v2.json').read_text(encoding='utf-8')))
+        cases = json.loads((ROOT / 'tests/fixtures/phantom.engine-cases.json').read_text(encoding='utf-8'))['cases']
+        effects = {e['id'] for c in json.loads((ROOT / 'knowledge/phantom-v2.json').read_text(encoding='utf-8'))['cards'] for e in c['effects'] if e['supported']}
+        self.assertEqual({c['effect_id'] for c in cases}, effects)
+        samples = json.loads((ROOT / 'tests/fixtures/phantom.fixed-hands.json').read_text())['samples']
+        self.assertEqual([sum(s['group'] == group for s in samples) for group in ['positive', 'limited', 'fallback']], [8, 4, 4])
+        for s in samples:
+            check.validate(s['request'])
+
     def test_card_and_request_fixtures(self):
         for schema, fixture in [('card.schema.json', 'cards.sample.json'), ('combo-request.schema.json', 'rabbit.request.json')]:
             validator(schema).validate(json.loads((ROOT / 'tests/fixtures' / fixture).read_text()))

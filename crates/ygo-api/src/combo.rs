@@ -142,8 +142,8 @@ pub fn validate_report_contract(report: &AnalysisReport) -> Result<(), String> {
     {
         return Err("report search budget mismatch".into());
     }
-    if report.schema_version != 2
-        || r.protocol_version != 2
+    if !matches!(report.schema_version, 2 | 3)
+        || !matches!((report.schema_version, r.protocol_version), (2, 2) | (3, 3))
         || r.probe_only
         || !r.decisions.is_empty()
         || q.deck != r.deck

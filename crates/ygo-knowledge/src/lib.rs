@@ -77,6 +77,7 @@ pub enum Rule {
     CherubiniMill,
     RustyMillSet,
     BreakRevive,
+    BreakDestroy,
     Unsupported,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -172,17 +173,20 @@ impl KnowledgePack {
         self.cards.iter().find(|c| c.card_id == id)
     }
     pub fn validate(&self) -> Result<(), String> {
-        let registry: Vec<serde_json::Value> = serde_json::from_str(include_str!(
-            "../../../tests/fixtures/phantom.semantic-cases.json"
-        ))
-        .map_err(|e| e.to_string())?;
+        let registry: Vec<serde_json::Value> =
+            serde_json::from_str(if self.profile_version == "phantom-v2" {
+                include_str!("../../../tests/fixtures/phantom-v2.semantic-cases.json")
+            } else {
+                include_str!("../../../tests/fixtures/phantom.semantic-cases.json")
+            })
+            .map_err(|e| e.to_string())?;
         let digest = |s: &str| {
             s.len() == 64
                 && s.bytes()
                     .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
         };
         if self.schema_version != 1
-            || self.profile_version != "phantom-v1"
+            || !matches!(self.profile_version.as_str(), "phantom-v1" | "phantom-v2")
             || self.evidence_status != "curated_hypotheses"
             || !digest(&self.cdb_sha256)
             || !digest(&self.scripts_sha256)

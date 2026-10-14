@@ -109,6 +109,7 @@ fn request() -> RunDuelRequest {
         decisions: vec![],
         versions: Default::default(),
         probe_only: false,
+        scenario: None,
     }
 }
 #[test]

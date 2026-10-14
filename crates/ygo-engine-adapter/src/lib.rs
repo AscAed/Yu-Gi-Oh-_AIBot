@@ -77,6 +77,8 @@ pub struct RunDuelRequest {
     pub versions: RuntimeVersions,
     #[serde(default)]
     pub probe_only: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenario: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Decision {
@@ -145,6 +147,10 @@ pub struct StateCard {
     pub attack: i32,
     pub defense: i32,
     pub overlay: Vec<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rank: Option<u32>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Checkpoint {

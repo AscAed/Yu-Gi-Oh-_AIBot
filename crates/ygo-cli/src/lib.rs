@@ -14,6 +14,7 @@ pub enum Command {
     EngineWorker,
     EvalRun,
     KnowledgeValidate,
+    KnowledgeVerify,
     CardExplain,
     ComboPlan,
     ComboPlanReplay,
@@ -30,6 +31,7 @@ impl Command {
             .map(|arg| arg.as_ref().to_string())
             .collect();
         match &args[..args.len().min(2)] {
+            [a, b] if a == "knowledge" && b == "verify" => Some(Self::KnowledgeVerify),
             [a, b] if a == "knowledge" && b == "validate" => Some(Self::KnowledgeValidate),
             [a, b] if a == "card" && b == "explain" => Some(Self::CardExplain),
             [a, b] if a == "combo" && b == "plan" => Some(Self::ComboPlan),

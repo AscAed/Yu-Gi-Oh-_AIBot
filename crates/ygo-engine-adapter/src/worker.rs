@@ -158,6 +158,7 @@ pub fn probe_request(engine: ProcessEngineConfig) -> Result<RunDuelRequest, Work
         decisions: vec![],
         versions,
         probe_only: true,
+        scenario: None,
     })
 }
 pub fn runtime_request(
@@ -174,7 +175,10 @@ pub fn runtime_request(
     Ok(r)
 }
 fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
-    if r.protocol_version != 2 {
+    if !matches!(r.protocol_version, 2 | 3)
+        || (r.protocol_version == 2 && r.scenario.is_some())
+        || r.scenario.as_ref().is_some_and(|s| s != "ryu-ran")
+    {
         return Err(WorkerError::new(
             "protocol_version",
             "input",
@@ -183,7 +187,12 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
     }
     if r.versions.rules != "ocg-mr5"
         || r.versions.core_commit != CORE_COMMIT
-        || r.versions.initializer != INITIALIZER_VERSION
+        || r.versions.initializer
+            != if r.protocol_version == 3 {
+                "fixed-opponent-v1"
+            } else {
+                INITIALIZER_VERSION
+            }
     {
         return Err(WorkerError::new(
             "version_mismatch",
@@ -241,6 +250,7 @@ fn checkpoint(
     turn: u32,
     player: u8,
     phase: u16,
+    extended: bool,
 ) -> Result<Checkpoint, String> {
     let mut state = Checkpoint {
         turn,
@@ -286,7 +296,13 @@ fn checkpoint(
                 }
                 for seq in 0..count {
                     let query = Query {
-                        flags: 1 | 2 | 8 | 0x100 | 0x200 | 0x10000,
+                        flags: 1
+                            | 2
+                            | 8
+                            | 0x100
+                            | 0x200
+                            | 0x10000
+                            | if extended { 0x10 | 0x20 } else { 0 },
                         controller: p,
                         location: zone,
                         sequence: seq,
@@ -313,6 +329,8 @@ fn checkpoint(
                         match flag {
                             1 => card.code = field.u32()?,
                             2 => card.position = field.u32()?,
+                            0x10 => card.level = Some(field.u32()?),
+                            0x20 => card.rank = Some(field.u32()?),
                             8 => card.type_flags = field.u32()?,
                             0x100 => card.attack = field.u32()? as i32,
                             0x200 => card.defense = field.u32()? as i32,
@@ -362,6 +380,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
     let mut result = DuelResult::failure(WorkerError::new("not_started", "create", ""));
     result.error = None;
     result.versions = request.versions.clone();
+    result.protocol_version = request.protocol_version;
     if request.probe_only {
         result.status = DuelStatus::ProbePassed;
         return Ok(result);
@@ -401,6 +420,19 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
     shuffle_initial_deck(&mut remaining, seeds[0]);
     let mut opponent_deck = request.deck.main.clone();
     shuffle_initial_deck(&mut opponent_deck, seeds[1]);
+    if request.scenario.is_some() {
+        let index = opponent_deck
+            .iter()
+            .position(|c| c.0 == 2964201)
+            .ok_or_else(|| {
+                WorkerError::new(
+                    "scenario_card_missing",
+                    "input",
+                    "opponent deck requires Ryu-Ran",
+                )
+            })?;
+        opponent_deck.remove(index);
+    }
     let options = Options {
         seed: seeds,
         flags: 0x2e800,
@@ -462,6 +494,20 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                         },
                     );
                 }
+            }
+            if request.scenario.is_some() {
+                (api.new_card)(
+                    duel,
+                    &NewCard {
+                        team: 1,
+                        duelist: 0,
+                        code: 2964201,
+                        controller: 1,
+                        location: 4,
+                        sequence: 0,
+                        position: 1,
+                    },
+                );
             }
             (api.start)(duel);
         }
@@ -538,8 +584,9 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                         "unused decisions",
                     ));
                 }
-                result.checkpoint = checkpoint(&api, duel, 1, 0, 512)
-                    .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
+                result.checkpoint =
+                    checkpoint(&api, duel, 1, 0, 512, request.protocol_version == 3)
+                        .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
                 result.status = if result.coverage_gaps.is_empty() {
                     DuelStatus::EngineVerified
                 } else {
@@ -574,8 +621,15 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 } else if p.actions.len() == 1 && result.resolved_decisions.len() < 1024 {
                     p.actions[0].choice.clone()
                 } else {
-                    result.checkpoint = checkpoint(&api, duel, turn, player, phase)
-                        .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
+                    result.checkpoint = checkpoint(
+                        &api,
+                        duel,
+                        turn,
+                        player,
+                        phase,
+                        request.protocol_version == 3,
+                    )
+                    .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
                     result.prompt = Some(p);
                     result.status = DuelStatus::DecisionRequired;
                     break;
@@ -632,7 +686,18 @@ pub fn run_worker<R: BufRead, W: Write>(mut input: R, mut output: W) -> std::io:
         DuelResult::failure(WorkerError::new("request_size", "input", "request limit"))
     } else {
         match serde_json::from_str::<RunDuelRequest>(&line) {
-            Ok(r) => execute(r).unwrap_or_else(DuelResult::failure),
+            Ok(r) => {
+                let protocol = r.protocol_version;
+                let versions = r.versions.clone();
+                execute(r).unwrap_or_else(|e| {
+                    let mut result = DuelResult::failure(e);
+                    if protocol == 3 {
+                        result.protocol_version = 3;
+                        result.versions = versions;
+                    }
+                    result
+                })
+            }
             Err(e) => {
                 DuelResult::failure(WorkerError::new("invalid_request", "input", e.to_string()))
             }

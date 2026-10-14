@@ -35,6 +35,14 @@ fn knowledge(opts: &BTreeMap<String, String>) -> Result<ygo_knowledge::Knowledge
         .unwrap_or_else(|| "knowledge/phantom-v1.json".into());
     ygo_knowledge::KnowledgePack::read(&path)
 }
+fn knowledge_v2(opts: &BTreeMap<String, String>) -> Result<ygo_knowledge::KnowledgePack, String> {
+    let path = opts
+        .get("--knowledge")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("YGO_KNOWLEDGE_V2_CONFIG").map(PathBuf::from))
+        .unwrap_or_else(|| "knowledge/phantom-v2.json".into());
+    ygo_knowledge::KnowledgePack::read(&path)
+}
 fn output(opts: &BTreeMap<String, String>, value: &serde_json::Value) -> Result<(), String> {
     if let Some(path) = opts.get("--output") {
         fs::write(
@@ -98,6 +106,7 @@ fn execute(args: &[String]) -> Result<(), String> {
     }
     let opts = options(&args[2..])?;
     let allowed = match command {
+        Command::KnowledgeVerify => vec!["--cases", "--output", "--knowledge", "--store"],
         Command::KnowledgeValidate => vec!["--knowledge"],
         Command::CardExplain => vec!["--knowledge", "--id", "--output", "--store"],
         Command::ComboPlan => vec!["--input", "--output", "--store", "--scoring", "--knowledge"],
@@ -138,6 +147,25 @@ fn execute(args: &[String]) -> Result<(), String> {
             .unwrap_or_else(|| store.root.join("active.json"))
     };
     match command {
+        Command::KnowledgeVerify => {
+            let cases = serde_json::from_slice(
+                &fs::read(need(&opts, "--cases")?).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            let p = active(&pointer_path)?;
+            let pack = knowledge_v2(&opts)?;
+            let report = ygo_api::verification::verify(
+                cases,
+                engine()?,
+                &store,
+                p["catalog_id"].as_str().ok_or("catalog not imported")?,
+                pack,
+            )?;
+            output(&opts, &report)?;
+            if report["passed"] != true {
+                return Err("effect verification failed; see case evidence".into());
+            }
+        }
         Command::KnowledgeValidate => {
             let k = knowledge(&opts)?;
             let cfg = engine()?;
@@ -175,6 +203,40 @@ fn execute(args: &[String]) -> Result<(), String> {
             output(&opts, &explanation)?;
         }
         Command::ComboPlan => {
+            let value: serde_json::Value = serde_json::from_slice(
+                &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            if value["schema_version"] == 2 {
+                let q: ygo_api::planning_v2::PlanRequest =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                let id = q
+                    .analysis
+                    .catalog_id
+                    .clone()
+                    .or_else(|| {
+                        active(&pointer_path)
+                            .ok()
+                            .and_then(|v| v["catalog_id"].as_str().map(String::from))
+                    })
+                    .ok_or("catalog not imported")?;
+                let pack = knowledge_v2(&opts)?;
+                let r = ygo_api::planning_v2::plan(
+                    q,
+                    engine()?,
+                    &store,
+                    &id,
+                    &ScoringConfig::default(),
+                    pack,
+                )?;
+                eprintln!(
+                    "v2 planning: {} lines, {} engine calls",
+                    r.analysis.search.lines.len(),
+                    r.analysis.search.stats.engine_calls
+                );
+                return output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?);
+            }
+
             let q: ygo_api::planning::PlanRequest = serde_json::from_slice(
                 &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
             )
@@ -214,6 +276,16 @@ fn execute(args: &[String]) -> Result<(), String> {
             output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?)?;
         }
         Command::ComboPlanReplay => {
+            let value: serde_json::Value = serde_json::from_slice(
+                &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            if value["schema_version"] == 2 {
+                let r: ygo_api::planning_v2::PlanReport =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                return json(&ygo_api::planning_v2::replay(&r, engine()?, &store)?);
+            }
+
             let r: ygo_api::planning::PlanReport = serde_json::from_slice(
                 &fs::read(need(&opts, "--input")?).map_err(|e| e.to_string())?,
             )

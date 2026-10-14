@@ -29,6 +29,10 @@ Copy-Item configs/scoring.toml "$dest/configs/scoring.toml"
 Copy-Item tests/fixtures/rabbit.request.json "$dest/fixtures/rabbit.request.json"
 Copy-Item tests/fixtures/phantom.request.json "$dest/fixtures/phantom.request.json"
 Copy-Item knowledge/phantom-v1.json "$dest/knowledge/phantom-v1.json"
+Copy-Item knowledge/phantom-v2.json "$dest/knowledge/phantom-v2.json"
+Copy-Item tests/fixtures/break-sword.request.json "$dest/fixtures/break-sword.request.json"
+Copy-Item tests/fixtures/phantom.engine-cases.json "$dest/fixtures/phantom.engine-cases.json"
+Copy-Item tests/fixtures/phantom.fixed-hands.json "$dest/fixtures/phantom.fixed-hands.json"
 Copy-Item docs/DEPLOYMENT.md "$dest/DEPLOYMENT.md"
 Copy-Item docs/SEMANTIC_PLANNING.md "$dest/SEMANTIC_PLANNING.md"
 Copy-Item docs/TESTING.md "$dest/TESTING.md"
@@ -51,6 +55,7 @@ set "YGO_ACTIVE_SNAPSHOT=$root\data\snapshots\active.json"
 set "YGO_SCORING_CONFIG=%~dp0configs\scoring.toml"
 set "YGO_SMOKE_REQUEST=%~dp0fixtures\rabbit.request.json"
 set "YGO_KNOWLEDGE_CONFIG=%~dp0knowledge\phantom-v1.json"
+set "YGO_KNOWLEDGE_V2_CONFIG=%~dp0knowledge\phantom-v2.json"
 "%~dp0ygo.exe" %*
 "@
 [IO.File]::WriteAllText("$dest/ygo.cmd",$launcher,[Text.UTF8Encoding]::new($false))

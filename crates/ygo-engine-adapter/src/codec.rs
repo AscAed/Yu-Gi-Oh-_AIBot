@@ -398,6 +398,18 @@ pub fn decode_frame(sequence: u64, raw: &[u8]) -> Result<CoreEventFrame, String>
         }
         40 => (true, json!({"player":r.u8()?})),
         41 => (true, json!({"phase":r.u16()?})),
+        83 => {
+            let count = r.count()?;
+            let mut cards = vec![];
+            for _ in 0..count {
+                cards.push(r.loc()?);
+            }
+            (true, json!({"targets":cards}))
+        }
+        165 => (
+            true,
+            json!({"player":r.u8()?,"hint_type":r.u8()?,"description":r.u64()?}),
+        ),
         50 => {
             let code = r.u32()?;
             let from = r.loc()?;

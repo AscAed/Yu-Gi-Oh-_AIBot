@@ -152,6 +152,20 @@ pub fn evaluate(state: &Checkpoint, decisions: usize, weights: &ScoringConfig) -
     e
 }
 pub fn prefix_key(request: &RunDuelRequest) -> String {
+    if request.protocol_version == 3 {
+        return digest(
+            &serde_json::to_vec(&(
+                "runtime-v3",
+                &request.deck,
+                &request.opening_hand,
+                request.seed,
+                &request.versions,
+                &request.scenario,
+                &request.decisions,
+            ))
+            .expect("serializable v3 prefix"),
+        );
+    }
     digest(
         &serde_json::to_vec(&(
             request.protocol_version,

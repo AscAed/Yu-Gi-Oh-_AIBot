@@ -1,0 +1,149 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "effect_id": {
+            "type": "string"
+          },
+          "request": {
+            "$ref": "plan-request-v2.schema.json"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "normal",
+                    "special",
+                    "set",
+                    "effect",
+                    "cards",
+                    "material",
+                    "yes",
+                    "end"
+                  ]
+                },
+                "code": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "index": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cards": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "player": {
+                  "enum": [
+                    0,
+                    1
+                  ]
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 128
+          },
+          "activation_step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "zone": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "player": {
+                  "enum": [
+                    0,
+                    1
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "level": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "rank": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "overlay": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "code",
+                "zone",
+                "count"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "negative_reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "effect_id",
+          "request",
+          "steps",
+          "activation_step",
+          "assertions",
+          "negative_reason"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 128
+    }
+  },
+  "required": [
+    "schema_version",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -21,3 +21,7 @@ fn parses_knowledge_explanation_and_causal_planning_commands() {
         );
     }
 }
+#[test]
+fn parses_live_knowledge_verification() {
+    assert!(ygo_cli::Command::parse(["knowledge", "verify"]).is_some());
+}
