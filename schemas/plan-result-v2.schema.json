@@ -812,9 +812,72 @@
           }
         },
         "prompt": {
-          "type": [
-            "object",
-            "null"
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "player": {
+                  "enum": [
+                    0,
+                    1
+                  ]
+                },
+                "opcode": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "choice": {
+                        "$ref": "plan-result-v2.schema.json#/$defs/choice"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "card_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "bytes": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
+                        }
+                      }
+                    },
+                    "required": [
+                      "choice",
+                      "label",
+                      "card_ids",
+                      "bytes"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "player",
+                "opcode",
+                "actions"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "checkpoint": {
@@ -922,13 +985,71 @@
           "additionalProperties": false
         },
         "error": {
-          "type": [
-            "object",
-            "null"
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "stage": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "stage",
+                "message"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "versions": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "rules": {
+              "const": "ocg-mr5"
+            },
+            "catalog": {
+              "type": "string"
+            },
+            "banlist": {
+              "type": "string"
+            },
+            "engine_sha256": {
+              "type": "string"
+            },
+            "cdb_sha256": {
+              "type": "string"
+            },
+            "scripts_sha256": {
+              "type": "string"
+            },
+            "core_commit": {
+              "type": "string"
+            },
+            "initializer": {
+              "const": "fixed-opponent-v1"
+            }
+          },
+          "required": [
+            "rules",
+            "catalog",
+            "banlist",
+            "engine_sha256",
+            "cdb_sha256",
+            "scripts_sha256",
+            "core_commit",
+            "initializer"
+          ],
+          "additionalProperties": false
         },
         "loaded_scripts": {
           "type": "object",
@@ -939,7 +1060,37 @@
         "steps": {
           "type": "array",
           "items": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "choice": {
+                "$ref": "plan-result-v2.schema.json#/$defs/choice"
+              },
+              "label": {
+                "type": "string"
+              },
+              "card_ids": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "bytes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              }
+            },
+            "required": [
+              "choice",
+              "label",
+              "card_ids",
+              "bytes"
+            ],
+            "additionalProperties": false
           }
         },
         "resolved_decisions": {

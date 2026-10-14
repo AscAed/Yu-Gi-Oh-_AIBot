@@ -49,6 +49,27 @@ class Schemas(unittest.TestCase):
         for s in samples:
             check.validate(s['request'])
 
+    @unittest.skipUnless(os.environ.get('YGO_LIVE_ENGINE') == '1', 'opt-in: actual v2 report')
+    def test_v2_runtime_nested_rejection(self):
+        import copy
+        value = json.loads((ROOT / 'data/runtime/break-sword-report.json').read_text())
+        check = validator('plan-result-v2.schema.json')
+        check.validate(value)
+        corruptions = [
+            (['analysis', 'runtime_request', 'deck'], 'garbage'),
+            (['analysis', 'runtime_request', 'injected'], True),
+            (['analysis', 'search', 'stats', 'engine_calls'], 'garbage'),
+            (['analysis', 'search', 'lines', 0, 'decisions'], [{'nonsense': True}]),
+            (['analysis', 'runtime_request', 'versions', 'initializer'], 42),
+        ]
+        for path, mutation in corruptions:
+            invalid = copy.deepcopy(value)
+            parent = invalid
+            for component in path[:-1]:
+                parent = parent[component]
+            parent[path[-1]] = mutation
+            self.assertTrue(list(check.iter_errors(invalid)), str(path))
+
     def test_card_and_request_fixtures(self):
         for schema, fixture in [('card.schema.json', 'cards.sample.json'), ('combo-request.schema.json', 'rabbit.request.json')]:
             validator(schema).validate(json.loads((ROOT / 'tests/fixtures' / fixture).read_text()))

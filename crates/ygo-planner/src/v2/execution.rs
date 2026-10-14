@@ -206,6 +206,8 @@ fn refresh(map: &mut BTreeMap<String, CardReference>, events: &[CoreEventFrame])
                     && from["player"].as_u64() == Some(m.player as u64)
                     && from["location"].as_u64() == Some(m.location as u64)
                     && from["sequence"].as_u64() == Some(m.sequence as u64)
+                    && (m.location & 128 == 0
+                        || from["position"].as_u64() == Some(m.position as u64))
             })
             .map(|(key, _)| key.clone())
             .collect();
@@ -225,6 +227,15 @@ fn refresh(map: &mut BTreeMap<String, CardReference>, events: &[CoreEventFrame])
                 mapped.location = to["location"].as_u64().unwrap_or(0) as u8;
                 mapped.sequence = to["sequence"].as_u64().unwrap_or(0) as u32;
                 mapped.position = to["position"].as_u64().unwrap_or(0) as u32;
+            } else if mapped.location & 128 != 0
+                && from["player"].as_u64() == Some(mapped.player as u64)
+                && from["location"].as_u64() == Some(mapped.location as u64)
+                && from["sequence"].as_u64() == Some(mapped.sequence as u64)
+                && from["position"]
+                    .as_u64()
+                    .is_some_and(|p| p < mapped.position as u64)
+            {
+                mapped.position -= 1;
             } else if mapped.sequence != u32::MAX
                 && matches!(mapped.location, 1 | 2 | 16 | 32 | 64)
                 && from["player"].as_u64() == Some(mapped.player as u64)
@@ -355,11 +366,30 @@ fn run<A: EngineAdapter>(
     q.engine.timeout_ms = q.engine.timeout_ms.min(left);
     stats.nodes += 1;
     stats.engine_calls += 1;
-    let result = adapter.run(&q)?;
+    let result = adapter.run(&q).map_err(|error| {
+        if error.code == "timeout" && start.elapsed().as_millis() as u64 >= budget.time_limit_ms {
+            WorkerError::new(
+                "planner_budget",
+                "execution",
+                format!("request deadline exhausted: {}", error.message),
+            )
+        } else {
+            error
+        }
+    })?;
     stats.worker_peak_working_set_bytes = stats
         .worker_peak_working_set_bytes
         .max(result.peak_working_set_bytes);
     Ok(result)
+}
+fn error_kind(error: &WorkerError, budget: &SearchBudget, start: Instant) -> FailureKind {
+    if error.code == "planner_budget"
+        || (error.code == "timeout" && start.elapsed().as_millis() as u64 >= budget.time_limit_ms)
+    {
+        FailureKind::BudgetExhausted
+    } else {
+        FailureKind::EngineFailure
+    }
 }
 pub fn execute<A: EngineAdapter>(
     adapter: &A,
@@ -421,6 +451,12 @@ pub fn execute<A: EngineAdapter>(
         let mut wanted = vec![];
         loop {
             if result.status == DuelStatus::Failed {
+                attempt.failure = Some(
+                    result
+                        .error
+                        .as_ref()
+                        .map_or(FailureKind::EngineFailure, |e| error_kind(e, budget, start)),
+                );
                 attempt
                     .discrepancies
                     .push(format!("engine failure: {:?}", result.error));
@@ -464,6 +500,7 @@ pub fn execute<A: EngineAdapter>(
                             .discrepancies
                             .push("independent replay mismatch".into()),
                         Err(e) => {
+                            attempt.failure = Some(error_kind(&e, budget, start));
                             attempt.discrepancies.push(e.message.clone());
                             diagnostics.push(e);
                         }
@@ -584,6 +621,13 @@ pub fn execute<A: EngineAdapter>(
                         .iter()
                         .any(|d| d == &attempt.predictions.last().unwrap().selected)
                     {
+                        attempt.failure = Some(
+                            next.error
+                                .as_ref()
+                                .map_or(FailureKind::PredictionMismatch, |e| {
+                                    error_kind(e, budget, start)
+                                }),
+                        );
                         attempt.discrepancies.push(format!(
                             "worker did not confirm the selected decision: {:?}",
                             next.error
@@ -598,6 +642,7 @@ pub fn execute<A: EngineAdapter>(
                 }
                 Err(e) => {
                     attempt.discrepancies.push(e.message.clone());
+                    attempt.failure = Some(error_kind(&e, budget, start));
                     diagnostics.push(e);
                     termination = "execution_budget_or_failure".into();
                     break;
@@ -610,7 +655,7 @@ pub fn execute<A: EngineAdapter>(
             attempt.status = "prediction_rejected".into();
             stats.failed_branches += 1;
         }
-        if !attempt.goal_achieved {
+        if !attempt.goal_achieved && attempt.failure.is_none() {
             let result = attempt.observation.as_ref().unwrap();
             attempt.failure = Some(if result.status == DuelStatus::Failed {
                 FailureKind::EngineFailure
@@ -774,6 +819,161 @@ pub fn matches_checkpoint(state: &SymbolicState, checkpoint: &Checkpoint) -> boo
 #[cfg(test)]
 mod regression {
     use super::*;
+    #[test]
+    fn request_deadline_timeout_reports_budget() {
+        struct Timeout;
+        impl EngineAdapter for Timeout {
+            fn doctor(&self) -> DoctorReport {
+                unreachable!()
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+                Err(WorkerError::new("timeout", "worker", "worker timed out"))
+            }
+        }
+        let q = RunDuelRequest {
+            protocol_version: 3,
+            engine: Default::default(),
+            deck: Default::default(),
+            opening_hand: vec![],
+            seed: 1,
+            decisions: vec![],
+            versions: Default::default(),
+            probe_only: false,
+            scenario: None,
+        };
+        let mut budget = SearchBudget {
+            time_limit_ms: 1,
+            ..Default::default()
+        };
+        let mut stats = SearchStats::default();
+        assert_eq!(
+            run(&Timeout, &q, &budget, Instant::now(), &mut stats)
+                .unwrap_err()
+                .code,
+            "planner_budget"
+        );
+        budget.time_limit_ms = 1000;
+        assert_eq!(
+            run(&Timeout, &q, &budget, Instant::now(), &mut stats)
+                .unwrap_err()
+                .code,
+            "timeout"
+        );
+    }
+    #[test]
+    fn detaching_one_duplicate_material_keeps_the_other_instance() {
+        let mut map = BTreeMap::new();
+        for position in 0..2 {
+            map.insert(
+                format!("boots-{position}"),
+                CardReference {
+                    code: 36426778,
+                    player: 0,
+                    location: 132,
+                    sequence: 0,
+                    position,
+                },
+            );
+        }
+        let event = CoreEventFrame {
+            sequence: 1,
+            opcode: 50,
+            raw: vec![],
+            supported: true,
+            fields: serde_json::json!({"code":36426778,"from":{"player":0,"location":132,"sequence":0,"position":0},"to":{"player":0,"location":16,"sequence":0,"position":1}}),
+        };
+        refresh(&mut map, &[event]);
+        assert_eq!(map["boots-0"].location, 16);
+        assert_eq!(map["boots-1"].location, 132);
+        assert_eq!(map["boots-1"].position, 0);
+    }
+    #[test]
+    fn worker_timeout_is_engine_failure_not_prediction_mismatch() {
+        struct Broken(std::cell::Cell<usize>);
+        impl EngineAdapter for Broken {
+            fn doctor(&self) -> DoctorReport {
+                unreachable!()
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                let n = self.0.get();
+                self.0.set(n + 1);
+                if n > 0 {
+                    return Err(WorkerError::new("timeout", "worker", "worker timed out"));
+                }
+                let raw: Vec<u8> = serde_json::from_str(include_str!(
+                    "../../../../tests/fixtures/v3-idle-frame.json"
+                ))
+                .unwrap();
+                let mut r = DuelResult::failure(WorkerError::new("unused", "test", ""));
+                r.protocol_version = 3;
+                r.status = DuelStatus::DecisionRequired;
+                r.error = None;
+                r.prompt = parse_prompt(1, &raw).unwrap();
+                r.events = vec![decode_frame(1, &raw).unwrap()];
+                Ok(r)
+            }
+        }
+        let source = Resource {
+            instance: "scales".into(),
+            code: 25538345,
+            location: 2,
+            level: 3,
+            redirect: false,
+            player: 0,
+            overlay_host: None,
+            xyz_summoned: false,
+            base_level: 3,
+            epoch: 0,
+        };
+        let state = SymbolicState {
+            cards: vec![],
+            used: Default::default(),
+            normal_left: 0,
+            pending: vec![],
+            dark_only: false,
+            destroyed_xyz: Default::default(),
+        };
+        let proposals = Proposals {
+            plans: vec![super::super::Proposal {
+                id: "test".into(),
+                steps: vec![SemanticStep {
+                    kind: StepKind::NormalSummon,
+                    effect_id: "25538345:normal".into(),
+                    source,
+                    costs: vec![],
+                    targets: vec![],
+                    reason: "before".into(),
+                    after: state,
+                }],
+                goal_predicted: false,
+            }],
+            expansions: 1,
+            termination: "test".into(),
+            coverage_gaps: vec![],
+        };
+        let q = RunDuelRequest {
+            protocol_version: 3,
+            engine: Default::default(),
+            deck: Default::default(),
+            opening_hand: vec![],
+            seed: 1,
+            decisions: vec![],
+            versions: Default::default(),
+            probe_only: false,
+            scenario: None,
+        };
+        let result = execute(
+            &Broken(std::cell::Cell::new(0)),
+            &q,
+            proposals,
+            &SearchBudget::default(),
+            &ScoringConfig::default(),
+            &KnowledgePack::builtin().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(result.attempts[0].failure, Some(FailureKind::EngineFailure));
+    }
     #[test]
     fn hand_shuffle_rebinds_unique_cards_and_marks_duplicates_ambiguous() {
         let mut map = BTreeMap::new();

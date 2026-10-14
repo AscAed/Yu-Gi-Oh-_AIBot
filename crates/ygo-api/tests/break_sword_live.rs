@@ -99,3 +99,54 @@ fn symbolic_break_paths() {
         .iter()
         .any(|p| p.steps.iter().any(|s| s.effect_id == "62709239:revive")));
 }
+#[test]
+#[ignore = "opt-in: duplicate XYZ material identity"]
+fn duplicate_boots_materials_plan_and_replay() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut engine = ygo_engine_adapter::ProcessEngineConfig::from_toml(
+        &std::fs::read_to_string(root.join("configs/engine.toml")).unwrap(),
+    )
+    .unwrap();
+    engine.worker_path = root.join("target/release/ygo-engine-worker.exe");
+    let store = ygo_storage::SnapshotStore::new(root.join("data/snapshots"));
+    let active: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(store.root.join("active.json")).unwrap()).unwrap();
+    let mut q: PlanRequest = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/break-sword.request.json"
+    ))
+    .unwrap();
+    q.analysis.opening_hand = vec![36426778, 36426778, 88544390, 2964201, 2971090]
+        .into_iter()
+        .map(ygo_domain::CardId)
+        .collect();
+    let pack = ygo_knowledge::KnowledgePack::read(&root.join("knowledge/phantom-v2.json")).unwrap();
+    let r = plan(
+        q,
+        engine.clone(),
+        &store,
+        active["catalog_id"].as_str().unwrap(),
+        &Default::default(),
+        pack,
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("data/runtime/break-duplicate-report.json"),
+        serde_json::to_vec_pretty(&r).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        r.attempts.iter().any(|a| a.goal_achieved
+            && a.predictions
+                .iter()
+                .any(|p| p.effect_id == "62709239:revive")),
+        "{:?}",
+        r.attempts
+            .iter()
+            .map(|a| &a.discrepancies)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        replay(&r, engine, &store).unwrap()["prediction_references_verified"],
+        true
+    );
+}

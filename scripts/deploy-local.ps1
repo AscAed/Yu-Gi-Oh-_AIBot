@@ -36,6 +36,7 @@ Copy-Item tests/fixtures/phantom.fixed-hands.json "$dest/fixtures/phantom.fixed-
 Copy-Item docs/DEPLOYMENT.md "$dest/DEPLOYMENT.md"
 Copy-Item docs/SEMANTIC_PLANNING.md "$dest/SEMANTIC_PLANNING.md"
 Copy-Item docs/TESTING.md "$dest/TESTING.md"
+Copy-Item docs/BREAK_SWORD_VERIFICATION.md "$dest/BREAK_SWORD_VERIFICATION.md"
 $config=@"
 worker_path = '$($dest.Replace('\','/'))/ygo-engine-worker.exe'
 ocgcore_path = '$($root.Replace('\','/'))/data/runtime/engine/ocgcore.dll'

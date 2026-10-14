@@ -2,6 +2,8 @@
 
 本版在真实引擎底座上加入人工效果知识和有限因果规划。范围为 OCG/MR5、完整合法牌组、固定五张起手、先攻首回合及惰性对手。默认目标是 Rusty Bardiche 在场、Fog Blade 已盖放。规则仍由固定 ocgcore 执行。
 
+本页描述 v1 范围，Break Sword 的最新 v2 支持、真实效果验真及合成对方场景见 [BREAK_SWORD_VERIFICATION.md](BREAK_SWORD_VERIFICATION.md)。下文的 Break Sword 未支持说明仅适用于 v1。
+
 ## 使用
 
 已有冻结资产时，在仓库根目录运行：

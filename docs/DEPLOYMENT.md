@@ -19,6 +19,8 @@
 
 包包含 `ygo.exe`、worker、配置示例、配置、评分文件、请求 fixture、说明和二进制哈希。`ygo.cmd` 设置本机资产、快照及评分路径，可从任意工作目录启动。外部 DLL、CDB、卡片脚本、个人路径不会进入 Git，也不随可公开分享的源码包分发。本机包的路径绑定当前安装，移动资产后需重新部署。
 
+新增逐效果验真和 Break Sword v2 命令见 [BREAK_SWORD_VERIFICATION.md](BREAK_SWORD_VERIFICATION.md)。包内提供 phantom-v1/v2 两个知识 profile，以及 Break 请求、真实效果案例和固定起手夹具；wrapper分别设置两个知识路径。协议v2与v3由当前 worker 同时处理。
+
 ## CLI
 
 ```powershell
