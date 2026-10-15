@@ -355,6 +355,12 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                 c.identity_known = false;
                 opaque_summon = true;
             }
+            // A spell offered in hand activates in the spell/trap zone.
+            // Preserve its pinned identity, not the pre-command coordinates.
+            c.player = n(loc, "player") as u8;
+            c.location = n(loc, "location") as u8;
+            c.sequence = n(loc, "sequence");
+            c.position = n(loc, "position");
             chains.insert(e.fields["chain"].as_u64().unwrap_or(0), (c, id));
         }
         if e.opcode == 71 {

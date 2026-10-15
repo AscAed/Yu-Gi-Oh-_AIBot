@@ -182,3 +182,40 @@ fn missing_chained_frame_cannot_prove_post_cost_material_conditions() {
         Truth::Unknown
     );
 }
+#[test]
+fn hand_activation_keeps_instance_binding_but_uses_the_chain_source_zone() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/activation-source.events.json"
+    ))
+    .unwrap();
+    let mut r = result();
+    r.events = fixture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| {
+            decode_frame(
+                e["sequence"].as_u64().unwrap(),
+                &serde_json::from_value::<Vec<u8>>(e["raw"].clone()).unwrap(),
+            )
+            .unwrap()
+        })
+        .collect();
+    r.resolved_decisions = vec![serde_json::from_value(fixture["decision"].clone()).unwrap()];
+    let f = facts(&r);
+    let actor = &f
+        .history
+        .iter()
+        .find(|h| h.kind == "effect_resolved")
+        .unwrap()
+        .card;
+    assert_eq!(
+        actor.location as u64,
+        fixture["expected"]["location"].as_u64().unwrap()
+    );
+    assert_eq!(
+        actor.sequence as u64,
+        fixture["expected"]["sequence"].as_u64().unwrap()
+    );
+    assert!(actor.identity_known);
+}

@@ -218,6 +218,7 @@ fn goal_matrix_covers_history_conditions_and_safe_fallback() {
             h.card.materials.clear();
             assert!(ygo_api::planning_v3::validate_plan_contract(&bad).is_err());
         }
+        check_chain_source_coordinates(&r);
         std::fs::write(
             root.join(format!("data/runtime/{name}-report.json")),
             serde_json::to_vec_pretty(&r).unwrap(),
@@ -392,4 +393,42 @@ fn check_raw_history_oracle(r: &ygo_api::planning_v3::PlanReport) {
     }
     assert!(covered > 0);
     assert!(boots_twice, "one line must cover Boots summon plus revival");
+}
+
+fn check_chain_source_coordinates(r: &ygo_api::planning_v3::PlanReport) {
+    for execution in &r.executions {
+        let Some(obs) = &execution.trace.observation else {
+            continue;
+        };
+        let mut chains = std::collections::BTreeMap::new();
+        for frame in &obs.events {
+            let chain = frame.fields["chain"].as_u64().unwrap_or(0);
+            if frame.opcode == 70 {
+                chains.insert(chain, &frame.fields);
+            }
+            if frame.opcode == 73 {
+                if let Some(raw) = chains.remove(&chain) {
+                    let actor = &execution
+                        .facts
+                        .history
+                        .iter()
+                        .find(|h| h.kind == "effect_resolved" && h.event == frame.sequence)
+                        .unwrap()
+                        .card;
+                    assert_eq!(serde_json::json!(actor.code), raw["code"]);
+                    for (name, actual) in [
+                        ("player", actor.player as u64),
+                        ("location", actor.location as u64),
+                        ("sequence", actor.sequence as u64),
+                        ("position", actor.position as u64),
+                    ] {
+                        assert_eq!(actual, raw["location"][name].as_u64().unwrap());
+                    }
+                }
+            }
+            if matches!(frame.opcode, 75 | 76) {
+                chains.remove(&chain);
+            }
+        }
+    }
 }
