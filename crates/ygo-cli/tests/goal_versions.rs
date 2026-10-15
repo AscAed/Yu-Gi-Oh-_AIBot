@@ -36,3 +36,9 @@ fn unknown_versions_are_rejected_before_legacy_parsing() {
         );
     }
 }
+
+#[test]
+fn replay_routes_v4_envelopes_to_the_recovery_contract() {
+    let error = invoke("plan-replay", serde_json::json!({"schema_version":4}));
+    assert!(error.contains("planner_profile"), "{error}");
+}

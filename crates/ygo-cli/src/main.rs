@@ -254,11 +254,6 @@ fn execute(args: &[String]) -> Result<(), String> {
                 )?;
                 return output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?);
             }
-            if value["schema_version"] == 4 {
-                let r: ygo_api::planning_v4::PlanReport =
-                    serde_json::from_value(value).map_err(|e| e.to_string())?;
-                return json(&ygo_api::planning_v4::replay(&r, engine()?, &store)?);
-            }
             if value["schema_version"] == 3 {
                 let q: ygo_api::planning_v3::PlanRequest =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
@@ -357,6 +352,11 @@ fn execute(args: &[String]) -> Result<(), String> {
             .contains(&value["schema_version"])
             {
                 return Err("unsupported planning schema_version".into());
+            }
+            if value["schema_version"] == 4 {
+                let r: ygo_api::planning_v4::PlanReport =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                return json(&ygo_api::planning_v4::replay(&r, engine()?, &store)?);
             }
             if value["schema_version"] == 3 {
                 let r: ygo_api::planning_v3::PlanReport =
