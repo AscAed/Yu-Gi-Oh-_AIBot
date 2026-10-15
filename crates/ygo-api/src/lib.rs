@@ -3,6 +3,7 @@ use ygo_domain::{Banlist, CardId, Deck, DeckValidationRules, EngineEvent, Valida
 use ygo_search::{CandidateLine, SearchConfig, Searcher};
 pub mod combo;
 pub mod planning;
+pub mod planning_v4;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct DeckRequest {

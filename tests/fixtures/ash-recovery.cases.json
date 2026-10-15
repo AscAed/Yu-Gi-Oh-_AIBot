@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "scope": "synthetic one-Ash early Scales window",
+  "cases": [
+    {
+      "case_id": "ash-scales-positive",
+      "effect_id": "14558127:negate",
+      "expect": [
+        "opponent actual legal activation",
+        "both discard costs retained",
+        "chain disabled for Scales",
+        "no deck mill",
+        "Scales mill usage consumed"
+      ],
+      "manual_recovery": [
+        "special summon hand Boots",
+        "link Cherubini using Scales and Boots",
+        "Cherubini sends Gloves as cost",
+        "banish grave Gloves to mill Cloak",
+        "resolve Scales revival",
+        "banish grave Boots to search Fog Blade",
+        "link Rusty using Cherubini and revived Scales",
+        "set Fog Blade"
+      ]
+    },
+    {
+      "case_id": "ash-cherubini-negative",
+      "effect_id": "14558127:negate",
+      "expect": [
+        "no legal Ash response to Cherubini attack effect solely because its cost mills"
+      ]
+    },
+    {
+      "case_id": "no-ash",
+      "expect": [
+        "removing Ash produces no legal Ash option"
+      ]
+    },
+    {
+      "case_id": "wrong-window",
+      "expect": [
+        "no response to summon or after chain end"
+      ]
+    },
+    {
+      "case_id": "not-reached",
+      "expect": [
+        "no Scales mill means no response and no recovery"
+      ]
+    },
+    {
+      "case_id": "budget",
+      "expect": [
+        "preserve completed proofs within each ledger"
+      ]
+    },
+    {
+      "case_id": "duplicate-instance",
+      "expect": [
+        "discard and source bound to actual instances"
+      ]
+    }
+  ]
+}

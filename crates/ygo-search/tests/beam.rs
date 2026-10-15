@@ -45,6 +45,7 @@ fn cache_key_preserves_effect_history_and_runtime_versions() {
         versions: Default::default(),
         probe_only: false,
         scenario: None,
+        interruption: None,
     };
     let mut other = request.clone();
     other.decisions.push(Decision {

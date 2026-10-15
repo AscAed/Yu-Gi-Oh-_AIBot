@@ -110,6 +110,7 @@ fn request() -> RunDuelRequest {
         versions: Default::default(),
         probe_only: false,
         scenario: None,
+        interruption: None,
     }
 }
 #[test]

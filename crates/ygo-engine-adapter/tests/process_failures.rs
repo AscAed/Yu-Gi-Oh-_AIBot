@@ -10,6 +10,7 @@ fn request() -> RunDuelRequest {
         versions: Default::default(),
         probe_only: true,
         scenario: None,
+        interruption: None,
     }
 }
 fn check(mode: &str, code: &str) {

@@ -159,6 +159,7 @@ pub fn probe_request(engine: ProcessEngineConfig) -> Result<RunDuelRequest, Work
         versions,
         probe_only: true,
         scenario: None,
+        interruption: None,
     })
 }
 pub fn runtime_request(
@@ -174,10 +175,63 @@ pub fn runtime_request(
     r.probe_only = false;
     Ok(r)
 }
+fn opponent_choice(
+    request: &RunDuelRequest,
+    events: &[CoreEventFrame],
+    p: &Prompt,
+) -> Result<Choice, WorkerError> {
+    if let Some(config) = &request.interruption {
+        let chains: Vec<_> = events.iter().filter(|e| e.opcode == 70).collect();
+        let scales: Vec<_> = chains
+            .iter()
+            .filter(|e| {
+                e.fields["code"] == 25538345u32
+                    && e.fields["player"] == 0
+                    && e.fields["description"].as_u64() == Some(25538345u64 << 20)
+            })
+            .collect();
+        if config.policy == "ash_scales_once"
+            && scales.len() == config.occurrence
+            && chains
+                .last()
+                .is_some_and(|e| e.fields["code"] == 25538345u32)
+            && !chains
+                .iter()
+                .any(|e| e.fields["code"] == 14558127u32 && e.fields["player"] == 1)
+        {
+            let frame = events.iter().find(|e| e.sequence == p.id).ok_or_else(|| {
+                WorkerError::new("opponent_prompt", "policy", "missing raw prompt")
+            })?;
+            let ms = prompt_metadata(p.id, &frame.raw)
+                .map_err(|e| WorkerError::new("opponent_binding", "policy", e))?;
+            if let Some(m) = ms.iter().find(|m| {
+                m.source
+                    .as_ref()
+                    .is_some_and(|s| s.code == 14558127 && s.player == 1 && s.location == 2)
+                    && m.effect_description == Some(14558127u64 << 20)
+            }) {
+                return Ok(m.choice.clone());
+            }
+        }
+    }
+    p.actions
+        .iter()
+        .find(|a| matches!(a.choice, Choice::Chain { index: None }))
+        .map(|a| a.choice.clone())
+        .ok_or_else(|| {
+            WorkerError::new(
+                "opponent_decision",
+                "policy",
+                "opponent has mandatory unsupported response",
+            )
+        })
+}
 fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
-    if !matches!(r.protocol_version, 2 | 3)
+    if !matches!(r.protocol_version, 2..=4)
         || (r.protocol_version == 2 && r.scenario.is_some())
         || r.scenario.as_ref().is_some_and(|s| s != "ryu-ran")
+        || (r.protocol_version != 4 && r.interruption.is_some())
+        || (r.protocol_version == 4 && (r.interruption.is_none() || r.scenario.is_some()))
     {
         return Err(WorkerError::new(
             "protocol_version",
@@ -188,7 +242,9 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
     if r.versions.rules != "ocg-mr5"
         || r.versions.core_commit != CORE_COMMIT
         || r.versions.initializer
-            != if r.protocol_version == 3 {
+            != if r.protocol_version == 4 {
+                "fixed-interruption-v1"
+            } else if r.protocol_version == 3 {
                 "fixed-opponent-v1"
             } else {
                 INITIALIZER_VERSION
@@ -199,6 +255,10 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
             "input",
             "unsupported rules/core",
         ));
+    }
+    if let Some(i) = &r.interruption {
+        i.validate()
+            .map_err(|e| WorkerError::new("interruption", "input", e))?;
     }
     for (path, expected) in [
         (&r.engine.ocgcore_path, &r.versions.engine_sha256),
@@ -418,7 +478,23 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
         seeds[i] = u64::from_le_bytes(chunk.try_into().unwrap());
     }
     shuffle_initial_deck(&mut remaining, seeds[0]);
-    let mut opponent_deck = request.deck.main.clone();
+    let mut opponent_deck = request.interruption.as_ref().map_or_else(
+        || request.deck.main.clone(),
+        |i| i.opponent_deck.main.clone(),
+    );
+    let opponent_hand = request
+        .interruption
+        .as_ref()
+        .map_or_else(Vec::new, |i| i.opponent_hand.clone());
+    for card in &opponent_hand {
+        let at = opponent_deck
+            .iter()
+            .position(|c| c == card)
+            .ok_or_else(|| {
+                WorkerError::new("opponent_hand", "input", "missing opponent resource")
+            })?;
+        opponent_deck.remove(at);
+    }
     shuffle_initial_deck(&mut opponent_deck, seeds[1]);
     if request.scenario.is_some() {
         let index = opponent_deck
@@ -479,6 +555,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 (0, 2, &request.opening_hand),
                 (0, 64, &request.deck.extra),
                 (1, 1, &opponent_deck),
+                (1, 2, &opponent_hand),
             ] {
                 for (seq, id) in cards.iter().enumerate() {
                     (api.new_card)(
@@ -585,7 +662,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                     ));
                 }
                 result.checkpoint =
-                    checkpoint(&api, duel, 1, 0, 512, request.protocol_version == 3)
+                    checkpoint(&api, duel, 1, 0, 512, request.protocol_version >= 3)
                         .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
                 result.status = if result.coverage_gaps.is_empty() {
                     DuelStatus::EngineVerified
@@ -597,17 +674,24 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
             if let Some(p) = prompt {
                 result.prompt = Some(p.clone());
                 let choice = if p.player == 1 {
-                    p.actions
-                        .iter()
-                        .find(|a| matches!(a.choice, Choice::Chain { index: None }))
-                        .map(|a| a.choice.clone())
-                        .ok_or_else(|| {
-                            WorkerError::new(
-                                "opponent_decision",
-                                "policy",
-                                "opponent has mandatory response",
-                            )
-                        })?
+                    let policy = opponent_choice(&request, &result.events, &p)?;
+                    if request.protocol_version == 4 {
+                        if let Some(d) = request
+                            .decisions
+                            .get(used)
+                            .filter(|d| d.prompt_id == p.id && d.player == 1)
+                        {
+                            if d.choice != policy {
+                                return Err(WorkerError::new(
+                                    "opponent_policy_mismatch",
+                                    "replay",
+                                    "opponent choice differs from fixed policy",
+                                ));
+                            }
+                            used += 1;
+                        }
+                    }
+                    policy
                 } else if let Some(decision) = request.decisions.get(used) {
                     if decision.prompt_id != p.id || decision.player != p.player {
                         return Err(WorkerError::new(
@@ -627,7 +711,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                         turn,
                         player,
                         phase,
-                        request.protocol_version == 3,
+                        request.protocol_version >= 3,
                     )
                     .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
                     result.prompt = Some(p);
@@ -637,7 +721,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 let bytes = p
                     .encode(&choice)
                     .map_err(|e| WorkerError::new("invalid_decision", "response", e))?;
-                if p.player == 0 {
+                if p.player == 0 || request.protocol_version == 4 {
                     result.resolved_decisions.push(Decision {
                         prompt_id: p.id,
                         player: p.player,
@@ -691,8 +775,8 @@ pub fn run_worker<R: BufRead, W: Write>(mut input: R, mut output: W) -> std::io:
                 let versions = r.versions.clone();
                 execute(r).unwrap_or_else(|e| {
                     let mut result = DuelResult::failure(e);
-                    if protocol == 3 {
-                        result.protocol_version = 3;
+                    if protocol >= 3 {
+                        result.protocol_version = protocol;
                         result.versions = versions;
                     }
                     result

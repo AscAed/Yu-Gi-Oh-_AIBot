@@ -79,6 +79,43 @@ pub struct RunDuelRequest {
     pub probe_only: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scenario: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interruption: Option<InterruptionConfig>,
+}
+/// Fixed synthetic opponent resources and one deterministic response policy.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct InterruptionConfig {
+    pub opponent_deck: Deck,
+    pub opponent_hand: Vec<CardId>,
+    pub policy: String,
+    pub effect_id: String,
+    pub occurrence: usize,
+}
+impl InterruptionConfig {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.opponent_deck.main.len() != 40
+            || !self.opponent_deck.extra.is_empty()
+            || !self.opponent_deck.side.is_empty()
+            || self.opponent_hand != [CardId(14558127)]
+            || self
+                .opponent_deck
+                .main
+                .iter()
+                .filter(|c| c.0 == 14558127)
+                .count()
+                != 1
+            || !matches!(self.policy.as_str(), "pass" | "ash_scales_once")
+            || self.effect_id != "25538345:mill"
+            || self.occurrence != 1
+        {
+            return Err("unsupported controlled interruption/resources".into());
+        }
+        if !self.opponent_deck.main.contains(&CardId(14558127)) {
+            return Err("opponent hand resource missing".into());
+        }
+        Ok(())
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Decision {

@@ -21,6 +21,22 @@ pub fn initialize(
     }
     Ok(state)
 }
+fn facts_seeded(
+    state: &SymbolicState,
+    history: &[SemanticStep],
+    cat: &Catalog,
+    pack: &KnowledgePack,
+    prefix: Option<&Facts>,
+) -> Facts {
+    let mut f = facts(state, history, cat, pack);
+    if let Some(p) = prefix {
+        let mut past = p.history.clone();
+        past.extend(f.history);
+        f.history = past;
+        f.history_complete &= p.history_complete;
+    }
+    f
+}
 pub fn proposal_id(pack: &KnowledgePack, goal: &Goal, steps: &[SemanticStep]) -> String {
     ygo_knowledge::hash(
         &serde_json::to_vec(&(PROFILE, pack.id(), goal.id(), steps))
@@ -251,6 +267,7 @@ pub struct Forecast {
     pub gain_prediction: BTreeMap<String, i64>,
 }
 /// Built before an adapter call, and reproducible from the frozen planning inputs.
+#[allow(clippy::too_many_arguments)]
 pub fn forecasts(
     initial: &SymbolicState,
     history: &[SemanticStep],
@@ -260,15 +277,28 @@ pub fn forecasts(
     branch: Option<&Expr>,
     pack: &KnowledgePack,
 ) -> Vec<Forecast> {
-    let anchor = facts(initial, history, cat, pack);
+    forecasts_seeded(initial, history, proposal, cat, goal, branch, pack, None)
+}
+#[allow(clippy::too_many_arguments)]
+pub fn forecasts_seeded(
+    initial: &SymbolicState,
+    history: &[SemanticStep],
+    proposal: &Proposal,
+    cat: &Catalog,
+    goal: &Goal,
+    branch: Option<&Expr>,
+    pack: &KnowledgePack,
+    prefix: Option<&Facts>,
+) -> Vec<Forecast> {
+    let anchor = facts_seeded(initial, history, cat, pack, prefix);
     let mut state = initial.clone();
     let mut prior = history.to_vec();
     let mut out = vec![];
     for (index, step) in proposal.steps.iter().enumerate() {
-        let before = facts(&state, &prior, cat, pack);
+        let before = facts_seeded(&state, &prior, cat, pack, prefix);
         let b = evaluate(&goal.expr, &before, &BTreeMap::new());
         prior.push(step.clone());
-        let after = facts(&step.after, &prior, cat, pack);
+        let after = facts_seeded(&step.after, &prior, cat, pack, prefix);
         let a = evaluate(&goal.expr, &after, &BTreeMap::new());
         let lb = ygo_goal::condition_values(&goal.expr, &b);
         let la = ygo_goal::condition_values(&goal.expr, &a);
@@ -350,6 +380,7 @@ fn make_plan(steps: Vec<SemanticStep>, pack: &KnowledgePack, goal: &Goal) -> Pro
         goal_predicted: true,
     }
 }
+#[allow(clippy::too_many_arguments)]
 fn dynamic_prediction(
     e: &Expr,
     state: &SymbolicState,
@@ -358,11 +389,13 @@ fn dynamic_prediction(
     pack: &KnowledgePack,
     goal: &Goal,
     expanded: &mut usize,
+    prefix: Option<&Facts>,
 ) -> Evaluation {
-    let f = facts(state, history, cat, pack);
+    let f = facts_seeded(state, history, cat, pack, prefix);
     let mut probes = BTreeMap::new();
     for (path, node) in ygo_goal::probe_nodes(e) {
-        let found = auxiliary_candidates(state, history, cat, pack, goal, node, expanded);
+        let found =
+            auxiliary_candidates_seeded(state, history, cat, pack, goal, node, expanded, prefix);
         probes.insert(
             path.clone(),
             Evaluation {
@@ -468,6 +501,21 @@ pub fn propose_from(
     max_steps: usize,
     expanded: &mut usize,
 ) -> Result<Proposals, String> {
+    propose_from_seeded(
+        initial, cat, pack, goal, max_plans, max_steps, expanded, None,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub fn propose_from_seeded(
+    initial: SymbolicState,
+    cat: &Catalog,
+    pack: &KnowledgePack,
+    goal: &Goal,
+    max_plans: usize,
+    max_steps: usize,
+    expanded: &mut usize,
+    prefix: Option<&Facts>,
+) -> Result<Proposals, String> {
     goal.validate()?;
     pack.validate()?;
     if !(1..=8).contains(&max_plans) || !(1..=32).contains(&max_steps) {
@@ -489,14 +537,16 @@ pub fn propose_from(
             *expanded += 1;
             let base = evaluate(
                 &goal.expr,
-                &facts(&state, &history, cat, pack),
+                &facts_seeded(&state, &history, cat, pack, prefix),
                 &BTreeMap::new(),
             );
             if !future_truth(&goal.expr, &base).0 {
                 continue;
             }
             let eval = if base.result == Truth::Unknown && state.pending.is_empty() {
-                dynamic_prediction(&goal.expr, &state, &history, cat, pack, goal, expanded)
+                dynamic_prediction(
+                    &goal.expr, &state, &history, cat, pack, goal, expanded, prefix,
+                )
             } else {
                 base.clone()
             };
@@ -535,7 +585,7 @@ pub fn propose_from(
                 steps.push(step);
                 let ev = evaluate(
                     &goal.expr,
-                    &facts(&after, &steps, cat, pack),
+                    &facts_seeded(&after, &steps, cat, pack, prefix),
                     &BTreeMap::new(),
                 );
                 if future_truth(&goal.expr, &ev).0 {
@@ -593,6 +643,19 @@ pub fn auxiliary_candidates(
     node: &Expr,
     expanded: &mut usize,
 ) -> Vec<Proposal> {
+    auxiliary_candidates_seeded(state, history, cat, pack, goal, node, expanded, None)
+}
+#[allow(clippy::too_many_arguments)]
+pub fn auxiliary_candidates_seeded(
+    state: &SymbolicState,
+    history: &[SemanticStep],
+    cat: &Catalog,
+    pack: &KnowledgePack,
+    goal: &Goal,
+    node: &Expr,
+    expanded: &mut usize,
+    prefix: Option<&Facts>,
+) -> Vec<Proposal> {
     match node {
         Expr::Available {
             effect_id,
@@ -611,7 +674,7 @@ pub fn auxiliary_candidates(
             {
                 return vec![];
             }
-            let before = facts(state, history, cat, pack);
+            let before = facts_seeded(state, history, cat, pack, prefix);
             transitions(state, cat, pack, goal)
                 .into_iter()
                 .filter(|s| {
@@ -631,7 +694,7 @@ pub fn auxiliary_candidates(
             gains,
             max_steps,
         } => {
-            let initial = facts(state, history, cat, pack);
+            let initial = facts_seeded(state, history, cat, pack, prefix);
             let mut frontier = vec![(state.clone(), vec![])];
             let mut out = vec![];
             for depth in 0..=max_steps.unwrap_or(goal.continuation_steps) {
@@ -646,7 +709,7 @@ pub fn auxiliary_candidates(
                         .cloned()
                         .chain(steps.iter().cloned())
                         .collect();
-                    let f = facts(&s, &all, cat, pack);
+                    let f = facts_seeded(&s, &all, cat, pack, prefix);
                     let deltas: Option<Vec<i64>> = gains
                         .iter()
                         .map(|g| Some(count(&g.filter, &f)? - count(&g.filter, &initial)?))
@@ -676,7 +739,7 @@ pub fn auxiliary_candidates(
                         h.push(step);
                         let mut full = history.to_vec();
                         full.extend(h.clone());
-                        let f = facts(&after, &full, cat, pack);
+                        let f = facts_seeded(&after, &full, cat, pack, prefix);
                         let score = priority_eval(target, &evaluate(target, &f, &BTreeMap::new()))
                             + gains
                                 .iter()

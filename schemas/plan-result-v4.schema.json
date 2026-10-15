@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Controlled Ash recovery report v4",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 4
+    },
+    "planner_profile": {
+      "const": "phantom-recovery-v1"
+    },
+    "request": {
+      "$ref": "plan-request-v4.schema.json"
+    },
+    "knowledge_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "opponent_knowledge": {
+      "type": "object",
+      "properties": {
+        "card_id": {
+          "const": 14558127
+        },
+        "name": {
+          "type": "string"
+        },
+        "text_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "script": {
+          "const": "official/c14558127.lua"
+        },
+        "script_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "14558127:negate"
+              },
+              "description_index": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rule": {
+                "const": "ash_negate"
+              },
+              "supported": {
+                "type": "boolean"
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "costs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "candidate_filter": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "excluded": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "setcodes": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "type_mask": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "level": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "max_level": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "race": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "attribute": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "operations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "trigger": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usage_key": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "restrictions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence_cases": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "description_index",
+              "rule",
+              "supported",
+              "conditions",
+              "costs",
+              "candidate_filter",
+              "operations",
+              "trigger",
+              "usage_key",
+              "restrictions",
+              "evidence_cases"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "card_id",
+        "name",
+        "text_sha256",
+        "script",
+        "script_sha256",
+        "effects"
+      ]
+    },
+    "baseline": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "plan-arm-v4.schema.json"
+        }
+      ]
+    },
+    "recovery": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "plan-arm-v4.schema.json"
+        }
+      ]
+    },
+    "interrupted": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "runtime": {
+              "$ref": "plan-arm-v4.schema.json#/$defs/runtime"
+            },
+            "observation": {
+              "$ref": "plan-arm-v4.schema.json#/$defs/observation"
+            },
+            "original_proposal": {
+              "$ref": "plan-arm-v4.schema.json#/$defs/proposal"
+            },
+            "attempt": {
+              "$ref": "plan-arm-v4.schema.json#/$defs/attempt"
+            },
+            "state": {
+              "$ref": "plan-arm-v4.schema.json#/$defs/state"
+            },
+            "facts": {
+              "$ref": "plan-arm-v4.schema.json#/$defs/facts"
+            },
+            "state_id": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "replay_verified": {
+              "const": true
+            },
+            "used_calls": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 512
+            },
+            "reserved_calls": {
+              "const": 1
+            },
+            "explanation": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "consumed_steps": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 32
+            },
+            "classification": {
+              "const": "original_plan_interrupted"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "runtime",
+            "observation",
+            "original_proposal",
+            "attempt",
+            "state",
+            "facts",
+            "state_id",
+            "replay_verified",
+            "used_calls",
+            "reserved_calls",
+            "explanation",
+            "consumed_steps",
+            "classification"
+          ]
+        }
+      ]
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "enum": [
+              "response_point_not_reached",
+              "response_illegal",
+              "original_plan_interrupted",
+              "recovery_coverage_gap",
+              "prompt_binding_failed",
+              "budget_exhausted",
+              "engine_failure",
+              "no_recovery_plan_found"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "detail"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "total_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1536
+    },
+    "interruption_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 512
+    },
+    "failed_interruption": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "plan-arm-v4.schema.json#/$defs/attempt"
+        }
+      ]
+    },
+    "interruption_diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "stage",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "planner_profile",
+    "request",
+    "knowledge_id",
+    "opponent_knowledge",
+    "baseline",
+    "recovery",
+    "interrupted",
+    "failures",
+    "total_calls",
+    "interruption_calls",
+    "failed_interruption",
+    "interruption_diagnostics"
+  ]
+}

@@ -39,3 +39,7 @@ Windows 本机 Combo CLI：固定完整卡组与五张起手，使用固定 API 
 完整安装步骤、命令及运行边界见 [部署说明](docs/DEPLOYMENT.md)。[任务表](TASKS.md)、[协议](docs/ENGINE_PROTOCOL.md)、[搜索与评分](docs/SEARCH_AND_SCORING.md)描述当前实现。[现状审查](docs/PROJECT_ASSESSMENT.md)、[验证记录](docs/TESTING.md)、[路线图](docs/ROADMAP.md)总结部署状态和后续计划。
 
 目标表达式、第二目标和有界收益分支见 [GOAL_PLANNING.md](docs/GOAL_PLANNING.md)。新入口使用规划请求/报告v3，原版本继续兼容。
+
+## 单次灰流丽与恢复规划
+
+v4入口、固定响应场景、三组预算和独立证据见 [RECOVERY_PLANNING.md](docs/RECOVERY_PLANNING.md)。使用 `combo plan --input tests/fixtures/ash-recovery.request.json`，报告通过 `combo plan-replay` 独立核验。旧版本入口保持兼容；首版不覆盖任意手坑或提前规避策略。

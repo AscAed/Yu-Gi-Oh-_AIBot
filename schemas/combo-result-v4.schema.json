@@ -1,0 +1,521 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Analysis v4",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request",
+    "runtime_request",
+    "card_names",
+    "search"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 4
+    },
+    "request": {
+      "$ref": "combo-request.schema.json"
+    },
+    "runtime_request": {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 4
+        },
+        "engine": {
+          "type": "object",
+          "properties": {
+            "worker_path": {
+              "type": "string"
+            },
+            "ocgcore_path": {
+              "type": "string"
+            },
+            "catalog_path": {
+              "type": "string"
+            },
+            "scripts_path": {
+              "type": "string"
+            },
+            "script_manifest_path": {
+              "type": "string"
+            },
+            "engine_manifest_path": {
+              "type": "string"
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "worker_path",
+            "ocgcore_path",
+            "catalog_path",
+            "scripts_path",
+            "script_manifest_path",
+            "engine_manifest_path",
+            "timeout_ms"
+          ],
+          "additionalProperties": false
+        },
+        "deck": {
+          "type": "object",
+          "required": [
+            "main",
+            "extra",
+            "side"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "main": {
+              "type": "array",
+              "minItems": 40,
+              "maxItems": 60,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            },
+            "extra": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 15,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            },
+            "side": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 15,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            }
+          }
+        },
+        "opening_hand": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "plan-result-v2.schema.json#/$defs/decision"
+          }
+        },
+        "versions": {
+          "type": "object",
+          "properties": {
+            "rules": {
+              "const": "ocg-mr5"
+            },
+            "catalog": {
+              "type": "string"
+            },
+            "banlist": {
+              "type": "string"
+            },
+            "engine_sha256": {
+              "type": "string"
+            },
+            "cdb_sha256": {
+              "type": "string"
+            },
+            "scripts_sha256": {
+              "type": "string"
+            },
+            "core_commit": {
+              "type": "string"
+            },
+            "initializer": {
+              "const": "fixed-interruption-v1"
+            }
+          },
+          "required": [
+            "rules",
+            "catalog",
+            "banlist",
+            "engine_sha256",
+            "cdb_sha256",
+            "scripts_sha256",
+            "core_commit",
+            "initializer"
+          ],
+          "additionalProperties": false
+        },
+        "probe_only": {
+          "const": false
+        },
+        "scenario": {
+          "enum": [
+            null,
+            "ryu-ran"
+          ]
+        },
+        "interruption": {
+          "type": "object",
+          "properties": {
+            "opponent_deck": {
+              "type": "object",
+              "required": [
+                "main",
+                "extra",
+                "side"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "main": {
+                  "type": "array",
+                  "minItems": 40,
+                  "maxItems": 60,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                  }
+                },
+                "extra": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 15,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                  }
+                },
+                "side": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 15,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                  }
+                }
+              }
+            },
+            "opponent_hand": {
+              "const": [
+                14558127
+              ]
+            },
+            "policy": {
+              "enum": [
+                "pass",
+                "ash_scales_once"
+              ]
+            },
+            "effect_id": {
+              "const": "25538345:mill"
+            },
+            "occurrence": {
+              "const": 1
+            }
+          },
+          "required": [
+            "opponent_deck",
+            "opponent_hand",
+            "policy",
+            "effect_id",
+            "occurrence"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "engine",
+        "deck",
+        "opening_hand",
+        "seed",
+        "decisions",
+        "versions",
+        "probe_only",
+        "interruption"
+      ],
+      "additionalProperties": false
+    },
+    "card_names": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "search": {
+      "type": "object",
+      "properties": {
+        "termination": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "decisions": {
+                "type": "array",
+                "items": {
+                  "$ref": "plan-result-v2.schema.json#/$defs/decision"
+                }
+              },
+              "evaluation": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "heuristic"
+                  },
+                  "profile_version": {
+                    "const": "rabbit-v1"
+                  },
+                  "interaction": {
+                    "type": "number"
+                  },
+                  "resources": {
+                    "type": "number"
+                  },
+                  "follow_up": {
+                    "type": "number"
+                  },
+                  "decisions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "total": {
+                    "type": "number"
+                  },
+                  "coverage_gaps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "explanations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "profile_version",
+                  "interaction",
+                  "resources",
+                  "follow_up",
+                  "decisions",
+                  "total",
+                  "coverage_gaps",
+                  "explanations"
+                ],
+                "additionalProperties": false
+              },
+              "result": {
+                "$ref": "plan-arm-v4.schema.json#/$defs/observation"
+              },
+              "replay_verified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "decisions",
+              "evaluation",
+              "result",
+              "replay_verified"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "nodes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "engine_calls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cache_hits": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pruned": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed_branches": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "elapsed_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "replay_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "peak_frontier": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_decision_depth": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "completed_lines": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "parent_peak_working_set_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "worker_peak_working_set_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "nodes",
+            "engine_calls",
+            "cache_hits",
+            "pruned",
+            "failed_branches",
+            "elapsed_ms",
+            "replay_ms",
+            "peak_frontier",
+            "max_decision_depth",
+            "completed_lines",
+            "parent_peak_working_set_bytes",
+            "worker_peak_working_set_bytes"
+          ],
+          "additionalProperties": false
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "stage": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "stage",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "scoring": {
+          "type": "object",
+          "properties": {
+            "board_interaction": {
+              "type": "number"
+            },
+            "resource_advantage": {
+              "type": "number"
+            },
+            "follow_up": {
+              "type": "number"
+            },
+            "complexity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "board_interaction",
+            "resource_advantage",
+            "follow_up",
+            "complexity"
+          ],
+          "additionalProperties": false
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "top_k": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 5
+            },
+            "node_budget": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 10000
+            },
+            "beam_width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024,
+              "default": 32
+            },
+            "max_depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024,
+              "default": 64
+            },
+            "time_limit_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600000,
+              "default": 60000
+            }
+          }
+        }
+      },
+      "required": [
+        "termination",
+        "lines",
+        "stats",
+        "diagnostics",
+        "scoring",
+        "budget"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

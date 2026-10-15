@@ -142,8 +142,11 @@ pub fn validate_report_contract(report: &AnalysisReport) -> Result<(), String> {
     {
         return Err("report search budget mismatch".into());
     }
-    if !matches!(report.schema_version, 2 | 3)
-        || !matches!((report.schema_version, r.protocol_version), (2, 2) | (3, 3))
+    if !matches!(report.schema_version, 2..=4)
+        || !matches!(
+            (report.schema_version, r.protocol_version),
+            (2, 2) | (3, 3) | (4, 4)
+        )
         || r.probe_only
         || !r.decisions.is_empty()
         || q.deck != r.deck
@@ -155,6 +158,14 @@ pub fn validate_report_contract(report: &AnalysisReport) -> Result<(), String> {
         || q.banlist_id != r.versions.banlist
     {
         return Err("report request/runtime contract mismatch".into());
+    }
+    if r.protocol_version == 4 {
+        r.interruption
+            .as_ref()
+            .ok_or("missing controlled opponent resources")?
+            .validate()?;
+    } else if r.interruption.is_some() {
+        return Err("legacy runtime has interruption resources".into());
     }
     for line in &report.search.lines {
         let mut prefix = r.clone();

@@ -164,6 +164,8 @@ pub struct Ledger {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlanReport {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<PlanningContext>,
     pub schema_version: u16,
     pub planner_profile: String,
     pub goal_id: String,
@@ -692,6 +694,7 @@ fn evaluate_probes(
     start: std::time::Instant,
     weights: &ScoringConfig,
 ) -> Result<Vec<Probe>, String> {
+    let past = prefix_facts(report);
     let main = report.executions[index].clone();
     let Ok((q, observation)) = anchor_observation(&main) else {
         return Ok(ygo_goal::probe_nodes(&report.request.goal.expr)
@@ -718,7 +721,7 @@ fn evaluate_probes(
         .steps
         .last()
         .map(|s| s.after.clone())
-        .unwrap_or(initial(&report.request, cat)?);
+        .unwrap_or(initial_report(report, cat)?);
     let nodes: Vec<_> = ygo_goal::probe_nodes(&report.request.goal.expr)
         .into_iter()
         .map(|(p, e)| (p, e.clone()))
@@ -758,7 +761,7 @@ fn evaluate_probes(
                 p.reason = "coverage_gap".into();
             }
         }
-        let candidates = v3::auxiliary_candidates(
+        let candidates = v3::auxiliary_candidates_seeded(
             &state,
             &main.proposal.steps,
             cat,
@@ -766,6 +769,7 @@ fn evaluate_probes(
             &report.request.goal,
             &node,
             &mut report.ledger.expansions,
+            past.as_ref(),
         );
         p.expansion_end = report.ledger.expansions;
         let allowance = report
@@ -804,7 +808,7 @@ fn evaluate_probes(
             p.plans.push(proposal.clone());
             report.forecasts.insert(
                 proposal.id.clone(),
-                v3::forecasts(
+                v3::forecasts_seeded(
                     &state,
                     &main.proposal.steps,
                     &proposal,
@@ -812,6 +816,7 @@ fn evaluate_probes(
                     &report.request.goal,
                     Some(&node),
                     &report.knowledge,
+                    past.as_ref(),
                 ),
             );
             let Some(i) = run_execution(
@@ -879,8 +884,8 @@ fn evaluate_probes(
     }
     Ok(probes)
 }
-fn recommendation_id(goal_id: &str, execution_id: &str) -> String {
-    ygo_knowledge::hash(&serde_json::to_vec(&(v3::PROFILE, goal_id, execution_id)).unwrap())
+fn recommendation_id(profile: &str, goal_id: &str, execution_id: &str) -> String {
+    ygo_knowledge::hash(&serde_json::to_vec(&(profile, goal_id, execution_id)).unwrap())
 }
 fn sort_recommendations(r: &mut PlanReport) {
     let order = &r.request.goal.gain_order;
@@ -1024,13 +1029,73 @@ fn verify_witnesses<A: EngineAdapter>(
     Ok(())
 }
 
+/// A v4 arm starts from a replayable engine prefix rather than a predicted terminal state.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlanningContext {
+    pub knowledge_bundle_id: String,
+    pub runtime: RunDuelRequest,
+    pub initial: SymbolicState,
+    pub anchor: Option<DuelResult>,
+}
+fn initial_report(r: &PlanReport, cat: &ygo_domain::Catalog) -> Result<SymbolicState, String> {
+    r.context
+        .as_ref()
+        .map_or_else(|| initial(&r.request, cat), |c| Ok(c.initial.clone()))
+}
+fn prefix_facts(r: &PlanReport) -> Option<Facts> {
+    r.context
+        .as_ref()
+        .and_then(|c| c.anchor.as_ref())
+        .map(|a| actual(a, &r.knowledge))
+}
+fn same_context_runtime(a: &RunDuelRequest, b: &RunDuelRequest) -> bool {
+    prefix_key(a) == prefix_key(b)
+}
+fn main_id(r: &PlanReport, steps: &[SemanticStep]) -> String {
+    r.context.as_ref().map_or_else(
+        || v3::proposal_id(&r.knowledge, &r.request.goal, steps),
+        |c| {
+            ygo_knowledge::hash(
+                &serde_json::to_vec(&(
+                    "phantom-recovery-v1",
+                    r.goal_id.clone(),
+                    prefix_key(&c.runtime),
+                    &c.knowledge_bundle_id,
+                    r.knowledge.id(),
+                    steps,
+                ))
+                .unwrap(),
+            )
+        },
+    )
+}
+fn rekey(r: &PlanReport, p: &mut Proposals) {
+    if r.context.is_some() {
+        for plan in &mut p.plans {
+            plan.id = main_id(r, &plan.steps);
+        }
+    }
+}
 pub fn plan(
+    request: PlanRequest,
+    engine: ProcessEngineConfig,
+    store: &SnapshotStore,
+    catalog: &str,
+    weights: &ScoringConfig,
+    knowledge: KnowledgePack,
+) -> Result<PlanReport, String> {
+    plan_context(request, engine, store, catalog, weights, knowledge, None)
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn plan_context(
     mut request: PlanRequest,
     engine: ProcessEngineConfig,
     store: &SnapshotStore,
     catalog: &str,
     weights: &ScoringConfig,
     knowledge: KnowledgePack,
+    context: Option<PlanningContext>,
 ) -> Result<PlanReport, String> {
     request.validate()?;
     if knowledge.profile_version != "phantom-v2" {
@@ -1054,14 +1119,25 @@ pub fn plan(
     runtime.scenario = request.scenario.clone();
     let start = std::time::Instant::now();
     let mut expansions = 0;
-    let proposals = v3::propose_from(
-        initial(&request, &cat)?,
+    if let Some(c) = &context {
+        runtime = c.runtime.clone();
+    }
+    let initial_state = context
+        .as_ref()
+        .map_or_else(|| initial(&request, &cat), |c| Ok(c.initial.clone()))?;
+    let past = context
+        .as_ref()
+        .and_then(|c| c.anchor.as_ref())
+        .map(|a| actual(a, &knowledge));
+    let proposals = v3::propose_from_seeded(
+        initial_state.clone(),
         &cat,
         &knowledge,
         &request.goal,
         request.max_proposals,
         request.max_steps,
         &mut expansions,
+        past.as_ref(),
     )?;
     let budget = request.analysis.search.clone();
     let gid = request.goal.id();
@@ -1071,6 +1147,12 @@ pub fn plan(
             request.analysis.deck.main.contains(id)
                 || request.analysis.deck.extra.contains(id)
                 || request.analysis.deck.side.contains(id)
+                || context.as_ref().is_some_and(|c| {
+                    c.runtime
+                        .interruption
+                        .as_ref()
+                        .is_some_and(|i| i.opponent_deck.main.contains(id))
+                })
         })
         .map(|(id, c)| (*id, c.clone()))
         .collect();
@@ -1083,9 +1165,17 @@ pub fn plan(
         })
         .map(|c| (c.id.0, c.name.clone()))
         .collect();
+    let version = if context.is_some() { 4 } else { 3 };
+    let mut analysis_runtime = runtime.clone();
+    analysis_runtime.decisions.clear();
     let mut r = PlanReport {
-        schema_version: 3,
-        planner_profile: v3::PROFILE.into(),
+        context,
+        schema_version: version,
+        planner_profile: if version == 4 {
+            "phantom-recovery-v1".into()
+        } else {
+            v3::PROFILE.into()
+        },
         goal_id: gid,
         knowledge_id: kid,
         knowledge,
@@ -1103,9 +1193,9 @@ pub fn plan(
             ..Default::default()
         },
         analysis: AnalysisReport {
-            schema_version: 3,
+            schema_version: version,
             request: resolved,
-            runtime_request: runtime.clone(),
+            runtime_request: analysis_runtime,
             search: SearchReport {
                 termination: "proposals_exhausted".into(),
                 lines: vec![],
@@ -1118,11 +1208,13 @@ pub fn plan(
         },
         failure_summary: vec![],
     };
-    let initial_state = initial(&r.request, &cat)?;
+    let mut proposals = proposals;
+    rekey(&r, &mut proposals);
+    r.proposals = proposals.clone();
     for p in &proposals.plans {
         r.forecasts.insert(
             p.id.clone(),
-            v3::forecasts(
+            v3::forecasts_seeded(
                 &initial_state,
                 &[],
                 p,
@@ -1130,6 +1222,7 @@ pub fn plan(
                 &r.request.goal,
                 None,
                 &r.knowledge,
+                past.as_ref(),
             ),
         );
     }
@@ -1221,7 +1314,7 @@ pub fn plan(
             continue;
         }
         r.recommendations.push(Recommendation {
-            id: recommendation_id(&r.goal_id, &exec.id),
+            id: recommendation_id(&r.planner_profile, &r.goal_id, &exec.id),
             execution_id: exec.id,
             execution: i,
             evaluation: eval,
@@ -1282,7 +1375,7 @@ pub fn plan(
         }
         r.analysis.search.termination = "no_verified_goal".into();
     }
-    validate_plan_contract(&r)?;
+    validate_plan_contract(&r).map_err(|e| format!("arm contract: {e}"))?;
     Ok(r)
 }
 fn recorded_steps(events: &[CoreEventFrame], decisions: &[Decision]) -> Vec<Action> {
@@ -1290,7 +1383,11 @@ fn recorded_steps(events: &[CoreEventFrame], decisions: &[Decision]) -> Vec<Acti
         .iter()
         .filter_map(|e| parse_prompt(e.sequence, &e.raw).ok().flatten())
         .filter_map(|p| {
-            let choice = if p.player == 0 {
+            let choice = if p.player == 0
+                || decisions
+                    .iter()
+                    .any(|d| d.prompt_id == p.id && d.player == p.player)
+            {
                 decisions
                     .iter()
                     .find(|d| d.prompt_id == p.id)
@@ -1311,8 +1408,14 @@ fn validate_execution(e: &Execution, r: &PlanReport) -> Result<(), String> {
         .observation
         .as_ref()
         .ok_or("missing trace observation")?;
+    if r.context.as_ref().is_some_and(|c| {
+        e.runtime.interruption != c.runtime.interruption
+            || (e.purpose == "main" && !same_context_runtime(&e.runtime, &c.runtime))
+    }) {
+        return Err("execution context mismatch".into());
+    }
     if e.runtime.probe_only
-        || e.runtime.protocol_version != 3
+        || e.runtime.protocol_version != r.analysis.runtime_request.protocol_version
         || e.runtime.versions != r.analysis.runtime_request.versions
         || e.runtime.scenario != r.request.scenario
         || e.runtime.deck != r.analysis.runtime_request.deck
@@ -1320,7 +1423,7 @@ fn validate_execution(e: &Execution, r: &PlanReport) -> Result<(), String> {
         || e.runtime.seed != r.analysis.runtime_request.seed
         || e.proposal.id
             != if e.purpose == "main" {
-                v3::proposal_id(&r.knowledge, &r.request.goal, &e.proposal.steps)
+                main_id(r, &e.proposal.steps)
             } else {
                 auxiliary_id(
                     &r.knowledge,
@@ -1332,13 +1435,13 @@ fn validate_execution(e: &Execution, r: &PlanReport) -> Result<(), String> {
             }
         || e.trace.proposal_id != e.proposal.id
         || o.versions != e.runtime.versions
-        || o.protocol_version != 3
+        || o.protocol_version != e.runtime.protocol_version
         || e.facts != actual(o, &r.knowledge)
     {
         return Err("execution provenance/facts mismatch".into());
     }
     if !o.resolved_decisions.starts_with(&e.runtime.decisions)
-        || (e.purpose == "main" && !e.runtime.decisions.is_empty())
+        || (e.purpose == "main" && r.context.is_none() && !e.runtime.decisions.is_empty())
         || o.steps != recorded_steps(&o.events, &o.resolved_decisions)
     {
         return Err("execution prefix/response bytes mismatch".into());
@@ -1538,7 +1641,20 @@ fn validate_goal_evidence(
     Ok((evaluation, gains, expected_witnesses))
 }
 pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
-    if r.planner_profile != v3::PROFILE {
+    if let Some(c) = &r.context {
+        let mut fresh = c.runtime.clone();
+        fresh.decisions.clear();
+        if !same_context_runtime(&fresh, &r.analysis.runtime_request) {
+            return Err("analysis/context runtime mismatch".into());
+        }
+    }
+    if r.planner_profile
+        != if r.context.is_some() {
+            "phantom-recovery-v1"
+        } else {
+            v3::PROFILE
+        }
+    {
         return Err(format!(
             "unsupported goal planner profile {}; regenerate the v3 report with {}",
             r.planner_profile,
@@ -1548,15 +1664,20 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
     r.request.validate()?;
     r.knowledge.validate()?;
     crate::combo::validate_report_contract(&r.analysis)?;
-    if r.schema_version != 3
-        || r.planner_profile != v3::PROFILE
+    let version = if r.context.is_some() { 4 } else { 3 };
+    if r.schema_version != version
         || r.goal_id != r.request.goal.id()
         || r.knowledge_id != r.knowledge.id()
         || r.request.knowledge_id.as_deref() != Some(&r.knowledge_id)
         || r.knowledge.profile_version != "phantom-v2"
-        || r.analysis.schema_version != 3
-        || r.analysis.runtime_request.protocol_version != 3
-        || r.analysis.runtime_request.versions.initializer != "fixed-opponent-v1"
+        || r.analysis.schema_version != version
+        || r.analysis.runtime_request.protocol_version != version
+        || r.analysis.runtime_request.versions.initializer
+            != if version == 4 {
+                "fixed-interruption-v1"
+            } else {
+                "fixed-opponent-v1"
+            }
         || r.analysis.runtime_request.scenario != r.request.scenario
         || serde_json::to_value(&r.request.analysis).unwrap()
             != serde_json::to_value(&r.analysis.request).unwrap()
@@ -1582,7 +1703,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
     let mut proposal_ids = std::collections::BTreeSet::new();
     for p in &r.proposals.plans {
         if p.steps.len() > r.request.max_steps
-            || p.id != v3::proposal_id(&r.knowledge, &r.request.goal, &p.steps)
+            || p.id != main_id(r, &p.steps)
             || !proposal_ids.insert(p.id.clone())
         {
             return Err("invalid goal proposal ID/steps".into());
@@ -1613,7 +1734,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
             return Err("goal witness identity/content mismatch".into());
         }
     }
-    let projected_ids: std::collections::BTreeSet<_> = r
+    let mut projected_ids: std::collections::BTreeSet<_> = r
         .request
         .analysis
         .deck
@@ -1623,6 +1744,13 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
         .chain(&r.request.analysis.deck.side)
         .copied()
         .collect();
+    if let Some(i) = r
+        .context
+        .as_ref()
+        .and_then(|c| c.runtime.interruption.as_ref())
+    {
+        projected_ids.extend(i.opponent_deck.main.iter().copied());
+    }
     if r.catalog_projection
         .keys()
         .copied()
@@ -1632,9 +1760,10 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
     {
         return Err("planning catalog projection mismatch".into());
     }
-    let initial_state = initial(&r.request, &r.catalog_projection)?;
+    let initial_state = initial_report(r, &r.catalog_projection)?;
     let mut regenerated_expansions = 0;
-    let regenerated = v3::propose_from(
+    let past = prefix_facts(r);
+    let mut regenerated = v3::propose_from_seeded(
         initial_state.clone(),
         &r.catalog_projection,
         &r.knowledge,
@@ -1642,7 +1771,9 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
         r.request.max_proposals,
         r.request.max_steps,
         &mut regenerated_expansions,
+        past.as_ref(),
     )?;
+    rekey(r, &mut regenerated);
     if serde_json::to_value(regenerated).unwrap() != serde_json::to_value(&r.proposals).unwrap() {
         return Err("primary causal proposal regeneration mismatch".into());
     }
@@ -1650,7 +1781,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
     for p in &r.proposals.plans {
         expected_forecasts.insert(
             p.id.clone(),
-            v3::forecasts(
+            v3::forecasts_seeded(
                 &initial_state,
                 &[],
                 p,
@@ -1658,6 +1789,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
                 &r.request.goal,
                 None,
                 &r.knowledge,
+                past.as_ref(),
             ),
         );
     }
@@ -1679,7 +1811,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
                 .ok_or("unknown forecast node")?
                 .1;
             let mut expansion = p.expansion_start;
-            let mut generated = v3::auxiliary_candidates(
+            let mut generated = v3::auxiliary_candidates_seeded(
                 &state,
                 &main.proposal.steps,
                 &r.catalog_projection,
@@ -1687,6 +1819,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
                 &r.request.goal,
                 node,
                 &mut expansion,
+                past.as_ref(),
             );
             for plan in &mut generated {
                 plan.id = auxiliary_id(
@@ -1727,7 +1860,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
                 }
                 expected_forecasts.insert(
                     plan.id.clone(),
-                    v3::forecasts(
+                    v3::forecasts_seeded(
                         &state,
                         &main.proposal.steps,
                         plan,
@@ -1735,6 +1868,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
                         &r.request.goal,
                         Some(node),
                         &r.knowledge,
+                        past.as_ref(),
                     ),
                 );
             }
@@ -1819,7 +1953,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
         if e.purpose != "main"
             || !e.trace.execution_verified
             || rec.execution_id != e.id
-            || rec.id != recommendation_id(&r.goal_id, &e.id)
+            || rec.id != recommendation_id(&r.planner_profile, &r.goal_id, &e.id)
             || !recids.insert(rec.id.clone())
             || !r.proposals.plans.iter().any(|p| p.id == e.proposal.id)
         {
@@ -1998,9 +2132,11 @@ mod tests {
             versions: Default::default(),
             probe_only: false,
             scenario: None,
+            interruption: None,
         };
         let knowledge = KnowledgePack::builtin().unwrap();
         PlanReport {
+            context: None,
             schema_version: 3,
             planner_profile: v3::PROFILE.into(),
             goal_id: request.goal.id(),

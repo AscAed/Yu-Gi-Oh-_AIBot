@@ -78,6 +78,7 @@ pub enum Rule {
     RustyMillSet,
     BreakRevive,
     BreakDestroy,
+    AshNegate,
     Unsupported,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -117,6 +118,24 @@ pub struct KnowledgePack {
     pub cards: Vec<CardKnowledge>,
 }
 impl KnowledgePack {
+    /// Source-bound opponent knowledge, kept separate from the original twelve-card pack.
+    pub fn ash_source(cdb: &Path, scripts: &Path) -> Result<CardKnowledge, String> {
+        let db = Connection::open_with_flags(cdb, OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|e| e.to_string())?;
+        let text: String = db
+            .query_row("SELECT desc FROM texts WHERE id=14558127", [], |r| r.get(0))
+            .map_err(|e| e.to_string())?;
+        let script = "official/c14558127.lua";
+        Ok(CardKnowledge { card_id:14558127, name:"Ash Blossom & Joyous Spring".into(), text_sha256:hash(text.as_bytes()), script:script.into(), script_sha256:hash(&fs::read(scripts.join(script)).map_err(|e|e.to_string())?), effects:vec![Effect {
+            id:"14558127:negate".into(), description_index:Some(0), rule:Rule::AshNegate, supported:true,
+            conditions:vec!["引擎提供可响应的手牌快速效果；目标连锁包含从牌库加入手牌、特殊召唤或送墓等脚本要求的操作".into()],
+            costs:vec!["弃掉自身；无效不退还双方费用".into()], candidate_filter:None,
+            operations:vec!["Duel.NegateEffect：无效效果，不无效发动，不破坏发动源".into()],
+            trigger:Some("EVENT_CHAINING；首版仅响应 Torn Scales 第一次送墓".into()), usage_key:Some("player:1:14558127:negate".into()),
+            restrictions:vec!["每个玩家同名一回合一次；不因 Cherubini 的费用送墓而合法响应".into()],
+            evidence_cases:vec!["ash-scales-positive".into(),"ash-cherubini-negative".into()],
+        }] })
+    }
     pub fn explain_catalog(
         &self,
         id: u32,

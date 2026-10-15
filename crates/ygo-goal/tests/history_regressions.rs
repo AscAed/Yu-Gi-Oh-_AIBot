@@ -39,6 +39,66 @@ fn facts(r: &DuelResult) -> Facts {
         &ygo_knowledge::KnowledgePack::builtin().unwrap(),
     )
 }
+
+#[test]
+fn negated_v4_effect_has_no_success_history_and_chain_end_remains_known() {
+    let mut r = result();
+    r.protocol_version = 4;
+    moved(&mut r, 25538345, (2, 0, 1), (4, 0, 1), 0);
+    event(
+        &mut r,
+        70,
+        serde_json::json!({"code":25538345,"description":25538345u64<<20,"chain":1,"location":{"player":0,"location":4,"sequence":0,"position":1}}),
+    );
+    event(&mut r, 71, serde_json::json!({"chain":1}));
+    event(&mut r, 76, serde_json::json!({"chain":1}));
+    event(&mut r, 73, serde_json::json!({"chain":1}));
+    event(&mut r, 74, serde_json::json!({}));
+    let f = facts(&r);
+    assert!(f
+        .history
+        .iter()
+        .any(|h| h.kind == "effect_negated" && h.effect_id.as_deref() == Some("25538345:mill")));
+    assert!(!f.history.iter().any(|h| h.kind == "effect_resolved"));
+    assert!(f.history_complete);
+}
+
+#[test]
+fn v4_hand_source_is_pinned_when_cost_move_follows_chaining() {
+    let mut r = result();
+    r.protocol_version = 4;
+    event(
+        &mut r,
+        70,
+        serde_json::json!({"code":14558127,"description":14558127u64<<20,"chain":1,"location":{"player":1,"location":2,"sequence":0,"position":10}}),
+    );
+    event(
+        &mut r,
+        50,
+        serde_json::json!({"code":14558127,"from":{"player":1,"location":2,"sequence":0,"position":10},"to":{"player":1,"location":16,"sequence":0,"position":5},"reason":16512}),
+    );
+    event(&mut r, 71, serde_json::json!({"chain":1}));
+    event(&mut r, 73, serde_json::json!({"chain":1}));
+    let f = facts(&r);
+    assert!(f.history_complete);
+    let resolved = f
+        .history
+        .iter()
+        .find(|h| h.kind == "effect_resolved")
+        .unwrap();
+    let cost = f
+        .history
+        .iter()
+        .find(|h| h.kind == "sent_to_grave")
+        .unwrap();
+    assert!(resolved.card.identity_known);
+    assert_eq!(resolved.card.instance, cost.card.instance);
+    assert_eq!(
+        resolved.card.location, 2,
+        "activation snapshot stays in hand"
+    );
+    assert_eq!(cost.card.location, 16, "cost destination is grave");
+}
 #[test]
 fn simultaneous_summons_commit_every_distinct_instance_only_on_success() {
     for codes in [[36426778, 88544390], [36426778, 36426778]] {

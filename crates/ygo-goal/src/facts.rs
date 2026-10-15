@@ -23,6 +23,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
     let mut history = vec![];
     let mut chains: BTreeMap<u64, (FactCard, Option<String>)> = BTreeMap::new();
     let mut finalized_chains = std::collections::BTreeSet::new();
+    let mut negated_chains = std::collections::BTreeSet::new();
     let mut summoning: Vec<(FactCard, bool, u64)> = vec![];
     let mut opaque_summon = false;
     let mut pending_activations: Vec<(u32, u64, FactCard)> = vec![];
@@ -101,6 +102,19 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                 {
                     source.instance = c.instance.clone();
                     source.identity_known = c.identity_known;
+                }
+            }
+            if result.protocol_version == 4 {
+                for (source, _) in chains.values_mut() {
+                    if !source.identity_known
+                        && source.code == code
+                        && source.player == n(from, "player") as u8
+                        && source.location == n(from, "location") as u8
+                        && source.sequence == n(from, "sequence")
+                    {
+                        source.instance = c.instance.clone();
+                        source.identity_known = c.identity_known;
+                    }
                 }
             }
             // Destruction observes the origin before overlays follow their host.
@@ -353,7 +367,11 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
             } else {
                 c.materials.clear();
                 c.identity_known = false;
-                opaque_summon = true;
+                // V4 may observe CHAINING before a hand source pays its cost.
+                // Finalization at CHAINED must still resolve that exact instance.
+                if result.protocol_version != 4 {
+                    opaque_summon = true;
+                }
             }
             // A spell offered in hand activates in the spell/trap zone.
             // Preserve its pinned identity, not the pre-command coordinates.
@@ -380,6 +398,9 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
         }
         if e.opcode == 73 {
             let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if result.protocol_version == 4 && negated_chains.remove(&chain) {
+                continue;
+            }
             if let Some((mut c, id)) = chains.remove(&chain) {
                 if !finalized_chains.remove(&chain) {
                     c.materials.clear();
@@ -399,6 +420,29 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
         }
         if matches!(e.opcode, 75 | 76) {
             let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if result.protocol_version == 4 {
+                if !finalized_chains.contains(&chain) {
+                    opaque_summon = true;
+                }
+                if let Some((c, id)) = chains.get(&chain) {
+                    history.push(HistoryFact {
+                        kind: if e.opcode == 76 {
+                            "effect_negated"
+                        } else {
+                            "activation_negated"
+                        }
+                        .into(),
+                        card: c.clone(),
+                        effect_id: id.clone(),
+                        reason: 0,
+                        reason_complete: true,
+                        event: e.sequence,
+                    });
+                    negated_chains.insert(chain);
+                } else {
+                    opaque_summon = true;
+                }
+            }
             chains.remove(&chain);
             finalized_chains.remove(&chain);
         }

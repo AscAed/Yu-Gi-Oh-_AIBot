@@ -225,10 +225,39 @@ fn execute(args: &[String]) -> Result<(), String> {
                 serde_json::json!(1),
                 serde_json::json!(2),
                 serde_json::json!(3),
+                serde_json::json!(4),
             ]
             .contains(&value["schema_version"])
             {
                 return Err("unsupported planning schema_version".into());
+            }
+            if value["schema_version"] == 4 {
+                let q: ygo_api::planning_v4::PlanRequest =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                let id = q
+                    .analysis
+                    .catalog_id
+                    .clone()
+                    .or_else(|| {
+                        active(&pointer_path)
+                            .ok()
+                            .and_then(|v| v["catalog_id"].as_str().map(String::from))
+                    })
+                    .ok_or("catalog not imported")?;
+                let r = ygo_api::planning_v4::plan(
+                    q,
+                    engine()?,
+                    &store,
+                    &id,
+                    &weights,
+                    knowledge_v2(&opts)?,
+                )?;
+                return output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?);
+            }
+            if value["schema_version"] == 4 {
+                let r: ygo_api::planning_v4::PlanReport =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                return json(&ygo_api::planning_v4::replay(&r, engine()?, &store)?);
             }
             if value["schema_version"] == 3 {
                 let q: ygo_api::planning_v3::PlanRequest =
@@ -323,6 +352,7 @@ fn execute(args: &[String]) -> Result<(), String> {
                 serde_json::json!(1),
                 serde_json::json!(2),
                 serde_json::json!(3),
+                serde_json::json!(4),
             ]
             .contains(&value["schema_version"])
             {

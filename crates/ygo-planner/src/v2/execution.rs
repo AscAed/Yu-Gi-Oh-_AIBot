@@ -426,7 +426,7 @@ pub fn execute_general<A: EngineAdapter, F: Fn(&DuelResult) -> bool>(
     pack.validate()?;
     if (!allow_prefix && !request.decisions.is_empty())
         || request.probe_only
-        || request.protocol_version != 3
+        || !matches!(request.protocol_version, 3 | 4)
     {
         return Err("planning requires a fresh protocol v2 duel".into());
     }
@@ -472,6 +472,25 @@ pub fn execute_general<A: EngineAdapter, F: Fn(&DuelResult) -> bool>(
             }
         };
         q.decisions = result.resolved_decisions.clone();
+        if request.protocol_version == 4 && !request.decisions.is_empty() {
+            let facts = ygo_goal::actual_facts(&result, &Default::default(), pack);
+            for c in facts
+                .cards
+                .into_iter()
+                .filter(|c| !matches!(c.location, 1 | 64))
+            {
+                map.insert(
+                    c.instance,
+                    CardReference {
+                        code: c.code,
+                        player: c.player,
+                        location: c.location,
+                        sequence: c.sequence,
+                        position: c.position,
+                    },
+                );
+            }
+        }
         let mut step_index = 0;
         let mut started = false;
         let mut wanted = vec![];
@@ -750,6 +769,39 @@ pub fn validate_bindings(
         .as_ref()
         .ok_or("missing binding observation")?;
     let mut map = BTreeMap::new();
+    if observation.protocol_version == 4 {
+        if let Some(p) = attempt.predictions.first().filter(|p| {
+            p.semantic_step == 0
+                && p.before_checkpoint
+                    .cards
+                    .iter()
+                    .any(|c| c.player == 1 && c.code == 14558127 && c.location == 16)
+        }) {
+            let mut anchor = observation.clone();
+            anchor.events.truncate(p.before_events);
+            anchor.checkpoint = p.before_checkpoint.clone();
+            anchor
+                .resolved_decisions
+                .retain(|d| d.prompt_id < p.selected.prompt_id);
+            for c in ygo_goal::actual_facts(&anchor, &Default::default(), pack)
+                .cards
+                .into_iter()
+                .filter(|c| !matches!(c.location, 1 | 64))
+            {
+                map.insert(
+                    c.instance,
+                    CardReference {
+                        code: c.code,
+                        player: c.player,
+                        location: c.location,
+                        sequence: c.sequence,
+                        position: c.position,
+                    },
+                );
+            }
+        }
+    }
+
     let mut index = 0;
     let mut started = false;
     let mut wanted = vec![];
@@ -778,7 +830,7 @@ pub fn validate_bindings(
             }
         }
         if prediction.semantic_step != index {
-            return Err("semantic step progression mismatch".into());
+            return Err(format!("semantic step progression mismatch: expected {index}, recorded {}, prompt {}, effect {}", prediction.semantic_step, prediction.selected.prompt_id, prediction.effect_id));
         }
         let chosen = if let Some(step) = proposal.steps.get(index) {
             if !started {
@@ -867,6 +919,7 @@ mod regression {
             versions: Default::default(),
             probe_only: false,
             scenario: None,
+            interruption: None,
         };
         let mut budget = SearchBudget {
             time_limit_ms: 1,
@@ -988,6 +1041,7 @@ mod regression {
             versions: Default::default(),
             probe_only: false,
             scenario: None,
+            interruption: None,
         };
         let result = execute(
             &Broken(std::cell::Cell::new(0)),
