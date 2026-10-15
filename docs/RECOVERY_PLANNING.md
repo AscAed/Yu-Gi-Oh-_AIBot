@@ -25,6 +25,12 @@ dist/ygo-local/ygo.cmd combo plan-replay --input data/runtime/ash-recovery-repor
 
 排序沿用目标满足、已验证收益向量、己方手牌及场上资源、决策成本、稳定推荐ID。`--scoring`、`YGO_SCORING_CONFIG`、默认值的优先级不变；诊断分数仍为启发式。
 
+## 本次固定起手的实际恢复
+
+固定seed=1下，基准线路先用Scales送墓Cloak并检索，再展开Rusty。灰流丽无效送墓后，Cloak仍在牌库，原路线无法依赖其墓地检索。规划器改为：Boots特召 → Scales与Boots连接Cherubini → 墓地Boots除外检索Shade Brigandine → 触发Scales复活 → 连接Rusty → Rusty送墓并盖Fog Blade。费用、除外与复活后的离场处理由实际事件核对。
+
+这是本次有界搜索选择的已验证路线，不证明全局最优。人工基准另行执行Cherubini费用送Gloves、Gloves送Cloak、Boots检索Fog的路线；两者分别保存引擎与重放证据。
+
 ## 证据与安全降级
 
 灰流丽无效效果，不无效发动。费用和Torn Scales已用次数保留；原送墓未发生，不加入预测收益或成功结算历史。正常召唤机会和此前Boots自行特召次数由实际历史恢复。费用前后的发动源身份、CHAINED费用后快照、实际无效和结算分别记录；CHAINING后才发生的手牌费用MOVE也必须绑定同一实例。

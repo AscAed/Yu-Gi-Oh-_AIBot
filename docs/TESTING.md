@@ -1,5 +1,47 @@
 # 本机验证记录
 
+## 2026-10-16 指定灰流丽中断与恢复（本轮验收完成）
+
+实施基线 `17f0e68`，核心实现 `90c9e45`，实际资源对照 `5613116`，部署CLI重放修复 `8737af1`。Windows x64、Python 3.14.7；冻结core、Lua、CDB及禁限表未升级。新增规划/分析/运行协议v4、profile `phantom-recovery-v1`、初始化 `fixed-interruption-v1`。
+
+| 检查 | 最终结果 |
+|---|---|
+| Rust默认workspace | 104 passed、0 failed、15 ignored |
+| 显式真实引擎workspace | 15 passed、0 failed；原16效果、16固定起手、14目标请求及灰流丽专项通过 |
+| fmt / Clippy（offline、locked、warnings denied） | 原工作区及独立副本通过 |
+| Python默认 / 全量合同 | 8 passed、5 skipped / 13 passed、0 skipped |
+| 人工灰后恢复基准 | 独立编写8步恢复，真实执行及重放通过 |
+| 部署CLI与旧合同 | 新v4三组、旧Rabbit、Phantom v1、Break Sword v2及目标v3重放通过 |
+| 独立源码部署 | `8737af1`全新checkout自行构建，冻结资产离线部署、doctor、v4及v3规划重放通过 |
+| 重复性 | 两处目标/方案/推荐/执行身份、恢复锚点、资源对照与调用账本一致 |
+
+默认测试不要求本机引擎、CDB或报告。真实引擎测试显式使用 `cargo test --release --offline --locked --workspace -- --ignored --test-threads=1`；Python全量设置 `YGO_LIVE_ENGINE=1` 和 `PYTHONPATH=python;tests`。运行报告、外部资产和本机配置继续忽略，不纳入源码。独立副本为 `../ash-recovery-clean-20261016`，只复制冻结数据资产，未复制原工作区target、dist或本机引擎配置；部署生成副本自己的worker和配置。
+
+固定起手、seed=1、每组512次调用、最多8候选、32步、5000展开。以下数字包括外部独立重放；账本中的预留在重放后成为实际调用，不重复相加。
+
+| 组别 | 成功推荐 | 执行及内部见证调用 | 外部重放 | 总额 |
+|---|---:|---:|---:|---:|
+| 对方持灰但不响应 | 5 | 249 | 41 | 290 |
+| 原方案被灰阻断 | 0（合法前缀） | 6 | 1 | 7 |
+| 实际状态恢复 | 5 | 222 | 38 | 260 |
+| 合计 | 10 | 477 | 80 | 557 / 1536 |
+
+基准与恢复的符号展开分别171与95。恢复首推经过Boots特召、Cherubini连接、Boots除外检索、Scales触发复活、Rusty连接及送墓盖Fog，达成原目标。此处只报告本次有界搜索实际验证的结果，不以墙钟变化证明性能改善，不将恢复路线与基准终场差额当作手坑导致的全部损失。
+
+真实事件确认Scales弃牌和灰流丽费用仍支付；Scales的牌库送墓没有发生，Cloak仍留在牌库；效果次数、通常召唤机会不重置。被无效的连锁单独记为effect_negated，不生成成功结算历史。人工Cherubini案例由引擎完成准备与费用送墓，检查对应窗口不存在灰流丽合法动作。相同Ryu-Ran分别留手与被弃，绑定不同实例。未到响应点、错误窗口、覆盖不足和预算截断保留明确失败分类；未知状态不用于证明恢复可行。
+
+失败复现与修复：旧worker不能读取v4字段；严格历史检查暴露手牌源先CHAINING、后费用MOVE的绑定顺序；复审发现受阻Attempt可伪标成功、前缀步数硬编码、恢复组可换请求/知识/预算。最后部署CLI检查复现v4 plan-replay落入旧合同解析，补入口失败回归后修正分派。资源对照按实际窗口见证重算；改选解释只归因于原路线缺少资源，避免错误指向紧接着的下一步。篡改状态、费用历史、前缀、预算、预测、数量差及验证标志由合同或独立重放拒绝。
+
+冻结资产SHA256（两处一致）：
+
+- CDB：`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`
+- Lua manifest：`69bf6f9d3fe444fd53890c60bde877f97b753f8d3e218a6349615d09f6740d91`
+- core DLL：`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`
+
+身份及资产逐项比较另存 `data/runtime/ash-acceptance/cross-checkout.json`。最终文档提交继续在独立副本离线部署并重放新旧报告。
+
+证据报告为 `data/runtime/ash-recovery-report-final.json`，独立重放及检查日志在 `data/runtime/ash-acceptance/`；人工基准为 `data/runtime/ash-manual-recovery.json`。恢复锚点限于早期第一次Scales送墓与灰流丽连锁；已有其他效果连锁、素材锚点或不完整身份时返回覆盖不足。不声称任意手坑恢复或全局无解，后续先设计同一手坑的不同时点及展开顺序。
+
 ## 2026-10-15 通用目标 v3：证据修复与最终验收
 
 实现提交 `dd13057`；证据修复 `8b6d047`、费用后采样修复 `363fa41`、最终发动源区域修复 `2e1e781`。Windows x64、Python 3.14.7；冻结 core、Lua、CDB及禁限表未升级。规划请求/报告v3、分析v3及运行协议v3保持不变，规划 profile 为 `phantom-goal-v2`。
