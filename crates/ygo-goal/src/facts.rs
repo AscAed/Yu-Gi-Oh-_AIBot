@@ -22,6 +22,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
     let mut tracked: Vec<FactCard> = vec![];
     let mut history = vec![];
     let mut chains: BTreeMap<u64, (FactCard, Option<String>)> = BTreeMap::new();
+    let mut finalized_chains = std::collections::BTreeSet::new();
     let mut summoning: Vec<(FactCard, bool, u64)> = vec![];
     let mut opaque_summon = false;
     let mut pending_activations: Vec<(u32, u64, FactCard)> = vec![];
@@ -345,8 +346,8 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                     sequence: n(loc, "sequence"),
                     ..Default::default()
                 });
-            // Keep the pre-cost source identity/activation zone, but sample
-            // materials after cost payment at CHAINING, not at summon time.
+            // Bind identity/activation zone at CHAINING. CHAINED below is
+            // emitted after cost and target selection and finalizes materials.
             if let Some(current) = tracked.iter().find(|x| x.instance == c.instance) {
                 c.materials = snapshot(current, &tracked).materials;
             } else {
@@ -356,8 +357,28 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
             }
             chains.insert(e.fields["chain"].as_u64().unwrap_or(0), (c, id));
         }
+        if e.opcode == 71 {
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if let Some((source, _)) = chains.get_mut(&chain) {
+                if let Some(current) = tracked.iter().find(|x| x.instance == source.instance) {
+                    source.materials = snapshot(current, &tracked).materials;
+                    finalized_chains.insert(chain);
+                } else {
+                    source.materials.clear();
+                    source.identity_known = false;
+                    opaque_summon = true;
+                }
+            } else {
+                opaque_summon = true;
+            }
+        }
         if e.opcode == 73 {
-            if let Some((c, id)) = chains.remove(&e.fields["chain"].as_u64().unwrap_or(0)) {
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if let Some((mut c, id)) = chains.remove(&chain) {
+                if !finalized_chains.remove(&chain) {
+                    c.materials.clear();
+                    opaque_summon = true;
+                }
                 history.push(HistoryFact {
                     kind: "effect_resolved".into(),
                     card: c,
@@ -366,10 +387,14 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                     reason_complete: true,
                     event: e.sequence,
                 });
+            } else {
+                opaque_summon = true;
             }
         }
         if matches!(e.opcode, 75 | 76) {
-            chains.remove(&e.fields["chain"].as_u64().unwrap_or(0));
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            chains.remove(&chain);
+            finalized_chains.remove(&chain);
         }
         if e.opcode == 33 {
             for c in tracked
@@ -443,6 +468,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
         history,
         history_complete: !opaque_summon
             && summoning.is_empty()
+            && chains.is_empty()
             && result.coverage_gaps.is_empty()
             && result.error.is_none()
             && result.status != ygo_engine_adapter::DuelStatus::Failed,

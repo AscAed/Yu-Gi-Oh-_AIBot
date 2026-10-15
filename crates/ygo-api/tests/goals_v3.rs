@@ -378,6 +378,12 @@ fn check_raw_history_oracle(r: &ygo_api::planning_v3::PlanReport) {
             .iter()
             .filter(|h| h.card.code == 62709239)
         {
+            if h.kind == "effect_resolved" && h.effect_id.as_deref() == Some("62709239:destroy") {
+                assert_eq!(
+                    h.card.materials, remaining,
+                    "CHAINED activation snapshot must follow the cost and precede destruction"
+                );
+            }
             if h.kind == "sent_to_grave" || (h.kind == "effect_resolved" && h.card.location == 16) {
                 assert!(h.card.materials.is_empty());
             }

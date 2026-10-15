@@ -98,12 +98,13 @@ fn historical_materials_use_origin_destination_and_activation_time() {
         }
         summon(&mut r, 62709239, 0);
         event(&mut r, 63, serde_json::json!({}));
-        moved(&mut r, mats[0], (132, 0, 0), (16, 0, 5), 128);
         event(
             &mut r,
             70,
             serde_json::json!({"code":62709239,"description":62709239u64<<20,"chain":1,"location":{"player":0,"location":4,"sequence":0}}),
         );
+        moved(&mut r, mats[0], (132, 0, 0), (16, 0, 5), 128);
+        event(&mut r, 71, serde_json::json!({"chain":1}));
         moved(&mut r, 62709239, (4, 0, 1), (16, 1, 5), 65);
         moved(&mut r, mats[1], (144, 1, 0), (16, 2, 5), 1536);
         event(&mut r, 73, serde_json::json!({"chain":1}));
@@ -149,4 +150,35 @@ fn historical_materials_use_origin_destination_and_activation_time() {
             "grave activation has no materials"
         );
     }
+}
+#[test]
+fn missing_chained_frame_cannot_prove_post_cost_material_conditions() {
+    let mut r = result();
+    moved(&mut r, 62709239, (64, 0, 5), (4, 0, 1), 0);
+    moved(&mut r, 36426778, (4, 1, 1), (132, 0, 0), 0);
+    event(
+        &mut r,
+        70,
+        serde_json::json!({"code":62709239,"description":62709239u64<<20,"chain":1,"location":{"player":0,"location":4,"sequence":0}}),
+    );
+    assert!(!facts(&r).history_complete);
+    event(&mut r, 73, serde_json::json!({"chain":1}));
+    let f = facts(&r);
+    assert!(!f.history_complete);
+    let expr = Expr::History {
+        kind: "effect_resolved".into(),
+        filter: Filter {
+            codes: vec![62709239],
+            materials_min: Some(1),
+            ..Default::default()
+        },
+        effect_id: None,
+        reason_mask: None,
+        min: 1,
+        max: None,
+    };
+    assert_eq!(
+        evaluate(&expr, &f, &Default::default()).result,
+        Truth::Unknown
+    );
 }

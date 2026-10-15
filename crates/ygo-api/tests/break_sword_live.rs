@@ -157,6 +157,16 @@ fn duplicate_boots_materials_plan_and_replay() {
     }) {
         let obs = attempt.observation.as_ref().unwrap();
         let facts = ygo_goal::actual_facts(obs, &catalog.data, &pack);
+        assert_eq!(
+            facts
+                .history
+                .iter()
+                .find(|h| h.effect_id.as_deref() == Some("62709239:destroy"))
+                .unwrap()
+                .card
+                .materials,
+            vec![36426778]
+        );
         let mut pending = vec![];
         for frame in &obs.events {
             if frame.opcode == 62 {
