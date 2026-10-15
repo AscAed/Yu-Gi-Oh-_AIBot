@@ -3,11 +3,10 @@
 fn ash_interrupts_scales_and_planner_recovers_from_paid_costs() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     std::env::set_current_dir(&root).unwrap();
-    let mut engine = ygo_engine_adapter::ProcessEngineConfig::from_toml(
+    let engine = ygo_engine_adapter::ProcessEngineConfig::from_toml(
         &std::fs::read_to_string("configs/engine.toml").unwrap(),
     )
     .unwrap();
-    engine.worker_path = root.join("target/debug/ygo-engine-worker.exe");
     let store = ygo_storage::SnapshotStore::new(root.join("data/snapshots"));
     let active: serde_json::Value =
         serde_json::from_slice(&std::fs::read(store.root.join("active.json")).unwrap()).unwrap();
@@ -69,9 +68,23 @@ fn ash_interrupts_scales_and_planner_recovers_from_paid_costs() {
         recovery.failure_summary
     );
     assert!(r.total_calls <= 1536);
+    let comparison = r.comparison.as_ref().expect("actual resource comparison");
+    assert!(comparison
+        .interruption_window_changes
+        .iter()
+        .any(|c| c.player == 1 && c.code == 14558127 && c.location == 16 && c.delta == 1));
+    assert_eq!(comparison.interruption_paid_cost_events.len(), 2);
     ygo_api::planning_v4::replay(&r, engine, &store).unwrap();
     let mut forged = r.clone();
     forged.interrupted.as_mut().unwrap().state.normal_left = 1;
+    assert!(ygo_api::planning_v4::validate_report(&forged).is_err());
+    let mut forged = r.clone();
+    forged
+        .comparison
+        .as_mut()
+        .unwrap()
+        .interruption_window_changes[0]
+        .delta += 1;
     assert!(ygo_api::planning_v4::validate_report(&forged).is_err());
     let mut forged = r.clone();
     let a = &mut forged.interrupted.as_mut().unwrap().attempt;

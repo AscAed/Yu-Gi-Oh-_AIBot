@@ -392,6 +392,219 @@
         ],
         "additionalProperties": false
       }
+    },
+    "comparison": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "actual_comparison"
+            },
+            "reference_window_witness": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "interrupted_state_id": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "baseline_execution_id": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "recovery_execution_id": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              ]
+            },
+            "interruption_paid_cost_events": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "uniqueItems": true
+            },
+            "interruption_window_changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "player": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "code": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "location": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 255
+                  },
+                  "before": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "after": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "delta": {
+                    "type": "integer"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "player",
+                  "code",
+                  "location",
+                  "before",
+                  "after",
+                  "delta"
+                ]
+              }
+            },
+            "recovery_changes": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "player": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "code": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "location": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 255
+                      },
+                      "before": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "after": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "delta": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "player",
+                      "code",
+                      "location",
+                      "before",
+                      "after",
+                      "delta"
+                    ]
+                  }
+                }
+              ]
+            },
+            "terminal_difference": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "player": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "code": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "location": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 255
+                      },
+                      "before": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "after": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "delta": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "player",
+                      "code",
+                      "location",
+                      "before",
+                      "after",
+                      "delta"
+                    ]
+                  }
+                }
+              ]
+            },
+            "missing_expected_grave": {
+              "type": "object",
+              "patternProperties": {
+                "^[0-9]+$": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "changed_plan_reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reference_window_witness",
+            "interrupted_state_id",
+            "baseline_execution_id",
+            "recovery_execution_id",
+            "interruption_paid_cost_events",
+            "interruption_window_changes",
+            "recovery_changes",
+            "terminal_difference",
+            "missing_expected_grave",
+            "changed_plan_reason"
+          ]
+        }
+      ]
     }
   },
   "additionalProperties": false,
@@ -408,6 +621,7 @@
     "total_calls",
     "interruption_calls",
     "failed_interruption",
-    "interruption_diagnostics"
+    "interruption_diagnostics",
+    "comparison"
   ]
 }

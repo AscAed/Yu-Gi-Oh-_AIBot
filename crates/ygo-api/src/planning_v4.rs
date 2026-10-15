@@ -31,6 +31,31 @@ pub struct Failure {
     pub category: FailureClass,
     pub detail: String,
 }
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ResourceChange {
+    pub player: u8,
+    pub code: u32,
+    pub location: u8,
+    pub before: i64,
+    pub after: i64,
+    pub delta: i64,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ResourceComparison {
+    pub kind: String,
+    pub reference_window_witness: String,
+    pub interrupted_state_id: String,
+    pub baseline_execution_id: String,
+    pub recovery_execution_id: Option<String>,
+    pub interruption_paid_cost_events: Vec<u64>,
+    pub interruption_window_changes: Vec<ResourceChange>,
+    pub recovery_changes: Option<Vec<ResourceChange>>,
+    pub terminal_difference: Option<Vec<ResourceChange>>,
+    pub missing_expected_grave: BTreeMap<u32, usize>,
+    pub changed_plan_reason: String,
+}
 impl From<String> for Failure {
     fn from(detail: String) -> Self {
         let category = match detail.split(':').next().unwrap_or("") {
@@ -117,6 +142,8 @@ pub struct Interrupted {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlanReport {
+    #[serde(default)]
+    pub comparison: Option<ResourceComparison>,
     pub schema_version: u16,
     pub planner_profile: String,
     pub request: PlanRequest,
@@ -340,6 +367,7 @@ pub fn plan(
         Some(context),
     )?;
     let mut report = PlanReport {
+        comparison: None,
         schema_version: 4,
         planner_profile: PROFILE.into(),
         request: q.clone(),
@@ -511,6 +539,96 @@ fn finish(r: &mut PlanReport) {
         .sum::<usize>()
         + r.interruption_calls
         + r.interrupted.as_ref().map_or(0, |i| i.reserved_calls);
+    r.comparison = resource_comparison(r);
+}
+fn inventory(c: &Checkpoint) -> BTreeMap<(u8, u32, u8), i64> {
+    let mut counts = BTreeMap::new();
+    for card in &c.cards {
+        *counts
+            .entry((card.player, card.code, card.location))
+            .or_default() += 1;
+        for code in &card.overlay {
+            *counts.entry((card.player, *code, 128)).or_default() += 1;
+        }
+    }
+    counts
+}
+fn resource_changes(before: &Checkpoint, after: &Checkpoint) -> Vec<ResourceChange> {
+    let a = inventory(before);
+    let b = inventory(after);
+    a.keys()
+        .chain(b.keys())
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .filter_map(|(player, code, location)| {
+            let before = *a.get(&(player, code, location)).unwrap_or(&0);
+            let after = *b.get(&(player, code, location)).unwrap_or(&0);
+            (before != after).then_some(ResourceChange {
+                player,
+                code,
+                location,
+                before,
+                after,
+                delta: after - before,
+            })
+        })
+        .collect()
+}
+fn resource_comparison(r: &PlanReport) -> Option<ResourceComparison> {
+    let b = r.baseline.as_ref()?;
+    let i = r.interrupted.as_ref()?;
+    let chosen = b.recommendations.first()?;
+    let e = b.executions.get(chosen.execution)?;
+    let target = e
+        .proposal
+        .steps
+        .iter()
+        .position(|s| s.effect_id == r.request.interruption.effect_id)?;
+    let reference = e
+        .trace
+        .predictions
+        .iter()
+        .find(|p| p.semantic_step > target)?;
+    let terminal = &e.trace.observation.as_ref()?.checkpoint;
+    let recovered = r.recovery.as_ref().and_then(|a| {
+        a.recommendations
+            .first()
+            .and_then(|rec| a.executions.get(rec.execution))
+    });
+    let recovered_checkpoint = recovered
+        .and_then(|x| x.trace.observation.as_ref())
+        .map(|o| &o.checkpoint);
+    let mut expected = BTreeMap::<u32, usize>::new();
+    for c in e.proposal.steps[target]
+        .after
+        .cards
+        .iter()
+        .filter(|c| c.player == 0 && c.location == 16)
+    {
+        *expected.entry(c.code).or_default() += 1;
+    }
+    for c in i
+        .observation
+        .checkpoint
+        .cards
+        .iter()
+        .filter(|c| c.player == 0 && c.location == 16)
+    {
+        if let Some(n) = expected.get_mut(&c.code) {
+            *n = n.saturating_sub(1);
+        }
+    }
+    expected.retain(|_, n| *n > 0);
+    Some(ResourceComparison {
+        kind:"actual_comparison".into(),reference_window_witness:reference.before_prefix.clone(),interrupted_state_id:i.state_id.clone(),baseline_execution_id:e.id.clone(),recovery_execution_id:recovered.map(|x|x.id.clone()),
+        interruption_paid_cost_events:i.facts.history.iter().filter(|h|h.kind=="sent_to_grave"&&h.reason&128!=0).map(|h|h.event).collect(),
+        interruption_window_changes:resource_changes(&reference.before_checkpoint,&i.observation.checkpoint),
+        recovery_changes:recovered_checkpoint.map(|c|resource_changes(&i.observation.checkpoint,c)),
+        terminal_difference:recovered_checkpoint.map(|c|resource_changes(terminal,c)),
+        changed_plan_reason:format!("{}被无效后，原路线缺少预期墓地资源{:?}；从已核验窗口重新比较资源转移，保留原目标。终场对照仅比较本次有界搜索实际验证的线路。",r.request.interruption.effect_id,expected),
+        missing_expected_grave:expected,
+    })
 }
 fn interruption_failure(a: &Attempt, pack: &KnowledgePack, detail: &str) -> Failure {
     if a.failure == Some(FailureKind::BudgetExhausted) {
@@ -819,6 +937,14 @@ pub fn validate_report(r: &PlanReport) -> Result<(), String> {
     }
     let mut expected = r.clone();
     finish(&mut expected);
+    if r.comparison != expected.comparison {
+        return Err("resource comparison arithmetic/references mismatch".into());
+    }
+    if let Some(c) = &r.comparison {
+        if !base.witnesses.contains_key(&c.reference_window_witness) {
+            return Err("unverified resource reference window".into());
+        }
+    }
     if r.total_calls != expected.total_calls
         || r.total_calls > 3 * r.request.analysis.search.node_budget
     {
