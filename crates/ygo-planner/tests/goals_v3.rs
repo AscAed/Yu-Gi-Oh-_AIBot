@@ -1,6 +1,56 @@
 use ygo_goal::*;
 use ygo_planner::{v2::*, v3};
 #[test]
+fn forecasts_identify_negated_loss_and_reverse_contribution_before_execution() {
+    let x = Resource {
+        instance: "x".into(),
+        code: 1,
+        location: 4,
+        level: 3,
+        redirect: false,
+        player: 0,
+        overlay_host: None,
+        xyz_summoned: false,
+        base_level: 3,
+        epoch: 0,
+    };
+    let empty = SymbolicState {
+        cards: vec![],
+        used: Default::default(),
+        normal_left: 1,
+        pending: vec![],
+        dark_only: false,
+        destroyed_xyz: Default::default(),
+    };
+    let mut field = empty.clone();
+    field.cards.push(x.clone());
+    let goal: Goal = serde_json::from_value(serde_json::json!({"version":1,"expr":{
+        "op":"not","arg":{"op":"count","filter":{"codes":[1]},"min":1}}}))
+    .unwrap();
+    let pack = ygo_knowledge::KnowledgePack::builtin().unwrap();
+    for (before, after, loss) in [(&empty, &field, true), (&field, &empty, false)] {
+        let p = Proposal {
+            id: "test".into(),
+            goal_predicted: !loss,
+            steps: vec![SemanticStep {
+                kind: StepKind::SpecialSummon,
+                effect_id: "test".into(),
+                source: x.clone(),
+                costs: vec![],
+                targets: vec![],
+                reason: "test".into(),
+                after: after.clone(),
+            }],
+        };
+        let fs = v3::forecasts(before, &[], &p, &Default::default(), &goal, None, &pack);
+        assert_eq!(fs[0].lost_nodes, if loss { vec!["/goal"] } else { vec![] });
+        assert_eq!(
+            fs[0].contribution_nodes,
+            if loss { vec![] } else { vec!["/goal"] }
+        );
+    }
+}
+#[test]
 fn already_satisfied_goal_has_a_zero_expansion_proposal() {
     let state = SymbolicState {
         cards: vec![],

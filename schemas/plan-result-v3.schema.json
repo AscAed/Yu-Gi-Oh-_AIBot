@@ -7,7 +7,7 @@
       "const": 3
     },
     "planner_profile": {
-      "const": "phantom-goal-v1"
+      "const": "phantom-goal-v2"
     },
     "goal_id": {
       "type": "string",

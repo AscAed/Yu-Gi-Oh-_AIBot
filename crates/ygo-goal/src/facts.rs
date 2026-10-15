@@ -4,13 +4,25 @@ use ygo_domain::{CardId, Catalog};
 use ygo_engine_adapter::{prompt_metadata, Choice, DuelResult};
 use ygo_knowledge::KnowledgePack;
 
+fn snapshot(card: &FactCard, tracked: &[FactCard]) -> FactCard {
+    let mut c = card.clone();
+    c.materials = tracked
+        .iter()
+        .filter(|m| {
+            c.location == 4 && m.player == c.player && m.location == 132 && m.sequence == c.sequence
+        })
+        .map(|m| m.code)
+        .collect();
+    c
+}
+
 /// Reconstruct instance history from raw decoded moves and successful summon/chain events.
 /// Unresolvable identities remain unknown; proposal history is never consulted.
 pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) -> Facts {
     let mut tracked: Vec<FactCard> = vec![];
     let mut history = vec![];
     let mut chains: BTreeMap<u64, (FactCard, Option<String>)> = BTreeMap::new();
-    let mut summoning: Option<(u32, bool)> = None;
+    let mut summoning: Vec<(FactCard, bool, u64)> = vec![];
     let mut opaque_summon = false;
     let mut pending_activations: Vec<(u32, u64, FactCard)> = vec![];
     for e in &result.events {
@@ -76,6 +88,26 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                 proper_xyz: Some(false),
                 ..Default::default()
             });
+            // Initial hand cards need not have a preceding MOVE. Pin a source
+            // observed in its legal prompt to its subsequent exact MOVE, rather
+            // than abandoning that identity or guessing by card name at CHAINING.
+            for (activation_code, _, source) in &mut pending_activations {
+                if !source.identity_known
+                    && *activation_code == code
+                    && source.player == n(from, "player") as u8
+                    && source.location == n(from, "location") as u8
+                    && source.sequence == n(from, "sequence")
+                {
+                    source.instance = c.instance.clone();
+                    source.identity_known = c.identity_known;
+                }
+            }
+            // Destruction observes the origin before overlays follow their host.
+            let mut origin = snapshot(&c, &tracked);
+            origin.player = n(from, "player") as u8;
+            origin.location = n(from, "location") as u8;
+            origin.sequence = n(from, "sequence");
+            origin.position = n(from, "position");
             for other in &mut tracked {
                 if other.player == n(from, "player") as u8
                     && other.location == n(from, "location") as u8
@@ -101,26 +133,11 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                     other.position -= 1;
                 }
             }
-            let mut origin = c.clone();
-            if n(from, "location") == 4 {
-                origin.materials = tracked
-                    .iter()
-                    .filter(|m| {
-                        m.player == n(from, "player") as u8
-                            && m.location == 132
-                            && m.sequence == n(from, "sequence")
-                    })
-                    .map(|m| m.code)
-                    .collect();
-            }
-            origin.player = n(from, "player") as u8;
-            origin.location = n(from, "location") as u8;
-            origin.sequence = n(from, "sequence");
-            origin.position = n(from, "position");
             c.player = n(to, "player") as u8;
             c.location = n(to, "location") as u8;
             c.sequence = n(to, "sequence");
             c.position = n(to, "position");
+            c = snapshot(&c, &tracked);
             if c.location == 4 && n(from, "location") != 4 {
                 c.proper_xyz = Some(false);
             }
@@ -148,41 +165,58 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
             tracked.push(c);
         }
         if matches!(e.opcode, 60 | 62) {
-            summoning = Some((n(&e.fields, "code"), e.opcode == 62));
+            let loc = &e.fields["location"];
+            let candidates: Vec<_> = tracked
+                .iter()
+                .filter(|c| {
+                    c.code == n(&e.fields, "code")
+                        && c.player == n(loc, "player") as u8
+                        && c.location == n(loc, "location") as u8
+                        && c.sequence == n(loc, "sequence")
+                })
+                .collect();
+            if candidates.len() == 1 && candidates[0].identity_known {
+                summoning.push((
+                    snapshot(candidates[0], &tracked),
+                    e.opcode == 62,
+                    e.sequence,
+                ));
+            } else {
+                opaque_summon = true;
+            }
         }
         if matches!(e.opcode, 61 | 63) {
-            if let Some((code, special)) = summoning.take() {
-                let host = tracked
-                    .iter()
-                    .rev()
-                    .find(|c| c.code == code && c.location == 4)
-                    .map(|c| (c.player, c.sequence));
-                let materials = tracked
-                    .iter()
-                    .filter(|c| {
-                        host.is_some_and(|(p, seq)| {
-                            c.player == p && c.location == 132 && c.sequence == seq
-                        })
-                    })
-                    .map(|c| c.code)
-                    .collect::<Vec<_>>();
-                if let Some(c) = tracked
-                    .iter_mut()
-                    .rev()
-                    .find(|c| c.code == code && c.location == 4)
-                {
+            if summoning.is_empty() {
+                opaque_summon = true;
+            }
+            let mut seen = std::collections::BTreeSet::new();
+            for (source, special, begin) in std::mem::take(&mut summoning) {
+                if special != (e.opcode == 63) || !seen.insert(source.instance.clone()) {
+                    opaque_summon = true;
+                    continue;
+                }
+                let materials = snapshot(&source, &tracked).materials;
+                if let Some(c) = tracked.iter_mut().find(|c| {
+                    c.instance == source.instance
+                        && c.player == source.player
+                        && c.sequence == source.sequence
+                        && c.location == 4
+                }) {
+                    let code = c.code;
                     let last_move = result.events.iter().rev().find(|f| {
-                        f.sequence < e.sequence
+                        f.sequence < begin
                             && f.opcode == 50
                             && f.fields["code"].as_u64() == Some(code as u64)
                             && f.fields["to"]["location"] == 4
+                            && f.fields["to"]["player"] == source.player
+                            && f.fields["to"]["sequence"] == source.sequence
                     });
                     let from_extra = last_move.is_some_and(|f| f.fields["from"]["location"] == 64);
                     let procedure = from_extra
                         && result
                             .resolved_decisions
                             .iter()
-                            .filter(|d| d.prompt_id < e.sequence)
+                            .filter(|d| d.prompt_id < begin)
                             .rev()
                             .find_map(|d| {
                                 result
@@ -263,6 +297,8 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                             event: e.sequence,
                         });
                     }
+                } else {
+                    opaque_summon = true;
                 }
             }
         }
@@ -289,7 +325,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                             }))
                 })
                 .map(|i| pending_activations.remove(i).2);
-            let c = pending
+            let mut c = pending
                 .or_else(|| {
                     tracked
                         .iter()
@@ -309,6 +345,15 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                     sequence: n(loc, "sequence"),
                     ..Default::default()
                 });
+            // Keep the pre-cost source identity/activation zone, but sample
+            // materials after cost payment at CHAINING, not at summon time.
+            if let Some(current) = tracked.iter().find(|x| x.instance == c.instance) {
+                c.materials = snapshot(current, &tracked).materials;
+            } else {
+                c.materials.clear();
+                c.identity_known = false;
+                opaque_summon = true;
+            }
             chains.insert(e.fields["chain"].as_u64().unwrap_or(0), (c, id));
         }
         if e.opcode == 73 {
@@ -397,6 +442,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
         cards,
         history,
         history_complete: !opaque_summon
+            && summoning.is_empty()
             && result.coverage_gaps.is_empty()
             && result.error.is_none()
             && result.status != ygo_engine_adapter::DuelStatus::Failed,

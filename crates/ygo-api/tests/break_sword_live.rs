@@ -126,7 +126,7 @@ fn duplicate_boots_materials_plan_and_replay() {
         &store,
         active["catalog_id"].as_str().unwrap(),
         &Default::default(),
-        pack,
+        pack.clone(),
     )
     .unwrap();
     std::fs::write(
@@ -144,6 +144,53 @@ fn duplicate_boots_materials_plan_and_replay() {
             .iter()
             .map(|a| &a.discrepancies)
             .collect::<Vec<_>>()
+    );
+    let catalog = store
+        .catalog(active["catalog_id"].as_str().unwrap())
+        .unwrap();
+    let mut checked = false;
+    for attempt in r.attempts.iter().filter(|a| {
+        a.goal_achieved
+            && a.predictions
+                .iter()
+                .any(|p| p.effect_id == "62709239:revive")
+    }) {
+        let obs = attempt.observation.as_ref().unwrap();
+        let facts = ygo_goal::actual_facts(obs, &catalog.data, &pack);
+        let mut pending = vec![];
+        for frame in &obs.events {
+            if frame.opcode == 62 {
+                pending.push(&frame.fields);
+            }
+            if frame.opcode == 63 {
+                if pending.len() == 2 && pending.iter().all(|c| c["code"] == 36426778) {
+                    let revivals: Vec<_> = facts
+                        .history
+                        .iter()
+                        .filter(|h| h.kind == "special_summon" && h.event == frame.sequence)
+                        .collect();
+                    assert_eq!(revivals.len(), 2);
+                    assert_ne!(revivals[0].card.instance, revivals[1].card.instance);
+                    assert_ne!(revivals[0].card.sequence, revivals[1].card.sequence);
+                    checked = true;
+                }
+                pending.clear();
+            }
+        }
+        assert_eq!(
+            facts
+                .history
+                .iter()
+                .find(|h| h.kind == "destroyed" && h.card.code == 62709239)
+                .unwrap()
+                .card
+                .materials,
+            vec![36426778]
+        );
+    }
+    assert!(
+        checked,
+        "real engine must prove both same-name revivals and the remaining material"
     );
     assert_eq!(
         replay(&r, engine, &store).unwrap()["prediction_references_verified"],

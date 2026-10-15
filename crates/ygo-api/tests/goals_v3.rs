@@ -103,6 +103,14 @@ fn available_effect_and_consuming_continuation_have_separate_witnesses() {
                 assert!(ygo_api::planning_v3::validate_plan_contract(bad).is_err())
             };
             let mut bad = r.clone();
+            bad.recommendations[0]
+                .probes
+                .last_mut()
+                .unwrap()
+                .lost_conditions
+                .push("/forged/not".into());
+            rejects(&bad);
+            let mut bad = r.clone();
             bad.executions[0].trace.predictions[0].reason = "posthoc".into();
             rejects(&bad);
             let mut bad = r.clone();
@@ -198,6 +206,18 @@ fn goal_matrix_covers_history_conditions_and_safe_fallback() {
             pack.clone(),
         )
         .unwrap();
+        if name == "goal-break-history" {
+            check_raw_history_oracle(&r);
+            let mut bad = r.clone();
+            let h = bad
+                .executions
+                .iter_mut()
+                .flat_map(|e| &mut e.facts.history)
+                .find(|h| h.kind == "destroyed" && h.card.code == 62709239)
+                .unwrap();
+            h.card.materials.clear();
+            assert!(ygo_api::planning_v3::validate_plan_contract(&bad).is_err());
+        }
         std::fs::write(
             root.join(format!("data/runtime/{name}-report.json")),
             serde_json::to_vec_pretty(&r).unwrap(),
@@ -247,4 +267,123 @@ fn goal_matrix_covers_history_conditions_and_safe_fallback() {
                 .any(|h| h.kind == "xyz_summon" && h.card.proper_xyz == Some(true)));
         }
     }
+}
+
+// Independent event oracle: count every member of each successful 62/63
+// batch and check the known cost/destruction sequence, without actual_facts.
+fn check_raw_history_oracle(r: &ygo_api::planning_v3::PlanReport) {
+    let mut covered = 0;
+    let mut boots_twice = false;
+    for execution in &r.executions {
+        if !execution.trace.execution_verified {
+            continue;
+        }
+        let Some(obs) = &execution.trace.observation else {
+            continue;
+        };
+        let Some(destroyed) = execution
+            .facts
+            .history
+            .iter()
+            .find(|h| h.kind == "destroyed" && h.card.code == 62709239)
+        else {
+            continue;
+        };
+        let mut pending = vec![];
+        let mut boots = 0;
+        for e in &obs.events {
+            if e.opcode == 62 {
+                pending.push(&e.fields);
+            }
+            if e.opcode == 63 {
+                let recorded: Vec<_> = execution
+                    .facts
+                    .history
+                    .iter()
+                    .filter(|h| h.kind == "special_summon" && h.event == e.sequence)
+                    .collect();
+                assert_eq!(recorded.len(), pending.len());
+                let mut instances = std::collections::BTreeSet::new();
+                for raw in pending.drain(..) {
+                    let h = recorded
+                        .iter()
+                        .find(|h| {
+                            serde_json::json!(h.card.code) == raw["code"]
+                                && serde_json::json!(h.card.player) == raw["location"]["player"]
+                                && serde_json::json!(h.card.sequence) == raw["location"]["sequence"]
+                        })
+                        .unwrap();
+                    assert!(instances.insert(&h.card.instance));
+                    if h.card.code == 36426778 {
+                        boots += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            execution
+                .facts
+                .history
+                .iter()
+                .filter(|h| h.kind == "special_summon" && h.card.code == 36426778)
+                .count(),
+            boots
+        );
+        if boots >= 2 {
+            boots_twice = true;
+            let at_most_one = ygo_goal::Expr::History {
+                kind: "special_summon".into(),
+                filter: ygo_goal::Filter {
+                    codes: vec![36426778],
+                    ..Default::default()
+                },
+                effect_id: None,
+                reason_mask: None,
+                min: 0,
+                max: Some(1),
+            };
+            assert_eq!(
+                ygo_goal::evaluate(&at_most_one, &execution.facts, &Default::default()).result,
+                ygo_goal::Truth::No
+            );
+        }
+        let detached = obs
+            .events
+            .iter()
+            .find(|e| {
+                e.sequence < destroyed.event
+                    && e.opcode == 50
+                    && e.fields["from"]["location"] == 132
+                    && e.fields["to"]["location"] == 16
+            })
+            .unwrap();
+        let remaining: Vec<_> = obs
+            .events
+            .iter()
+            .filter(|e| {
+                e.sequence > destroyed.event
+                    && e.opcode == 50
+                    && e.fields["from"]["location"] == 144
+                    && e.fields["to"]["location"] == 16
+            })
+            .take(1)
+            .map(|e| e.fields["code"].as_u64().unwrap() as u32)
+            .collect();
+        assert_eq!(destroyed.card.materials, remaining);
+        assert_eq!(remaining.len(), 1);
+        assert!(detached.fields["reason"].as_u64().unwrap() & 128 != 0);
+        for h in execution
+            .facts
+            .history
+            .iter()
+            .filter(|h| h.card.code == 62709239)
+        {
+            if h.kind == "sent_to_grave" || (h.kind == "effect_resolved" && h.card.location == 16) {
+                assert!(h.card.materials.is_empty());
+            }
+        }
+        covered += 1;
+    }
+    assert!(covered > 0);
+    assert!(boots_twice, "one line must cover Boots summon plus revival");
 }

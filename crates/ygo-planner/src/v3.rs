@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use ygo_domain::{CardId, Catalog};
 use ygo_goal::{count, evaluate, Evaluation, Expr, FactCard, Facts, Goal, HistoryFact, Truth};
 use ygo_knowledge::{KnowledgePack, Rule};
-pub const PROFILE: &str = "phantom-goal-v1";
+pub const PROFILE: &str = "phantom-goal-v2";
 pub fn initialize(
     deck: &ygo_domain::Deck,
     hand: &[CardId],
@@ -250,16 +250,6 @@ pub struct Forecast {
     pub consumers: Vec<String>,
     pub gain_prediction: BTreeMap<String, i64>,
 }
-fn leaf_values(e: &Evaluation) -> BTreeMap<String, Truth> {
-    if e.children.is_empty() {
-        BTreeMap::from([(e.node.clone(), e.result)])
-    } else {
-        e.children
-            .iter()
-            .flat_map(|c| leaf_values(c).into_iter())
-            .collect()
-    }
-}
 /// Built before an adapter call, and reproducible from the frozen planning inputs.
 pub fn forecasts(
     initial: &SymbolicState,
@@ -280,8 +270,8 @@ pub fn forecasts(
         prior.push(step.clone());
         let after = facts(&step.after, &prior, cat, pack);
         let a = evaluate(&goal.expr, &after, &BTreeMap::new());
-        let lb = leaf_values(&b);
-        let la = leaf_values(&a);
+        let lb = ygo_goal::condition_values(&goal.expr, &b);
+        let la = ygo_goal::condition_values(&goal.expr, &a);
         let contribution_nodes = la
             .iter()
             .filter(|(id, t)| **t == Truth::Yes && lb.get(*id) != Some(&Truth::Yes))

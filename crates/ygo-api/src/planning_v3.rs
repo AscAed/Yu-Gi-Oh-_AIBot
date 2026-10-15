@@ -437,20 +437,9 @@ fn unknown(node: &str, reason: &str) -> Evaluation {
         children: vec![],
     }
 }
-fn leaves(e: &Evaluation) -> BTreeMap<String, Truth> {
-    let mut out = BTreeMap::new();
-    if e.children.is_empty() {
-        out.insert(e.node.clone(), e.result);
-    } else {
-        for c in &e.children {
-            out.extend(leaves(c));
-        }
-    }
-    out
-}
 fn lost(expr: &Expr, before: &Facts, after: &Facts) -> Vec<String> {
-    let a = leaves(&ygo_goal::evaluate(expr, before, &BTreeMap::new()));
-    let b = leaves(&ygo_goal::evaluate(expr, after, &BTreeMap::new()));
+    let a = ygo_goal::condition_values(expr, &ygo_goal::evaluate(expr, before, &BTreeMap::new()));
+    let b = ygo_goal::condition_values(expr, &ygo_goal::evaluate(expr, after, &BTreeMap::new()));
     a.into_iter()
         .filter(|(id, t)| *t == Truth::Yes && b.get(id) == Some(&Truth::No))
         .map(|(id, _)| id)
@@ -1549,6 +1538,13 @@ fn validate_goal_evidence(
     Ok((evaluation, gains, expected_witnesses))
 }
 pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
+    if r.planner_profile != v3::PROFILE {
+        return Err(format!(
+            "unsupported goal planner profile {}; regenerate the v3 report with {}",
+            r.planner_profile,
+            v3::PROFILE
+        ));
+    }
     r.request.validate()?;
     r.knowledge.validate()?;
     crate::combo::validate_report_contract(&r.analysis)?;
@@ -2106,6 +2102,37 @@ mod tests {
         .unwrap();
         assert!(r.failure_summary.contains(&FailureKind::EngineFailure));
         assert!(!r.failure_summary.contains(&FailureKind::BudgetExhausted));
+    }
+    #[test]
+    fn old_goal_profile_requires_report_regeneration() {
+        let mut r = empty_report();
+        r.planner_profile = "phantom-goal-v1".into();
+        assert!(validate_plan_contract(&r)
+            .unwrap_err()
+            .contains("regenerate"));
+    }
+    #[test]
+    fn negated_conditions_report_loss_at_the_negation_node() {
+        let node = Expr::Not {
+            arg: Box::new(Expr::Count {
+                filter: ygo_goal::Filter {
+                    codes: vec![1],
+                    ..Default::default()
+                },
+                min: 1,
+                max: None,
+            }),
+        };
+        let before = Facts::default();
+        let after = Facts {
+            cards: vec![ygo_goal::FactCard {
+                code: 1,
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert_eq!(lost(&node, &before, &after), vec!["/goal"]);
+        assert!(lost(&node, &after, &before).is_empty());
     }
     #[test]
     fn own_idle_menu_cannot_prove_opponent_activation_absent() {

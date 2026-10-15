@@ -355,6 +355,18 @@ pub struct Evaluation {
     pub reason: String,
     pub children: Vec<Evaluation>,
 }
+/// Conditions for explanation. A negated expression is one condition;
+/// its positive operand must never be reported as an objective contribution.
+pub fn condition_values(expr: &Expr, value: &Evaluation) -> BTreeMap<String, Truth> {
+    match expr {
+        Expr::All { args } | Expr::Any { args } => args
+            .iter()
+            .zip(&value.children)
+            .flat_map(|(x, e)| condition_values(x, e))
+            .collect(),
+        _ => BTreeMap::from([(value.node.clone(), value.result)]),
+    }
+}
 pub fn evaluate(expr: &Expr, facts: &Facts, probes: &BTreeMap<String, Evaluation>) -> Evaluation {
     fn go(e: &Expr, f: &Facts, p: &BTreeMap<String, Evaluation>, path: String) -> Evaluation {
         let mut out = Evaluation {

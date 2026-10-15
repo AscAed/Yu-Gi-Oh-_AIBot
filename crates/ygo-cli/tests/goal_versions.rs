@@ -1,8 +1,11 @@
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
+static NEXT_FILE: AtomicU64 = AtomicU64::new(0);
 fn invoke(action: &str, value: serde_json::Value) -> String {
     let path = std::env::temp_dir().join(format!(
-        "ygo-goal-version-{}-{}.json",
+        "ygo-goal-version-{}-{}-{}.json",
         std::process::id(),
+        NEXT_FILE.fetch_add(1, Ordering::Relaxed),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
