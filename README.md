@@ -2,6 +2,15 @@
 
 Windows 本机 Combo CLI：固定完整卡组与五张起手，使用固定 API 11.0 的 x64 ocgcore 执行先攻首回合、无干扰展开。新增幻影骑士团人工效果知识与因果规划：先提出带资源依据的目标方案，再绑定真实提示执行并独立重放。自动构筑、手坑和 HTTP 接口列入后续范围。
 
+## 通用目标与收益验证
+
+规划 v3 支持 Rusty＋Fog、Cherubini＋Fog等结构化目标，并独立验证发动机会和有界后续收益。当前 profile 为 `phantom-goal-v2`；旧 `phantom-goal-v1` 本地报告需要重新生成，规划 v1/v2报告继续兼容。
+
+    ./dist/ygo-local/ygo.cmd combo plan --input tests/fixtures/goal-cherubini.request.json --output data/runtime/goal-cherubini-report.json
+    ./dist/ygo-local/ygo.cmd combo plan-replay --input data/runtime/goal-cherubini-report.json
+
+历史记录区分破坏前、送墓后和费用后的发动源快照；重放一致之外，测试也核对原始召唤批次与素材移动。接口、预算和限制见 [目标规划说明](docs/GOAL_PLANNING.md)，最终状态见 [验证记录](docs/TESTING.md)。
+
 ## Break Sword 与逐效果验真
 
 新增 v2 规划与真实效果案例验真：16个支持效果分别记录符号预测、原生提示、结算后反例和独立重放；受控对方场面支持 Break Sword 超量、破坏、复活后继续达成目标。旧 v1 入口与报告仍可重放。使用、场景含义及范围见 [逐效果验真说明](docs/BREAK_SWORD_VERIFICATION.md)。
