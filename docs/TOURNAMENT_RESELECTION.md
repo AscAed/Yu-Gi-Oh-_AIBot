@@ -8,7 +8,7 @@
 
 原图：[HP67QpnbIAAT-Yd.jpg](https://pbs.twimg.com/media/HP67QpnbIAAT-Yd.jpg?name=orig)，SHA256 `1e8369a35fe3e67b2fcad4d3d880335cc2d5d1f0b2ee19e914aa0e538aabac13`。
 
-主卡组41张、额外15张，39个不同卡号；Side未公开，未完成其合法性检查。执行夹具的 `side: []` 只表示本场景不使用Side。完整原表见 `tests/fixtures/tournament-2026.deck.json`，字节SHA256 `0102c4d4c8fc22c855a02b9627317f47a78c0cc4be6bfa59e396870745ff71e5`。转录独立复核，修正了土龙与角兔、两张一滴、Karmael与Kaspitell、Four Heavenly Dragons与Supreme King Dragon的初始识别歧义。
+主卡组41张、额外15张，39个不同卡号；Side未公开，未完成其合法性检查。执行夹具的 `side: []` 只表示本场景不使用Side。完整原表见 `tests/fixtures/tournament-2026.deck.json`，字节SHA256 `5533c9f0aae115e9a408a26acb6d037d38c9505c1e78970431ffc19ab92cdb88`。转录独立复核，修正了土龙与角兔、两张一滴、Karmael与Kaspitell、Four Heavenly Dragons与Supreme King Dragon的初始识别歧义。
 
 检索窗口为2026-01-01至2026-10-16。15条取得原始材料的候选、18张照片及逐项理由保存于 `configs/tournament-2026.source.json`。聚合页只用于发现；没有声称穷尽全网赛事。资料完整度优先，再按赛事日期和规范化URL筛选。选定来源是本次候选中最新且完整、可准确转录并通过冻结规则的原表，没有按规划器表现选表。
 
@@ -60,4 +60,4 @@ py -m unittest test_tournament_gate -v
 
 外网获取时必须在同一终端调用注入127.0.0.1:7897代理。上述命令自身离线。设置独立engine配置后运行doctor，不能运行默认prepare-runtime.py覆盖旧资产。
 
-效果清单 `knowledge/tournament-2026.coverage.json` 已分类102项：85项场景内、17项有依据排除。**当前85项均未作为完整实现／验真交付**。首回合正常召唤、触发、即时响应、必要结束阶段处理均在清单范围；后续必须逐项实现、验真后再进入样本评估。
+效果清单 `knowledge/tournament-2026.coverage.json` 已分类102项：86项场景内、16项有依据排除。**当前86项均未作为完整实现／验真交付**。首回合正常召唤、触发、即时响应、必要结束阶段处理均在清单范围；后续必须逐项实现、验真后再进入样本评估。

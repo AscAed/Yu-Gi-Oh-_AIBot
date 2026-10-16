@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeSet, fs, path::Path};
 use ygo_domain::Card;
+pub mod first_turn;
 pub const CORE: [u32; 12] = [
     25538345, 36426778, 90432163, 63821877, 88544390, 98827725, 25542642, 32807846, 81439173,
     58699500, 62709239, 26692769,

@@ -941,6 +941,7 @@ mod regression {
             probe_only: false,
             scenario: None,
             interruption: None,
+            first_turn: None,
         };
         let mut budget = SearchBudget {
             time_limit_ms: 1,
@@ -1063,6 +1064,7 @@ mod regression {
             probe_only: false,
             scenario: None,
             interruption: None,
+            first_turn: None,
         };
         let result = execute(
             &Broken(std::cell::Cell::new(0)),

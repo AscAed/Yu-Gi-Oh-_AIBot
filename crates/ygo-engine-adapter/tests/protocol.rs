@@ -103,6 +103,7 @@ fn invalid_jsonl_and_wrong_protocol_are_structured_failures() {
         probe_only: true,
         scenario: None,
         interruption: None,
+        first_turn: None,
     };
     out.clear();
     run_worker(

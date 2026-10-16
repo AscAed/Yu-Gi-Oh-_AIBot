@@ -1,0 +1,3826 @@
+{
+  "schema_version": 1,
+  "profile": "tournament-first-turn-v1",
+  "asset_group_id": "asset-group-228cca96b5cf16a5e8d8f397cb30db073b483e75ddb0536d7d5f6f28783af340",
+  "source_id": "tournament-source-d458804dce80c01fc27f5863c0b0ec821624627a61c0fd982dded04f41bc6aff",
+  "coverage_id": "coverage-0740b5b8fc8ec19df3e2abce23faeebf7b3199dae68b3160bc08a560c8f69b27",
+  "cards": [
+    {
+      "card_id": 83566725,
+      "name": "The Phantom Knights of Doomed Soleret",
+      "text_sha256": "b707464692b82c38ee72c25de66cfde834e94a76fe4633ff161c7e0a243ed0c0",
+      "script": "official/c83566725.lua",
+      "script_sha256": "cb509cba72af98d1e176768205333b33e2b50d43e86e6f1f31e38c4bc04eab81"
+    },
+    {
+      "card_id": 25538345,
+      "name": "The Phantom Knights of Torn Scales",
+      "text_sha256": "ef953f845d332bb0d9dfdd022c8c35c76dc9ad9f818afedab281abae54cfae7c",
+      "script": "official/c25538345.lua",
+      "script_sha256": "641101b96bf8f456f77d9dfee04f81468bdd98627fedaeb731918cedc31b1aec"
+    },
+    {
+      "card_id": 46072770,
+      "name": "The Phantom Knights of Decayed Cloak",
+      "text_sha256": "b8f61645264eebf20ea2adfc893cd0a5d89da3f4a10f253a7c568c92a8d95a87",
+      "script": "official/c46072770.lua",
+      "script_sha256": "5a84d56ee85586f94b64fb7f76532e2c11e630315bfe7571127a9c9bcc29d238"
+    },
+    {
+      "card_id": 90432163,
+      "name": "The Phantom Knights of Ancient Cloak",
+      "text_sha256": "19a98ea1a1eb6571acbe438259a2176766cc7dc2ce06116a58b11c51c1af7bdf",
+      "script": "official/c90432163.lua",
+      "script_sha256": "380457723770acf48ae53ec9bf5868a52b4cee715aafb9a207ea2dc747bf9376"
+    },
+    {
+      "card_id": 36426778,
+      "name": "The Phantom Knights of Silent Boots",
+      "text_sha256": "c37904a7c59086cb7a41dbe24f11f48228eca2519e9f17ee57aa2d08b3c1d930",
+      "script": "official/c36426778.lua",
+      "script_sha256": "24ed34f97e0611ef53c8166bc358fd3a34a0ecd9c7a3914f6350d1a03e12b164"
+    },
+    {
+      "card_id": 63821877,
+      "name": "The Phantom Knights of Ragged Gloves",
+      "text_sha256": "9d986704d3ebd856911d6f11a3659afa101779a3cfa8c675ef155d6e317bf54d",
+      "script": "official/c63821877.lua",
+      "script_sha256": "0ff30542243260f23f809e53c80464e4b6e3e0019b86845849abf7fdbdec83dc"
+    },
+    {
+      "card_id": 88544390,
+      "name": "The Phantom Knights of Stained Greaves",
+      "text_sha256": "cd95c30dbff31f570c2c1029ccf93b998bf5cd8498d2948bc74e2c97e956036b",
+      "script": "official/c88544390.lua",
+      "script_sha256": "f486fa7cfe2cc82dd164a0031a31cdf97bc67539b071888a9682c9f79c4b042f"
+    },
+    {
+      "card_id": 52159691,
+      "name": "Raider's Wing",
+      "text_sha256": "ffd001e6f70f833a7d491b625f454075dc9c91c1e26c6e5f68d8e7e853331539",
+      "script": "official/c52159691.lua",
+      "script_sha256": "7df339c2820877cb093047441dbcb7d8a1d092e3b5a617d6c7db75fbf505e006"
+    },
+    {
+      "card_id": 99745551,
+      "name": "Danger!? Tsuchinoko?",
+      "text_sha256": "7c5f233e525ff81ffd1a73f91cc35ccb50a08709ec3db9933b20eda933eada1f",
+      "script": "official/c99745551.lua",
+      "script_sha256": "fb4480695681e06ddb61212e3b718a83c516178bf173feb82a0b516c5030a457"
+    },
+    {
+      "card_id": 65192027,
+      "name": "Dark Armed Dragon",
+      "text_sha256": "6507ea8b03ed85fa33ef1a252884f40d26831570427dd71c44189d85bf300d8d",
+      "script": "official/c65192027.lua",
+      "script_sha256": "7b99d49d96ed9a19a1249953ef8ee6015a2a7c905f3bd5d31ccbb1a532cda87a"
+    },
+    {
+      "card_id": 44088353,
+      "name": "Doll Hammer",
+      "text_sha256": "9ac9030451526ca0b7703f82ba7fb52848be23613933197aec57c7fd094acf0b",
+      "script": "official/c44088353.lua",
+      "script_sha256": "130ccd5dcd35c0a95ca8d87758009e43ba5630b8ccebf4c369fadfcba650b675"
+    },
+    {
+      "card_id": 32807846,
+      "name": "Reinforcement of the Army",
+      "text_sha256": "f8eec50bbcccbf26b39202e8407297448041c817f292e8296771d951b6b1f219",
+      "script": "official/c32807846.lua",
+      "script_sha256": "dd3e2046df766ec30dcae539b5d7af6511c66930db94577c70f6cdf1e963481c"
+    },
+    {
+      "card_id": 81439173,
+      "name": "Foolish Burial",
+      "text_sha256": "e39a64a2944ae5106a2c70f8c2fca25b96723a5509a9c4fa2e8a34349bee6418",
+      "script": "official/c81439173.lua",
+      "script_sha256": "6e65769ede8ba639875e3b36e1d041475ceb2e86ed8d3e987184db893ecd8907"
+    },
+    {
+      "card_id": 62104532,
+      "name": "The Phantom Knights' Rank-Up-Magic Requiem",
+      "text_sha256": "e10fb5f6264a33b2ca89d1fc9b2b4fbaec061d6c3296e3b6acdab273a6e123f9",
+      "script": "official/c62104532.lua",
+      "script_sha256": "ecab5bec6884091f23442f04c843bc54279537193f8afc4977e17351645a7c06"
+    },
+    {
+      "card_id": 88504133,
+      "name": "Phantom Knights' Rank-Up-Magic Force",
+      "text_sha256": "fc038f44450f9ca61480b18cd009f8afff7771f885566916cc0fac88cb17a9b0",
+      "script": "official/c88504133.lua",
+      "script_sha256": "41c2955d4ac7eba8f6862679b0b2140c11206215e5f817ece64286f9483ea122"
+    },
+    {
+      "card_id": 24299458,
+      "name": "Forbidden Droplet",
+      "text_sha256": "c27b09e131abed95bb7bfff6bcc13b17ceb3758e223c4498ff3527297ac501d3",
+      "script": "official/c24299458.lua",
+      "script_sha256": "3382c20d08eca08f22264e82f9d5dedd9d3f5da6a032e4f403fbaca4d11427ac"
+    },
+    {
+      "card_id": 85257384,
+      "name": "The Phantom Knights of Umbrage Veil",
+      "text_sha256": "af77683e5ac79ec5a1e2276981b07aca46c8b3d9160aa61eb2050ac2e1338463",
+      "script": "official/c85257384.lua",
+      "script_sha256": "be9158f40126adadf76f663e4915678f6fc0d598b294d53e5401b499e4e3f6d7"
+    },
+    {
+      "card_id": 98431356,
+      "name": "Phantom Knights' Wing",
+      "text_sha256": "9014b56094b79896615ebf19f019e1c2035286d0c4130f525fd79e6dfaccb2ec",
+      "script": "official/c98431356.lua",
+      "script_sha256": "3b1f742527ae74ffd76d06b1d7ba3a34160a70787ba9819b6012ab89cf4a2e68"
+    },
+    {
+      "card_id": 25542642,
+      "name": "Phantom Knights' Fog Blade",
+      "text_sha256": "57ac24a14053fdf12031dc67ddf642de16929098bdefa9aea8b3db0d9ade5964",
+      "script": "official/c25542642.lua",
+      "script_sha256": "0cebfc9d0f6746acd3eb76becadc85d837279f219549786eca39f6e286c174b1"
+    },
+    {
+      "card_id": 14558127,
+      "name": "Ash Blossom & Joyous Spring",
+      "text_sha256": "fd614dfd3dcacc570425374b0263f2dae7dc20274e1820b826c4ca8afe330acf",
+      "script": "official/c14558127.lua",
+      "script_sha256": "ef52822941d9e63d6b3ed0d7bea58dc8ab440be983a88aa353c36e3e294313ac"
+    },
+    {
+      "card_id": 23434538,
+      "name": "Maxx \"C\"",
+      "text_sha256": "0cb2fea51c616ac0e1b368a71cad982b0c0f9db446e8239671a860638b4f69df",
+      "script": "official/c23434538.lua",
+      "script_sha256": "ff77e69f085ead924ee153dbec57c03f2bd73fb2dfe8a5e08ab077f41d0b68d0"
+    },
+    {
+      "card_id": 42141493,
+      "name": "Mulcharmy Fuwalos",
+      "text_sha256": "764298a4c79118aaebe2b955381fa108baf01379b4c48228badccf332cac3e11",
+      "script": "official/c42141493.lua",
+      "script_sha256": "b5581a3ccbaa0d37f5a49388c415cafd33aab451df27cdf030ec81cfb906f380"
+    },
+    {
+      "card_id": 94145021,
+      "name": "Droll & Lock Bird",
+      "text_sha256": "2e329ca3d34c612fbd0c0cb1f1cb15313b90cb9274679fb93d248eb2c68b379f",
+      "script": "official/c94145021.lua",
+      "script_sha256": "a27f1c2c552b4a8f1df756c06f35730ed85ed1ef5c91903276e296963a202b68"
+    },
+    {
+      "card_id": 10045474,
+      "name": "Infinite Impermanence",
+      "text_sha256": "7c906f98b7baf2d1275ab278be2d0680e5a82803fbbf24d1f6d62151b878d7b8",
+      "script": "official/c10045474.lua",
+      "script_sha256": "3e7a6a44bfcc399b3f7d910930fa9144dbe0baf1ba4893a84c0afad94b5e5fc0"
+    },
+    {
+      "card_id": 40366667,
+      "name": "Dominus Impulse",
+      "text_sha256": "b9512c6529efc5869af7a90b4bbf643865a2312d97086c419094c630a4b7b6b8",
+      "script": "official/c40366667.lua",
+      "script_sha256": "717bb2657074687655b1aeac49a3a98f54e8bf225aa1aa1ed6e36a19aa08a9c3"
+    },
+    {
+      "card_id": 26692769,
+      "name": "The Phantom Knights of Rusty Bardiche",
+      "text_sha256": "6535e4fc5b9ba5c083d340182db3bfa1037fb1e89aae961278523e8917953c48",
+      "script": "official/c26692769.lua",
+      "script_sha256": "616ebad5cbff0d115c6dde05618b128149214da07dbbb974e0952c4ecaba60e0"
+    },
+    {
+      "card_id": 65741786,
+      "name": "I:P Masquerena",
+      "text_sha256": "d75b4f9c8f4ee62a68dc6af87928e4fbaa7d71128dc36b3e8a7b5f484bd7f9ef",
+      "script": "official/c65741786.lua",
+      "script_sha256": "79373439b595b559ce1f14d4c24a8bfc3865563f808d5e307d4db0c34c96b94f"
+    },
+    {
+      "card_id": 58699500,
+      "name": "Cherubini, Ebon Angel of the Burning Abyss",
+      "text_sha256": "075820c2b56c33946ba099f293282d3dceac8abce63d401fc2670988ed03eac9",
+      "script": "official/c58699500.lua",
+      "script_sha256": "e695eb8e22ad0c82b445c774260c8b81c8405f43c48895f0cde7d6fe0f6e8475"
+    },
+    {
+      "card_id": 29301450,
+      "name": "S:P Little Knight",
+      "text_sha256": "369955e04c9deaf964e23e26d21147bad51fa6a6c960ee4a8791a0b42beec7c6",
+      "script": "official/c29301450.lua",
+      "script_sha256": "a1034128f91faff3ab1469e8437cbd02cc47584f1f6a28e184e9288e7cd4f778"
+    },
+    {
+      "card_id": 4993187,
+      "name": "W:P Fancy Ball",
+      "text_sha256": "fa3b163acd60fbb102a20580ef7d2145bf87287794b806b193d9c8140afd3d03",
+      "script": "official/c4993187.lua",
+      "script_sha256": "2a2372af7e0bcca424b3f73e1757226c4f18e71b6c90fea27c80dc9270360a6e"
+    },
+    {
+      "card_id": 62709239,
+      "name": "The Phantom Knights of Break Sword",
+      "text_sha256": "669453e9494c63ad1cf9ef8cf8f829896b1416c4ac21ace3825fa7882ffa4890",
+      "script": "official/c62709239.lua",
+      "script_sha256": "aab9525406d64a7b1510e3b848a575ee24cdf09c0adabee395c62129cdca9567"
+    },
+    {
+      "card_id": 28781003,
+      "name": "Raider's Knight",
+      "text_sha256": "51a469fd4daa96e2160a4958073765886d478486556c3d86b3a262cbcd9aa515",
+      "script": "official/c28781003.lua",
+      "script_sha256": "5bf945f0efef9060e6a898c052d7f3edf459ee6ec2cf6a58398796b11990a99e"
+    },
+    {
+      "card_id": 91279700,
+      "name": "Evilswarm Ophion",
+      "text_sha256": "329c2f974af7aff3c1ef16f58dc891d32dfc84c8522109e8d844e0b42d4dd59a",
+      "script": "official/c91279700.lua",
+      "script_sha256": "f158c9f648856eb43db8ef7b3f0cda6642d99b2ea1d9adb27bc28b1465ab9d56"
+    },
+    {
+      "card_id": 77675029,
+      "name": "Exosister Karmael",
+      "text_sha256": "586571baa5c5092edbae964bc132c4a0ad4a50fe9be70cd2b6eea0f15c7e2e04",
+      "script": "official/c77675029.lua",
+      "script_sha256": "b8eb0d24079446c50b988e342dd3cf19a7b693dfa056399a38ad33cf2cbdb25b"
+    },
+    {
+      "card_id": 1621413,
+      "name": "Dark Requiem Xyz Dragon",
+      "text_sha256": "6d8423bd4c34895e3955494efd42460b020a183a1b6e27f8653a31ead7f49655",
+      "script": "official/c1621413.lua",
+      "script_sha256": "dc2a2a73e23a77383d37db4fe0831700a4bbda12f2b694bb12315d4e627c4381"
+    },
+    {
+      "card_id": 16195942,
+      "name": "Dark Rebellion Xyz Dragon",
+      "text_sha256": "28535648696ed803e196954e30ab558ee9590737023f7ac3078b7937d1963911",
+      "script": "official/c16195942.lua",
+      "script_sha256": "82ca8518eb49281a435e738cfe5d25ae518df02189b9fc7ab52c5e87bbf7cada"
+    },
+    {
+      "card_id": 64276752,
+      "name": "Arc Rebellion Xyz Dragon",
+      "text_sha256": "f149f7b8bf6ab4d85a9a8cdd14f7536b7ae73105d2020407a6cfa9cc42d5209b",
+      "script": "official/c64276752.lua",
+      "script_sha256": "0100a7e82aaba053675f5fe0c24e8292b1095931d8acdc616370dd500371c01c"
+    },
+    {
+      "card_id": 90091224,
+      "name": "Dark Rebellion Xyz Dragon of the Four Heavenly Dragons",
+      "text_sha256": "5b039b58f38e593db3bf79d8b9805d1280dbd9c0450a8b9cf3ff1f70344f74dd",
+      "script": "official/c90091224.lua",
+      "script_sha256": "b61e921c5e27bd043e3b76936711d9205dfcf0ff116b4ef1e2675223aaf3c168"
+    },
+    {
+      "card_id": 78449284,
+      "name": "The Phantom Knights of Malevolent Scythe",
+      "text_sha256": "57c5cb8e93edebac85ec9fc1beacde4205258676ba76cde435bafd0bfe7a5064",
+      "script": "official/c78449284.lua",
+      "script_sha256": "98b587cef68db00de74dae96f97819ca0333a60b771a0178746e037c8e411b42"
+    }
+  ],
+  "rules": [
+    {
+      "id": "83566725:normal_summon_and_set",
+      "card_id": 83566725,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "83566725:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "83566725:empty_field_special",
+      "card_id": 83566725,
+      "applicable": true,
+      "operation": "empty_field_special",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_procedure",
+        "key": "83566725:empty_field_special",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own monster zones empty",
+        "free legal monster zone"
+      ],
+      "costs": [],
+      "restrictions": [
+        "one summon by this procedure per name per turn"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "83566725:deck_set",
+      "card_id": 83566725,
+      "applicable": true,
+      "operation": "deck_set",
+      "description": 87626062233601,
+      "source_locations": 4,
+      "deck_interaction": "set",
+      "usage": {
+        "scope": "name_use",
+        "key": "83566725:deck_set",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 6
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "source normal or special summoned",
+        "legal S/T zone and settable The Phantom Knights S/T remains"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "83566725:raise_level_or_rank",
+      "card_id": 83566725,
+      "applicable": true,
+      "operation": "raise_level_rank",
+      "description": 87626062233602,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "83566725:raise_level_or_rank",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 2,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": "level_or_rank_three",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "raise_level_rank: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source from grave as cost"
+      ],
+      "restrictions": [
+        "apply +1 to actual level or actual rank separately until reset"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "25538345:normal_summon_and_set",
+      "card_id": 25538345,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "25538345:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "25538345:discard_and_mill",
+      "card_id": 25538345,
+      "applicable": true,
+      "operation": "discard_mill",
+      "description": 26778895646720,
+      "source_locations": 4,
+      "deck_interaction": "effect_mill",
+      "usage": {
+        "scope": "name_use",
+        "key": "25538345:discard_and_mill",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            2
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              219
+            ],
+            "excluded": [
+              25538345
+            ]
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "discard_mill: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "discard one hand card as cost"
+      ],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "25538345:banishment_revive",
+      "card_id": 25538345,
+      "applicable": true,
+      "operation": "revive_on_banish",
+      "description": 26778895646721,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "25538345:banishment_revive",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "another Phantom Knights card banished from own grave while source is in grave",
+        "free monster zone"
+      ],
+      "costs": [],
+      "restrictions": [
+        "banish on leaving monster zone; becoming material does not apply redirect"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "46072770:normal_summon_and_set",
+      "card_id": 46072770,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "46072770:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "46072770:reveal_and_special",
+      "card_id": 46072770,
+      "applicable": true,
+      "operation": "reveal_special",
+      "description": 48310800875520,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "46072770:reveal_and_special",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "reveal",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            2
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ]
+          },
+          "relation": "other_nonpublic_hand_card",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "reveal_special: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "reveal another nonpublic The Phantom Knights hand card without consuming it"
+      ],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "46072770:monster_search",
+      "card_id": 46072770,
+      "applicable": true,
+      "operation": "search_monster",
+      "description": 48310800875521,
+      "source_locations": 4,
+      "deck_interaction": "search",
+      "usage": {
+        "scope": "name_use",
+        "key": "46072770:monster_search",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "source normal or special summoned"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "46072770:rank_as_level",
+      "card_id": 46072770,
+      "applicable": true,
+      "operation": "rank_as_level",
+      "description": 48310800875522,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "46072770:rank_as_level",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 8388608
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "rank_as_level: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source from grave as cost"
+      ],
+      "restrictions": [
+        "target current face-up XYZ instance may use current rank as level for XYZ materials this turn"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "90432163:normal_summon_and_set",
+      "card_id": 90432163,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "90432163:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "90432163:position_and_stat_boost",
+      "card_id": 90432163,
+      "applicable": true,
+      "operation": "position_boost",
+      "description": 94824995749888,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "90432163:position_and_stat_boost",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "source face-up attack position"
+      ],
+      "costs": [],
+      "restrictions": [
+        "source changes to defense; target gains800ATK/DEF until opponent turn end"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "90432163:grave_search",
+      "card_id": 90432163,
+      "applicable": true,
+      "operation": "search_monster",
+      "description": 94824995749889,
+      "source_locations": 16,
+      "deck_interaction": "search",
+      "usage": {
+        "scope": "name_use",
+        "key": "90432163:grave_search",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "excluded": [
+              90432163
+            ]
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "search_monster: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source from grave as cost"
+      ],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "36426778:normal_summon_and_set",
+      "card_id": 36426778,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "36426778:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "36426778:phantom_control_special",
+      "card_id": 36426778,
+      "applicable": true,
+      "operation": "phantom_field_special",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_procedure",
+        "key": "36426778:phantom_control_special",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "control face-up The Phantom Knights monster",
+        "free legal monster zone"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "36426778:grave_spell_trap_search",
+      "card_id": 36426778,
+      "applicable": true,
+      "operation": "search_spell_trap",
+      "description": 38196245168129,
+      "source_locations": 16,
+      "deck_interaction": "search",
+      "usage": {
+        "scope": "name_use",
+        "key": "36426778:grave_spell_trap_search",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              219
+            ],
+            "type_mask": 6
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "search_spell_trap: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source from grave as cost"
+      ],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "63821877:normal_summon_and_set",
+      "card_id": 63821877,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "63821877:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "63821877:granted_xyz_stat_boost",
+      "card_id": 63821877,
+      "applicable": true,
+      "operation": "granted_xyz_attack",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "63821877:granted_xyz_stat_boost",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "DARK Xyz summoned using source on field as material"
+      ],
+      "costs": [],
+      "restrictions": [
+        "granted optional trigger gives summoned host1000ATK; name usage shared across copies"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "63821877:grave_mill",
+      "card_id": 63821877,
+      "applicable": true,
+      "operation": "mill",
+      "description": 66922088497152,
+      "source_locations": 16,
+      "deck_interaction": "effect_mill",
+      "usage": {
+        "scope": "name_use",
+        "key": "63821877:grave_mill",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              219
+            ]
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "mill: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source from grave as cost"
+      ],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "88544390:normal_summon_and_set",
+      "card_id": 88544390,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "88544390:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "88544390:hand_special_optional_level",
+      "card_id": 88544390,
+      "applicable": true,
+      "operation": "special_on_phantom_summon",
+      "description": 92845522288640,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "88544390:hand_special_optional_level",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "The Phantom Knights monster special summoned to own field",
+        "trigger window; free monster zone"
+      ],
+      "costs": [],
+      "restrictions": [
+        "after summon may raise own actual level by1"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "88544390:grave_hand_special_optional_level",
+      "card_id": 88544390,
+      "applicable": true,
+      "operation": "grave_hand_special",
+      "description": 92845522288641,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "88544390:grave_hand_special_optional_level",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            2
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1,
+            "excluded": [
+              88544390
+            ]
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "grave_hand_special: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source from grave as cost"
+      ],
+      "restrictions": [
+        "after target summon may raise its level by1"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "52159691:normal_summon_and_set",
+      "card_id": 52159691,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "52159691:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "52159691:phantom_and_raidraptor_identity",
+      "card_id": 52159691,
+      "applicable": true,
+      "operation": "identity",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "always The Phantom Knights and Raidraptor"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "52159691:detach_and_self_revive",
+      "card_id": 52159691,
+      "applicable": true,
+      "operation": "detach_self_special",
+      "description": 54693400150016,
+      "source_locations": 18,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "52159691:detach_and_self_revive",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": "own_dark_xyz_material",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "detach_self_special: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "detach one material from a controlled DARK XYZ as cost"
+      ],
+      "restrictions": [
+        "banish when source leaves monster zone; material transition clears redirect"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "52159691:granted_opponent_target_protection",
+      "card_id": 52159691,
+      "applicable": true,
+      "operation": "granted_opponent_protection",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "host original attribute DARK and source is its material"
+      ],
+      "costs": [],
+      "restrictions": [
+        "opponent targeting prohibited; own targeting remains legal"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "99745551:normal_summon_and_set",
+      "card_id": 99745551,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "99745551:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "99745551:random_discard_special_draw",
+      "card_id": 99745551,
+      "applicable": true,
+      "operation": "danger_reveal",
+      "description": 104590790885376,
+      "source_locations": 2,
+      "deck_interaction": "draw",
+      "usage": {
+        "scope": "chain",
+        "key": "99745551:random_discard_special_draw",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "source hand card not public",
+        "no same-source activation flag in current chain"
+      ],
+      "costs": [],
+      "restrictions": [
+        "random discard is effect, not cost",
+        "draw identity unknown until actual observation",
+        "reveal activation has no name once-per-turn"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "99745551:discarded_self_revive",
+      "card_id": 99745551,
+      "applicable": true,
+      "operation": "danger_discard_special",
+      "description": 104590790885377,
+      "source_locations": 48,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "99745551:discarded_self_revive",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "source discarded from hand",
+        "free zone and legal special summon"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "65192027:exact_three_dark_grave_special",
+      "card_id": 65192027,
+      "applicable": true,
+      "operation": "exact_dark_grave_special",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "exactly3DARK monsters in own grave",
+        "cannot normal summon/set; own summon procedure only"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "65192027:banish_and_destroy",
+      "card_id": 65192027,
+      "applicable": true,
+      "operation": "banish_destroy",
+      "description": 68358794903554,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            16
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4,
+            8
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "banish_destroy: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish one DARK grave monster as cost"
+      ],
+      "restrictions": [
+        "destroy only a still-related target; protections may prevent destruction"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "44088353:self_field_destroy_draw",
+      "card_id": 44088353,
+      "applicable": true,
+      "operation": "destroy_draw",
+      "description": 46229988835328,
+      "source_locations": 10,
+      "deck_interaction": "draw",
+      "usage": {
+        "scope": "name_use",
+        "key": "44088353:self_field_destroy_draw",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "own monster target and can draw2"
+      ],
+      "costs": [],
+      "restrictions": [
+        "draw2 only after successful destruction; unknown card identities",
+        "optional opponent position branch unavailable in empty opponent field"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "44088353:grave_return_after_revive",
+      "card_id": 44088353,
+      "applicable": true,
+      "operation": "return_on_grave_special",
+      "description": 46229988835329,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "44088353:grave_return_after_revive",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own monster special summoned from own grave while source already grave"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "32807846:warrior_search",
+      "card_id": 32807846,
+      "applicable": true,
+      "operation": "search_warrior",
+      "description": 0,
+      "source_locations": 10,
+      "deck_interaction": "search",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 1,
+            "max_level": 4,
+            "race": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "search_warrior: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "81439173:monster_mill",
+      "card_id": 81439173,
+      "applicable": true,
+      "operation": "mill_monster",
+      "description": 85395162267648,
+      "source_locations": 10,
+      "deck_interaction": "effect_mill",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "mill_monster: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "62104532:revive_negate_and_rank_up_transfer",
+      "card_id": 62104532,
+      "applicable": true,
+      "operation": "requiem_rank_up",
+      "description": 65121321746432,
+      "source_locations": 10,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_activation",
+        "key": "62104532:revive_negate_and_rank_up_transfer",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            16,
+            32
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315,
+              8307
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "rank_up_host",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 8388608,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "rank_up_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            64
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315,
+              8307
+            ],
+            "type_mask": 8388608
+          },
+          "relation": "host_rank_plus_one",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "revive target legal; free zone",
+        "legal DARK XYZ host exists after revival with legal rank+1 extra target"
+      ],
+      "costs": [],
+      "restrictions": [
+        "revived target effects negated",
+        "rank-up is XYZ summon; transfer all materials; preserve proper-history distinction"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "88504133:banish_rank_up_transfer_and_xyz_lock",
+      "card_id": 88504133,
+      "applicable": true,
+      "operation": "force_rank_up",
+      "description": 92803309764608,
+      "source_locations": 10,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_activation",
+        "key": "88504133:banish_rank_up_transfer_and_xyz_lock",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            16
+          ],
+          "min": 1,
+          "max": 10,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "rank_up_host",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 8388608,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "rank_up_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            64
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315,
+              186,
+              8307
+            ],
+            "type_mask": 8388608
+          },
+          "relation": "host_rank_plus_banished_count",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "force_rank_up: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish one or more DARK grave monsters as cost"
+      ],
+      "restrictions": [
+        "extra-deck special summons restricted to XYZ after resolution this turn",
+        "XYZ summon and material transfer"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "24299458:droplet_opponent_monsters",
+      "card_id": 24299458,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "需要对方场上效果怪兽；本场景对方只从手牌发动灰流丽，且牌表没有将怪兽放到对方场上的效果。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "85257384:same_turn_trap_condition",
+      "card_id": 85257384,
+      "applicable": true,
+      "operation": "trap_same_turn",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "face-up The Phantom Knights monster in own field or grave"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "85257384:trap_monster_special",
+      "card_id": 85257384,
+      "applicable": true,
+      "operation": "trap_monster",
+      "description": 89398846685184,
+      "source_locations": 8,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "85257384:trap_monster_special",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "activation permitted for set turn",
+        "free zone"
+      ],
+      "costs": [],
+      "restrictions": [
+        "normal monster warriorDARKlevel3defense0/300; no longer Trap"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "85257384:grave_immediate_xyz",
+      "card_id": 85257384,
+      "applicable": true,
+      "operation": "immediate_xyz",
+      "description": 89398846685185,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "85257384:grave_immediate_xyz",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            64
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 8388608,
+            "attribute": 32
+          },
+          "relation": "legal_xyz_procedure",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "immediate_xyz: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source as cost"
+      ],
+      "restrictions": [
+        "XYZ summon immediately after resolution, required procedure counts toward steps"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "98431356:field_wing_activation",
+      "card_id": 98431356,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "没有可于首回合发动该通常陷阱的手续；Doom只能盖The Phantom Knights字段，Wing属于Phantom Knights字段。墓地主动效果单独纳入。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "98431356:grave_phantom_revive",
+      "card_id": 98431356,
+      "applicable": true,
+      "operation": "grave_revive",
+      "description": 103212757549056,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "98431356:grave_phantom_revive",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            16
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "grave_revive: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source as cost"
+      ],
+      "restrictions": [
+        "banish revived target on leaving field; material transition clears redirect"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "25542642:field_fog_activation_and_continuous_effect",
+      "card_id": 25542642,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "没有允许该永续陷阱盖放当回合发动的手续；盖放和墓地主动效果仍纳入。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "25542642:grave_phantom_revive",
+      "card_id": 25542642,
+      "applicable": true,
+      "operation": "grave_revive",
+      "description": 26783401377792,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "25542642:grave_phantom_revive",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            16
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "grave_revive: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "banish source as cost"
+      ],
+      "restrictions": [
+        "banish revived target on leaving field; material transition clears redirect"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "14558127:normal_summon_and_set",
+      "card_id": 14558127,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "14558127:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "14558127:own_or_opponent_chain_negation",
+      "card_id": 14558127,
+      "applicable": true,
+      "operation": "ash_negate",
+      "description": 15265302577152,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "14558127:own_or_opponent_chain_negation",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "immediate chain predecessor includes a legal Ash category",
+        "chain disablable and source not disabled"
+      ],
+      "costs": [
+        "discard source as cost"
+      ],
+      "restrictions": [
+        "negate effect, not activation; name-use count remains consumed"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "23434538:normal_summon_and_set",
+      "card_id": 23434538,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "23434538:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "23434538:draw_observer",
+      "card_id": 23434538,
+      "applicable": true,
+      "operation": "draw_observer",
+      "description": 24572894117888,
+      "source_locations": 2,
+      "deck_interaction": "draw",
+      "usage": {
+        "scope": "name_use",
+        "key": "23434538:draw_observer",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "draw_observer: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "send source from hand to grave as cost"
+      ],
+      "restrictions": [
+        "register draws for opponent special summons; no opponent SS assumed"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "42141493:normal_summon_and_set",
+      "card_id": 42141493,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "42141493:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "42141493:empty_field_draw_observer",
+      "card_id": 42141493,
+      "applicable": true,
+      "operation": "mulcharmy_observer",
+      "description": 44188558163968,
+      "source_locations": 2,
+      "deck_interaction": "draw",
+      "usage": {
+        "scope": "shared_mulcharmy_activation",
+        "key": "42141493:empty_field_draw_observer",
+        "limit": 2
+      },
+      "selections": [],
+      "conditions": [
+        "own field has no cards",
+        "Mulcharmy activation count below2"
+      ],
+      "costs": [
+        "discard source as cost"
+      ],
+      "restrictions": [
+        "register draws only for opponent deck/extra special summons and end-phase hand reduction"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "42141493:end_phase_random_hand_reduction",
+      "card_id": 42141493,
+      "applicable": true,
+      "operation": "end_phase_hand_reduce",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "resolved observer registered this turn",
+        "end phase hand exceeds opponent field+6"
+      ],
+      "costs": [],
+      "restrictions": [
+        "randomly return surplus cards; observe actual identities after operation"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "42141493:shared_mulcharmy_activation_limit",
+      "card_id": 42141493,
+      "applicable": true,
+      "operation": "mulcharmy_limit",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "shared_mulcharmy_activation",
+        "key": "42141493:shared_mulcharmy_activation_limit",
+        "limit": 2
+      },
+      "selections": [],
+      "conditions": [
+        "each Mulcharmy activation increments shared counter even if effect negated"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "94145021:normal_summon_and_set",
+      "card_id": 94145021,
+      "applicable": true,
+      "operation": "normal_summon_set",
+      "description": null,
+      "source_locations": 2,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "normal_opportunity",
+        "key": "94145021:normal_summon_and_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "own main phase; normal summon/set opportunity remains",
+        "monster has a legal standard normal summon/set procedure; tribute requirements checked"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "94145021:opponent_deck_to_hand_trigger",
+      "card_id": 94145021,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "对方没有从主卡组加入手牌的动作；Karmael改写的是墓地回手，不满足牌库加入条件。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "10045474:imperm_opponent_monster",
+      "card_id": 10045474,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "对方始终没有表侧怪兽可选。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "40366667:impulse_activation",
+      "card_id": 40366667,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "对方无场卡，不能从手牌发动；首回合盖放也没有同回合发动许可。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "26692769:dark_link_three",
+      "card_id": 26692769,
+      "applicable": true,
+      "operation": "link_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 3,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "material link contributions sum exactly3",
+        "legal extra monster/linked zone",
+        "Rusty cannot be link material"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "26692769:deck_mill_and_set",
+      "card_id": 26692769,
+      "applicable": true,
+      "operation": "discard_mill",
+      "description": 27989396946944,
+      "source_locations": 4,
+      "deck_interaction": "effect_mill",
+      "usage": {
+        "scope": "name_use",
+        "key": "26692769:deck_mill_and_set",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "deck_set",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              219
+            ],
+            "type_mask": 6
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "own main phase; both deck candidates and S/T capacity"
+      ],
+      "costs": [],
+      "restrictions": [
+        "send then set; second operation depends on first"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "26692769:linked_zone_xyz_destroy",
+      "card_id": 26692769,
+      "applicable": true,
+      "operation": "linked_xyz_destroy",
+      "description": 27989396946945,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "26692769:linked_zone_xyz_destroy",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4,
+            8
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "DARK XYZ special summoned to source linked zone while source on field"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "26692769:cannot_link_material",
+      "card_id": 26692769,
+      "applicable": true,
+      "operation": "link_material_prohibition",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "source cannot be used as link material"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "65741786:two_non_link_monsters",
+      "card_id": 65741786,
+      "applicable": true,
+      "operation": "link_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "non_link",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "material link contributions sum exactly2",
+        "legal extra monster/linked zone",
+        "Rusty cannot be link material"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "65741786:opponent_main_link",
+      "card_id": 65741786,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "只在对方主阶段发动，本轮结束在己方首回合。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "65741786:opponent_effect_destruction_protection",
+      "card_id": 65741786,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "该保护仅针对对方效果破坏；对方唯一效果灰流丽只无效效果，不破坏。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "58699500:two_level_three",
+      "card_id": 58699500,
+      "applicable": true,
+      "operation": "link_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "level_three",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "material link contributions sum exactly2",
+        "legal extra monster/linked zone",
+        "Rusty cannot be link material"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "58699500:linked_zone_destruction_protection",
+      "card_id": 58699500,
+      "applicable": true,
+      "operation": "linked_destroy_protection",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "monster currently in zone source points to"
+      ],
+      "costs": [],
+      "restrictions": [
+        "prevents own and opponent effect destruction"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "58699500:opponent_destruction_or_battle_replacement",
+      "card_id": 58699500,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "只涉及战斗或对方效果破坏；本轮两者均不发生。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "58699500:cost_mill_and_stat_boost",
+      "card_id": 58699500,
+      "applicable": true,
+      "operation": "cost_mill_boost",
+      "description": 61550886912000,
+      "source_locations": 4,
+      "deck_interaction": "cost_mill",
+      "usage": {
+        "scope": "name_use",
+        "key": "58699500:cost_mill_and_stat_boost",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 1,
+            "level": 3
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              177
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "cost_mill_boost: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "send level3deck monster as cost"
+      ],
+      "restrictions": [
+        "cost sending is not Ash category; target gets sent monster original ATK/DEF"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "29301450:two_effect_monsters",
+      "card_id": 29301450,
+      "applicable": true,
+      "operation": "link_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "material link contributions sum exactly2",
+        "legal extra monster/linked zone",
+        "Rusty cannot be link material"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "29301450:qualified_link_summon_banish",
+      "card_id": 29301450,
+      "applicable": true,
+      "operation": "link_summon_banish",
+      "description": 30724797235200,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "29301450:qualified_link_summon_banish",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4,
+            8,
+            16
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "link summoned using fusion/synchro/XYZ/link monster"
+      ],
+      "costs": [],
+      "restrictions": [
+        "rest of turn own monsters cannot attack directly"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "29301450:opponent_chain_temporary_banish_and_return",
+      "card_id": 29301450,
+      "applicable": true,
+      "operation": "temporary_banish_return",
+      "description": 30724797235201,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "29301450:opponent_chain_temporary_banish_and_return",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "faceup_including_own",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "opponent activated card/effect"
+      ],
+      "costs": [],
+      "restrictions": [
+        "return during end phase is not a special summon; no summon history invented"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "4993187:effect_link_three",
+      "card_id": 4993187,
+      "applicable": true,
+      "operation": "link_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 3,
+          "filter": {
+            "type_mask": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "material link contributions sum exactly3",
+        "legal extra monster/linked zone",
+        "Rusty cannot be link material"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "4993187:opponent_field_or_grave_monster_response",
+      "card_id": 4993187,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "灰流丽的发动区域为手牌，不能因费用后进入墓地误认为墓地发动。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "4993187:opponent_main_link_using_opponent_material",
+      "card_id": 4993187,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "只在对方主阶段发动，且对方没有连接怪兽。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "62709239:two_level_three",
+      "card_id": 62709239,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 3,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "62709239:destroy_both_fields",
+      "card_id": 62709239,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "要求双方场上各有对象；本轮对方场上恒为空。原Ryu-Ran合成场景仍按旧路径回归。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "62709239:destroyed_xyz_two_revive_dark_lock",
+      "card_id": 62709239,
+      "applicable": true,
+      "operation": "destroyed_xyz_revive",
+      "description": 65755402993665,
+      "source_locations": 16,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "target",
+          "controller": 0,
+          "locations": [
+            16
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "relation": "same_actual_level",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "source current XYZ-summoned incarnation actually destroyed",
+        "two free legal zones and legal grave pair"
+      ],
+      "costs": [],
+      "restrictions": [
+        "revived monsters levels+1",
+        "DARK-only special summon for rest of turn after successful processing"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "28781003:two_dark_level_four",
+      "card_id": 28781003,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 4,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "28781003:rank_up_or_down_transfer_and_delayed_destruction",
+      "card_id": 28781003,
+      "applicable": true,
+      "operation": "rank_shift",
+      "description": 30179069001728,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "28781003:rank_up_or_down_transfer_and_delayed_destruction",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": "source_material",
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "rank_up_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            64
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315,
+              186,
+              8307
+            ],
+            "type_mask": 8388608
+          },
+          "relation": "source_rank_plus_or_minus_one",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "rank_shift: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "detach1source material"
+      ],
+      "restrictions": [
+        "XYZ summon and transfer remaining materials; opponent-next-end-phase destruction registered"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "91279700:two_level_four_lswarm",
+      "card_id": 91279700,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1,
+            "setcodes": [
+              10
+            ]
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 4,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "91279700:material_dependent_high_level_summon_lock",
+      "card_id": 91279700,
+      "applicable": true,
+      "operation": "ophion_lock",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "source face-up and has at least1material"
+      ],
+      "costs": [],
+      "restrictions": [
+        "neither player may special summon actual level5+ monsters; ranks are not levels"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "91279700:infestation_search",
+      "card_id": 91279700,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "原表中没有Infestation魔法陷阱；不通过改卡创造检索目标。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "77675029:two_level_four_exosister",
+      "card_id": 77675029,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1,
+            "setcodes": [
+              372
+            ]
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 4,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "77675029:exosister_end_phase_set",
+      "card_id": 77675029,
+      "applicable": true,
+      "operation": "delayed_exosister_set",
+      "description": 81448171208704,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "77675029:exosister_end_phase_set",
+        "limit": 1
+      },
+      "selections": [],
+      "conditions": [
+        "source XYZ summoned; no immediate candidate requirement"
+      ],
+      "costs": [],
+      "restrictions": [
+        "register end-phase set; choose available Exosister S/T then; zero candidates does not prevent initial activation"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "77675029:rewrite_opponent_effect",
+      "card_id": 77675029,
+      "applicable": true,
+      "operation": "rewrite_opponent",
+      "description": 81448171208705,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "77675029:rewrite_opponent_effect",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "effect_material",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 0,
+          "max": 99,
+          "filter": {},
+          "relation": "all_source_materials",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "opponent monster effect or normal S/T activation",
+        "source material count>0 and own grave card can return to hand"
+      ],
+      "costs": [],
+      "restrictions": [
+        "send all materials as effect, not cost",
+        "rewrite predecessor to add card from its opponents grave to hand",
+        "opponent forced target choice recorded"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "1621413:three_level_five",
+      "card_id": 1621413,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 3,
+          "max": 3,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 5,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "1621413:opponent_stat_absorption",
+      "card_id": 1621413,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "对方没有可选的表侧怪兽。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "1621413:material_gated_negate_and_optional_xyz_revive",
+      "card_id": 1621413,
+      "applicable": true,
+      "operation": "requiem_negate_revive",
+      "description": 1700174757889,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": "source_material",
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "optional_target",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            16
+          ],
+          "min": 0,
+          "max": 1,
+          "filter": {
+            "type_mask": 8388608
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "Dark Rebellion16195942 is source material",
+        "opponent monster effect activated"
+      ],
+      "costs": [
+        "detach1material"
+      ],
+      "restrictions": [
+        "negate activation then destroy; optional grave XYZ revive requires successful processing"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "16195942:two_level_four",
+      "card_id": 16195942,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 4,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "16195942:opponent_attack_absorption",
+      "card_id": 16195942,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "对方没有可选的表侧怪兽。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "64276752:three_level_five",
+      "card_id": 64276752,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 3,
+          "max": 3,
+          "filter": {
+            "type_mask": 1
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 5,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "64276752:xyz_summoned_destruction_protection",
+      "card_id": 64276752,
+      "applicable": true,
+      "operation": "arc_protection",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "current source incarnation XYZ summoned"
+      ],
+      "costs": [],
+      "restrictions": [
+        "cannot be destroyed by card effects"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "64276752:stat_gain_and_conditional_field_negation",
+      "card_id": 64276752,
+      "applicable": true,
+      "operation": "arc_attack_negate",
+      "description": 67399059505152,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "64276752:stat_gain_and_conditional_field_negation",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": "source_material",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "arc_attack_negate: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [
+        "detach1material"
+      ],
+      "restrictions": [
+        "gain other monsters originalATK total; if DARK XYZ material negate all other face-up monsters",
+        "only source can declare attacks for rest of turn after resolves"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "90091224:phantom_identity",
+      "card_id": 90091224,
+      "applicable": true,
+      "operation": "identity",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "always The Phantom Knights"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "90091224:two_dark_level_four",
+      "card_id": 90091224,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 4,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "90091224:equal_cards_both_fields_destroy",
+      "card_id": 90091224,
+      "applicable": false,
+      "operation": "outside",
+      "description": null,
+      "source_locations": 0,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [],
+      "conditions": [
+        "要求双方场上有相同非零数量对象；对方场上恒为空。"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "excluded",
+      "evidence_cases": []
+    },
+    {
+      "id": "90091224:opponent_chain_overlay_rank_four_transfer",
+      "card_id": 90091224,
+      "applicable": true,
+      "operation": "opponent_overlay",
+      "description": 94467495297025,
+      "source_locations": 4,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "90091224:opponent_chain_overlay_rank_four_transfer",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": "source_material",
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "rank_up_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            64
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "type_mask": 8388608,
+            "attribute": 32
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": 4
+        }
+      ],
+      "conditions": [
+        "opponent card/effect activated"
+      ],
+      "costs": [
+        "detach1material"
+      ],
+      "restrictions": [
+        "XYZ summon rank4DARK using source; transfer remaining materials"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "78449284:two_dark_level_three",
+      "card_id": 78449284,
+      "applicable": true,
+      "operation": "xyz_procedure",
+      "description": null,
+      "source_locations": 64,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "none",
+        "key": null,
+        "limit": null
+      },
+      "selections": [
+        {
+          "role": "material",
+          "stage": "procedure",
+          "controller": 0,
+          "locations": [
+            4
+          ],
+          "min": 2,
+          "max": 2,
+          "filter": {
+            "type_mask": 1,
+            "attribute": 32
+          },
+          "relation": "actual_level_or_permitted_rank",
+          "actual_level": 3,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "xyz_procedure: check actor, window, count, capacity and script-specific conditions"
+      ],
+      "costs": [],
+      "restrictions": [
+        "material transition is not sent to grave; attach same-name instances separately",
+        "source gains current proper XYZ history only on successful summon"
+      ],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "78449284:deck_special",
+      "card_id": 78449284,
+      "applicable": true,
+      "operation": "deck_special",
+      "description": 82260036419584,
+      "source_locations": 4,
+      "deck_interaction": "effect_special",
+      "usage": {
+        "scope": "name_use",
+        "key": "78449284:deck_special",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "cost",
+          "stage": "cost",
+          "controller": 0,
+          "locations": [
+            132
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {},
+          "relation": "source_material",
+          "actual_level": null,
+          "actual_rank": null
+        },
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "free zone; legal The Phantom Knights deck monster"
+      ],
+      "costs": [
+        "detach1material as cost"
+      ],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "78449284:xyz_dragon_rank_up_search",
+      "card_id": 78449284,
+      "applicable": true,
+      "operation": "search_rank_up",
+      "description": 82260036419585,
+      "source_locations": 4,
+      "deck_interaction": "search",
+      "usage": {
+        "scope": "name_use",
+        "key": "78449284:xyz_dragon_rank_up_search",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "deck_result",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            1
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              149
+            ],
+            "type_mask": 2
+          },
+          "relation": null,
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "own Xyz Dragon XYZ summoned while source in own monster zone"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    },
+    {
+      "id": "78449284:destroyed_banished_card_return",
+      "card_id": 78449284,
+      "applicable": true,
+      "operation": "return_banished_on_destruction",
+      "description": 82260036419586,
+      "source_locations": 52,
+      "deck_interaction": "none",
+      "usage": {
+        "scope": "name_use",
+        "key": "78449284:destroyed_banished_card_return",
+        "limit": 1
+      },
+      "selections": [
+        {
+          "role": "target",
+          "stage": "resolution",
+          "controller": 0,
+          "locations": [
+            32
+          ],
+          "min": 1,
+          "max": 1,
+          "filter": {
+            "setcodes": [
+              4315
+            ]
+          },
+          "relation": "non_xyz",
+          "actual_level": null,
+          "actual_rank": null
+        }
+      ],
+      "conditions": [
+        "source actually destroyed",
+        "face-up nonXYZ The Phantom Knights banished card can return to hand"
+      ],
+      "costs": [],
+      "restrictions": [],
+      "status": "curated",
+      "evidence_cases": []
+    }
+  ]
+}

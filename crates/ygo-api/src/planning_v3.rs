@@ -2220,6 +2220,7 @@ mod tests {
             probe_only: false,
             scenario: None,
             interruption: None,
+            first_turn: None,
         };
         let knowledge = KnowledgePack::builtin().unwrap();
         PlanReport {

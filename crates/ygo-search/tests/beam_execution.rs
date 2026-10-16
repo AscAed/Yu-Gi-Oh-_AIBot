@@ -111,6 +111,7 @@ fn request() -> RunDuelRequest {
         probe_only: false,
         scenario: None,
         interruption: None,
+        first_turn: None,
     }
 }
 #[test]

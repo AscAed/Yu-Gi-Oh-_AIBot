@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# New source-bound identities hash bytes and must survive Windows/Linux checkout.
+# Historical fixtures retain their existing checkout and identity conventions.
+configs/tournament-2026*.json text eol=lf
+knowledge/tournament-2026*.json text eol=lf
+tests/fixtures/tournament-2026*.json text eol=lf

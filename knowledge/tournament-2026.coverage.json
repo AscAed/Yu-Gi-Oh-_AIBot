@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scenario": "own_first_turn_ocg_mr5_opponent_one_ash_only",
-  "deck_sha256": "0102c4d4c8fc22c855a02b9627317f47a78c0cc4be6bfa59e396870745ff71e5",
+  "deck_sha256": "5533c9f0aae115e9a408a26acb6d037d38c9505c1e78970431ffc19ab92cdb88",
   "asset_group_id": "asset-group-228cca96b5cf16a5e8d8f397cb30db073b483e75ddb0536d7d5f6f28783af340",
   "scope_notes": [
     "覆盖清单不是已实现或已验真声明",
@@ -989,9 +989,9 @@
         {
           "id": "77675029:exosister_end_phase_set",
           "kind": "activation_or_rule",
-          "applicability": "outside_scenario",
-          "exclusion_basis": "原表中没有Exosister魔法陷阱；其特殊召唤与改写效果单独纳入。",
-          "implementation_status": "excluded_with_basis",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
           "verification_cases": []
         },
         {

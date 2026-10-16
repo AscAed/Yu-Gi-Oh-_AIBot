@@ -160,6 +160,7 @@ pub fn probe_request(engine: ProcessEngineConfig) -> Result<RunDuelRequest, Work
         probe_only: true,
         scenario: None,
         interruption: None,
+        first_turn: None,
     })
 }
 pub fn runtime_request(
@@ -181,11 +182,20 @@ fn opponent_choice(
     p: &Prompt,
 ) -> Result<Choice, WorkerError> {
     if let Some(config) = &request.interruption {
-        if request.protocol_version == 5 {
-            let (code, desc) =
-                crate::ash_effect_descriptor(&config.effect_id).ok_or_else(|| {
+        if request.protocol_version >= 5 {
+            let (code, desc, zones) = if request.protocol_version == 6 {
+                let d = request
+                    .first_turn
+                    .as_ref()
+                    .and_then(|c| c.descriptor(&config.effect_id))
+                    .ok_or_else(|| WorkerError::new("policy", "effect", "missing v6 descriptor"))?;
+                (d.card_id, d.description, Some(d.source_locations))
+            } else {
+                let (c, d) = crate::ash_effect_descriptor(&config.effect_id).ok_or_else(|| {
                     WorkerError::new("policy", "effect", "unsupported effect descriptor")
                 })?;
+                (c, d, None)
+            };
             let matches: Vec<_> = events
                 .iter()
                 .filter(|e| {
@@ -193,6 +203,11 @@ fn opponent_choice(
                         && e.fields["code"] == code
                         && e.fields["player"] == 0
                         && e.fields["description"].as_u64() == Some(desc)
+                        && zones.map_or(true, |mask| {
+                            e.fields["trigger_location"]
+                                .as_u64()
+                                .is_some_and(|z| z & u64::from(mask) != 0)
+                        })
                 })
                 .collect();
             let current = events.iter().rev().find(|e| matches!(e.opcode, 70 | 74));
@@ -274,7 +289,8 @@ fn opponent_choice(
         })
 }
 fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
-    if !matches!(r.protocol_version, 2..=5)
+    if !matches!(r.protocol_version, 2..=6)
+        || r.validate_protocol().is_err()
         || (r.protocol_version == 2 && r.scenario.is_some())
         || r.scenario.as_ref().is_some_and(|s| s != "ryu-ran")
         || (r.protocol_version < 4 && r.interruption.is_some())
@@ -289,7 +305,9 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
     if r.versions.rules != "ocg-mr5"
         || r.versions.core_commit != CORE_COMMIT
         || r.versions.initializer
-            != if r.protocol_version == 5 {
+            != if r.protocol_version == 6 {
+                crate::FIRST_TURN_INITIALIZER
+            } else if r.protocol_version == 5 {
                 "fixed-ash-strategy-v1"
             } else if r.protocol_version == 4 {
                 "fixed-interruption-v1"
@@ -306,12 +324,18 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
         ));
     }
     if let Some(i) = &r.interruption {
-        if r.protocol_version == 5 {
+        if r.protocol_version == 6 {
+            i.validate_v6(r.first_turn.as_ref().expect("checked v6 context"))
+        } else if r.protocol_version == 5 {
             i.validate_v5()
         } else {
             i.validate()
         }
         .map_err(|e| WorkerError::new("interruption", "input", e))?;
+    }
+    if r.protocol_version == 6 {
+        crate::verify_first_turn_assets(r)
+            .map_err(|e| WorkerError::new("asset_group", "verify", e))?;
     }
     for (path, expected) in [
         (&r.engine.ocgcore_path, &r.versions.engine_sha256),
@@ -363,7 +387,7 @@ fn checkpoint(
     turn: u32,
     player: u8,
     phase: u16,
-    extended: bool,
+    protocol: u16,
 ) -> Result<Checkpoint, String> {
     let mut state = Checkpoint {
         turn,
@@ -415,7 +439,12 @@ fn checkpoint(
                             | 0x100
                             | 0x200
                             | 0x10000
-                            | if extended { 0x10 | 0x20 } else { 0 },
+                            | if protocol >= 3 { 0x10 | 0x20 } else { 0 }
+                            | if protocol >= 6 {
+                                0x40 | 0x80 | 0x400 | 0x800 | 0x40000 | 0x80000 | 0x800000
+                            } else {
+                                0
+                            },
                         controller: p,
                         location: zone,
                         sequence: seq,
@@ -444,6 +473,16 @@ fn checkpoint(
                             2 => card.position = field.u32()?,
                             0x10 => card.level = Some(field.u32()?),
                             0x20 => card.rank = Some(field.u32()?),
+                            0x40 => card.attribute = Some(field.u32()?),
+                            0x80 => card.race = Some(field.u64()?),
+                            0x400 => card.base_attack = Some(field.u32()? as i32),
+                            0x800 => card.base_defense = Some(field.u32()? as i32),
+                            0x40000 => card.owner = Some(field.u8()?),
+                            0x80000 => card.status = Some(field.u32()?),
+                            0x800000 => {
+                                card.link = Some(field.u32()?);
+                                card.link_marker = Some(field.u32()?);
+                            }
                             8 => card.type_flags = field.u32()?,
                             0x100 => card.attack = field.u32()? as i32,
                             0x200 => card.defense = field.u32()? as i32,
@@ -714,9 +753,8 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                         "unused decisions",
                     ));
                 }
-                result.checkpoint =
-                    checkpoint(&api, duel, 1, 0, 512, request.protocol_version >= 3)
-                        .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
+                result.checkpoint = checkpoint(&api, duel, 1, 0, 512, request.protocol_version)
+                    .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
                 result.status = if result.coverage_gaps.is_empty() {
                     DuelStatus::EngineVerified
                 } else {
@@ -757,19 +795,13 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                     decision.choice.clone()
                 } else if p.actions.len() == 1
                     && result.resolved_decisions.len() < 1024
-                    && !(request.protocol_version == 5 && p.opcode == 11)
+                    && !(request.protocol_version >= 5 && p.opcode == 11)
                 {
                     p.actions[0].choice.clone()
                 } else {
-                    result.checkpoint = checkpoint(
-                        &api,
-                        duel,
-                        turn,
-                        player,
-                        phase,
-                        request.protocol_version >= 3,
-                    )
-                    .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
+                    result.checkpoint =
+                        checkpoint(&api, duel, turn, player, phase, request.protocol_version)
+                            .map_err(|e| WorkerError::new("query_failed", "checkpoint", e))?;
                     result.prompt = Some(p);
                     result.status = DuelStatus::DecisionRequired;
                     break;

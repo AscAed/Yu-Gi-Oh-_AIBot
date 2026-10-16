@@ -2,7 +2,7 @@
   "schema_version": 1,
   "case_id": "tournament-assets-manual-compatibility",
   "scope": "asset/core compatibility probe only; not effect acceptance or v6 sample",
-  "deck_sha256": "0102c4d4c8fc22c855a02b9627317f47a78c0cc4be6bfa59e396870745ff71e5",
+  "deck_sha256": "5533c9f0aae115e9a408a26acb6d037d38c9505c1e78970431ffc19ab92cdb88",
   "opening_hand": [
     83566725,
     46072770,

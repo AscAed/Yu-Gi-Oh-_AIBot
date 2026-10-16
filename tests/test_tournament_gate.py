@@ -23,10 +23,17 @@ class TournamentGate(unittest.TestCase):
     def check(self):
         return validate_gate(self.source, self.deck, self.coverage)
 
+    def test_frozen_json_bytes_have_portable_lf_line_endings(self):
+        for name in ('configs/tournament-2026.source.json',
+                     'configs/tournament-2026.assets.json',
+                     'tests/fixtures/tournament-2026.deck.json',
+                     'knowledge/tournament-2026.coverage.json'):
+            self.assertFalse(b'\r\n' in (ROOT / name).read_bytes(), name)
+
     def test_original_counts_and_unpublished_side_are_explicit(self):
         result = self.check()
         self.assertEqual(result['counts'], {'main': 41, 'extra': 15})
-        self.assertEqual(result['inside_rules'], 85)
+        self.assertEqual(result['inside_rules'], 86)
         self.assertFalse(result['semantics_verified'])
 
     def test_changed_deck_or_unclassified_rule_is_rejected(self):
@@ -63,6 +70,14 @@ class TournamentGate(unittest.TestCase):
         self.source['side']['legality_verified'] = True
         with self.assertRaisesRegex(ValueError, 'unpublished side'):
             self.check()
+
+    def test_delayed_set_registration_is_not_excluded_by_missing_deck_targets(self):
+        karmael = next(c for c in self.coverage['cards'] if c['card_id'] == 77675029)
+        delayed = next(e for e in karmael['entries']
+                       if e['id'] == '77675029:exosister_end_phase_set')
+        # The frozen Lua registers the End Phase operation without a target check.
+        # Empty Exosister S/T candidates affect that later operation, not activation.
+        self.assertEqual(delayed['applicability'], 'inside_scenario')
 
     def test_selected_source_requires_independent_full_transcription(self):
         self.source['transcription']['independent_check'] = False

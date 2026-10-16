@@ -1,9 +1,11 @@
 mod codec;
 mod ffi;
+mod first_turn;
 mod metadata;
 mod process;
 mod worker;
 pub use codec::*;
+pub use first_turn::*;
 pub use metadata::*;
 pub use process::*;
 use serde::{Deserialize, Serialize};
@@ -81,6 +83,8 @@ pub struct RunDuelRequest {
     pub scenario: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interruption: Option<InterruptionConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first_turn: Option<FirstTurnConfig>,
 }
 /// Fixed synthetic opponent resources and one deterministic response policy.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -224,6 +228,22 @@ pub struct StateCard {
     pub level: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rank: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attribute: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub race: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_attack: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_defense: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_marker: Option<u32>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Checkpoint {

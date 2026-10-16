@@ -11,6 +11,7 @@ fn request() -> RunDuelRequest {
         probe_only: true,
         scenario: None,
         interruption: None,
+        first_turn: None,
     }
 }
 fn check(mode: &str, code: &str) {
