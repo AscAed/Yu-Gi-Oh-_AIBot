@@ -152,10 +152,14 @@ pub fn evaluate(state: &Checkpoint, decisions: usize, weights: &ScoringConfig) -
     e
 }
 pub fn prefix_key(request: &RunDuelRequest) -> String {
-    if request.protocol_version == 4 {
+    if matches!(request.protocol_version, 4 | 5) {
         return digest(
             &serde_json::to_vec(&(
-                "runtime-v4",
+                if request.protocol_version == 5 {
+                    "runtime-v5"
+                } else {
+                    "runtime-v4"
+                },
                 &request.deck,
                 &request.opening_hand,
                 request.seed,

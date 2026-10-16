@@ -164,7 +164,7 @@ fn same<T: Serialize>(a: &T, b: &T) -> bool {
 fn state_id(runtime: &RunDuelRequest, state: &SymbolicState) -> String {
     ygo_knowledge::hash(&serde_json::to_vec(&(PROFILE, prefix_key(runtime), state)).unwrap())
 }
-fn initial(q: &PlanRequest, cat: &Catalog) -> Result<SymbolicState, String> {
+pub(crate) fn initial(q: &PlanRequest, cat: &Catalog) -> Result<SymbolicState, String> {
     let mut s = v3::initialize(&q.analysis.deck, &q.analysis.opening_hand, cat)?;
     let mut remaining = q.interruption.opponent_deck.main.clone();
     let at = remaining
@@ -352,6 +352,7 @@ pub fn plan(
     pass.policy = "pass".into();
     runtime.interruption = Some(pass);
     let context = PlanningContext {
+        proposal_mode: None,
         knowledge_bundle_id: knowledge_id.clone(),
         runtime: runtime.clone(),
         initial: initial(&q, &cat)?,
@@ -493,6 +494,7 @@ pub fn plan(
     let mut recovery_request = q.inner();
     recovery_request.max_steps -= prefix_steps;
     let ctx = PlanningContext {
+        proposal_mode: None,
         knowledge_bundle_id: report.knowledge_id.clone(),
         runtime: anchor_runtime,
         initial: state,
@@ -553,7 +555,7 @@ fn inventory(c: &Checkpoint) -> BTreeMap<(u8, u32, u8), i64> {
     }
     counts
 }
-fn resource_changes(before: &Checkpoint, after: &Checkpoint) -> Vec<ResourceChange> {
+pub(crate) fn resource_changes(before: &Checkpoint, after: &Checkpoint) -> Vec<ResourceChange> {
     let a = inventory(before);
     let b = inventory(after);
     a.keys()

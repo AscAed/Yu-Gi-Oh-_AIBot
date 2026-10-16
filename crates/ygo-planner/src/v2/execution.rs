@@ -426,7 +426,7 @@ pub fn execute_general<A: EngineAdapter, F: Fn(&DuelResult) -> bool>(
     pack.validate()?;
     if (!allow_prefix && !request.decisions.is_empty())
         || request.probe_only
-        || !matches!(request.protocol_version, 3 | 4)
+        || !matches!(request.protocol_version, 3..=5)
     {
         return Err("planning requires a fresh protocol v2 duel".into());
     }
@@ -472,7 +472,7 @@ pub fn execute_general<A: EngineAdapter, F: Fn(&DuelResult) -> bool>(
             }
         };
         q.decisions = result.resolved_decisions.clone();
-        if request.protocol_version == 4 && !request.decisions.is_empty() {
+        if request.protocol_version >= 4 && !request.decisions.is_empty() {
             let facts = ygo_goal::actual_facts(&result, &Default::default(), pack);
             for c in facts
                 .cards
@@ -559,6 +559,27 @@ pub fn execute_general<A: EngineAdapter, F: Fn(&DuelResult) -> bool>(
                 }
                 break;
             };
+            // V5 frozen strategies stop at the actual interruption, before accepting
+            // optional post-chain triggers or starting any replacement action.
+            if request.protocol_version == 5
+                && request.decisions.is_empty()
+                && request
+                    .interruption
+                    .as_ref()
+                    .is_some_and(|c| c.policy == "ash_effect_once")
+                && result.events.iter().any(|e| e.opcode == 76)
+                && result
+                    .events
+                    .iter()
+                    .rev()
+                    .find(|e| matches!(e.opcode, 70 | 74))
+                    .is_some_and(|e| e.opcode == 74)
+            {
+                attempt.discrepancies.push(
+                    "original_plan_interrupted: settled negation; preserve legal prefix".into(),
+                );
+                break;
+            }
             let raw = result
                 .events
                 .iter()
@@ -769,7 +790,7 @@ pub fn validate_bindings(
         .as_ref()
         .ok_or("missing binding observation")?;
     let mut map = BTreeMap::new();
-    if observation.protocol_version == 4 {
+    if observation.protocol_version >= 4 {
         if let Some(p) = attempt.predictions.first().filter(|p| {
             p.semantic_step == 0
                 && p.before_checkpoint

@@ -42,6 +42,8 @@ Copy-Item tests/fixtures/goal-*.request.json "$dest/fixtures/"
 Copy-Item tests/fixtures/ash-recovery.request.json "$dest/fixtures/"
 Copy-Item tests/fixtures/ash-recovery.cases.json "$dest/fixtures/"
 Copy-Item docs/RECOVERY_PLANNING.md "$dest/RECOVERY_PLANNING.md"
+Copy-Item tests/fixtures/ash-strategy.request.json "$dest/fixtures/"
+Copy-Item docs/ASH_STRATEGY_PLANNING.md "$dest/ASH_STRATEGY_PLANNING.md"
 New-Item -ItemType Directory -Force "$dest/schemas" | Out-Null
 Copy-Item schemas/*.json "$dest/schemas/"
 $config=@"

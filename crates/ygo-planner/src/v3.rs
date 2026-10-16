@@ -516,6 +516,43 @@ pub fn propose_from_seeded(
     expanded: &mut usize,
     prefix: Option<&Facts>,
 ) -> Result<Proposals, String> {
+    propose_mode(
+        initial, cat, pack, goal, max_plans, max_steps, expanded, prefix, false,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub fn propose_diverse(
+    initial: SymbolicState,
+    cat: &Catalog,
+    pack: &KnowledgePack,
+    goal: &Goal,
+    max_plans: usize,
+    max_steps: usize,
+    expanded: &mut usize,
+    prefix: Option<&Facts>,
+) -> Result<Proposals, String> {
+    propose_mode(
+        initial, cat, pack, goal, max_plans, max_steps, expanded, prefix, true,
+    )
+}
+pub fn first_sensitive(steps: &[SemanticStep]) -> String {
+    steps
+        .iter()
+        .find(|s| ygo_engine_adapter::ASH_EFFECTS.contains(&s.effect_id.as_str()))
+        .map_or("none".into(), |s| s.effect_id.clone())
+}
+#[allow(clippy::too_many_arguments)]
+fn propose_mode(
+    initial: SymbolicState,
+    cat: &Catalog,
+    pack: &KnowledgePack,
+    goal: &Goal,
+    max_plans: usize,
+    max_steps: usize,
+    expanded: &mut usize,
+    prefix: Option<&Facts>,
+    diverse: bool,
+) -> Result<Proposals, String> {
     goal.validate()?;
     pack.validate()?;
     if !(1..=8).contains(&max_plans) || !(1..=32).contains(&max_steps) {
@@ -552,7 +589,12 @@ pub fn propose_from_seeded(
             };
             if state.pending.is_empty() && eval.result == Truth::Yes {
                 let p = make_plan(history.clone(), pack, goal);
-                if ids.insert(p.id.clone()) {
+                if ids.insert(p.id.clone())
+                    && (!diverse
+                        || !plans.iter().any(|old: &Proposal| {
+                            first_sensitive(&old.steps) == first_sensitive(&p.steps)
+                        }))
+                {
                     plans.push(p);
                 }
                 if plans.len() >= max_plans {
@@ -603,7 +645,32 @@ pub fn propose_from_seeded(
                 ygo_knowledge::hash(&serde_json::to_vec(h).unwrap()),
             )
         });
-        next.truncate(32);
+        if diverse {
+            let mut chosen = Vec::new();
+            let mut classes = BTreeSet::new();
+            for (i, (_, h, _)) in next.iter().enumerate() {
+                if classes.insert(first_sensitive(h)) {
+                    chosen.push(i);
+                }
+            }
+            for i in 0..next.len() {
+                if chosen.len() >= 32 {
+                    break;
+                }
+                if !chosen.contains(&i) {
+                    chosen.push(i);
+                }
+            }
+            chosen.sort_unstable();
+            next = next
+                .into_iter()
+                .enumerate()
+                .filter(|(i, _)| chosen.contains(i))
+                .map(|(_, v)| v)
+                .collect();
+        } else {
+            next.truncate(32);
+        }
         frontier = next.into_iter().map(|(s, h, _)| (s, h)).collect();
         if frontier.is_empty() {
             break;

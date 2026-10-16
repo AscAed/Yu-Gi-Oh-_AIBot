@@ -92,7 +92,43 @@ pub struct InterruptionConfig {
     pub effect_id: String,
     pub occurrence: usize,
 }
+/// Supported effect identities, not a claim that every activation offers Ash.
+pub const ASH_EFFECTS: [&str; 7] = [
+    "25538345:mill",
+    "36426778:search",
+    "90432163:search",
+    "63821877:mill",
+    "26692769:mill_set",
+    "32807846:search",
+    "81439173:mill",
+];
+pub fn ash_effect_descriptor(id: &str) -> Option<(u32, u64)> {
+    let (code, _) = id.split_once(':')?;
+    let code: u32 = code.parse().ok()?;
+    if !ASH_EFFECTS.contains(&id) {
+        return None;
+    }
+    Some((
+        code,
+        if code == 32807846 {
+            0
+        } else {
+            ((code as u64) << 20) + u64::from(matches!(code, 36426778 | 90432163))
+        },
+    ))
+}
 impl InterruptionConfig {
+    pub fn validate_v5(&self) -> Result<(), String> {
+        if !ASH_EFFECTS.contains(&self.effect_id.as_str())
+            || !matches!(self.policy.as_str(), "pass" | "ash_effect_once")
+        {
+            return Err("unsupported v5 effect/policy".into());
+        }
+        let mut legacy = self.clone();
+        legacy.effect_id = "25538345:mill".into();
+        legacy.policy = "ash_scales_once".into();
+        legacy.validate()
+    }
     pub fn validate(&self) -> Result<(), String> {
         if self.opponent_deck.main.len() != 40
             || !self.opponent_deck.extra.is_empty()

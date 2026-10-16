@@ -87,3 +87,5 @@ pub mod verification;
 
 pub mod planning_v3;
 pub mod regression;
+
+pub mod planning_v5;

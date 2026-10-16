@@ -1036,7 +1036,86 @@ pub struct PlanningContext {
     pub knowledge_bundle_id: String,
     pub runtime: RunDuelRequest,
     pub initial: SymbolicState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proposal_mode: Option<ProposalMode>,
     pub anchor: Option<DuelResult>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ProposalMode {
+    Recovery,
+    Diverse,
+    Frozen { proposal: Proposal },
+}
+fn profile(version: u16) -> &'static str {
+    match version {
+        5 => "phantom-ash-strategy-v1",
+        4 => "phantom-recovery-v1",
+        _ => v3::PROFILE,
+    }
+}
+#[allow(clippy::too_many_arguments)]
+fn generate(
+    initial: SymbolicState,
+    cat: &ygo_domain::Catalog,
+    pack: &KnowledgePack,
+    goal: &Goal,
+    max_plans: usize,
+    max_steps: usize,
+    exp: &mut usize,
+    past: Option<&Facts>,
+    mode: Option<&ProposalMode>,
+) -> Result<Proposals, String> {
+    match mode {
+        Some(ProposalMode::Recovery) => {
+            let mut p = v3::propose_from_seeded(
+                initial,
+                cat,
+                pack,
+                goal,
+                max_plans.saturating_sub(1).max(1),
+                max_steps,
+                exp,
+                past,
+            )?;
+            if !p.plans.iter().any(|x| x.steps.is_empty()) {
+                if p.plans.len() == max_plans {
+                    p.plans.pop();
+                }
+                p.plans.push(Proposal {
+                    id: v3::proposal_id(pack, goal, &[]),
+                    steps: vec![],
+                    goal_predicted: false,
+                });
+            }
+            p.termination.push_str("_with_terminal_baseline");
+            Ok(p)
+        }
+        Some(ProposalMode::Diverse) => {
+            v3::propose_diverse(initial, cat, pack, goal, max_plans, max_steps, exp, past)
+        }
+        Some(ProposalMode::Frozen { proposal }) => {
+            let mut state = initial;
+            for step in &proposal.steps {
+                let valid = v3::transitions(&state, cat, pack, goal)
+                    .into_iter()
+                    .any(|s| {
+                        serde_json::to_value(&s).unwrap() == serde_json::to_value(step).unwrap()
+                    });
+                if !valid {
+                    return Err("invalid frozen semantic transition".into());
+                }
+                state = step.after.clone();
+            }
+            Ok(Proposals {
+                plans: vec![proposal.clone()],
+                expansions: 0,
+                termination: "frozen_strategy".into(),
+                coverage_gaps: vec![],
+            })
+        }
+        None => v3::propose_from_seeded(initial, cat, pack, goal, max_plans, max_steps, exp, past),
+    }
 }
 fn initial_report(r: &PlanReport, cat: &ygo_domain::Catalog) -> Result<SymbolicState, String> {
     r.context
@@ -1058,7 +1137,7 @@ fn main_id(r: &PlanReport, steps: &[SemanticStep]) -> String {
         |c| {
             ygo_knowledge::hash(
                 &serde_json::to_vec(&(
-                    "phantom-recovery-v1",
+                    profile(c.runtime.protocol_version),
                     r.goal_id.clone(),
                     prefix_key(&c.runtime),
                     &c.knowledge_bundle_id,
@@ -1129,7 +1208,7 @@ pub(crate) fn plan_context(
         .as_ref()
         .and_then(|c| c.anchor.as_ref())
         .map(|a| actual(a, &knowledge));
-    let proposals = v3::propose_from_seeded(
+    let proposals = generate(
         initial_state.clone(),
         &cat,
         &knowledge,
@@ -1138,6 +1217,7 @@ pub(crate) fn plan_context(
         request.max_steps,
         &mut expansions,
         past.as_ref(),
+        context.as_ref().and_then(|c| c.proposal_mode.as_ref()),
     )?;
     let budget = request.analysis.search.clone();
     let gid = request.goal.id();
@@ -1165,17 +1245,13 @@ pub(crate) fn plan_context(
         })
         .map(|c| (c.id.0, c.name.clone()))
         .collect();
-    let version = if context.is_some() { 4 } else { 3 };
+    let version = context.as_ref().map_or(3, |c| c.runtime.protocol_version);
     let mut analysis_runtime = runtime.clone();
     analysis_runtime.decisions.clear();
     let mut r = PlanReport {
         context,
         schema_version: version,
-        planner_profile: if version == 4 {
-            "phantom-recovery-v1".into()
-        } else {
-            v3::PROFILE.into()
-        },
+        planner_profile: profile(version).into(),
         goal_id: gid,
         knowledge_id: kid,
         knowledge,
@@ -1378,7 +1454,7 @@ pub(crate) fn plan_context(
     validate_plan_contract(&r).map_err(|e| format!("arm contract: {e}"))?;
     Ok(r)
 }
-fn recorded_steps(events: &[CoreEventFrame], decisions: &[Decision]) -> Vec<Action> {
+pub(crate) fn recorded_steps(events: &[CoreEventFrame], decisions: &[Decision]) -> Vec<Action> {
     events
         .iter()
         .filter_map(|e| parse_prompt(e.sequence, &e.raw).ok().flatten())
@@ -1641,6 +1717,12 @@ fn validate_goal_evidence(
     Ok((evaluation, gains, expected_witnesses))
 }
 pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
+    if r.context.as_ref().is_some_and(|c| {
+        !matches!(c.runtime.protocol_version, 4 | 5)
+            || (c.runtime.protocol_version != 5 && c.proposal_mode.is_some())
+    }) {
+        return Err("unsupported versioned proposal mode".into());
+    }
     if let Some(c) = &r.context {
         let mut fresh = c.runtime.clone();
         fresh.decisions.clear();
@@ -1648,13 +1730,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
             return Err("analysis/context runtime mismatch".into());
         }
     }
-    if r.planner_profile
-        != if r.context.is_some() {
-            "phantom-recovery-v1"
-        } else {
-            v3::PROFILE
-        }
-    {
+    if r.planner_profile != profile(r.context.as_ref().map_or(3, |c| c.runtime.protocol_version)) {
         return Err(format!(
             "unsupported goal planner profile {}; regenerate the v3 report with {}",
             r.planner_profile,
@@ -1664,7 +1740,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
     r.request.validate()?;
     r.knowledge.validate()?;
     crate::combo::validate_report_contract(&r.analysis)?;
-    let version = if r.context.is_some() { 4 } else { 3 };
+    let version = r.context.as_ref().map_or(3, |c| c.runtime.protocol_version);
     if r.schema_version != version
         || r.goal_id != r.request.goal.id()
         || r.knowledge_id != r.knowledge.id()
@@ -1673,7 +1749,9 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
         || r.analysis.schema_version != version
         || r.analysis.runtime_request.protocol_version != version
         || r.analysis.runtime_request.versions.initializer
-            != if version == 4 {
+            != if version == 5 {
+                "fixed-ash-strategy-v1"
+            } else if version == 4 {
                 "fixed-interruption-v1"
             } else {
                 "fixed-opponent-v1"
@@ -1763,7 +1841,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
     let initial_state = initial_report(r, &r.catalog_projection)?;
     let mut regenerated_expansions = 0;
     let past = prefix_facts(r);
-    let mut regenerated = v3::propose_from_seeded(
+    let mut regenerated = generate(
         initial_state.clone(),
         &r.catalog_projection,
         &r.knowledge,
@@ -1772,6 +1850,7 @@ pub fn validate_plan_contract(r: &PlanReport) -> Result<(), String> {
         r.request.max_steps,
         &mut regenerated_expansions,
         past.as_ref(),
+        r.context.as_ref().and_then(|c| c.proposal_mode.as_ref()),
     )?;
     rekey(r, &mut regenerated);
     if serde_json::to_value(regenerated).unwrap() != serde_json::to_value(&r.proposals).unwrap() {
@@ -2059,7 +2138,7 @@ pub fn replay(
     {
         return Err("catalog projection differs from frozen snapshot".into());
     }
-    if r.recommendations.is_empty() {
+    if r.recommendations.is_empty() && r.schema_version != 5 {
         return Err("no goal recommendations to replay".into());
     }
     let adapter = ProcessEngineAdapter::new(engine.clone());
@@ -2085,7 +2164,7 @@ pub fn replay(
         }
     }
     Ok(
-        serde_json::json!({"schema_version":3,"goal_id":r.goal_id,"recommendations":r.recommendations.iter().map(|x|&x.id).collect::<Vec<_>>(),"witnesses":calls,"execution_calls":r.ledger.used_calls,"replay_calls":calls,"total_calls":r.ledger.used_calls+calls,"goal_evidence_verified":true}),
+        serde_json::json!({"schema_version":if r.schema_version==5 {5}else{3},"goal_id":r.goal_id,"recommendations":r.recommendations.iter().map(|x|&x.id).collect::<Vec<_>>(),"witnesses":calls,"execution_calls":r.ledger.used_calls,"replay_calls":calls,"total_calls":r.ledger.used_calls+calls,"goal_evidence_verified":r.schema_version!=5||!r.witnesses.is_empty()}),
     )
 }
 #[cfg(test)]

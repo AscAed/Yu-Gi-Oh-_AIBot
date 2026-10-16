@@ -104,7 +104,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                     source.identity_known = c.identity_known;
                 }
             }
-            if result.protocol_version == 4 {
+            if result.protocol_version >= 4 {
                 for (source, _) in chains.values_mut() {
                     if !source.identity_known
                         && source.code == code
@@ -323,9 +323,9 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
             let id = pack
                 .card(code)
                 .and_then(|c| {
-                    c.effects
-                        .iter()
-                        .find(|x| matches_description(x, code, desc))
+                    c.effects.iter().find(|x| {
+                        matches_description_version(result.protocol_version, x, code, desc)
+                    })
                 })
                 .map(|x| x.id.clone());
             let loc = &e.fields["location"];
@@ -335,8 +335,14 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                     *c == code
                         && (*d == desc
                             || id.as_ref().is_some_and(|eid| {
-                                pack.effect(eid)
-                                    .is_some_and(|effect| matches_description(effect, code, *d))
+                                pack.effect(eid).is_some_and(|effect| {
+                                    matches_description_version(
+                                        result.protocol_version,
+                                        effect,
+                                        code,
+                                        *d,
+                                    )
+                                })
                             }))
                 })
                 .map(|i| pending_activations.remove(i).2);
@@ -369,7 +375,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                 c.identity_known = false;
                 // V4 may observe CHAINING before a hand source pays its cost.
                 // Finalization at CHAINED must still resolve that exact instance.
-                if result.protocol_version != 4 {
+                if result.protocol_version < 4 {
                     opaque_summon = true;
                 }
             }
@@ -387,6 +393,11 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                 if let Some(current) = tracked.iter().find(|x| x.instance == source.instance) {
                     source.materials = snapshot(current, &tracked).materials;
                     finalized_chains.insert(chain);
+                } else if result.protocol_version == 5 && source.location == 2 {
+                    // A hand trigger without a cost moves only during resolution.
+                    // MOVE must still pin its exact identity before CHAIN_SOLVED.
+                    source.materials.clear();
+                    finalized_chains.insert(chain);
                 } else {
                     source.materials.clear();
                     source.identity_known = false;
@@ -398,12 +409,15 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
         }
         if e.opcode == 73 {
             let chain = e.fields["chain"].as_u64().unwrap_or(0);
-            if result.protocol_version == 4 && negated_chains.remove(&chain) {
+            if result.protocol_version >= 4 && negated_chains.remove(&chain) {
                 continue;
             }
             if let Some((mut c, id)) = chains.remove(&chain) {
                 if !finalized_chains.remove(&chain) {
                     c.materials.clear();
+                    opaque_summon = true;
+                }
+                if result.protocol_version == 5 && !c.identity_known {
                     opaque_summon = true;
                 }
                 history.push(HistoryFact {
@@ -420,7 +434,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
         }
         if matches!(e.opcode, 75 | 76) {
             let chain = e.fields["chain"].as_u64().unwrap_or(0);
-            if result.protocol_version == 4 {
+            if result.protocol_version >= 4 {
                 if !finalized_chains.contains(&chain) {
                     opaque_summon = true;
                 }
@@ -537,4 +551,18 @@ pub fn matches_description(effect: &ygo_knowledge::Effect, code: u32, descriptio
                     | ygo_knowledge::Rule::Fool
                     | ygo_knowledge::Rule::Brigandine
             ))
+}
+
+/// V5 recognizes the explicit description in the frozen Foolish Burial Lua;
+/// legacy reports retain their original effect mapping.
+pub fn matches_description_version(
+    version: u16,
+    effect: &ygo_knowledge::Effect,
+    code: u32,
+    description: u64,
+) -> bool {
+    matches_description(effect, code, description)
+        || (version == 5
+            && matches!(effect.rule, ygo_knowledge::Rule::Fool)
+            && description == ((code as u64) << 20))
 }

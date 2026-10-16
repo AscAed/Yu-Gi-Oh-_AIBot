@@ -181,6 +181,53 @@ fn opponent_choice(
     p: &Prompt,
 ) -> Result<Choice, WorkerError> {
     if let Some(config) = &request.interruption {
+        if request.protocol_version == 5 {
+            let (code, desc) =
+                crate::ash_effect_descriptor(&config.effect_id).ok_or_else(|| {
+                    WorkerError::new("policy", "effect", "unsupported effect descriptor")
+                })?;
+            let matches: Vec<_> = events
+                .iter()
+                .filter(|e| {
+                    e.opcode == 70
+                        && e.fields["code"] == code
+                        && e.fields["player"] == 0
+                        && e.fields["description"].as_u64() == Some(desc)
+                })
+                .collect();
+            let current = events.iter().rev().find(|e| matches!(e.opcode, 70 | 74));
+            if config.policy == "ash_effect_once"
+                && matches.len() == 1
+                && current
+                    .is_some_and(|e| matches.first().is_some_and(|t| e.sequence == t.sequence))
+                && !events.iter().any(|e| {
+                    e.opcode == 70 && e.fields["player"] == 1 && e.fields["code"] == 14558127u32
+                })
+            {
+                let frame = events
+                    .iter()
+                    .find(|e| e.sequence == p.id)
+                    .ok_or_else(|| WorkerError::new("policy", "prompt", "missing raw prompt"))?;
+                let ms = prompt_metadata(p.id, &frame.raw)
+                    .map_err(|e| WorkerError::new("policy", "binding", e))?;
+                if let Some(m) = ms.iter().find(|m| {
+                    m.source
+                        .as_ref()
+                        .is_some_and(|s| s.code == 14558127 && s.player == 1 && s.location == 2)
+                        && m.effect_description == Some(14558127u64 << 20)
+                }) {
+                    return Ok(m.choice.clone());
+                }
+            }
+            return p
+                .actions
+                .iter()
+                .find(|a| matches!(a.choice, Choice::Chain { index: None }))
+                .map(|a| a.choice.clone())
+                .ok_or_else(|| {
+                    WorkerError::new("policy", "response", "unsupported mandatory response")
+                });
+        }
         let chains: Vec<_> = events.iter().filter(|e| e.opcode == 70).collect();
         let scales: Vec<_> = chains
             .iter()
@@ -227,11 +274,11 @@ fn opponent_choice(
         })
 }
 fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
-    if !matches!(r.protocol_version, 2..=4)
+    if !matches!(r.protocol_version, 2..=5)
         || (r.protocol_version == 2 && r.scenario.is_some())
         || r.scenario.as_ref().is_some_and(|s| s != "ryu-ran")
-        || (r.protocol_version != 4 && r.interruption.is_some())
-        || (r.protocol_version == 4 && (r.interruption.is_none() || r.scenario.is_some()))
+        || (r.protocol_version < 4 && r.interruption.is_some())
+        || (r.protocol_version >= 4 && (r.interruption.is_none() || r.scenario.is_some()))
     {
         return Err(WorkerError::new(
             "protocol_version",
@@ -242,7 +289,9 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
     if r.versions.rules != "ocg-mr5"
         || r.versions.core_commit != CORE_COMMIT
         || r.versions.initializer
-            != if r.protocol_version == 4 {
+            != if r.protocol_version == 5 {
+                "fixed-ash-strategy-v1"
+            } else if r.protocol_version == 4 {
                 "fixed-interruption-v1"
             } else if r.protocol_version == 3 {
                 "fixed-opponent-v1"
@@ -257,8 +306,12 @@ fn verify(r: &RunDuelRequest) -> Result<(), WorkerError> {
         ));
     }
     if let Some(i) = &r.interruption {
-        i.validate()
-            .map_err(|e| WorkerError::new("interruption", "input", e))?;
+        if r.protocol_version == 5 {
+            i.validate_v5()
+        } else {
+            i.validate()
+        }
+        .map_err(|e| WorkerError::new("interruption", "input", e))?;
     }
     for (path, expected) in [
         (&r.engine.ocgcore_path, &r.versions.engine_sha256),
@@ -675,7 +728,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 result.prompt = Some(p.clone());
                 let choice = if p.player == 1 {
                     let policy = opponent_choice(&request, &result.events, &p)?;
-                    if request.protocol_version == 4 {
+                    if request.protocol_version >= 4 {
                         if let Some(d) = request
                             .decisions
                             .get(used)
@@ -702,7 +755,10 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                     }
                     used += 1;
                     decision.choice.clone()
-                } else if p.actions.len() == 1 && result.resolved_decisions.len() < 1024 {
+                } else if p.actions.len() == 1
+                    && result.resolved_decisions.len() < 1024
+                    && !(request.protocol_version == 5 && p.opcode == 11)
+                {
                     p.actions[0].choice.clone()
                 } else {
                     result.checkpoint = checkpoint(
@@ -721,7 +777,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 let bytes = p
                     .encode(&choice)
                     .map_err(|e| WorkerError::new("invalid_decision", "response", e))?;
-                if p.player == 0 || request.protocol_version == 4 {
+                if p.player == 0 || request.protocol_version >= 4 {
                     result.resolved_decisions.push(Decision {
                         prompt_id: p.id,
                         player: p.player,

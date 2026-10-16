@@ -60,7 +60,12 @@ fn output(opts: &BTreeMap<String, String>, value: &serde_json::Value) -> Result<
     if let Some(path) = opts.get("--output") {
         fs::write(
             path,
-            serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?,
+            if value["schema_version"] == 5 {
+                serde_json::to_vec(value)
+            } else {
+                serde_json::to_vec_pretty(value)
+            }
+            .map_err(|e| e.to_string())?,
         )
         .map_err(|e| e.to_string())
     } else {
@@ -226,10 +231,34 @@ fn execute(args: &[String]) -> Result<(), String> {
                 serde_json::json!(2),
                 serde_json::json!(3),
                 serde_json::json!(4),
+                serde_json::json!(5),
             ]
             .contains(&value["schema_version"])
             {
                 return Err("unsupported planning schema_version".into());
+            }
+            if value["schema_version"] == 5 {
+                let q: ygo_api::planning_v5::PlanRequest =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                let id = q
+                    .analysis
+                    .catalog_id
+                    .clone()
+                    .or_else(|| {
+                        active(&pointer_path)
+                            .ok()
+                            .and_then(|v| v["catalog_id"].as_str().map(String::from))
+                    })
+                    .ok_or("catalog not imported")?;
+                let r = ygo_api::planning_v5::plan(
+                    q,
+                    engine()?,
+                    &store,
+                    &id,
+                    &weights,
+                    knowledge_v2(&opts)?,
+                )?;
+                return output(&opts, &serde_json::to_value(r).map_err(|e| e.to_string())?);
             }
             if value["schema_version"] == 4 {
                 let q: ygo_api::planning_v4::PlanRequest =
@@ -348,10 +377,16 @@ fn execute(args: &[String]) -> Result<(), String> {
                 serde_json::json!(2),
                 serde_json::json!(3),
                 serde_json::json!(4),
+                serde_json::json!(5),
             ]
             .contains(&value["schema_version"])
             {
                 return Err("unsupported planning schema_version".into());
+            }
+            if value["schema_version"] == 5 {
+                let r: ygo_api::planning_v5::PlanReport =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                return json(&ygo_api::planning_v5::replay(&r, engine()?, &store)?);
             }
             if value["schema_version"] == 4 {
                 let r: ygo_api::planning_v4::PlanReport =

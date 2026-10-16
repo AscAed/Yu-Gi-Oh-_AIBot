@@ -43,3 +43,5 @@ Windows 本机 Combo CLI：固定完整卡组与五张起手，使用固定 API 
 ## 单次灰流丽与恢复规划
 
 v4入口、固定响应场景、三组预算和独立证据见 [RECOVERY_PLANNING.md](docs/RECOVERY_PLANNING.md)。使用 `combo plan --input tests/fixtures/ash-recovery.request.json`，报告通过 `combo plan-replay` 独立核验。旧版本入口保持兼容；首版不覆盖任意手坑或提前规避策略。
+
+灰流丽多响应点与稳健展开顺序：见 [ASH_STRATEGY_PLANNING.md](docs/ASH_STRATEGY_PLANNING.md)，使用 `tests/fixtures/ash-strategy.request.json` 及原有 `combo plan` / `combo plan-replay`。

@@ -15,3 +15,27 @@ fn controlled_interruption_is_versioned_and_preserves_failure_protocol() {
     assert_eq!(r.status, DuelStatus::Failed);
     assert_eq!(r.versions.initializer, "fixed-interruption-v1");
 }
+
+#[test]
+fn v5_accepts_each_scoped_effect_but_keeps_v4_closed() {
+    let mut deck = ygo_domain::Deck {
+        main: vec![ygo_domain::CardId(2964201); 40],
+        extra: vec![],
+        side: vec![],
+    };
+    deck.main[0] = ygo_domain::CardId(14558127);
+    let mut c = InterruptionConfig {
+        opponent_deck: deck,
+        opponent_hand: vec![ygo_domain::CardId(14558127)],
+        policy: "ash_effect_once".into(),
+        effect_id: "25538345:mill".into(),
+        occurrence: 1,
+    };
+    for id in ASH_EFFECTS {
+        c.effect_id = id.into();
+        c.validate_v5().unwrap();
+        assert!(c.validate().is_err());
+    }
+    c.effect_id = "58699500:mill".into();
+    assert!(c.validate_v5().is_err());
+}
