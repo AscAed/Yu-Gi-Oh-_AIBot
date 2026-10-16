@@ -125,7 +125,6 @@ fn planner_observes_deck_multisets_and_drawn_cards_but_never_deck_order() {
 #[test]
 #[ignore = "opt-in independent frozen 2026 assets; manual protocol case, not planner acceptance"]
 fn scythe_has_actual_single_ash_cost_negation_anchor_and_independent_replay() {
-    use std::io::Write;
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let config_path = std::env::var_os("YGO_TOURNAMENT_ENGINE")
         .map(std::path::PathBuf::from)
@@ -164,39 +163,27 @@ fn scythe_has_actual_single_ash_cost_negation_anchor_and_independent_replay() {
         occurrence: 1,
     });
     q.decisions = serde_json::from_value(case["pass_decisions"].clone()).unwrap();
-    let adapter = ProcessEngineAdapter::new(config);
-    let journal = config_path
-        .parent()
-        .unwrap()
-        .join("v6-protocol-audit.jsonl");
-    let mut charged = 0usize;
-    let mut run = |request: &RunDuelRequest| {
-        charged += 1;
-        assert!(charged <= 512);
-        let mut log = std::fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(&journal)
-            .unwrap();
-        writeln!(
-            log,
-            "{}",
-            serde_json::json!({"case":"scythe-protocol",
-            "status":"debited","request_sha256":digest(&serde_json::to_vec(request).unwrap())})
-        )
-        .unwrap();
-        log.sync_all().unwrap();
-        let result = adapter.run(request).unwrap();
-        writeln!(
-            log,
-            "{}",
-            serde_json::json!({"case":"scythe-protocol",
-            "status":"completed","result_sha256":digest(&serde_json::to_vec(&result).unwrap())})
-        )
-        .unwrap();
-        log.sync_all().unwrap();
-        result
-    };
+    let journal_path = config_path.parent().unwrap().join("journals").join(format!(
+        "scythe-protocol-{}-{}.jsonl",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let journal = CallJournal::open(
+        &journal_path,
+        "scythe-protocol-audit",
+        &digest(&serde_json::to_vec(&q).unwrap()),
+        512,
+    )
+    .unwrap();
+    let adapter = JournaledAdapter::new(
+        ProcessEngineAdapter::new(config),
+        journal.clone(),
+        CallPurpose::Audit,
+    );
+    let run = |request: &RunDuelRequest| adapter.run(request).unwrap();
     let pass = run(&q);
     assert_eq!(pass.status, DuelStatus::EngineVerified, "{:?}", pass.error);
     assert!(pass
@@ -280,5 +267,7 @@ fn scythe_has_actual_single_ash_cost_negation_anchor_and_independent_replay() {
     assert_eq!(ash.resolved_decisions, replay.resolved_decisions);
     q.first_turn.as_mut().unwrap().asset_group_id = format!("asset-group-{}", "0".repeat(64));
     assert_eq!(run(&q).error.unwrap().code, "asset_group");
-    assert_eq!(charged, 5);
+    assert_eq!(journal.stats().unwrap().consumed, 5);
+    assert_eq!(journal.stats().unwrap().completed, 5);
+    journal.verify().unwrap();
 }

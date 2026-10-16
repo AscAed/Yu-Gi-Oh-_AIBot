@@ -1,11 +1,13 @@
 mod codec;
 mod ffi;
 mod first_turn;
+mod journal;
 mod metadata;
 mod process;
 mod worker;
 pub use codec::*;
 pub use first_turn::*;
+pub use journal::*;
 pub use metadata::*;
 pub use process::*;
 use serde::{Deserialize, Serialize};
