@@ -47,6 +47,14 @@ fn two_distinct_strategies_have_replayed_eight_policy_evidence() {
             );
         }
     }
+    assert!(
+        r.discoveries
+            .iter()
+            .map(|d| d.proposals.plans.len())
+            .sum::<usize>()
+            <= 8
+    );
+    assert!(r.discoveries.last().unwrap().ledger.expansions <= 5000);
     assert_eq!(r.ranking.len(), 2);
     assert!(r.total_calls <= 8192);
     ygo_api::planning_v5::replay(&r, engine.clone(), &store).unwrap();

@@ -126,10 +126,16 @@
               "properties": {
                 "kind": {
                   "const": "diverse"
+                },
+                "expansion_start": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5000
                 }
               },
               "required": [
-                "kind"
+                "kind",
+                "expansion_start"
               ],
               "additionalProperties": false
             },

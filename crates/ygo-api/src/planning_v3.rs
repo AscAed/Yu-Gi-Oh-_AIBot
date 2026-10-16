@@ -1044,7 +1044,7 @@ pub struct PlanningContext {
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ProposalMode {
     Recovery,
-    Diverse,
+    Diverse { expansion_start: usize },
     Frozen { proposal: Proposal },
 }
 fn profile(version: u16) -> &'static str {
@@ -1091,8 +1091,16 @@ fn generate(
             p.termination.push_str("_with_terminal_baseline");
             Ok(p)
         }
-        Some(ProposalMode::Diverse) => {
-            v3::propose_diverse(initial, cat, pack, goal, max_plans, max_steps, exp, past)
+        Some(ProposalMode::Diverse { expansion_start }) => {
+            if *expansion_start > 5000 {
+                return Err("invalid shared discovery expansion offset".into());
+            }
+            *exp = *expansion_start;
+            let mut p =
+                v3::propose_diverse(initial, cat, pack, goal, max_plans, max_steps, exp, past)?;
+            // Both neutral searches consume the same symbolic expansion allowance.
+            p.expansions = *exp;
+            Ok(p)
         }
         Some(ProposalMode::Frozen { proposal }) => {
             let mut state = initial;

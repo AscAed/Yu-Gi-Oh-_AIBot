@@ -678,15 +678,27 @@ pub fn plan(
         if diversity && r.strategies.is_empty() {
             break;
         }
+        let mut discovery_q = q.clone();
+        discovery_q.max_proposals = if diversity {
+            q.max_proposals
+                .saturating_sub(r.discoveries[0].proposals.plans.len())
+        } else {
+            (q.max_proposals / 2).max(1)
+        };
+        if discovery_q.max_proposals == 0 {
+            break;
+        }
         let ctx = PlanningContext {
             knowledge_bundle_id: kid.clone(),
             runtime: runtime.clone(),
             initial: initial.clone(),
             anchor: None,
-            proposal_mode: diversity.then_some(ProposalMode::Diverse),
+            proposal_mode: diversity.then(|| ProposalMode::Diverse {
+                expansion_start: r.discoveries[0].ledger.expansions,
+            }),
         };
         let a = arm::plan_context(
-            q.inner(q.analysis.search.node_budget, q.max_steps),
+            discovery_q.inner(q.analysis.search.node_budget, q.max_steps),
             engine.clone(),
             store,
             catalog,
@@ -929,10 +941,22 @@ pub fn validate_report(r: &PlanReport) -> Result<(), String> {
     }
     let mut expected_rows = vec![];
     for (index, a) in r.discoveries.iter().enumerate() {
-        let mode = (index == 1).then_some(ProposalMode::Diverse);
+        let mode = (index == 1).then(|| ProposalMode::Diverse {
+            expansion_start: r.discoveries[0].ledger.expansions,
+        });
+        let mut discovery_q = q.clone();
+        discovery_q.max_proposals = if index == 0 {
+            (q.max_proposals / 2).max(1)
+        } else {
+            q.max_proposals
+                .saturating_sub(r.discoveries[0].proposals.plans.len())
+        };
+        if discovery_q.max_proposals == 0 {
+            return Err("exhausted shared initial candidate allowance".into());
+        }
         validate_arm(
             a,
-            q,
+            &discovery_q,
             &r.knowledge_id,
             &runtime,
             &state,
@@ -957,6 +981,17 @@ pub fn validate_report(r: &PlanReport) -> Result<(), String> {
         if let Some(i) = selected {
             expected_rows.push((i, v3::first_sensitive(&a.executions[i].proposal.steps)));
         }
+    }
+    if r.discoveries
+        .iter()
+        .map(|a| a.proposals.plans.len())
+        .sum::<usize>()
+        > q.max_proposals
+        || r.discoveries
+            .last()
+            .is_some_and(|a| a.ledger.expansions > 5000)
+    {
+        return Err("shared initial search budget exceeded".into());
     }
     if expected_rows.len() != r.strategies.len() {
         return Err("missing/extra frozen strategy".into());
