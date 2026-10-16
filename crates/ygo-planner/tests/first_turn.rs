@@ -9,7 +9,7 @@ fn catalog() -> Catalog {
         (46072770, 0x21, 3, vec![0x10db]),
         (36426778, 0x21, 3, vec![0x10db]),
         (25538345, 0x21, 3, vec![0x10db]),
-        (85257384, 4, 0, vec![0x10db]),
+        (85257384, 4, 3, vec![0x10db]),
         (25542642, 4, 0, vec![0xdb]),
         (78449284, 0x800021, 3, vec![0x10db]),
     ]
@@ -23,8 +23,17 @@ fn catalog() -> Catalog {
                 type_flags,
                 level,
                 setcodes,
-                attribute: if type_flags & 1 != 0 { 32 } else { 0 },
-                race: if type_flags & 1 != 0 { 1 } else { 0 },
+                attribute: if type_flags & 1 != 0 || code == 85257384 {
+                    32
+                } else {
+                    0
+                },
+                race: if type_flags & 1 != 0 || code == 85257384 {
+                    1
+                } else {
+                    0
+                },
+                defense: if code == 85257384 { 300 } else { 0 },
                 ..Default::default()
             },
         )
@@ -459,6 +468,80 @@ fn known_resource_mismatch_is_false_even_when_an_unrelated_attribute_is_unknown(
         compare_resources(&predicted, &first_turn_public_state(&actual)).result,
         ygo_knowledge::Truth::No
     );
+}
+
+#[test]
+fn inconsistent_material_instances_are_rejected_before_planning() {
+    let s = choose(&state(), "83566725:empty_field_special").after_resolution;
+    let s = choose(&s, "83566725:deck_set").after_resolution;
+    let s = choose(&s, "85257384:trap_monster_special").after_resolution;
+    let mut s = choose(&s, "78449284:two_dark_level_three").after_resolution;
+    s.cards
+        .iter_mut()
+        .find(|c| c.card.location == 132)
+        .unwrap()
+        .host = None;
+    assert!(s.validate(&catalog()).is_err());
+    let result = successors(&s, &catalog(), &FirstTurnKnowledge::builtin().unwrap());
+    assert!(result.transitions.is_empty());
+    assert!(!result.unknowns.is_empty());
+}
+
+#[test]
+fn normal_xyz_using_an_xyz_as_material_sends_its_old_materials_to_grave() {
+    let s = choose(&state(), "83566725:empty_field_special").after_resolution;
+    let s = choose(&s, "83566725:deck_set").after_resolution;
+    let s = choose(&s, "85257384:trap_monster_special").after_resolution;
+    let mut s = choose(&s, "78449284:two_dark_level_three").after_resolution;
+    let old = s
+        .cards
+        .iter_mut()
+        .find(|c| c.card.code == 78449284)
+        .unwrap();
+    old.rank_as_level = Some(true);
+    let mut second = old.clone();
+    second.id = "second-extra-scythe".into();
+    second.card.location = 64;
+    second.card.sequence = 1;
+    second.card.overlay.clear();
+    second.proper_xyz = Some(false);
+    second.rank_as_level = Some(false);
+    s.cards.push(second);
+    let other = s.cards.iter_mut().find(|c| c.card.location == 2).unwrap();
+    other.card.location = 4;
+    other.card.sequence = 1;
+    other.card.position = 1;
+    s.normal_remaining = Some(0);
+    let transition = successors(&s, &catalog(), &FirstTurnKnowledge::builtin().unwrap())
+        .transitions
+        .into_iter()
+        .find(|s| s.rule_id == "78449284:two_dark_level_three" && s.source == "second-extra-scythe")
+        .unwrap();
+    transition.after_resolution.validate(&catalog()).unwrap();
+    assert_eq!(
+        transition
+            .after_resolution
+            .cards
+            .iter()
+            .filter(|c| c.card.location == 16)
+            .count(),
+        2
+    );
+    let host = transition
+        .after_resolution
+        .cards
+        .iter()
+        .find(|c| c.id == "second-extra-scythe")
+        .unwrap();
+    assert_eq!(host.card.overlay.len(), 2);
+    let nested = transition
+        .after_resolution
+        .cards
+        .iter()
+        .find(|c| c.card.code == 78449284 && c.id != "second-extra-scythe")
+        .unwrap();
+    assert_eq!(nested.card.location, 132);
+    assert!(nested.card.overlay.is_empty());
 }
 
 #[test]

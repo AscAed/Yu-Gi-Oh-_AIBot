@@ -42,6 +42,24 @@ pub struct PrintedAttributes {
     defense: i32,
 }
 impl PrintedAttributes {
+    fn for_catalog(base: &ygo_domain::Card) -> Self {
+        let monster = base.type_flags & 1 != 0;
+        let xyz = base.type_flags & 0x800000 != 0;
+        let link = base.type_flags & 0x4000000 != 0;
+        Self {
+            type_flags: base.type_flags,
+            level: Some(if monster && !xyz && !link {
+                base.level
+            } else {
+                0
+            }),
+            rank: Some(if xyz { base.level } else { 0 }),
+            attribute: Some(if monster { base.attribute } else { 0 }),
+            race: Some(if monster { base.race } else { 0 }),
+            attack: if monster { base.attack } else { 0 },
+            defense: if monster && !link { base.defense } else { 0 },
+        }
+    }
     fn from(card: &StateCard) -> Self {
         Self {
             type_flags: card.type_flags,
@@ -135,6 +153,9 @@ struct ResourceRow {
     level: Option<u32>,
     rank: Option<u32>,
     attribute: Option<u32>,
+    race: Option<u64>,
+    attack: i32,
+    defense: i32,
     materials: Vec<u32>,
 }
 fn row(card: &StateCard) -> ResourceRow {
@@ -155,7 +176,7 @@ fn row(card: &StateCard) -> ResourceRow {
             None
         },
         type_flags: card.type_flags,
-        level: if card.type_flags & 1 != 0 && card.type_flags & 0x800000 == 0 {
+        level: if card.type_flags & 0x4800000 == 0 {
             card.level
         } else {
             None
@@ -165,11 +186,10 @@ fn row(card: &StateCard) -> ResourceRow {
         } else {
             None
         },
-        attribute: if card.type_flags & 1 != 0 {
-            card.attribute
-        } else {
-            None
-        },
+        attribute: card.attribute,
+        race: card.race,
+        attack: card.attack,
+        defense: card.defense,
         materials,
     }
 }
@@ -212,9 +232,10 @@ pub fn compare_resources(
         .visible
         .cards
         .iter()
-        .filter(|c| c.player == 0 && c.type_flags & 1 != 0)
+        .filter(|c| c.player == 0)
         .any(|c| {
             c.attribute.is_none()
+                || c.race.is_none()
                 || if c.type_flags & 0x800000 != 0 {
                     c.rank.is_none()
                 } else {
@@ -231,6 +252,7 @@ pub fn compare_resources(
             row.level = None;
             row.rank = None;
             row.attribute = None;
+            row.race = None;
         }
         rows.sort();
         rows
@@ -260,6 +282,61 @@ pub fn compare_resources(
 }
 
 impl CausalState {
+    pub fn validate(&self, catalog: &Catalog) -> Result<(), String> {
+        let mut ids = BTreeSet::new();
+        for c in &self.cards {
+            if !ids.insert(&c.id)
+                || c.card.player > 1
+                || ![2, 4, 8, 16, 32, 64, 132].contains(&c.card.location)
+            {
+                return Err("duplicate instance or invalid resource domain".into());
+            }
+            let base = catalog
+                .get(&CardId(c.card.code))
+                .ok_or("missing printed card metadata")?;
+            let effective = PrintedAttributes::for_catalog(base);
+            if c.printed.type_flags != base.type_flags
+                || c.printed
+                    .attribute
+                    .is_some_and(|v| Some(v) != effective.attribute)
+                || c.printed.race.is_some_and(|v| Some(v) != effective.race)
+                || c.printed.rank.is_some_and(|v| Some(v) != effective.rank)
+                || c.printed.level.is_some_and(|v| Some(v) != effective.level)
+                || c.printed.attack != effective.attack
+                || c.printed.defense != effective.defense
+            {
+                return Err("printed source attributes differ from catalog".into());
+            }
+            if c.card.location == 132 {
+                let host = c
+                    .host
+                    .as_ref()
+                    .and_then(|id| lookup(self, id))
+                    .ok_or("material lacks a known host instance")?;
+                if host.id == c.id
+                    || host.card.location != 4
+                    || host.card.type_flags & 0x800000 == 0
+                {
+                    return Err("material host is not a current XYZ instance".into());
+                }
+            } else if c.host.is_some() {
+                return Err("non-material resource retains a host".into());
+            }
+            let mut children: Vec<_> = self
+                .cards
+                .iter()
+                .filter(|child| child.host.as_deref() == Some(&c.id))
+                .map(|child| child.card.code)
+                .collect();
+            children.sort();
+            let mut overlay = c.card.overlay.clone();
+            overlay.sort();
+            if children != overlay {
+                return Err("host material multiset differs from known instances".into());
+            }
+        }
+        Ok(())
+    }
     /// Only for the untouched first own main window. Recovery needs event reconstruction.
     pub fn initial(public: &FirstTurnPublicState) -> Result<Self, String> {
         let c = &public.visible;
@@ -412,7 +489,7 @@ fn deck_card(
     };
     s.next_entity += 1;
     let id = format!("revealed:{}:{code}", s.next_entity);
-    let xyz = base.type_flags & 0x800000 != 0;
+    let effective = PrintedAttributes::for_catalog(base);
     let card = StateCard {
         code,
         player: 0,
@@ -420,12 +497,12 @@ fn deck_card(
         sequence,
         position: if zone == 8 { 10 } else { 1 },
         type_flags: base.type_flags,
-        level: if xyz { None } else { Some(base.level) },
-        rank: if xyz { Some(base.level) } else { None },
-        attribute: Some(base.attribute),
-        race: Some(base.race),
-        attack: base.attack,
-        defense: base.defense,
+        level: effective.level,
+        rank: effective.rank,
+        attribute: effective.attribute,
+        race: effective.race,
+        attack: effective.attack,
+        defense: effective.defense,
         ..Default::default()
     };
     let printed = PrintedAttributes::from(&card);
@@ -595,6 +672,10 @@ fn summon_allowed(s: &CausalState, attribute: Option<u32>) -> Truth {
 /// Enumerate supported causal hypotheses without consulting hidden deck order.
 pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowledge) -> Successors {
     let mut out = Successors::default();
+    if let Err(error) = state.validate(catalog) {
+        out.unknowns.push(format!("invalid causal state: {error}"));
+        return out;
+    }
     for source in state
         .cards
         .iter()
@@ -780,6 +861,16 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                             let pair = [materials[a], materials[b]];
                             let mut after = state.clone();
                             for material in pair {
+                                let children: Vec<_> = after
+                                    .cards
+                                    .iter()
+                                    .filter(|c| c.host.as_deref() == Some(&material.id))
+                                    .map(|c| c.id.clone())
+                                    .collect();
+                                for child in children {
+                                    move_known(&mut after, &child, 16, 5)
+                                        .expect("validated attached material exists");
+                                }
                                 let c = after
                                     .cards
                                     .iter_mut()
