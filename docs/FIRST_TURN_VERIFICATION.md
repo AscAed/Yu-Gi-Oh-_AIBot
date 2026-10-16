@@ -26,3 +26,9 @@ target/debug/ygo-cli.exe knowledge verify --knowledge knowledge/tournament-2026.
 合同使用`first-turn-cases.schema.json`、`first-turn-runtime.schema.json`及`first-turn-verification.schema.json`；旧协议不变。新合同对旧共享类型的嵌套字段额外收紧，不修改旧请求的序列化与身份。
 
 当前12个案例覆盖6项规则，报告仍列出80项缺少成对案例。`rules-resource.contract.json`是删去本机绝对路径的合同夹具，不提供真实日志，不替代本机验真报告。原生案例通过也不代表规划器转移已实现；知识包维持未完成验真的状态，v6自主规划与48手评估继续实施。
+
+## 首批因果模型对照
+
+`ygo-planner::first_turn`目前仅注册上述6项规则。转移保存费用后的资源和假定结算后的资源，不把牌库送墓、取除素材或成为素材混为一类。未知等级或召唤限制不生成有效候选；可选触发放弃不消耗次数，目标已耗尽不凭空创建触发。
+
+本机专项`cargo test -p ygo-planner --test first_turn --offline --locked -- --ignored --nocapture`从公开初态生成预测，先保存到持久账本，再执行独立人工准备步骤，分别检查资源和重放。它是转移模型的对照实验，不是规划器自行选择的路线；没有做出默认目标，也不提供恢复状态验收。当前还需扩展其他规则、完整事件／限制重建、自动搜索与提示绑定。

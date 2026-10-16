@@ -15,3 +15,6 @@ ygo-engine-adapter = { path = "../ygo-engine-adapter" }
 ygo-search = { path = "../ygo-search" }
 
 ygo-goal = { path = "../ygo-goal" }
+
+[dev-dependencies]
+ygo-storage = { path = "../ygo-storage" }

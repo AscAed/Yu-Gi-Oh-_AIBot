@@ -489,6 +489,7 @@ dependencies = [
  "ygo-goal",
  "ygo-knowledge",
  "ygo-search",
+ "ygo-storage",
 ]
 
 [[package]]
