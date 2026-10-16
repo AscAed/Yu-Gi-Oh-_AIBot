@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "catalog": {
+    "repository": "https://github.com/ProjectIgnis/BabelCDB",
+    "commit": "b20871e24ec0edda78f42f7e115d4deef0184889",
+    "sha256": "3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632"
+  },
+  "scripts": {
+    "repository": "https://github.com/ProjectIgnis/CardScripts",
+    "commit": "7e5ae6d089bde91471436b9c4ce192b61332f3ff",
+    "archive_sha256": "4daaa44a4d145f50e2962c2330a085a90895a87294df371b33c9507af0a6e43b",
+    "manifest_sha256": "26c44946c7aba56900ededc5358e163fce71d5b99182f0d0fa910739bc3d9c94"
+  },
+  "core": {
+    "core_commit": "38d04c9feb1a26617407091380634c87262fe3f8",
+    "lua_commit": "6e22fedb74cf0c9b6656e9fce8b7331db847c605",
+    "architecture": "x64",
+    "api": "11.0",
+    "abi_probe_passed": true,
+    "sha256": "446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9",
+    "source_verified": true,
+    "core_tree": "707146ae14234f0023193b41b21ed47c5b227d1b",
+    "lua_tree": "c288cf2d1a3758e2e6d3f4977d3ecb3aa1773d72",
+    "meson_adapter_sha256": "deb25165c89e8cf9988eb60982c812aca12338c6b4a5f37454d76e31275bf708"
+  },
+  "banlist_id": "banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783"
+}

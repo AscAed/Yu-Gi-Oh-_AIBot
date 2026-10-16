@@ -1,0 +1,496 @@
+{
+  "schema_version": 1,
+  "case_id": "tournament-assets-manual-compatibility",
+  "scope": "asset/core compatibility probe only; not effect acceptance or v6 sample",
+  "deck_sha256": "0102c4d4c8fc22c855a02b9627317f47a78c0cc4be6bfa59e396870745ff71e5",
+  "opening_hand": [
+    83566725,
+    46072770,
+    25538345,
+    44088353,
+    99745551
+  ],
+  "seed": 1,
+  "protocol_version": 2,
+  "manual_plan": [
+    "Doomed Soleret empty-field special summon",
+    "Doomed Soleret trigger sets Umbrage Veil from deck",
+    "Activate Veil and summon it as a monster",
+    "Xyz Malevolent Scythe using Soleret and Veil",
+    "Detach Soleret; summon Decayed Cloak from deck",
+    "Decayed Cloak trigger searches Silent Boots",
+    "Special summon Boots",
+    "Link Rusty with Scythe, Decayed Cloak and Boots",
+    "Rusty sends Ragged Gloves; sets Fog Blade",
+    "End turn"
+  ],
+  "decisions": [
+    {
+      "prompt_id": 7,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 1,
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 9,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 10,
+      "player": 0,
+      "choice": {
+        "kind": "position",
+        "position": 1
+      }
+    },
+    {
+      "prompt_id": 13,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 16,
+      "player": 0,
+      "choice": {
+        "kind": "yes_no",
+        "yes": true
+      }
+    },
+    {
+      "prompt_id": 20,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 23,
+      "player": 0,
+      "choice": {
+        "kind": "cards",
+        "indices": [
+          1
+        ]
+      }
+    },
+    {
+      "prompt_id": 25,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 8,
+            "sequence": 0
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 32,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 37,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 40,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 46,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 48,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 1,
+        "index": 4
+      }
+    },
+    {
+      "prompt_id": 50,
+      "player": 0,
+      "choice": {
+        "kind": "toggle",
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 52,
+      "player": 0,
+      "choice": {
+        "kind": "toggle",
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 56,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 57,
+      "player": 0,
+      "choice": {
+        "kind": "position",
+        "position": 1
+      }
+    },
+    {
+      "prompt_id": 60,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 63,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 65,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 5,
+        "index": 3
+      }
+    },
+    {
+      "prompt_id": 68,
+      "player": 0,
+      "choice": {
+        "kind": "cards",
+        "indices": [
+          1
+        ]
+      }
+    },
+    {
+      "prompt_id": 72,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 75,
+      "player": 0,
+      "choice": {
+        "kind": "cards",
+        "indices": [
+          1
+        ]
+      }
+    },
+    {
+      "prompt_id": 77,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 78,
+      "player": 0,
+      "choice": {
+        "kind": "position",
+        "position": 1
+      }
+    },
+    {
+      "prompt_id": 85,
+      "player": 0,
+      "choice": {
+        "kind": "yes_no",
+        "yes": true
+      }
+    },
+    {
+      "prompt_id": 89,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 92,
+      "player": 0,
+      "choice": {
+        "kind": "cards",
+        "indices": [
+          1
+        ]
+      }
+    },
+    {
+      "prompt_id": 102,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 104,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 1,
+        "index": 2
+      }
+    },
+    {
+      "prompt_id": 106,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 107,
+      "player": 0,
+      "choice": {
+        "kind": "position",
+        "position": 1
+      }
+    },
+    {
+      "prompt_id": 110,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 113,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 115,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 1,
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 117,
+      "player": 0,
+      "choice": {
+        "kind": "toggle",
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 119,
+      "player": 0,
+      "choice": {
+        "kind": "toggle",
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 121,
+      "player": 0,
+      "choice": {
+        "kind": "toggle",
+        "index": 0
+      }
+    },
+    {
+      "prompt_id": 127,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 5
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 130,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 133,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 135,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 5,
+        "index": 4
+      }
+    },
+    {
+      "prompt_id": 139,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 142,
+      "player": 0,
+      "choice": {
+        "kind": "cards",
+        "indices": [
+          8
+        ]
+      }
+    },
+    {
+      "prompt_id": 145,
+      "player": 0,
+      "choice": {
+        "kind": "cards",
+        "indices": [
+          1
+        ]
+      }
+    },
+    {
+      "prompt_id": 147,
+      "player": 0,
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 8,
+            "sequence": 0
+          }
+        ]
+      }
+    },
+    {
+      "prompt_id": 154,
+      "player": 0,
+      "choice": {
+        "kind": "chain",
+        "index": null
+      }
+    },
+    {
+      "prompt_id": 156,
+      "player": 0,
+      "choice": {
+        "kind": "command",
+        "command": 7,
+        "index": 0
+      }
+    }
+  ],
+  "expected": {
+    "faceup_monsters": [
+      26692769
+    ],
+    "set_traps": [
+      25542642
+    ],
+    "deck_to_grave_effect": 63821877,
+    "detached_material": 83566725,
+    "new_resolved_effects": [
+      83566725,
+      85257384,
+      78449284,
+      46072770
+    ]
+  }
+}

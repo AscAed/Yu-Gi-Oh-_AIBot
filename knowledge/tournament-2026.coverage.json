@@ -1,0 +1,1181 @@
+{
+  "schema_version": 1,
+  "scenario": "own_first_turn_ocg_mr5_opponent_one_ash_only",
+  "deck_sha256": "0102c4d4c8fc22c855a02b9627317f47a78c0cc4be6bfa59e396870745ff71e5",
+  "asset_group_id": "asset-group-228cca96b5cf16a5e8d8f397cb30db073b483e75ddb0536d7d5f6f28783af340",
+  "scope_notes": [
+    "覆盖清单不是已实现或已验真声明",
+    "通用盖放、表示形式与阶段动作同样需要执行支持",
+    "标准超量手续的素材条件需实现；原表不可凑齐时使用引擎合法准备的定向案例验证，不假定当前线路可达",
+    "效果内的对方怪兽表示形式可选分支在本场景不适用；效果内其余处理仍在范围内"
+  ],
+  "cards": [
+    {
+      "card_id": 83566725,
+      "name": "The Phantom Knights of Doomed Soleret",
+      "text_sha256": "b707464692b82c38ee72c25de66cfde834e94a76fe4633ff161c7e0a243ed0c0",
+      "script": "official/c83566725.lua",
+      "script_sha256": "cb509cba72af98d1e176768205333b33e2b50d43e86e6f1f31e38c4bc04eab81",
+      "entries": [
+        {
+          "id": "83566725:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "83566725:empty_field_special",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "83566725:deck_set",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "83566725:raise_level_or_rank",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 25538345,
+      "name": "The Phantom Knights of Torn Scales",
+      "text_sha256": "ef953f845d332bb0d9dfdd022c8c35c76dc9ad9f818afedab281abae54cfae7c",
+      "script": "official/c25538345.lua",
+      "script_sha256": "641101b96bf8f456f77d9dfee04f81468bdd98627fedaeb731918cedc31b1aec",
+      "entries": [
+        {
+          "id": "25538345:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "25538345:discard_and_mill",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "25538345:banishment_revive",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 46072770,
+      "name": "The Phantom Knights of Decayed Cloak",
+      "text_sha256": "b8f61645264eebf20ea2adfc893cd0a5d89da3f4a10f253a7c568c92a8d95a87",
+      "script": "official/c46072770.lua",
+      "script_sha256": "5a84d56ee85586f94b64fb7f76532e2c11e630315bfe7571127a9c9bcc29d238",
+      "entries": [
+        {
+          "id": "46072770:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "46072770:reveal_and_special",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "46072770:monster_search",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "46072770:rank_as_level",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 90432163,
+      "name": "The Phantom Knights of Ancient Cloak",
+      "text_sha256": "19a98ea1a1eb6571acbe438259a2176766cc7dc2ce06116a58b11c51c1af7bdf",
+      "script": "official/c90432163.lua",
+      "script_sha256": "380457723770acf48ae53ec9bf5868a52b4cee715aafb9a207ea2dc747bf9376",
+      "entries": [
+        {
+          "id": "90432163:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "90432163:position_and_stat_boost",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "90432163:grave_search",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 36426778,
+      "name": "The Phantom Knights of Silent Boots",
+      "text_sha256": "c37904a7c59086cb7a41dbe24f11f48228eca2519e9f17ee57aa2d08b3c1d930",
+      "script": "official/c36426778.lua",
+      "script_sha256": "24ed34f97e0611ef53c8166bc358fd3a34a0ecd9c7a3914f6350d1a03e12b164",
+      "entries": [
+        {
+          "id": "36426778:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "36426778:phantom_control_special",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "36426778:grave_spell_trap_search",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 63821877,
+      "name": "The Phantom Knights of Ragged Gloves",
+      "text_sha256": "9d986704d3ebd856911d6f11a3659afa101779a3cfa8c675ef155d6e317bf54d",
+      "script": "official/c63821877.lua",
+      "script_sha256": "0ff30542243260f23f809e53c80464e4b6e3e0019b86845849abf7fdbdec83dc",
+      "entries": [
+        {
+          "id": "63821877:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "63821877:granted_xyz_stat_boost",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "63821877:grave_mill",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 88544390,
+      "name": "The Phantom Knights of Stained Greaves",
+      "text_sha256": "cd95c30dbff31f570c2c1029ccf93b998bf5cd8498d2948bc74e2c97e956036b",
+      "script": "official/c88544390.lua",
+      "script_sha256": "f486fa7cfe2cc82dd164a0031a31cdf97bc67539b071888a9682c9f79c4b042f",
+      "entries": [
+        {
+          "id": "88544390:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "88544390:hand_special_optional_level",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "88544390:grave_hand_special_optional_level",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 52159691,
+      "name": "Raider's Wing",
+      "text_sha256": "ffd001e6f70f833a7d491b625f454075dc9c91c1e26c6e5f68d8e7e853331539",
+      "script": "official/c52159691.lua",
+      "script_sha256": "7df339c2820877cb093047441dbcb7d8a1d092e3b5a617d6c7db75fbf505e006",
+      "entries": [
+        {
+          "id": "52159691:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "52159691:phantom_and_raidraptor_identity",
+          "kind": "rule",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "52159691:detach_and_self_revive",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "52159691:granted_opponent_target_protection",
+          "kind": "continuous",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 99745551,
+      "name": "Danger!? Tsuchinoko?",
+      "text_sha256": "7c5f233e525ff81ffd1a73f91cc35ccb50a08709ec3db9933b20eda933eada1f",
+      "script": "official/c99745551.lua",
+      "script_sha256": "fb4480695681e06ddb61212e3b718a83c516178bf173feb82a0b516c5030a457",
+      "entries": [
+        {
+          "id": "99745551:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "99745551:random_discard_special_draw",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "99745551:discarded_self_revive",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 65192027,
+      "name": "Dark Armed Dragon",
+      "text_sha256": "6507ea8b03ed85fa33ef1a252884f40d26831570427dd71c44189d85bf300d8d",
+      "script": "official/c65192027.lua",
+      "script_sha256": "7b99d49d96ed9a19a1249953ef8ee6015a2a7c905f3bd5d31ccbb1a532cda87a",
+      "entries": [
+        {
+          "id": "65192027:exact_three_dark_grave_special",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "65192027:banish_and_destroy",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 44088353,
+      "name": "Doll Hammer",
+      "text_sha256": "9ac9030451526ca0b7703f82ba7fb52848be23613933197aec57c7fd094acf0b",
+      "script": "official/c44088353.lua",
+      "script_sha256": "130ccd5dcd35c0a95ca8d87758009e43ba5630b8ccebf4c369fadfcba650b675",
+      "entries": [
+        {
+          "id": "44088353:self_field_destroy_draw",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "44088353:grave_return_after_revive",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 32807846,
+      "name": "Reinforcement of the Army",
+      "text_sha256": "f8eec50bbcccbf26b39202e8407297448041c817f292e8296771d951b6b1f219",
+      "script": "official/c32807846.lua",
+      "script_sha256": "dd3e2046df766ec30dcae539b5d7af6511c66930db94577c70f6cdf1e963481c",
+      "entries": [
+        {
+          "id": "32807846:warrior_search",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 81439173,
+      "name": "Foolish Burial",
+      "text_sha256": "e39a64a2944ae5106a2c70f8c2fca25b96723a5509a9c4fa2e8a34349bee6418",
+      "script": "official/c81439173.lua",
+      "script_sha256": "6e65769ede8ba639875e3b36e1d041475ceb2e86ed8d3e987184db893ecd8907",
+      "entries": [
+        {
+          "id": "81439173:monster_mill",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 62104532,
+      "name": "The Phantom Knights' Rank-Up-Magic Requiem",
+      "text_sha256": "e10fb5f6264a33b2ca89d1fc9b2b4fbaec061d6c3296e3b6acdab273a6e123f9",
+      "script": "official/c62104532.lua",
+      "script_sha256": "ecab5bec6884091f23442f04c843bc54279537193f8afc4977e17351645a7c06",
+      "entries": [
+        {
+          "id": "62104532:revive_negate_and_rank_up_transfer",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 88504133,
+      "name": "Phantom Knights' Rank-Up-Magic Force",
+      "text_sha256": "fc038f44450f9ca61480b18cd009f8afff7771f885566916cc0fac88cb17a9b0",
+      "script": "official/c88504133.lua",
+      "script_sha256": "41c2955d4ac7eba8f6862679b0b2140c11206215e5f817ece64286f9483ea122",
+      "entries": [
+        {
+          "id": "88504133:banish_rank_up_transfer_and_xyz_lock",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 24299458,
+      "name": "Forbidden Droplet",
+      "text_sha256": "c27b09e131abed95bb7bfff6bcc13b17ceb3758e223c4498ff3527297ac501d3",
+      "script": "official/c24299458.lua",
+      "script_sha256": "3382c20d08eca08f22264e82f9d5dedd9d3f5da6a032e4f403fbaca4d11427ac",
+      "entries": [
+        {
+          "id": "24299458:droplet_opponent_monsters",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "需要对方场上效果怪兽；本场景对方只从手牌发动灰流丽，且牌表没有将怪兽放到对方场上的效果。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 85257384,
+      "name": "The Phantom Knights of Umbrage Veil",
+      "text_sha256": "af77683e5ac79ec5a1e2276981b07aca46c8b3d9160aa61eb2050ac2e1338463",
+      "script": "official/c85257384.lua",
+      "script_sha256": "be9158f40126adadf76f663e4915678f6fc0d598b294d53e5401b499e4e3f6d7",
+      "entries": [
+        {
+          "id": "85257384:same_turn_trap_condition",
+          "kind": "rule",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "85257384:trap_monster_special",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "85257384:grave_immediate_xyz",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 98431356,
+      "name": "Phantom Knights' Wing",
+      "text_sha256": "9014b56094b79896615ebf19f019e1c2035286d0c4130f525fd79e6dfaccb2ec",
+      "script": "official/c98431356.lua",
+      "script_sha256": "3b1f742527ae74ffd76d06b1d7ba3a34160a70787ba9819b6012ab89cf4a2e68",
+      "entries": [
+        {
+          "id": "98431356:field_wing_activation",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "没有可于首回合发动该通常陷阱的手续；Doom只能盖The Phantom Knights字段，Wing属于Phantom Knights字段。墓地主动效果单独纳入。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "98431356:grave_phantom_revive",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 25542642,
+      "name": "Phantom Knights' Fog Blade",
+      "text_sha256": "57ac24a14053fdf12031dc67ddf642de16929098bdefa9aea8b3db0d9ade5964",
+      "script": "official/c25542642.lua",
+      "script_sha256": "0cebfc9d0f6746acd3eb76becadc85d837279f219549786eca39f6e286c174b1",
+      "entries": [
+        {
+          "id": "25542642:field_fog_activation_and_continuous_effect",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "没有允许该永续陷阱盖放当回合发动的手续；盖放和墓地主动效果仍纳入。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "25542642:grave_phantom_revive",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 14558127,
+      "name": "Ash Blossom & Joyous Spring",
+      "text_sha256": "fd614dfd3dcacc570425374b0263f2dae7dc20274e1820b826c4ca8afe330acf",
+      "script": "official/c14558127.lua",
+      "script_sha256": "ef52822941d9e63d6b3ed0d7bea58dc8ab440be983a88aa353c36e3e294313ac",
+      "entries": [
+        {
+          "id": "14558127:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "14558127:own_or_opponent_chain_negation",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 23434538,
+      "name": "Maxx \"C\"",
+      "text_sha256": "0cb2fea51c616ac0e1b368a71cad982b0c0f9db446e8239671a860638b4f69df",
+      "script": "official/c23434538.lua",
+      "script_sha256": "ff77e69f085ead924ee153dbec57c03f2bd73fb2dfe8a5e08ab077f41d0b68d0",
+      "entries": [
+        {
+          "id": "23434538:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "23434538:draw_observer",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 42141493,
+      "name": "Mulcharmy Fuwalos",
+      "text_sha256": "764298a4c79118aaebe2b955381fa108baf01379b4c48228badccf332cac3e11",
+      "script": "official/c42141493.lua",
+      "script_sha256": "b5581a3ccbaa0d37f5a49388c415cafd33aab451df27cdf030ec81cfb906f380",
+      "entries": [
+        {
+          "id": "42141493:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "42141493:empty_field_draw_observer",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "42141493:end_phase_random_hand_reduction",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "42141493:shared_mulcharmy_activation_limit",
+          "kind": "rule",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 94145021,
+      "name": "Droll & Lock Bird",
+      "text_sha256": "2e329ca3d34c612fbd0c0cb1f1cb15313b90cb9274679fb93d248eb2c68b379f",
+      "script": "official/c94145021.lua",
+      "script_sha256": "a27f1c2c552b4a8f1df756c06f35730ed85ed1ef5c91903276e296963a202b68",
+      "entries": [
+        {
+          "id": "94145021:normal_summon_and_set",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "94145021:opponent_deck_to_hand_trigger",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "对方没有从主卡组加入手牌的动作；Karmael改写的是墓地回手，不满足牌库加入条件。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 10045474,
+      "name": "Infinite Impermanence",
+      "text_sha256": "7c906f98b7baf2d1275ab278be2d0680e5a82803fbbf24d1f6d62151b878d7b8",
+      "script": "official/c10045474.lua",
+      "script_sha256": "3e7a6a44bfcc399b3f7d910930fa9144dbe0baf1ba4893a84c0afad94b5e5fc0",
+      "entries": [
+        {
+          "id": "10045474:imperm_opponent_monster",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "对方始终没有表侧怪兽可选。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 40366667,
+      "name": "Dominus Impulse",
+      "text_sha256": "b9512c6529efc5869af7a90b4bbf643865a2312d97086c419094c630a4b7b6b8",
+      "script": "official/c40366667.lua",
+      "script_sha256": "717bb2657074687655b1aeac49a3a98f54e8bf225aa1aa1ed6e36a19aa08a9c3",
+      "entries": [
+        {
+          "id": "40366667:impulse_activation",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "对方无场卡，不能从手牌发动；首回合盖放也没有同回合发动许可。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 26692769,
+      "name": "The Phantom Knights of Rusty Bardiche",
+      "text_sha256": "6535e4fc5b9ba5c083d340182db3bfa1037fb1e89aae961278523e8917953c48",
+      "script": "official/c26692769.lua",
+      "script_sha256": "616ebad5cbff0d115c6dde05618b128149214da07dbbb974e0952c4ecaba60e0",
+      "entries": [
+        {
+          "id": "26692769:dark_link_three",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "26692769:deck_mill_and_set",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "26692769:linked_zone_xyz_destroy",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "26692769:cannot_link_material",
+          "kind": "rule",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 65741786,
+      "name": "I:P Masquerena",
+      "text_sha256": "d75b4f9c8f4ee62a68dc6af87928e4fbaa7d71128dc36b3e8a7b5f484bd7f9ef",
+      "script": "official/c65741786.lua",
+      "script_sha256": "79373439b595b559ce1f14d4c24a8bfc3865563f808d5e307d4db0c34c96b94f",
+      "entries": [
+        {
+          "id": "65741786:two_non_link_monsters",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "65741786:opponent_main_link",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "只在对方主阶段发动，本轮结束在己方首回合。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "65741786:opponent_effect_destruction_protection",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "该保护仅针对对方效果破坏；对方唯一效果灰流丽只无效效果，不破坏。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 58699500,
+      "name": "Cherubini, Ebon Angel of the Burning Abyss",
+      "text_sha256": "075820c2b56c33946ba099f293282d3dceac8abce63d401fc2670988ed03eac9",
+      "script": "official/c58699500.lua",
+      "script_sha256": "e695eb8e22ad0c82b445c774260c8b81c8405f43c48895f0cde7d6fe0f6e8475",
+      "entries": [
+        {
+          "id": "58699500:two_level_three",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "58699500:linked_zone_destruction_protection",
+          "kind": "continuous",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "58699500:opponent_destruction_or_battle_replacement",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "只涉及战斗或对方效果破坏；本轮两者均不发生。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "58699500:cost_mill_and_stat_boost",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 29301450,
+      "name": "S:P Little Knight",
+      "text_sha256": "369955e04c9deaf964e23e26d21147bad51fa6a6c960ee4a8791a0b42beec7c6",
+      "script": "official/c29301450.lua",
+      "script_sha256": "a1034128f91faff3ab1469e8437cbd02cc47584f1f6a28e184e9288e7cd4f778",
+      "entries": [
+        {
+          "id": "29301450:two_effect_monsters",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "29301450:qualified_link_summon_banish",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "29301450:opponent_chain_temporary_banish_and_return",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 4993187,
+      "name": "W:P Fancy Ball",
+      "text_sha256": "fa3b163acd60fbb102a20580ef7d2145bf87287794b806b193d9c8140afd3d03",
+      "script": "official/c4993187.lua",
+      "script_sha256": "2a2372af7e0bcca424b3f73e1757226c4f18e71b6c90fea27c80dc9270360a6e",
+      "entries": [
+        {
+          "id": "4993187:effect_link_three",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "4993187:opponent_field_or_grave_monster_response",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "灰流丽的发动区域为手牌，不能因费用后进入墓地误认为墓地发动。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "4993187:opponent_main_link_using_opponent_material",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "只在对方主阶段发动，且对方没有连接怪兽。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 62709239,
+      "name": "The Phantom Knights of Break Sword",
+      "text_sha256": "669453e9494c63ad1cf9ef8cf8f829896b1416c4ac21ace3825fa7882ffa4890",
+      "script": "official/c62709239.lua",
+      "script_sha256": "aab9525406d64a7b1510e3b848a575ee24cdf09c0adabee395c62129cdca9567",
+      "entries": [
+        {
+          "id": "62709239:two_level_three",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "62709239:destroy_both_fields",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "要求双方场上各有对象；本轮对方场上恒为空。原Ryu-Ran合成场景仍按旧路径回归。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "62709239:destroyed_xyz_two_revive_dark_lock",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 28781003,
+      "name": "Raider's Knight",
+      "text_sha256": "51a469fd4daa96e2160a4958073765886d478486556c3d86b3a262cbcd9aa515",
+      "script": "official/c28781003.lua",
+      "script_sha256": "5bf945f0efef9060e6a898c052d7f3edf459ee6ec2cf6a58398796b11990a99e",
+      "entries": [
+        {
+          "id": "28781003:two_dark_level_four",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "28781003:rank_up_or_down_transfer_and_delayed_destruction",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 91279700,
+      "name": "Evilswarm Ophion",
+      "text_sha256": "329c2f974af7aff3c1ef16f58dc891d32dfc84c8522109e8d844e0b42d4dd59a",
+      "script": "official/c91279700.lua",
+      "script_sha256": "f158c9f648856eb43db8ef7b3f0cda6642d99b2ea1d9adb27bc28b1465ab9d56",
+      "entries": [
+        {
+          "id": "91279700:two_level_four_lswarm",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "91279700:material_dependent_high_level_summon_lock",
+          "kind": "continuous",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "91279700:infestation_search",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "原表中没有Infestation魔法陷阱；不通过改卡创造检索目标。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 77675029,
+      "name": "Exosister Karmael",
+      "text_sha256": "586571baa5c5092edbae964bc132c4a0ad4a50fe9be70cd2b6eea0f15c7e2e04",
+      "script": "official/c77675029.lua",
+      "script_sha256": "b8eb0d24079446c50b988e342dd3cf19a7b693dfa056399a38ad33cf2cbdb25b",
+      "entries": [
+        {
+          "id": "77675029:two_level_four_exosister",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "77675029:exosister_end_phase_set",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "原表中没有Exosister魔法陷阱；其特殊召唤与改写效果单独纳入。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "77675029:rewrite_opponent_effect",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 1621413,
+      "name": "Dark Requiem Xyz Dragon",
+      "text_sha256": "6d8423bd4c34895e3955494efd42460b020a183a1b6e27f8653a31ead7f49655",
+      "script": "official/c1621413.lua",
+      "script_sha256": "dc2a2a73e23a77383d37db4fe0831700a4bbda12f2b694bb12315d4e627c4381",
+      "entries": [
+        {
+          "id": "1621413:three_level_five",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "1621413:opponent_stat_absorption",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "对方没有可选的表侧怪兽。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "1621413:material_gated_negate_and_optional_xyz_revive",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 16195942,
+      "name": "Dark Rebellion Xyz Dragon",
+      "text_sha256": "28535648696ed803e196954e30ab558ee9590737023f7ac3078b7937d1963911",
+      "script": "official/c16195942.lua",
+      "script_sha256": "82ca8518eb49281a435e738cfe5d25ae518df02189b9fc7ab52c5e87bbf7cada",
+      "entries": [
+        {
+          "id": "16195942:two_level_four",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "16195942:opponent_attack_absorption",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "对方没有可选的表侧怪兽。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 64276752,
+      "name": "Arc Rebellion Xyz Dragon",
+      "text_sha256": "f149f7b8bf6ab4d85a9a8cdd14f7536b7ae73105d2020407a6cfa9cc42d5209b",
+      "script": "official/c64276752.lua",
+      "script_sha256": "0100a7e82aaba053675f5fe0c24e8292b1095931d8acdc616370dd500371c01c",
+      "entries": [
+        {
+          "id": "64276752:three_level_five",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "64276752:xyz_summoned_destruction_protection",
+          "kind": "continuous",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "64276752:stat_gain_and_conditional_field_negation",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 90091224,
+      "name": "Dark Rebellion Xyz Dragon of the Four Heavenly Dragons",
+      "text_sha256": "5b039b58f38e593db3bf79d8b9805d1280dbd9c0450a8b9cf3ff1f70344f74dd",
+      "script": "official/c90091224.lua",
+      "script_sha256": "b61e921c5e27bd043e3b76936711d9205dfcf0ff116b4ef1e2675223aaf3c168",
+      "entries": [
+        {
+          "id": "90091224:phantom_identity",
+          "kind": "rule",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "90091224:two_dark_level_four",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "90091224:equal_cards_both_fields_destroy",
+          "kind": "activation_or_rule",
+          "applicability": "outside_scenario",
+          "exclusion_basis": "要求双方场上有相同非零数量对象；对方场上恒为空。",
+          "implementation_status": "excluded_with_basis",
+          "verification_cases": []
+        },
+        {
+          "id": "90091224:opponent_chain_overlay_rank_four_transfer",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 78449284,
+      "name": "The Phantom Knights of Malevolent Scythe",
+      "text_sha256": "57c5cb8e93edebac85ec9fc1beacde4205258676ba76cde435bafd0bfe7a5064",
+      "script": "official/c78449284.lua",
+      "script_sha256": "98b587cef68db00de74dae96f97819ca0333a60b771a0178746e037c8e411b42",
+      "entries": [
+        {
+          "id": "78449284:two_dark_level_three",
+          "kind": "procedure",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "78449284:deck_special",
+          "kind": "activation",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "78449284:xyz_dragon_rank_up_search",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        },
+        {
+          "id": "78449284:destroyed_banished_card_return",
+          "kind": "trigger",
+          "applicability": "inside_scenario",
+          "exclusion_basis": null,
+          "implementation_status": "pending",
+          "verification_cases": []
+        }
+      ]
+    }
+  ]
+}
