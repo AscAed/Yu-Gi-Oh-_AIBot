@@ -133,6 +133,28 @@ fn seven_effects_have_actual_ash_negation_and_replayed_paid_prefixes() {
             &mut progress,
         )
         .unwrap_or_else(|e| panic!("{target}: {e}"));
+        let mut capped = FailedSettlement {
+            selections: vec![],
+            observation: anchor.observation.clone(),
+            used_calls: 0,
+            replay_attempts: 0,
+            error: String::new(),
+        };
+        let stopped = settle(
+            anchor.runtime.clone(),
+            anchor.observation.clone(),
+            &cat,
+            &pack,
+            33,
+            32,
+            512,
+            &mut capped,
+        );
+        assert!(
+            stopped.is_err_and(|e| e.starts_with("budget_exhausted")),
+            "settled idle must respect prefix step budget"
+        );
+        assert_eq!(capped.used_calls, 0);
         let facts = ygo_goal::actual_facts(&anchor.observation, &cat, &pack);
         assert!(facts
             .history
@@ -214,5 +236,40 @@ fn seven_effects_have_actual_ash_negation_and_replayed_paid_prefixes() {
         verify_witness(&anchor.witness, &engine).unwrap();
         assert!(out.search.stats.engine_calls + anchor.used_calls + anchor.reserved_calls <= 512);
         std::fs::write(format!("data/runtime/ash-strategy-cases/{}.json",target.replace(':',"-")),serde_json::to_vec_pretty(&serde_json::json!({"request":q,"human_proposal":p,"attempt":attempt,"anchor":anchor,"calls":out.search.stats.engine_calls+progress.used_calls+progress.selections.len()+1})).unwrap()).unwrap();
+    }
+}
+
+#[test]
+fn verified_probe_losses_keep_their_truth_and_unknown_is_not_a_loss() {
+    use ygo_goal::{Evaluation, Expr, Filter, Truth};
+    let value = |result| Evaluation {
+        node: "/goal".into(),
+        result,
+        observed: None,
+        matches: vec![],
+        reason: "independently verified probe".into(),
+        children: vec![],
+    };
+    let available = Expr::Available {
+        effect_id: "36426778:search".into(),
+        filter: Filter::default(),
+        window: "main1".into(),
+    };
+    let continuation = Expr::Continuation {
+        goal: Box::new(Expr::Count {
+            filter: Filter::default(),
+            min: 1,
+            max: None,
+        }),
+        gains: vec![],
+        max_steps: Some(4),
+    };
+    for expr in [available, continuation] {
+        assert_eq!(
+            confirmed_losses(&expr, &value(Truth::Yes), &value(Truth::No)),
+            vec!["/goal"]
+        );
+        assert!(confirmed_losses(&expr, &value(Truth::Yes), &value(Truth::Unknown)).is_empty());
+        assert!(confirmed_losses(&expr, &value(Truth::Unknown), &value(Truth::No)).is_empty());
     }
 }

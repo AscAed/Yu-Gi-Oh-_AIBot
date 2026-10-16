@@ -364,6 +364,9 @@ fn settle(
     budget: usize,
     progress: &mut FailedSettlement,
 ) -> Result<Anchor, String> {
+    if prefix_steps > max_steps {
+        return Err("budget_exhausted: interrupted prefix semantic steps".into());
+    }
     let adapter = ProcessEngineAdapter::new(runtime.engine.clone());
     let mut active = "system:settlement".to_string();
     loop {
@@ -491,6 +494,18 @@ fn row_score(row: &Strategy) -> Option<Vec<Score>> {
     x.sort();
     Some(x)
 }
+fn confirmed_losses(
+    expr: &ygo_goal::Expr,
+    before: &ygo_goal::Evaluation,
+    after: &ygo_goal::Evaluation,
+) -> Vec<String> {
+    let b = ygo_goal::condition_values(expr, after);
+    ygo_goal::condition_values(expr, before)
+        .into_iter()
+        .filter(|(id, t)| *t == ygo_goal::Truth::Yes && b.get(id) == Some(&ygo_goal::Truth::No))
+        .map(|(id, _)| id)
+        .collect()
+}
 fn cell_comparison(
     pass: &arm::PlanReport,
     index: usize,
@@ -519,21 +534,14 @@ fn cell_comparison(
         .as_ref()
         .and_then(|o| arm.and_then(|a| a.executions.iter().find(|e| e.id == o.execution_id)))
         .and_then(|e| e.trace.observation.as_ref());
-    let lost = terminal.map_or_else(Vec::new, |o| {
-        let a = ygo_goal::condition_values(
-            &goal.expr,
-            &ygo_goal::evaluate(&goal.expr, &base.facts, &BTreeMap::new()),
-        );
-        let facts = ygo_goal::actual_facts(o, &pass.catalog_projection, &pass.knowledge);
-        let b = ygo_goal::condition_values(
-            &goal.expr,
-            &ygo_goal::evaluate(&goal.expr, &facts, &BTreeMap::new()),
-        );
-        a.into_iter()
-            .filter(|(id, t)| *t == ygo_goal::Truth::Yes && b.get(id) == Some(&ygo_goal::Truth::No))
-            .map(|(id, _)| id)
-            .collect()
-    });
+    let lost = pass
+        .assessments
+        .iter()
+        .find(|a| a.execution == index)
+        .zip(c.outcome.as_ref())
+        .map_or_else(Vec::new, |(a, b)| {
+            confirmed_losses(&goal.expr, &a.evaluation, &b.evaluation)
+        });
     Some(CellComparison{pass_execution_id:base.id.clone(),reference_window_id:reference.map(|p|p.before_prefix.clone()),actual_anchor_id:c.anchor.as_ref().map(|a|a.id.clone()),interruption_changes:reference.and_then(|p|c.anchor.as_ref().map(|a|crate::planning_v4::resource_changes(&p.before_checkpoint,&a.observation.checkpoint))),recovery_changes:c.anchor.as_ref().and_then(|a|terminal.map(|t|crate::planning_v4::resource_changes(&a.observation.checkpoint,&t.checkpoint))),terminal_difference:terminal.map(|t|crate::planning_v4::resource_changes(&before.checkpoint,&t.checkpoint)),lost_goal_conditions:lost,window_semantics:"实际合法操作窗口对照包含已选择的触发结算；终场差异单列，不自动解释为纯中断损失或可用收益".into()})
 }
 struct MatrixSummary {
