@@ -26,6 +26,8 @@ pub struct LedgerStats {
     pub reserved: usize,
     pub completed: usize,
     pub unknown: usize,
+    #[serde(default)]
+    pub abandoned: usize,
     pub limit: usize,
 }
 
@@ -81,6 +83,10 @@ enum Entry {
         consumed: usize,
         charged_sequence: String,
     },
+    Abandon {
+        call_id: u64,
+        reason: String,
+    },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -97,6 +103,7 @@ struct Call {
     request: String,
     purpose: CallPurpose,
     completed: Option<(String, String, String)>,
+    abandoned: bool,
 }
 struct State {
     file: File,
@@ -186,6 +193,7 @@ impl State {
             reserved: self.reserved.values().sum(),
             completed,
             unknown: self.calls.len() - completed,
+            abandoned: self.calls.values().filter(|c| c.abandoned).count(),
             limit: self.limit,
         }
     }
@@ -225,7 +233,7 @@ impl State {
                 if self
                     .calls
                     .get(call_id)
-                    .map_or(true, |c| c.completed.is_some())
+                    .map_or(true, |c| c.completed.is_some() || c.abandoned)
                 {
                     return Err(bad());
                 }
@@ -235,7 +243,8 @@ impl State {
                     .recoveries
                     .iter()
                     .any(|r| r.tail_hash == evidence.tail_hash)
-                    || evidence.additional_charge != (self.stats().unknown == 0)
+                    || evidence.additional_charge
+                        != (self.stats().unknown == self.stats().abandoned)
                 {
                     return Err(bad());
                 }
@@ -253,10 +262,19 @@ impl State {
                 ..
             } if name.is_empty()
                 || *consumed != self.calls.len()
-                || self.stats().unknown != 0
+                || self.stats().unknown != self.stats().abandoned
                 || *charged_sequence != self.sequence_id(*consumed)? =>
             {
                 return Err(bad());
+            }
+            Entry::Abandon { call_id, reason }
+                if reason.trim().is_empty()
+                    || self
+                        .calls
+                        .get(call_id)
+                        .map_or(true, |c| c.completed.is_some() || c.abandoned) =>
+            {
+                return Err(bad())
             }
             _ => {}
         }
@@ -290,6 +308,7 @@ impl State {
                         request,
                         purpose,
                         completed: None,
+                        abandoned: false,
                     },
                 );
             }
@@ -313,6 +332,7 @@ impl State {
                             request: format!("unknown-tail-{}", evidence.tail_hash),
                             purpose: CallPurpose::Audit,
                             completed: None,
+                            abandoned: true,
                         },
                     );
                 }
@@ -326,6 +346,9 @@ impl State {
             } => {
                 self.checkpoints
                     .insert(name, (blob, consumed, charged_sequence));
+            }
+            Entry::Abandon { call_id, .. } => {
+                self.calls.get_mut(&call_id).unwrap().abandoned = true
             }
         }
     }
@@ -514,7 +537,7 @@ impl CallJournal {
             let entry = Entry::Recovery {
                 evidence: JournalRecovery {
                     tail_hash: marker.tail_hash,
-                    additional_charge: state.stats().unknown == 0,
+                    additional_charge: state.stats().unknown == state.stats().abandoned,
                 },
             };
             state.check(&entry)?;
@@ -534,6 +557,29 @@ impl CallJournal {
     }
     pub fn stats(&self) -> Result<LedgerStats, WorkerError> {
         Ok(self.lock()?.stats())
+    }
+    /// Disclose an uncertain completed/crashed call without refunding its debit.
+    pub fn acknowledge_unknown(&self, call_id: u64, reason: &str) -> Result<(), WorkerError> {
+        self.lock()?.append(Entry::Abandon {
+            call_id,
+            reason: reason.into(),
+        })
+    }
+    pub fn unresolved_calls(&self) -> Result<Vec<u64>, WorkerError> {
+        Ok(self
+            .lock()?
+            .calls
+            .iter()
+            .filter(|(_, c)| c.completed.is_none() && !c.abandoned)
+            .map(|(id, _)| *id)
+            .collect())
+    }
+    pub fn call_purpose(&self, call_id: u64) -> Result<CallPurpose, WorkerError> {
+        self.lock()?
+            .calls
+            .get(&call_id)
+            .map(|c| c.purpose)
+            .ok_or_else(|| fail("journal_call", "unknown call"))
     }
     pub fn recoveries(&self) -> Result<Vec<JournalRecovery>, WorkerError> {
         Ok(self.lock()?.recoveries.clone())

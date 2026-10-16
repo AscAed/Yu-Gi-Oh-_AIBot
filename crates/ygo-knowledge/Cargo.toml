@@ -11,3 +11,5 @@ serde_json.workspace = true
 sha2.workspace = true
 rusqlite.workspace = true
 ygo-domain = { path = "../ygo-domain" }
+ygo-engine-adapter = { path = "../ygo-engine-adapter" }
+ygo-storage = { path = "../ygo-storage" }

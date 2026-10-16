@@ -56,6 +56,25 @@ fn knowledge_v2(opts: &BTreeMap<String, String>) -> Result<ygo_knowledge::Knowle
         .unwrap_or_else(|| "knowledge/phantom-v2.json".into());
     ygo_knowledge::KnowledgePack::read(&path)
 }
+fn first_turn_knowledge(
+    opts: &BTreeMap<String, String>,
+) -> Result<Option<ygo_knowledge::first_turn::FirstTurnKnowledge>, String> {
+    let path = opts
+        .get("--knowledge")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("YGO_KNOWLEDGE_CONFIG").map(PathBuf::from));
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+    if value.get("profile").and_then(|v| v.as_str()) == Some("tournament-first-turn-v1") {
+        ygo_knowledge::first_turn::FirstTurnKnowledge::read(&path).map(Some)
+    } else {
+        Ok(None)
+    }
+}
 fn output(opts: &BTreeMap<String, String>, value: &serde_json::Value) -> Result<(), String> {
     if let Some(path) = opts.get("--output") {
         fs::write(
@@ -166,6 +185,39 @@ fn execute(args: &[String]) -> Result<(), String> {
     };
     match command {
         Command::KnowledgeVerify => {
+            if let Some(pack) = first_turn_knowledge(&opts)? {
+                use ygo_knowledge::first_turn::verification::*;
+                let cases: NativeCases = serde_json::from_slice(
+                    &fs::read(need(&opts, "--cases")?).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| e.to_string())?;
+                let p = active(&pointer_path)?;
+                let config = engine()?;
+                let assets = config
+                    .catalog_path
+                    .parent()
+                    .ok_or("catalog asset directory required")?
+                    .to_path_buf();
+                let output_path = PathBuf::from(need(&opts, "--output")?);
+                let mut log_path = output_path.as_os_str().to_owned();
+                log_path.push(".calls");
+                let environment = NativeEnvironment {
+                    engine: config,
+                    asset_root: &assets,
+                    store: &store,
+                    catalog_id: p["catalog_id"].as_str().ok_or("catalog missing")?,
+                    banlist_id: p["banlist_id"].as_str().ok_or("banlist missing")?,
+                };
+                let report = verify_cases(&pack, &cases, &environment, Path::new(&log_path))?;
+                output(
+                    &opts,
+                    &serde_json::to_value(&report).map_err(|e| e.to_string())?,
+                )?;
+                if !report.passed {
+                    return Err("native rule verification failed; inspect case evidence".into());
+                }
+                return Ok(());
+            }
             let cases = serde_json::from_slice(
                 &fs::read(need(&opts, "--cases")?).map_err(|e| e.to_string())?,
             )
@@ -185,6 +237,20 @@ fn execute(args: &[String]) -> Result<(), String> {
             }
         }
         Command::KnowledgeValidate => {
+            if let Some(pack) = first_turn_knowledge(&opts)? {
+                let cfg = engine()?;
+                pack.validate_sources(
+                    cfg.catalog_path
+                        .parent()
+                        .ok_or("catalog asset directory required")?,
+                )?;
+                return output(
+                    &opts,
+                    &serde_json::json!({"schema_version":1,"knowledge_id":pack.id(),"sources_verified":true,
+                    "cards":pack.cards.len(),"rules":pack.rules.len(),"potential_ash_effects":pack.potential_ash_effects().len(),
+                    "verified_ash_effects":pack.verified_ash_effects().len(),"complete_semantic_coverage":pack.require_verified_coverage().is_ok()}),
+                );
+            }
             let k = knowledge(&opts)?;
             let cfg = engine()?;
             k.validate_sources(

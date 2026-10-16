@@ -3,6 +3,7 @@
 use crate::{hash, Filter};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, path::Path};
+pub mod verification;
 
 const DATA: &str = include_str!("../../../knowledge/tournament-2026.knowledge.json");
 const COVERAGE: &str = include_str!("../../../knowledge/tournament-2026.coverage.json");

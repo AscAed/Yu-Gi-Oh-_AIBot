@@ -352,3 +352,41 @@ fn adapter_failures_are_charged_completed_and_reusable_as_failures() {
     assert_eq!(journal.load_result(1, &q).unwrap_err().code, "spawn");
     journal.verify().unwrap();
 }
+
+#[test]
+fn disclosed_unknown_calls_remain_charged_while_later_checkpoints_can_progress() {
+    let dir = folder();
+    let path = dir.join("calls.jsonl");
+    let q = request();
+    let journal = CallJournal::open(&path, "case", "frozen", 3).unwrap();
+    journal
+        .begin_call(&q, CallPurpose::Execution, None)
+        .unwrap();
+    drop(journal);
+    let journal = CallJournal::open(&path, "case", "frozen", 3).unwrap();
+    assert!(journal.acknowledge_unknown(1, "").is_err());
+    journal
+        .acknowledge_unknown(
+            1,
+            "process stopped before result persistence; retry will cost another call",
+        )
+        .unwrap();
+    assert_eq!(journal.stats().unwrap().unknown, 1);
+    assert_eq!(journal.stats().unwrap().abandoned, 1);
+    let adapter = JournaledAdapter::new(
+        Fake(Arc::new(AtomicUsize::new(0))),
+        journal.clone(),
+        CallPurpose::Execution,
+    );
+    adapter.run(&q).unwrap();
+    journal
+        .save_checkpoint("search", &serde_json::json!({"next":2}))
+        .unwrap();
+    assert_eq!(journal.stats().unwrap().consumed, 2);
+    assert_eq!(journal.stats().unwrap().completed, 1);
+    drop(adapter);
+    drop(journal);
+    let resumed = CallJournal::open(&path, "case", "frozen", 3).unwrap();
+    assert_eq!(resumed.stats().unwrap().abandoned, 1);
+    assert!(resumed.checkpoint("search").unwrap().is_some());
+}

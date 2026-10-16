@@ -5,3 +5,4 @@
 configs/tournament-2026*.json text eol=lf
 knowledge/tournament-2026*.json text eol=lf
 tests/fixtures/tournament-2026*.json text eol=lf
+schemas/first-turn*.json text eol=lf
