@@ -201,6 +201,73 @@ fn missing_material_evidence_is_unknown_while_legacy_serialization_stays_unchang
 }
 
 #[test]
+fn a_known_self_summoning_handler_recovers_identity_after_same_name_hand_shuffle() {
+    let (result, witnesses) = read_capture(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-reveal.json"
+    ));
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let trace = actual_trace_v6(&result, &catalog(), &pack, &witnesses).unwrap();
+    let actor = trace
+        .facts
+        .cards
+        .iter()
+        .find(|c| c.code == 46072770 && c.location == 4)
+        .unwrap();
+    assert!(actor.identity_known);
+    assert_eq!(actor.instance, "observed:0:2:0:0");
+    let other = trace
+        .facts
+        .cards
+        .iter()
+        .find(|c| c.code == 46072770 && c.location == 2)
+        .unwrap();
+    assert!(other.identity_known);
+    assert_eq!(other.instance, "observed:0:2:2:0");
+    assert!(trace
+        .facts
+        .history
+        .iter()
+        .any(|h| h.kind == "special_summon" && h.card.instance == actor.instance));
+    assert_eq!(trace.identity_bindings.len(), 2);
+    assert_eq!(
+        trace.identity_bindings[0].basis,
+        "known_handler_self_special_during_resolution"
+    );
+    assert_eq!(
+        trace.identity_bindings[1].basis,
+        "unique_unassigned_query_after_shuffle"
+    );
+}
+
+#[test]
+fn contradicting_a_known_activation_source_is_rejected_even_with_rehashed_frames() {
+    use sha2::{Digest, Sha256};
+    let (mut result, mut witnesses) = read_capture(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-reveal.json"
+    ));
+    let index = result.events.iter().position(|e| e.opcode == 70).unwrap();
+    let event = &result.events[index];
+    let mut raw = event.raw.clone();
+    raw[7..11].copy_from_slice(&2u32.to_le_bytes());
+    raw[17..21].copy_from_slice(&2u32.to_le_bytes());
+    result.events[index] = decode_frame(event.sequence, &raw).unwrap();
+    for w in &mut witnesses {
+        let raw: Vec<_> = result.events[..w.event as usize]
+            .iter()
+            .map(|e| &e.raw)
+            .collect();
+        w.raw_prefix_sha256 = format!("{:x}", Sha256::digest(serde_json::to_vec(&raw).unwrap()));
+    }
+    assert!(actual_trace_v6(
+        &result,
+        &catalog(),
+        &FirstTurnKnowledge::builtin().unwrap(),
+        &witnesses
+    )
+    .is_err());
+}
+
+#[test]
 fn activation_source_and_paid_material_snapshot_are_separate() {
     let (result, witnesses) = captured();
     let pack = FirstTurnKnowledge::builtin().unwrap();
@@ -471,4 +538,49 @@ fn captured_ash_anchor_queries_match_independent_native_replay() {
     let trace = actual_trace_v6(&result, &catalog(), &pack, &witnesses).unwrap();
     assert_eq!(trace.window, TraceWindow::OwnMainAction);
     assert_eq!(trace.used.get("78449284:deck_special"), Some(&1));
+}
+
+#[test]
+fn opponent_usage_is_not_spent_from_our_same_name_counter() {
+    let (result, witnesses) = read_capture(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-ash.json"
+    ));
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let trace = actual_trace_v6(&result, &catalog(), &pack, &witnesses).unwrap();
+    let ash_key = pack
+        .rules
+        .iter()
+        .find(|r| r.card_id == 14558127 && r.description.is_some())
+        .unwrap()
+        .usage
+        .key
+        .as_ref()
+        .unwrap();
+    assert!(!trace.used.contains_key(ash_key));
+    assert_eq!(trace.used.get(&format!("p1:{ash_key}")), Some(&1));
+}
+
+#[test]
+fn invalid_raw_controller_coordinates_are_rejected_without_indexing_outside_resources() {
+    use sha2::{Digest, Sha256};
+    let (mut result, mut witnesses) = captured();
+    let index = result.events.iter().position(|e| e.opcode == 50).unwrap();
+    let event = &result.events[index];
+    let mut raw = event.raw.clone();
+    raw[5] = 2;
+    result.events[index] = decode_frame(event.sequence, &raw).unwrap();
+    for w in &mut witnesses {
+        let raw: Vec<_> = result.events[..w.event as usize]
+            .iter()
+            .map(|e| &e.raw)
+            .collect();
+        w.raw_prefix_sha256 = format!("{:x}", Sha256::digest(serde_json::to_vec(&raw).unwrap()));
+    }
+    assert!(actual_trace_v6(
+        &result,
+        &catalog(),
+        &FirstTurnKnowledge::builtin().unwrap(),
+        &witnesses
+    )
+    .is_err());
 }

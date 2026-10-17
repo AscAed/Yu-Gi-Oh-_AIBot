@@ -18,6 +18,22 @@ fn snapshot(card: &FactCard, tracked: &[FactCard], hosts: &BTreeMap<String, Stri
     c
 }
 
+fn relocate_materials(
+    tracked: &mut [FactCard],
+    hosts: &BTreeMap<String, String>,
+    host: &str,
+    to: &serde_json::Value,
+) {
+    for child in tracked
+        .iter_mut()
+        .filter(|m| hosts.get(&m.instance).is_some_and(|id| id == host))
+    {
+        child.player = to["player"].as_u64().unwrap_or(0) as u8;
+        child.location = to["location"].as_u64().unwrap_or(0) as u8 | 128;
+        child.sequence = to["sequence"].as_u64().unwrap_or(0) as u32;
+    }
+}
+
 /// Reconstruct instance history from raw decoded moves and successful summon/chain events.
 /// Unresolvable identities remain unknown; proposal history is never consulted.
 pub fn actual_trace_v6(
@@ -43,8 +59,11 @@ pub fn actual_trace_v6(
         })
         .collect();
     let mut hosts: BTreeMap<String, String> = BTreeMap::new();
-    let mut activations = vec![];
-    let mut chain_activation = BTreeMap::new();
+    let mut activations: Vec<ActivationWitness> = vec![];
+    let mut shuffled_origins: BTreeMap<String, u64> = BTreeMap::new();
+    let mut identity_bindings = vec![];
+    let mut resolving_chain: Option<u64> = None;
+    let mut chain_activation: BTreeMap<u64, usize> = BTreeMap::new();
     let mut movements = vec![];
     let mut draws = vec![];
     let mut hand_count = [5usize, first.public.opponent_hand_count];
@@ -66,9 +85,16 @@ pub fn actual_trace_v6(
         }
         if e.opcode == 74 {
             chain_open = false;
+            resolving_chain = None;
         }
         if let Some(w) = witnesses.iter().find(|w| w.event == e.sequence) {
-            reconcile(&mut tracked, &w.public.visible.cards);
+            reconcile(
+                &mut tracked,
+                &w.public.visible.cards,
+                &mut shuffled_origins,
+                &mut identity_bindings,
+                e.sequence,
+            );
         }
         let n = |v: &serde_json::Value, k: &str| v[k].as_u64().unwrap_or(0) as u32;
         if e.opcode == 90 {
@@ -170,13 +196,53 @@ pub fn actual_trace_v6(
                     }
                 }
             }
-            let old = tracked.iter().position(|c| {
-                c.code == code
-                    && c.player == n(from, "player") as u8
-                    && c.location == n(from, "location") as u8
-                    && c.sequence == n(from, "sequence")
-                    && (c.location & 128 == 0 || c.position == n(from, "position"))
-            });
+            let exact = tracked
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| {
+                    c.code == code
+                        && c.player == n(from, "player") as u8
+                        && c.location == n(from, "location") as u8
+                        && c.sequence == n(from, "sequence")
+                        && (c.location & 128 == 0 || c.position == n(from, "position"))
+                })
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>();
+            let exact = (exact.len() == 1).then(|| exact[0]);
+            let rebound = if exact.map_or(true, |i| !tracked[i].identity_known)
+                && n(from, "location") == 2
+                && n(to, "location") == 4
+                && n(&e.fields, "reason") & 2048 != 0
+            {
+                resolving_chain.and_then(|chain| {
+                    chains.get(&chain).and_then(|(source, id)| {
+                        let rule = id.as_deref().and_then(|id| pack.rule(id))?;
+                        let self_special = matches!(
+                            rule.operation,
+                            Operation::RevealSpecial
+                                | Operation::DetachSelfSpecial
+                                | Operation::SpecialOnPhantomSummon
+                                | Operation::DangerReveal
+                        );
+                        if !self_special
+                            || !source.identity_known
+                            || source.code != code
+                            || source.player != n(from, "player") as u8
+                        {
+                            return None;
+                        }
+                        tracked
+                            .iter()
+                            .position(|c| {
+                                c.instance == source.instance && c.location == 2 && c.code == code
+                            })
+                            .map(|i| (i, chain, rule.id.clone()))
+                    })
+                })
+            } else {
+                None
+            };
+            let old = rebound.as_ref().map(|(i, _, _)| *i).or(exact);
             let mut c = old.map(|i| tracked.remove(i)).unwrap_or_else(|| FactCard {
                 materials_complete: Some(false),
                 instance: format!("observed:{}", e.sequence),
@@ -190,6 +256,20 @@ pub fn actual_trace_v6(
                 proper_xyz: Some(false),
                 ..Default::default()
             });
+            if let Some((_, chain, rule_id)) = rebound {
+                c.identity_known = true;
+                shuffled_origins.remove(&c.instance);
+                identity_bindings.push(IdentityBinding {
+                    instance: c.instance.clone(),
+                    event: e.sequence,
+                    prior_event: activations[*chain_activation
+                        .get(&chain)
+                        .ok_or("missing resolving source")?]
+                    .event,
+                    basis: "known_handler_self_special_during_resolution".into(),
+                    rule_id: Some(rule_id),
+                });
+            }
             // Initial hand cards need not have a preceding MOVE. Pin a source
             // observed in its legal prompt to its subsequent exact MOVE, rather
             // than abandoning that identity or guessing by card name at CHAINING.
@@ -227,6 +307,7 @@ pub fn actual_trace_v6(
                 if other.player == n(from, "player") as u8
                     && other.location == n(from, "location") as u8
                     && matches!(other.location, 1 | 2 | 16 | 32 | 64)
+                    && other.sequence != u32::MAX
                     && other.sequence > n(from, "sequence")
                 {
                     other.sequence -= 1;
@@ -258,16 +339,7 @@ pub fn actual_trace_v6(
             } else {
                 hosts.remove(&c.instance);
             }
-            if matches!(n(to, "location"), 4 | 64) {
-                for child in tracked
-                    .iter_mut()
-                    .filter(|m| hosts.get(&m.instance) == Some(&c.instance))
-                {
-                    child.player = n(to, "player") as u8;
-                    child.location = n(to, "location") as u8 | 128;
-                    child.sequence = n(to, "sequence");
-                }
-            }
+            relocate_materials(&mut tracked, &hosts, &c.instance, to);
             let epoch = epochs.entry(c.instance.clone()).or_default();
             let previous_epoch = *epoch;
             if n(from, "location") == 4 && n(to, "location") != 4 {
@@ -492,6 +564,16 @@ pub fn actual_trace_v6(
             // Bind identity/activation zone at CHAINING. CHAINED below is
             // emitted after cost and target selection and finalizes materials.
             if let Some(current) = tracked.iter().find(|x| x.instance == c.instance) {
+                if c.identity_known
+                    && current.identity_known
+                    && (current.player != n(loc, "player") as u8
+                        || current.location != n(loc, "location") as u8
+                        || current.sequence != n(loc, "sequence"))
+                {
+                    return Err(
+                        "actual activation handler contradicts its known source instance".into(),
+                    );
+                }
                 c.materials = snapshot(current, &tracked, &hosts).materials;
             } else {
                 c.materials.clear();
@@ -563,6 +645,7 @@ pub fn actual_trace_v6(
             }
         }
         if e.opcode == 72 {
+            resolving_chain = e.fields["chain"].as_u64();
             if let Some(i) = chain_activation.get(&e.fields["chain"].as_u64().unwrap_or(0)) {
                 activations[*i].solving_event = Some(e.sequence);
             } else {
@@ -571,6 +654,9 @@ pub fn actual_trace_v6(
         }
         if e.opcode == 73 {
             let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if resolving_chain == Some(chain) {
+                resolving_chain = None;
+            }
             if result.protocol_version >= 4 && negated_chains.remove(&chain) {
                 continue;
             }
@@ -656,6 +742,9 @@ pub fn actual_trace_v6(
                 c.sequence = if positions.len() == 1 {
                     positions[0]
                 } else {
+                    if c.identity_known {
+                        shuffled_origins.insert(c.instance.clone(), e.sequence);
+                    }
                     c.identity_known = false;
                     u32::MAX
                 };
@@ -741,6 +830,11 @@ pub fn actual_trace_v6(
             .any(|e| e.opcode == 40 && e.fields["player"] == 1)
     {
         TraceWindow::OwnTurnEnded
+    } else if result.status == ygo_engine_adapter::DuelStatus::DecisionRequired
+        && result.error.is_none()
+        && result.prompt.is_some()
+    {
+        TraceWindow::Pending
     } else {
         TraceWindow::Unknown
     };
@@ -763,6 +857,7 @@ pub fn actual_trace_v6(
         used,
         draws,
         window,
+        identity_bindings,
     })
 }
 
@@ -785,6 +880,11 @@ fn usage_from_trace(
             _ => None,
         };
         if let Some(key) = key {
+            let key = if a.source.player == 0 {
+                key
+            } else {
+                format!("p{}:{key}", a.source.player)
+            };
             *used.entry(key).or_default() += 1;
         }
     }
@@ -838,4 +938,62 @@ fn usage_from_trace(
         }
     }
     (normal, used)
+}
+
+#[cfg(test)]
+mod material_coordinates {
+    use super::*;
+    #[test]
+    fn host_departure_uses_the_actual_transient_overlay_source_coordinates() {
+        let data: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/tournament-2026.overlay-host-move.json"
+        ))
+        .unwrap();
+        let assets: serde_json::Value =
+            serde_json::from_str(include_str!("../../../configs/tournament-2026.assets.json"))
+                .unwrap();
+        assert_eq!(data["engine_sha256"], assets["core"]["sha256"]);
+        let host_frame = ygo_engine_adapter::decode_frame(
+            1,
+            &serde_json::from_value::<Vec<u8>>(data["host_frame"].clone()).unwrap(),
+        )
+        .unwrap();
+        let material_frame = ygo_engine_adapter::decode_frame(
+            2,
+            &serde_json::from_value::<Vec<u8>>(data["material_frame"].clone()).unwrap(),
+        )
+        .unwrap();
+        let mut host = FactCard {
+            instance: "host".into(),
+            code: 62709239,
+            player: 0,
+            location: 4,
+            sequence: 0,
+            ..Default::default()
+        };
+        let mut tracked = vec![FactCard {
+            instance: "material".into(),
+            code: 25538345,
+            player: 0,
+            location: 132,
+            sequence: 0,
+            ..Default::default()
+        }];
+        let hosts = BTreeMap::from([("material".into(), "host".into())]);
+        let before = snapshot(&host, &tracked, &hosts);
+        assert_eq!(before.materials, vec![25538345]);
+        relocate_materials(&mut tracked, &hosts, "host", &host_frame.fields["to"]);
+        let from = &material_frame.fields["from"];
+        assert_eq!(
+            tracked[0].location as u64,
+            from["location"].as_u64().unwrap()
+        );
+        assert_eq!(
+            tracked[0].sequence as u64,
+            from["sequence"].as_u64().unwrap()
+        );
+        host.location = 16;
+        assert!(snapshot(&host, &tracked, &hosts).materials.is_empty());
+        assert_eq!(before.materials, vec![25538345]);
+    }
 }

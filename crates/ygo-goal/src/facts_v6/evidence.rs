@@ -199,6 +199,17 @@ pub struct FirstTurnTrace {
     pub used: BTreeMap<String, usize>,
     pub draws: Vec<DrawWitness>,
     pub window: TraceWindow,
+    pub identity_bindings: Vec<IdentityBinding>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IdentityBinding {
+    pub instance: String,
+    pub event: u64,
+    pub prior_event: u64,
+    pub basis: String,
+    pub rule_id: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -249,8 +260,14 @@ pub(super) fn public_location(v: &serde_json::Value) -> ObservedLocation {
     }
 }
 
-pub(super) fn reconcile(tracked: &mut [FactCard], cards: &[ygo_engine_adapter::StateCard]) {
-    for c in tracked {
+pub(super) fn reconcile(
+    tracked: &mut [FactCard],
+    cards: &[ygo_engine_adapter::StateCard],
+    shuffled: &mut BTreeMap<String, u64>,
+    bindings: &mut Vec<IdentityBinding>,
+    event: u64,
+) {
+    for c in tracked.iter_mut() {
         let matches = cards
             .iter()
             .filter(|q| {
@@ -267,6 +284,53 @@ pub(super) fn reconcile(tracked: &mut [FactCard], cards: &[ygo_engine_adapter::S
                 c.identity_known,
                 c.proper_xyz,
             );
+        }
+    }
+    // A shuffle does not tell same-name instances apart. Only a unique leftover
+    // original and a unique unassigned actual slot permit this bijection.
+    for i in 0..tracked.len() {
+        let c = &tracked[i];
+        if c.identity_known
+            || c.location != 2
+            || c.sequence != u32::MAX
+            || !shuffled.contains_key(&c.instance)
+        {
+            continue;
+        }
+        let originals = tracked
+            .iter()
+            .filter(|x| {
+                x.code == c.code
+                    && x.player == c.player
+                    && x.location == 2
+                    && !x.identity_known
+                    && shuffled.contains_key(&x.instance)
+            })
+            .count();
+        let unassigned = cards
+            .iter()
+            .filter(|q| {
+                q.code == c.code
+                    && q.player == c.player
+                    && q.location == 2
+                    && !tracked.iter().any(|x| {
+                        x.player == q.player
+                            && x.location == 2
+                            && x.sequence == q.sequence
+                            && x.sequence != u32::MAX
+                    })
+            })
+            .collect::<Vec<_>>();
+        if originals == 1 && unassigned.len() == 1 {
+            let prior_event = shuffled.remove(&c.instance).unwrap();
+            bindings.push(IdentityBinding {
+                instance: c.instance.clone(),
+                event,
+                prior_event,
+                basis: "unique_unassigned_query_after_shuffle".into(),
+                rule_id: None,
+            });
+            tracked[i] = from_query(unassigned[0], c.instance.clone(), true, c.proper_xyz);
         }
     }
 }
@@ -290,6 +354,20 @@ pub(super) fn validate_evidence(
         {
             return Err("decoded event does not match original raw frame".into());
         }
+        let locations: Vec<_> = match e.opcode {
+            50 => vec![&e.fields["from"], &e.fields["to"]],
+            54 | 60 | 62 | 70 => vec![&e.fields["location"]],
+            83 => e.fields["targets"]
+                .as_array()
+                .map_or_else(Vec::new, |xs| xs.iter().collect()),
+            _ => vec![],
+        };
+        if locations
+            .iter()
+            .any(|loc| loc["player"].as_u64().map_or(true, |p| p > 1))
+        {
+            return Err("invalid raw controller coordinate".into());
+        }
     }
     let mut previous_decision = 0;
     for d in &result.resolved_decisions {
@@ -303,7 +381,8 @@ pub(super) fn validate_evidence(
             .ok_or("missing decision prompt")?;
         let prompt = ygo_engine_adapter::parse_prompt(d.prompt_id, &event.raw)?
             .ok_or("decision has no supported prompt")?;
-        if d.prompt_id <= previous_decision
+        if d.player > 1
+            || d.prompt_id <= previous_decision
             || prompt.player != d.player
             || !prompt.actions.iter().any(|a| a.choice == d.choice)
         {
@@ -380,6 +459,39 @@ mod tests {
         Arc,
     };
     use ygo_engine_adapter::*;
+
+    #[test]
+    fn same_name_count_mismatch_never_picks_an_original_by_name() {
+        let mut tracked = vec![
+            FactCard {
+                instance: "a".into(),
+                code: 7,
+                location: 2,
+                sequence: u32::MAX,
+                ..Default::default()
+            },
+            FactCard {
+                instance: "b".into(),
+                code: 7,
+                location: 2,
+                sequence: u32::MAX,
+                ..Default::default()
+            },
+        ];
+        let cards = vec![StateCard {
+            code: 7,
+            location: 2,
+            sequence: 0,
+            ..Default::default()
+        }];
+        let mut shuffled = BTreeMap::from([("a".into(), 1), ("b".into(), 1)]);
+        let mut bindings = vec![];
+        reconcile(&mut tracked, &cards, &mut shuffled, &mut bindings, 2);
+        assert!(tracked
+            .iter()
+            .all(|c| !c.identity_known && c.sequence == u32::MAX));
+        assert!(bindings.is_empty());
+    }
 
     fn fixture() -> (DuelResult, Vec<QueryWitness>, RunDuelRequest) {
         let mut data: serde_json::Value = serde_json::from_str(include_str!(
