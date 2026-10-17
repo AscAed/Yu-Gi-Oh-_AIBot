@@ -139,3 +139,17 @@ fn actual_ash_resources_usage_and_materials_drive_the_causal_state() {
         .any(|t| t.rule_id == "78449284:deck_special"));
     assert_eq!(journal.stats().unwrap().consumed, 7);
 }
+
+#[test]
+fn generic_yes_no_uses_actual_summon_history_and_unique_handler_not_its_label() {
+    let (r, w) = capture(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-reveal.json"
+    ));
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let mut trace = actual_trace_v6(&r, &Default::default(), &pack, &w).unwrap();
+    let pending = observed_summon_trigger(&r, &trace, &pack).unwrap();
+    assert_eq!(pending.rule_id, "46072770:monster_search");
+    assert_eq!(pending.source, "observed:0:2:0:0");
+    trace.facts.history.clear();
+    assert!(observed_summon_trigger(&r, &trace, &pack).is_err());
+}

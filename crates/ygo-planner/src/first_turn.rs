@@ -7,16 +7,33 @@ use ygo_knowledge::{
     first_turn::{FirstTurnKnowledge, FirstTurnRule, Operation, Selection},
     Truth,
 };
+mod binding;
+mod dependencies;
+mod execution;
+pub use binding::{bind_pick, bind_start};
+pub use execution::{
+    execute_partial, replay_partial_execution, validate_choice_checkpoint,
+    validate_partial_execution, PartialAnchor, PartialDecisionEvidence, PartialExecution,
+    PartialFailure, PartialFailureKind, PartialPrediction,
+};
+mod search;
+pub use search::{
+    forecast_facts, propose_partial, validate_forecast, ForecastPlan, PartialPlans, SearchLimits,
+};
 mod observation;
-pub use observation::{actual_state, ObservedState};
+pub use observation::{actual_state, actual_trigger_state, observed_summon_trigger, ObservedState};
 
-const IMPLEMENTED: [&str; 6] = [
+const IMPLEMENTED: [&str; 10] = [
     "83566725:empty_field_special",
     "83566725:deck_set",
     "85257384:trap_monster_special",
     "78449284:two_dark_level_three",
     "78449284:deck_special",
     "46072770:monster_search",
+    "46072770:reveal_and_special",
+    "36426778:phantom_control_special",
+    "26692769:dark_link_three",
+    "26692769:deck_mill_and_set",
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -95,6 +112,8 @@ pub struct PendingTrigger {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CausalState {
+    /// Full observed raw/decision/query prefix, retained by every forecast branch.
+    pub observed_prefix_id: Option<String>,
     pub cards: Vec<KnownInstance>,
     /// No unobserved deck sequence or hypothetical deck instance is exposed.
     pub deck_counts: BTreeMap<u32, usize>,
@@ -134,6 +153,8 @@ pub enum TransitionKind {
     Activate,
     Trigger,
     DeclineTrigger,
+    NormalSummon,
+    SetMonster,
 }
 #[derive(Default)]
 pub struct Successors {
@@ -384,6 +405,7 @@ impl CausalState {
             });
         }
         Ok(Self {
+            observed_prefix_id: None,
             cards,
             deck_counts: public.own_deck_counts.clone(),
             normal_remaining: Some(1),
@@ -398,7 +420,16 @@ impl CausalState {
 }
 
 pub fn implemented_rules() -> BTreeSet<String> {
-    IMPLEMENTED.into_iter().map(str::to_owned).collect()
+    let mut rules: BTreeSet<String> = IMPLEMENTED.into_iter().map(str::to_owned).collect();
+    if let Ok(pack) = FirstTurnKnowledge::builtin() {
+        rules.extend(
+            pack.rules
+                .iter()
+                .filter(|r| r.applicable && r.operation == Operation::NormalSummonSet)
+                .map(|r| r.id.clone()),
+        );
+    }
+    rules
 }
 fn own(card: &KnownInstance, zone: u8) -> bool {
     card.card.player == 0 && card.card.location == zone
@@ -459,6 +490,7 @@ fn move_known(s: &mut CausalState, id: &str, zone: u8, position: u32) -> Result<
             zone
         };
     target.card.position = position;
+    target.card.is_public = Some(position & 5 != 0);
     target.card.sequence = sequence;
     target.host = None;
     if zone != 4 {
@@ -508,7 +540,8 @@ fn deck_card(
         player: 0,
         location: zone,
         sequence,
-        position: if zone == 8 { 10 } else { 1 },
+        position: if matches!(zone, 2 | 8) { 10 } else { 1 },
+        is_public: Some(!matches!(zone, 2 | 8)),
         type_flags: base.type_flags,
         level: effective.level,
         rank: effective.rank,
@@ -683,7 +716,10 @@ fn emit(
 ) {
     out.transitions.push(Transition {
         kind: match rule.operation {
-            Operation::EmptyFieldSpecial | Operation::XyzProcedure => TransitionKind::Procedure,
+            Operation::EmptyFieldSpecial
+            | Operation::XyzProcedure
+            | Operation::PhantomFieldSpecial
+            | Operation::LinkProcedure => TransitionKind::Procedure,
             Operation::DeckSet | Operation::SearchMonster => TransitionKind::Trigger,
             _ => TransitionKind::Activate,
         },
@@ -737,7 +773,9 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                 && r.card_id == source.card.code
                 && r.source_locations & source.card.location != 0
         }) {
-            if !IMPLEMENTED.contains(&rule.id.as_str()) {
+            if !IMPLEMENTED.contains(&rule.id.as_str())
+                && rule.operation != Operation::NormalSummonSet
+            {
                 out.coverage_gaps.push(rule.id.clone());
                 continue;
             }
@@ -780,6 +818,13 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                 continue;
             }
             match rule.operation {
+                Operation::NormalSummonSet
+                | Operation::RevealSpecial
+                | Operation::PhantomFieldSpecial
+                | Operation::DeckMillSet
+                | Operation::LinkProcedure => {
+                    dependencies::apply(&mut out, state, source, rule, catalog, pack)
+                }
                 Operation::EmptyFieldSpecial => {
                     if state.cards.iter().any(|c| own(c, 4)) || free_main(state).is_none() {
                         continue;
@@ -1045,6 +1090,7 @@ mod summon_restriction_tests {
     #[test]
     fn extra_xyz_only_applies_to_extra_summons_and_unknown_types_remain_unknown() {
         let mut s = CausalState {
+            observed_prefix_id: None,
             cards: vec![],
             deck_counts: Default::default(),
             normal_remaining: Some(1),

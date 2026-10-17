@@ -1,5 +1,5 @@
 use ygo_domain::{Card, CardId, Catalog};
-use ygo_engine_adapter::{first_turn_public_state, Checkpoint, StateCard};
+use ygo_engine_adapter::{first_turn_public_state, Checkpoint, FirstTurnPublicState, StateCard};
 use ygo_knowledge::first_turn::FirstTurnKnowledge;
 use ygo_planner::first_turn::*;
 
@@ -815,4 +815,139 @@ fn missing_material_type_is_unknown_instead_of_a_known_filter_failure() {
         .unknowns
         .iter()
         .any(|s| s.contains("attributes unknown")));
+}
+
+#[test]
+fn dependent_pilot_actions_are_generated_from_resources_without_a_route_script() {
+    let cat = catalog();
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let mut s = state();
+    let mut source = s.cards[0].clone();
+    source.id = "decay-hand".into();
+    source.card.code = 46072770;
+    source.card.is_public = Some(false);
+    s.cards.push(source);
+    for card in &mut s.cards {
+        if card.card.location == 2 {
+            card.card.is_public = Some(false);
+        }
+    }
+    let options = successors(&s, &cat, &pack);
+    assert!(options
+        .transitions
+        .iter()
+        .any(|t| t.rule_id == "46072770:reveal_and_special"));
+    assert!(options
+        .transitions
+        .iter()
+        .any(|t| t.rule_id == "46072770:normal_summon_and_set"));
+    let transition = options
+        .transitions
+        .into_iter()
+        .find(|t| t.rule_id == "46072770:reveal_and_special")
+        .unwrap();
+    assert_eq!(
+        transition
+            .after_cost
+            .cards
+            .iter()
+            .filter(|c| c.card.location == 2)
+            .count(),
+        3
+    );
+    assert_eq!(transition.after_resolution.normal_remaining, Some(1));
+    assert!(transition
+        .after_resolution
+        .pending
+        .iter()
+        .any(|p| p.rule_id == "46072770:monster_search"));
+    let mut unknown = s.clone();
+    for c in &mut unknown.cards {
+        c.card.is_public = None;
+    }
+    let options = successors(&unknown, &cat, &pack);
+    assert!(!options
+        .transitions
+        .iter()
+        .any(|t| t.rule_id == "46072770:reveal_and_special"));
+    assert!(!options.unknowns.is_empty());
+}
+
+#[test]
+fn rusty_link_consumes_selected_bodies_and_the_hosts_materials_before_milling_and_setting() {
+    let mut cat = catalog();
+    cat.insert(
+        CardId(26692769),
+        Card {
+            id: CardId(26692769),
+            name: "Rusty".into(),
+            type_flags: 0x4000021,
+            attribute: 32,
+            race: 1,
+            level: 3,
+            ..Default::default()
+        },
+    );
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let s = choose(&state(), "83566725:empty_field_special").after_resolution;
+    let s = choose(&s, "83566725:deck_set").after_resolution;
+    let s = choose(&s, "85257384:trap_monster_special").after_resolution;
+    let s = choose(&s, "78449284:two_dark_level_three").after_resolution;
+    let mut s = choose(&s, "78449284:deck_special").after_resolution;
+    s.pending.clear();
+    let other = s.cards.iter_mut().find(|c| c.card.location == 2).unwrap();
+    other.card.location = 4;
+    other.card.sequence = 2;
+    other.card.position = 1;
+    let mut public = first_turn_public_state(&Checkpoint::default());
+    public.visible.cards.push(StateCard {
+        code: 26692769,
+        player: 0,
+        location: 64,
+        sequence: 8,
+        type_flags: 0x4000021,
+        attribute: Some(32),
+        race: Some(1),
+        level: Some(0),
+        rank: Some(0),
+        link: Some(3),
+        ..Default::default()
+    });
+    let extra = CausalState::initial(&FirstTurnPublicState {
+        visible: Checkpoint {
+            turn: 1,
+            turn_player: 0,
+            phase: 4,
+            ..public.visible
+        },
+        ..public
+    })
+    .unwrap();
+    s.cards.extend(extra.cards);
+    let link = successors(&s, &cat, &pack)
+        .transitions
+        .into_iter()
+        .find(|t| t.rule_id == "26692769:dark_link_three")
+        .unwrap();
+    let after = &link.after_resolution;
+    assert_eq!(
+        after.cards.iter().filter(|c| c.card.location == 4).count(),
+        1
+    );
+    assert!(!after.cards.iter().any(|c| c.host.is_some()));
+    assert!(after
+        .cards
+        .iter()
+        .any(|c| c.card.code == 85257384 && c.card.location == 16));
+    let set = successors(after, &cat, &pack)
+        .transitions
+        .into_iter()
+        .find(|t| t.rule_id == "26692769:deck_mill_and_set")
+        .unwrap();
+    assert_eq!(set.after_cost.deck_counts, after.deck_counts);
+    assert!(set
+        .after_resolution
+        .cards
+        .iter()
+        .any(|c| c.card.code == 25542642 && c.card.location == 8));
 }

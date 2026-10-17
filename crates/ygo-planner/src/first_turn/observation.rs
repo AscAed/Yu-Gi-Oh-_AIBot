@@ -16,8 +16,118 @@ pub fn actual_state(
     catalog: &Catalog,
     pack: &FirstTurnKnowledge,
 ) -> Result<ObservedState, String> {
+    build(result, witnesses, catalog, pack, false)
+}
+
+/// An observed optional summon trigger, never a recovery anchor.
+pub fn actual_trigger_state(
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    catalog: &Catalog,
+    pack: &FirstTurnKnowledge,
+) -> Result<ObservedState, String> {
+    build(result, witnesses, catalog, pack, true)
+}
+
+pub fn observed_summon_trigger(
+    result: &DuelResult,
+    trace: &FirstTurnTrace,
+    pack: &FirstTurnKnowledge,
+) -> Result<PendingTrigger, String> {
+    let p = result
+        .prompt
+        .as_ref()
+        .ok_or("missing actual trigger prompt")?;
+    if trace.window != TraceWindow::Pending
+        || !trace.facts.history_complete
+        || p.opcode != 12
+        || p.player != 0
+        || result.checkpoint.turn != 1
+        || result.checkpoint.turn_player != 0
+        || result.checkpoint.phase != 4
+    {
+        return Err("not a closed own summon trigger window".into());
+    }
+    let metadata = ygo_engine_adapter::prompt_metadata(
+        p.id,
+        &result.events.last().ok_or("missing raw trigger")?.raw,
+    )?;
+    let m = metadata
+        .iter()
+        .find(|m| matches!(m.choice, ygo_engine_adapter::Choice::YesNo { yes: true }))
+        .ok_or("missing optional activation")?;
+    let source = m.source.as_ref().ok_or("trigger has no source instance")?;
+    if source.player != 0 {
+        return Err("optional trigger source is not ours".into());
+    }
+    let card = trace
+        .facts
+        .cards
+        .iter()
+        .find(|c| {
+            c.identity_known
+                && c.code == source.code
+                && c.player == source.player
+                && c.location == source.location
+                && c.sequence == source.sequence
+        })
+        .ok_or("trigger source identity unknown")?;
+    let last_action = result
+        .events
+        .iter()
+        .rev()
+        .find(|e| e.opcode == 11)
+        .map_or(0, |e| e.sequence);
+    if !trace.facts.history.iter().any(|h| {
+        h.card.instance == card.instance
+            && h.event > last_action
+            && matches!(h.kind.as_str(), "special_summon" | "normal_summon")
+    }) {
+        return Err("trigger lacks the actual recent successful summon".into());
+    }
+    let eligible = pack
+        .rules
+        .iter()
+        .filter(|r| {
+            r.applicable
+                && r.card_id == source.code
+                && r.source_locations & source.location != 0
+                && matches!(r.operation, Operation::DeckSet | Operation::SearchMonster)
+                && (m.effect_description == r.description || m.effect_description == Some(221))
+                && r.usage.limit.map_or(true, |limit| {
+                    trace
+                        .used
+                        .get(r.usage.key.as_deref().unwrap_or(""))
+                        .copied()
+                        .unwrap_or(0)
+                        < limit
+                })
+        })
+        .collect::<Vec<_>>();
+    if eligible.len() != 1 {
+        return Err("optional trigger effect is not uniquely supported".into());
+    }
+    Ok(PendingTrigger {
+        rule_id: eligible[0].id.clone(),
+        source: card.instance.clone(),
+        eligibility: Truth::Yes,
+    })
+}
+
+fn build(
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    catalog: &Catalog,
+    pack: &FirstTurnKnowledge,
+    trigger: bool,
+) -> Result<ObservedState, String> {
     let trace = actual_trace_v6(result, catalog, pack, witnesses)?;
-    if trace.window != TraceWindow::OwnMainAction {
+    let pending = if trigger {
+        vec![observed_summon_trigger(result, &trace, pack)?]
+    } else {
+        vec![]
+    };
+    if !trigger && trace.window != TraceWindow::OwnMainAction {
         return Err("actual state requires a closed own main action window".into());
     }
     if !trace.facts.history_complete || trace.normal_remaining.is_none() {
@@ -118,11 +228,21 @@ pub fn actual_state(
         });
     }
     let state = CausalState {
+        observed_prefix_id: Some(ygo_knowledge::hash(
+            &serde_json::to_vec(&(
+                result.protocol_version,
+                &result.versions,
+                result.events.iter().map(|e| &e.raw).collect::<Vec<_>>(),
+                &result.resolved_decisions,
+                witnesses,
+            ))
+            .expect("actual prefix serialization"),
+        )),
         cards,
         deck_counts: public.own_deck_counts.clone(),
         normal_remaining: trace.normal_remaining,
         used: trace.used.clone(),
-        pending: vec![],
+        pending,
         special_allowed: trace.restrictions.special_allowed,
         dark_only: trace.restrictions.dark_only,
         extra_xyz_only: trace.restrictions.extra_xyz_only,

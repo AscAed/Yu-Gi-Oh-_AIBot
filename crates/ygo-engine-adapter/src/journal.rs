@@ -623,6 +623,17 @@ impl CallJournal {
                 .clone(),
         ))
     }
+    /// Charged prefix saved with a verified checkpoint, for pre-call evidence.
+    pub fn checkpoint_consumed(&self, name: &str) -> Result<Option<usize>, WorkerError> {
+        if self.checkpoint(name)?.is_none() {
+            return Ok(None);
+        }
+        Ok(self
+            .lock()?
+            .checkpoints
+            .get(name)
+            .map(|(_, count, _)| *count))
+    }
     pub fn reserve(&self, token: &str, amount: usize) -> Result<(), WorkerError> {
         self.lock()?.append(Entry::Reserve {
             token: token.into(),
