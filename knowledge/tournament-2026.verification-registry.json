@@ -1,84 +1,162 @@
 {
-  "schema_version": 1,
-  "knowledge_id": "first-turn-knowledge-419cdd70cb1e3a913d80d7beabc05a153b339659f14f52578c04e4fdcf429658",
   "cases": [
     {
+      "case_id": "soleret-set-positive",
+      "case_sha256": "5a49fcc285a6bb35095ba3ea80bad3d31c7ae8f122a6fd9fce5d0618fd5aca5d",
+      "kind": "positive",
+      "rule_id": "83566725:deck_set"
+    },
+    {
       "case_id": "soleret-empty-positive",
-      "rule_id": "83566725:empty_field_special",
       "case_sha256": "e80258dec43b5b16c15c4682e14877fd3894bbe6a68ee01aebefa8234e329015",
-      "kind": "procedure"
+      "kind": "procedure",
+      "rule_id": "83566725:empty_field_special"
     },
     {
       "case_id": "soleret-occupied-negative",
-      "rule_id": "83566725:empty_field_special",
       "case_sha256": "996d8e0a9424ec809f15ca4f78ad7e1dee85b3457e9da5c5b05c4e5be86d8d2d",
-      "kind": "negative"
-    },
-    {
-      "case_id": "soleret-set-positive",
-      "rule_id": "83566725:deck_set",
-      "case_sha256": "5a49fcc285a6bb35095ba3ea80bad3d31c7ae8f122a6fd9fce5d0618fd5aca5d",
-      "kind": "positive"
+      "kind": "negative",
+      "rule_id": "83566725:empty_field_special"
     },
     {
       "case_id": "soleret-set-window-negative",
-      "rule_id": "83566725:deck_set",
       "case_sha256": "3c1ef7920330fd02e408c23a1eba7b56cb8a14b845abd8b6d6edb563a5dcb9c4",
-      "kind": "negative"
+      "kind": "negative",
+      "rule_id": "83566725:deck_set"
     },
     {
       "case_id": "veil-trap-monster-positive",
-      "rule_id": "85257384:trap_monster_special",
       "case_sha256": "f27c153158b618b627f3cbca46388a1cfd92cd81c688dd17002c7eec86aadf6a",
-      "kind": "positive"
+      "kind": "positive",
+      "rule_id": "85257384:trap_monster_special"
     },
     {
       "case_id": "veil-no-trap-source-negative",
-      "rule_id": "85257384:trap_monster_special",
       "case_sha256": "3756c7bd5f0490b9c4d4388fd0be893642ae99ec8f59fbe1c7e3ea1eb0e564c0",
-      "kind": "negative"
+      "kind": "negative",
+      "rule_id": "85257384:trap_monster_special"
     },
     {
       "case_id": "scythe-xyz-positive",
-      "rule_id": "78449284:two_dark_level_three",
       "case_sha256": "0a45cd73ae2e0a9eb74826b48ba9b9dc16f4944a88f3ecac8ee3b31ffde55703",
-      "kind": "procedure"
+      "kind": "procedure",
+      "rule_id": "78449284:two_dark_level_three"
     },
     {
       "case_id": "scythe-xyz-no-materials-negative",
-      "rule_id": "78449284:two_dark_level_three",
       "case_sha256": "eb9f71523dd1aec37597902cfefe5a828bfe2976f3fe8081fa665c2a2d9d29a2",
-      "kind": "negative"
+      "kind": "negative",
+      "rule_id": "78449284:two_dark_level_three"
     },
     {
       "case_id": "scythe-deck-special-positive",
-      "rule_id": "78449284:deck_special",
       "case_sha256": "6f312ca869e8cfc886ce7bc2e47b643dcbd59bcffe71bc950fe5be40ba7213aa",
-      "kind": "positive"
+      "kind": "positive",
+      "rule_id": "78449284:deck_special"
     },
     {
       "case_id": "scythe-name-use-negative",
-      "rule_id": "78449284:deck_special",
       "case_sha256": "8e808cdd5db4a05ca69d09f9630e7a29d28b8e4c51b4b201071b61bcbaea7afe",
-      "kind": "negative"
+      "kind": "negative",
+      "rule_id": "78449284:deck_special"
     },
     {
       "case_id": "decayed-search-positive",
-      "rule_id": "46072770:monster_search",
       "case_sha256": "35ddb99451b9d373a8a7feb7cb5bdeda53c7eab92ae0a0c8ae42d7432ec9abc3",
-      "kind": "positive"
+      "kind": "positive",
+      "rule_id": "46072770:monster_search"
     },
     {
       "case_id": "decayed-search-window-negative",
-      "rule_id": "46072770:monster_search",
       "case_sha256": "8e13defc7b90b93ba7cf8d71498d5fdfa5dcae6e3a2398a46d3a23bec6b74478",
-      "kind": "negative"
+      "kind": "negative",
+      "rule_id": "46072770:monster_search"
     },
     {
       "case_id": "scythe-native-ash-response",
-      "rule_id": "78449284:deck_special",
       "case_sha256": "5b4d7b54858c3d9d844f7a08e710a5c4b2c1fddf08dddbb45c869f15b584bb7f",
-      "kind": "ash_response"
+      "kind": "ash_response",
+      "rule_id": "78449284:deck_special"
+    },
+    {
+      "case_id": "boots-controlled-pk-special-positive",
+      "case_sha256": "c489baa136d1893cf615af457aa467a1c7d7114b90cee1069d3cbefbc3ed7569",
+      "kind": "procedure",
+      "rule_id": "36426778:phantom_control_special"
+    },
+    {
+      "case_id": "boots-empty-field-negative",
+      "case_sha256": "094643223fc1a954b4ba6616c491d71143a6f303b4cc001b897cca2a7dd960c6",
+      "kind": "procedure_negative",
+      "rule_id": "36426778:phantom_control_special"
+    },
+    {
+      "case_id": "rusty-dark-link-positive",
+      "case_sha256": "b42f3e9e04c5d383a07f016baf16aa53a9d7229a26e4bf097ec1ddd76d7dfeb1",
+      "kind": "procedure",
+      "rule_id": "26692769:dark_link_three"
+    },
+    {
+      "case_id": "rusty-dark-link-no-materials-negative",
+      "case_sha256": "2c40ea88fb05a3bb528a67e6751f090dac57ed14c2c08942b828db3b76c21418",
+      "kind": "procedure_negative",
+      "rule_id": "26692769:dark_link_three"
+    },
+    {
+      "case_id": "rusty-mill-set-positive",
+      "case_sha256": "e730df7d107a22f8748401809f37d898503861aa2e35973ed41ce538af1c6195",
+      "kind": "positive",
+      "rule_id": "26692769:deck_mill_and_set"
+    },
+    {
+      "case_id": "rusty-mill-set-used-negative",
+      "case_sha256": "52609cedafdd2be2bc8c6b426f66a1e56898d4036394f8f892e43b7a51ae5eb8",
+      "kind": "negative",
+      "rule_id": "26692769:deck_mill_and_set"
+    },
+    {
+      "case_id": "soleret-normal-positive",
+      "case_sha256": "2de717903934e918d54c49b54683b783586ee224bd4069f7eee96c710fde1fee",
+      "kind": "procedure",
+      "rule_id": "83566725:normal_summon_and_set"
+    },
+    {
+      "case_id": "soleret-normal-monster-set-positive",
+      "case_sha256": "08eef716c5a32cc7f4da848a47c804a35af424e5b10b13cfe3faa5743aca5991",
+      "kind": "procedure",
+      "rule_id": "83566725:normal_summon_and_set"
+    },
+    {
+      "case_id": "soleret-normal-used-negative",
+      "case_sha256": "8e9f0be1bd6499ae7b79d84c9a93217967a29257661f788601c9b291db1fef86",
+      "kind": "procedure_negative",
+      "rule_id": "83566725:normal_summon_and_set"
+    },
+    {
+      "case_id": "decay-reveal-special-positive",
+      "case_sha256": "082bda43ac87c603dd9e9e079cf219db96b9d196e6e432472fc225ebcc4dcdcd",
+      "kind": "positive",
+      "rule_id": "46072770:reveal_and_special"
+    },
+    {
+      "case_id": "decay-no-reveal-target-negative",
+      "case_sha256": "2c034e71d812e59eac217d1e76b9969ff9c5afe7989ad93dc955343642c9ec54",
+      "kind": "negative",
+      "rule_id": "46072770:reveal_and_special"
+    },
+    {
+      "case_id": "rusty-link-material-prohibition-positive",
+      "case_sha256": "69152aa73dc1b3a96873c2db13f4ef1b43828e2a451111206c1e1a52b9797fd7",
+      "kind": "continuous",
+      "rule_id": "26692769:cannot_link_material"
+    },
+    {
+      "case_id": "rusty-prohibition-does-not-ban-other-bodies",
+      "case_sha256": "7b4312b47f3593a9c6a1ecbe703bc91c3c8bcf3e1dc02c8df76019246ba614fd",
+      "kind": "continuous_negative",
+      "rule_id": "26692769:cannot_link_material"
     }
-  ]
+  ],
+  "knowledge_id": "first-turn-knowledge-419cdd70cb1e3a913d80d7beabc05a153b339659f14f52578c04e4fdcf429658",
+  "schema_version": 1
 }

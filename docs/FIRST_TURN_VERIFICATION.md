@@ -1,5 +1,7 @@
 # 首回合规则验真（实施中）
 
+最新扩充为26案例、12项成对规则资格和1项实际Scythe灰点资格；完整覆盖仍缺74项。新增依赖案例位于`tests/fixtures/tournament-2026.rules-dependencies.json`。素材禁止使用实际素材选择提示的`material_option`断言，结合在场及额外资源查询；普通操作窗口没有某个发动选项不能证明持续规则。
+
 当前公开查询口径下，原12项规则案例和新增1项Scythe灰响应案例已重新执行及独立认证，共92次。新增`ash_response`类型分别证明我方被测发动、对方合法灰选项、费用前手牌坐标、弃牌、实际无效与闭链；被无效的目标效果不计入正向结算。运行时为6项成对规则／1项实际灰点资格，整包仍缺80项。案例文件为`tests/fixtures/tournament-2026.rules-ash.json`，不替代自主线路其他新依赖的分支证据。
 
 `knowledge validate --knowledge knowledge/tournament-2026.knowledge.json`只检查结构、来源和冻结引用。它不执行效果，也不读取某条成功线路来提升知识包状态。

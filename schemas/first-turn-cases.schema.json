@@ -400,6 +400,34 @@
                     "count"
                   ],
                   "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "material_option"
+                    },
+                    "card_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4294967295
+                    },
+                    "player": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "offered": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "card_id",
+                    "player",
+                    "offered"
+                  ],
+                  "additionalProperties": false
                 }
               ]
             },

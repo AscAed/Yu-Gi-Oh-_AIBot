@@ -7,6 +7,16 @@ from test_schemas import ROOT, validator
 
 
 class FirstTurnSchemas(unittest.TestCase):
+    def test_dependency_material_filters_have_strict_observable_assertions(self):
+        check = validator('first-turn-cases.schema.json')
+        suite = json.loads((ROOT / 'tests/fixtures/tournament-2026.rules-dependencies.json').read_text(encoding='utf-8'))
+        check.validate(suite)
+        changed = copy.deepcopy(suite)
+        assertion = next(a for c in changed['cases'] for a in c['assertions']
+                         if a['kind'] == 'material_option')
+        assertion['verified'] = True
+        self.assertTrue(list(check.iter_errors(changed)))
+
     def test_native_ash_branch_requires_its_own_focus_and_scoped_recipe(self):
         check = validator('first-turn-cases.schema.json')
         suite = json.loads((ROOT / 'tests/fixtures/tournament-2026.rules-ash.json').read_text(encoding='utf-8'))

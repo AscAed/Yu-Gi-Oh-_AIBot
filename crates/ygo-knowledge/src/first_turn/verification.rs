@@ -178,6 +178,12 @@ pub struct NativeCases {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum NativeAssertion {
+    /// Observable material-filter evidence; never absence of an activation.
+    MaterialOption {
+        card_id: u32,
+        player: u8,
+        offered: bool,
+    },
     Count {
         card_id: u32,
         player: u8,
@@ -244,6 +250,9 @@ fn count(result: &DuelResult, code: u32, player: u8, zone: u8) -> usize {
 impl NativeAssertion {
     fn validate(&self) -> Result<(), String> {
         let valid = match self {
+            Self::MaterialOption {
+                card_id, player, ..
+            } => *card_id > 0 && *player <= 1,
             Self::Count {
                 card_id,
                 player,
@@ -298,6 +307,35 @@ impl NativeAssertion {
     }
     pub fn check(&self, before: &DuelResult, after: &DuelResult, since: u64) -> Result<(), String> {
         let valid = match self {
+            Self::MaterialOption {
+                card_id,
+                player,
+                offered,
+            } => {
+                let frame = after
+                    .events
+                    .last()
+                    .ok_or("material filter has no raw prompt")?;
+                raw_event(frame)?;
+                if frame.opcode != 26 {
+                    return Err(
+                        "material filter needs an actual SELECT_UNSELECT_CARD prompt".into(),
+                    );
+                }
+                let metadata = prompt_metadata(frame.sequence, &frame.raw)?;
+                let candidates = metadata
+                    .iter()
+                    .filter(|m| matches!(m.selection_group, Some(0 | 1)))
+                    .flat_map(|m| &m.selected)
+                    .collect::<Vec<_>>();
+                if candidates.is_empty() || candidates.iter().any(|c| c.code == 0) {
+                    return Err("material filter candidates are unidentified".into());
+                }
+                candidates
+                    .iter()
+                    .any(|c| c.code == *card_id && c.player == *player)
+                    == *offered
+            }
             Self::Count {
                 card_id,
                 player,

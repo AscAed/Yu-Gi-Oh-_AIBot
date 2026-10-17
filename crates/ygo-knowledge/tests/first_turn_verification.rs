@@ -15,6 +15,11 @@ fn current_query_cases_and_actual_ash_response_grant_only_scoped_qualification()
     ))
     .unwrap();
     suite.cases.extend(ash.cases);
+    let dependencies: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-dependencies.json"
+    ))
+    .unwrap();
+    suite.cases.extend(dependencies.cases);
     let assets = root.join("data/runtime/tournament-2026/frozen");
     let store =
         ygo_storage::SnapshotStore::new(root.join("data/runtime/tournament-2026/snapshots"));
@@ -32,15 +37,23 @@ fn current_query_cases_and_actual_ash_response_grant_only_scoped_qualification()
         catalog_id: active["catalog_id"].as_str().unwrap(),
         banlist_id: active["banlist_id"].as_str().unwrap(),
     };
-    let dir = root
-        .join("data/runtime/tournament-2026/rule-audits")
-        .join(format!(
-            "resource-ash-{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+    let dir = std::env::var_os("YGO_RESUME_RULE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            root.join("data/runtime/tournament-2026/rule-audits")
+                .join(format!(
+                    "resource-ash-{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_nanos()
+                ))
+        });
+    let prior: usize = std::fs::read(dir.join("report.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<NativeVerificationReport>(&bytes).ok())
+        .map(|r| r.cases.iter().map(|c| c.ledger.consumed).sum())
+        .unwrap_or(0);
     let report = verify_cases(&pack, &suite, &environment, &dir).unwrap();
     std::fs::write(
         dir.join("report.json"),
@@ -63,18 +76,25 @@ fn current_query_cases_and_actual_ash_response_grant_only_scoped_qualification()
             .iter()
             .map(|c| c.ledger.consumed)
             .sum::<usize>(),
-        46
+        93
     );
+    let audit_dir = dir.join(format!(
+        "independent-audit-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
     let view = ygo_knowledge::first_turn::certification::VerifiedKnowledge::audit(
         &pack,
         &suite,
         &report,
         &environment,
         &dir,
-        &dir.join("independent-audit"),
+        &audit_dir,
     )
     .unwrap();
-    assert_eq!(view.certificates().len(), 6);
+    assert_eq!(view.certificates().len(), 12);
     assert_eq!(
         view.verified_ash_effects()
             .iter()
@@ -83,8 +103,15 @@ fn current_query_cases_and_actual_ash_response_grant_only_scoped_qualification()
         vec!["78449284:deck_special"]
     );
     assert!(view.require_verified_coverage().is_err());
+    std::fs::write(
+        audit_dir.join("report.json"),
+        serde_json::to_vec_pretty(&view.audits()[0]).unwrap(),
+    )
+    .unwrap();
+    std::fs::write(audit_dir.join("qualification.json"),serde_json::to_vec_pretty(&serde_json::json!({"id":view.id(),"certificates":view.certificates(),"knowledge_id":view.knowledge().id(),"scope":"runtime view constructed by fresh audit; diagnostic JSON cannot mint qualification"})).unwrap()).unwrap();
     println!(
-        "native rule execution46 + independent qualification46 =92 calls; reports={}",
+        "native rule execution93 (new {}) + independent qualification93; reports={}",
+        93usize.saturating_sub(prior),
         dir.display()
     );
 }
@@ -173,6 +200,56 @@ fn event_assertions_use_raw_frames_not_forged_decoded_fields() {
         fields: serde_json::json!({"code":14558127,"from":{"location":2},"to":{"location":16}}),
     });
     assert!(assertion.check(&after, &after, 0).is_err());
+}
+
+#[test]
+fn material_filter_evidence_requires_a_real_material_prompt_with_identified_candidates() {
+    let v: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-resource.json"
+    ))
+    .unwrap();
+    let raw: Vec<u8> = v["frames"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|raw| raw[0] == 26)
+        .map(|raw| serde_json::from_value(raw.clone()).unwrap())
+        .unwrap();
+    let mut r = DuelResult::failure(WorkerError::new(
+        "recorded",
+        "test",
+        "recorded parser case, not native qualification",
+    ));
+    r.events = vec![decode_frame(1, &raw).unwrap()];
+    r.prompt = parse_prompt(1, &raw).unwrap();
+    let positive = NativeAssertion::MaterialOption {
+        card_id: 83566725,
+        player: 0,
+        offered: true,
+    };
+    positive.check(&r, &r, 0).unwrap();
+    let absent = NativeAssertion::MaterialOption {
+        card_id: 26692769,
+        player: 0,
+        offered: false,
+    };
+    absent.check(&r, &r, 0).unwrap();
+    let wrong = NativeAssertion::MaterialOption {
+        card_id: 83566725,
+        player: 0,
+        offered: false,
+    };
+    assert!(wrong.check(&r, &r, 0).is_err());
+    r.events = vec![decode_frame(
+        1,
+        &serde_json::from_value::<Vec<u8>>(v["frames"][7].clone()).unwrap(),
+    )
+    .unwrap()];
+    r.prompt = parse_prompt(1, &r.events[0].raw).unwrap();
+    assert!(
+        absent.check(&r, &r, 0).is_err(),
+        "no material prompt cannot prove a continuous prohibition"
+    );
 }
 
 #[test]

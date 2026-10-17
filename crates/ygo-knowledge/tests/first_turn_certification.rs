@@ -48,3 +48,15 @@ fn reviewed_scythe_response_preserves_the_manual_case_identity() {
         .validate_suite(&FirstTurnKnowledge::builtin().unwrap(), &suite)
         .unwrap();
 }
+
+#[test]
+fn independent_human_dependencies_have_frozen_case_assertions() {
+    let suite: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-dependencies.json"
+    ))
+    .unwrap();
+    ReviewedCases::builtin()
+        .unwrap()
+        .validate_suite(&FirstTurnKnowledge::builtin().unwrap(), &suite)
+        .unwrap();
+}
