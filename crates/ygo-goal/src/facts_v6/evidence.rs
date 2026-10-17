@@ -913,6 +913,26 @@ mod tests {
         }
     }
     #[test]
+    fn a_mismatched_result_protocol_is_rejected_before_any_replay_debit() {
+        let (mut root, witnesses, request) = fixture();
+        root.protocol_version = 5;
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries_recorded(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .expect("wrong protocol must not obtain a receipt");
+        assert_eq!(error.stage, QueryAuditStage::Validation);
+        assert!(error.call_ids.is_empty());
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(j.stats().unwrap().consumed, 0);
+    }
+    #[test]
     fn a_worker_failure_retains_completed_witnesses_and_the_charged_attempt() {
         struct FailingOracle {
             inner: RecordedOracle,

@@ -5,6 +5,156 @@ use ygo_knowledge::first_turn::FirstTurnKnowledge;
 use ygo_planner::first_turn::*;
 
 #[test]
+#[ignore = "opt-in: real prefixes and a labelled injected worker failure after a material cost"]
+fn an_injected_failure_after_material_payment_keeps_a_replayable_pending_prefix() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    struct StopAt {
+        inner: ProcessEngineAdapter,
+        count: AtomicUsize,
+        at: usize,
+    }
+    impl EngineAdapter for StopAt {
+        fn doctor(&self) -> DoctorReport {
+            panic!("no uncharged probe")
+        }
+        fn run(&self, q: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+            if self.count.fetch_add(1, Ordering::SeqCst) == self.at {
+                return Err(WorkerError::new(
+                    "injected_worker_exit",
+                    "fault_injection",
+                    "controlled worker loss",
+                ));
+            }
+            self.inner.run(q)
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = std::path::PathBuf::from(std::env::var("YGO_PILOT_REPORT_DIR").unwrap());
+    let saved: PartialExecution =
+        serde_json::from_slice(&std::fs::read(dir.join("pass.report.json")).unwrap()).unwrap();
+    let plans: PartialPlans =
+        serde_json::from_slice(&std::fs::read(dir.join("frozen-forecasts.json")).unwrap()).unwrap();
+    let plan = plans.plans.iter().find(|p| p.id == saved.plan_id).unwrap();
+    let step = plan
+        .steps
+        .iter()
+        .position(|s| s.rule_id == "78449284:deck_special")
+        .unwrap();
+    // Freeze the fault location before executing the experiment: the first
+    // selection after the actual host has paid one of its two materials.
+    let at = saved
+        .choices
+        .iter()
+        .position(|c| {
+            c.step == Some(step)
+                && c.public.visible.cards.iter().any(|card| {
+                    card.code == 78449284 && card.location == 4 && card.overlay.len() == 1
+                })
+                && saved.result.events[c.prompt as usize - 1].opcode == 15
+        })
+        .unwrap();
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let cat = ygo_storage::SnapshotStore::new(root.join("data/runtime/tournament-2026/snapshots"))
+        .catalog(&saved.start_request.versions.catalog)
+        .unwrap();
+    let goal:Goal=serde_json::from_value(serde_json::json!({"version":1,"expr":{"op":"all","args":[{"op":"count","filter":{"codes":[26692769],"locations":[4]},"min":1},{"op":"count","filter":{"codes":[25542642],"locations":[8],"position_mask":10},"min":1}]}})).unwrap();
+    let output = dir.join(format!(
+        "paid-cost-fault-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&output).unwrap();
+    let j = CallJournal::open(
+        output.join("calls.jsonl"),
+        "fault-injection-with-native-prefixes",
+        &pack.id(),
+        512,
+    )
+    .unwrap();
+    let q = saved.start_request;
+    let initial = JournaledAdapter::new(
+        ProcessEngineAdapter::new(q.engine.clone()),
+        j.clone(),
+        CallPurpose::Execution,
+    )
+    .run(&q)
+    .unwrap();
+    let report = execute_partial_v2_with_backend(
+        &q,
+        &initial,
+        &[QueryWitness::capture(&initial).unwrap()],
+        plan,
+        &cat.data,
+        &pack,
+        &goal,
+        j.clone(),
+        StopAt {
+            inner: ProcessEngineAdapter::new(q.engine.clone()),
+            count: AtomicUsize::new(0),
+            at,
+        },
+    )
+    .unwrap();
+    std::fs::write(
+        output.join("report.json"),
+        serde_json::to_vec_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(report.faults[0].code, "injected_worker_exit");
+    assert_eq!(report.failure.as_ref().unwrap().step, step);
+    assert!(!report.verified());
+    assert!(report.audit_failure.is_none());
+    assert!(report.last_audited_prefix.is_some());
+    assert_eq!(report.observed_terminal, Some(false));
+    let last = report.last_result.as_ref().unwrap();
+    assert!(last
+        .checkpoint
+        .cards
+        .iter()
+        .any(|c| c.code == 78449284 && c.location == 4 && c.overlay.len() == 1));
+    assert!(last.events.iter().any(|e| e.opcode == 50
+        && e.fields["from"]["location"] == 132
+        && e.fields["to"]["location"] == 16
+        && e.raw.len() >= 4
+        && u32::from_le_bytes(e.raw[e.raw.len() - 4..].try_into().unwrap()) & 0x80 != 0));
+    validate_partial_execution_v2(&report, plan, &cat.data, &pack, &goal, &j).unwrap();
+    let mut forged: PartialExecutionV2 =
+        serde_json::from_value(serde_json::to_value(&report).unwrap()).unwrap();
+    forged
+        .last_result
+        .as_mut()
+        .unwrap()
+        .checkpoint
+        .cards
+        .iter_mut()
+        .find(|c| c.code == 78449284 && c.location == 4)
+        .unwrap()
+        .overlay
+        .push(85257384);
+    assert!(validate_partial_execution_v2(&forged, plan, &cat.data, &pack, &goal, &j).is_err());
+    forged = serde_json::from_value(serde_json::to_value(&report).unwrap()).unwrap();
+    forged.failure.as_mut().unwrap().kind = PartialFailureKind::OriginalPlanBlocked;
+    assert!(validate_partial_execution_v2(&forged, plan, &cat.data, &pack, &goal, &j).is_err());
+    std::fs::write(
+        output.join("experiment.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+        "kind":"fault_injection_with_native_prefixes", "scope":"not_rule_qualification_or_matrix",
+        "injected_debits":1,"paid_total":j.stats().unwrap().consumed,
+        "native_adapter_attempts":j.stats().unwrap().consumed-1,
+        "report_sha256":ygo_knowledge::hash(&serde_json::to_vec(&report).unwrap())}))
+        .unwrap(),
+    )
+    .unwrap();
+    println!(
+        "paid-cost injected failure, charged{}, {}",
+        j.stats().unwrap().consumed,
+        output.display()
+    );
+}
+
+#[test]
 #[ignore = "opt-in: real initial state and worker-start failures; uses YGO_PILOT_REPORT_DIR"]
 fn a_worker_failure_returns_a_v2_diagnostic_instead_of_losing_the_prefix() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

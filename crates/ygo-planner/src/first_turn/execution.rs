@@ -393,6 +393,11 @@ pub fn validate_partial_execution(
         .filter(|w| w.event <= initial.events.len() as u64)
         .cloned()
         .collect();
+    if initial.protocol_version != report.start_request.protocol_version
+        || initial.versions != report.start_request.versions
+    {
+        return Err("initial result runtime differs from its request".into());
+    }
     let start = observed(&initial, &initial_queries, cat, pack)?;
     validate_forecast(plan, &start.state, cat, pack, goal)?;
     let mut results = vec![initial.clone()];
@@ -443,32 +448,7 @@ pub fn validate_partial_execution(
             return Err("unexecuted choice is not a proved budget truncation".into());
         }
     }
-    for (i, call) in report.audit_calls.iter().enumerate() {
-        if *call != (report.start_call + report.choices.len() + i + 1) as u64
-            || journal.call_purpose(*call).map_err(|e| e.message)? != CallPurpose::Witness
-        {
-            return Err("independent witness cost sequence differs".into());
-        }
-        let mut q = report.request.clone();
-        if let Some(witness) = report.queries.get(i) {
-            q.decisions.retain(|d| d.prompt_id < witness.event);
-            let r = journal
-                .load_result(*call, &q)
-                .map_err(|e| e.message)?
-                .ok_or("query replay result missing")?;
-            if !same_json(&QueryWitness::capture(&r)?, witness) {
-                return Err("independent query content differs".into());
-            }
-        } else {
-            let r = journal
-                .load_result(*call, &q)
-                .map_err(|e| e.message)?
-                .ok_or("root replay missing")?;
-            if !same_native(&r, &report.result) {
-                return Err("independent complete replay differs".into());
-            }
-        }
-    }
+    validate_audits(report, journal)?;
     let map = validate_predictions(report, plan, cat, pack, goal, journal, &start, &results)?;
     if let Some(failure) = &report.failure {
         if failure.prompt != report.result.prompt.as_ref().map(|p| p.id) {
@@ -514,6 +494,44 @@ pub fn validate_partial_execution(
                 }
             }
             _ => return Err("this partial local validator lacks a complete witness for the reported failure category".into()),
+        }
+    }
+    Ok(())
+}
+fn validate_audits(report: &PartialExecution, journal: &CallJournal) -> Result<(), String> {
+    if report.audit_calls.len() != report.queries.len() + 1 {
+        return Err("complete query/root audit is missing".into());
+    }
+    for (i, call) in report.audit_calls.iter().enumerate() {
+        if *call != (report.start_call + report.choices.len() + i + 1) as u64
+            || journal.call_purpose(*call).map_err(|e| e.message)? != CallPurpose::Witness
+        {
+            return Err("independent witness cost sequence differs".into());
+        }
+        let mut q = report.request.clone();
+        if let Some(witness) = report.queries.get(i) {
+            q.decisions.retain(|d| d.prompt_id < witness.event);
+            let r = journal
+                .load_result(*call, &q)
+                .map_err(|e| e.message)?
+                .ok_or("query replay result missing")?;
+            if r.protocol_version != q.protocol_version || r.versions != q.versions {
+                return Err("query replay runtime differs from its request".into());
+            }
+            if !same_json(&QueryWitness::capture(&r)?, witness) {
+                return Err("independent query content differs".into());
+            }
+        } else {
+            let r = journal
+                .load_result(*call, &q)
+                .map_err(|e| e.message)?
+                .ok_or("root replay missing")?;
+            if r.protocol_version != q.protocol_version || r.versions != q.versions {
+                return Err("root replay runtime differs from its request".into());
+            }
+            if !same_native(&r, &report.result) {
+                return Err("independent complete replay differs".into());
+            }
         }
     }
     Ok(())
@@ -998,10 +1016,39 @@ pub fn execute_partial_v2(
     goal: &Goal,
     journal: Arc<CallJournal>,
 ) -> Result<PartialExecutionV2, String> {
+    execute_partial_v2_with_backend(
+        request,
+        initial,
+        queries,
+        plan,
+        cat,
+        pack,
+        goal,
+        journal,
+        ProcessEngineAdapter::new(request.engine.clone()),
+    )
+}
+
+/// Internal adapter seam for labelled fault tests. Independent query/root audits
+/// always use ProcessEngineAdapter; a supplied backend cannot grant a receipt.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn execute_partial_v2_with_backend<A: EngineAdapter>(
+    request: &RunDuelRequest,
+    initial: &DuelResult,
+    queries: &[QueryWitness],
+    plan: &ForecastPlan,
+    cat: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    journal: Arc<CallJournal>,
+    backend: A,
+) -> Result<PartialExecutionV2, String> {
     request.validate_protocol()?;
     goal.validate()?;
     pack.validate()?;
     if request.protocol_version != 6
+        || initial.protocol_version != request.protocol_version
         || request.versions != initial.versions
         || plan.goal_id != goal.id()
         || plan.steps.len() > 64
@@ -1024,11 +1071,7 @@ pub fn execute_partial_v2(
     let held = format!("partial-witness-{base}");
     let reserve_error = journal.reserve(&held, queries.len() + 1).err();
     let mut runner = Runner {
-        adapter: JournaledAdapter::new(
-            ProcessEngineAdapter::new(request.engine.clone()),
-            journal.clone(),
-            CallPurpose::Execution,
-        ),
+        adapter: JournaledAdapter::new(backend, journal.clone(), CallPurpose::Execution),
         journal: journal.clone(),
         held: if reserve_error.is_none() {
             vec![held]
@@ -1485,6 +1528,66 @@ pub fn execute_partial_v2(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn prefix_query_versions_are_checked_even_when_public_fields_match() {
+        struct Fixed(DuelResult);
+        impl EngineAdapter for Fixed {
+            fn doctor(&self) -> DoctorReport {
+                panic!("no uncharged probe")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        let (mut q, result) = initial();
+        q.versions = result.versions.clone();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/tmp")
+            .join(format!(
+                "query-version-{}.jsonl",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        let j = CallJournal::open(path, "query-version-unit", "not-native-proof", 512).unwrap();
+        let mut wrong_version = result.clone();
+        wrong_version.versions.catalog = "forged-catalog".into();
+        JournaledAdapter::new(Fixed(wrong_version), j.clone(), CallPurpose::Witness)
+            .run(&q)
+            .unwrap();
+        JournaledAdapter::new(Fixed(result.clone()), j.clone(), CallPurpose::Witness)
+            .run(&q)
+            .unwrap();
+        let report = PartialExecution {
+            schema_version: 1,
+            scope: "partial_integration_native_execution; not full rule certification".into(),
+            plan_id: "unused-in-audit-only-test".into(),
+            request: q.clone(),
+            start_request: q,
+            start_call: 0,
+            queries: vec![QueryWitness::capture(&result).unwrap()],
+            result,
+            predictions: vec![],
+            choices: vec![],
+            pending_choice: None,
+            failure: None,
+            interruption: None,
+            terminal: false,
+            goal: ygo_goal::Evaluation {
+                node: "/goal".into(),
+                result: ygo_goal::Truth::Unknown,
+                observed: None,
+                matches: vec![],
+                reason: "not a native qualification".into(),
+                children: vec![],
+            },
+            audit_calls: vec![1, 2],
+            calls: 2,
+            identity_gaps: vec![],
+        };
+        assert!(validate_audits(&report, &j).is_err());
+    }
     struct FailedWorker(&'static str);
     impl EngineAdapter for FailedWorker {
         fn doctor(&self) -> DoctorReport {

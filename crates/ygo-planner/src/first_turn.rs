@@ -12,11 +12,11 @@ mod dependencies;
 mod execution;
 pub use binding::{bind_pick, bind_start};
 pub use execution::{
-    execute_partial, execute_partial_v2, replay_partial_execution, replay_partial_execution_v2,
-    replay_partial_execution_v2_with_engine, start_partial_v2, validate_choice_checkpoint,
-    validate_partial_execution, validate_partial_execution_v2, AuditedPrefix, ExecutionFault,
-    ExecutionStage, PartialAnchor, PartialDecisionEvidence, PartialExecution, PartialExecutionV2,
-    PartialFailure, PartialFailureKind, PartialPrediction,
+    execute_partial, execute_partial_v2, execute_partial_v2_with_backend, replay_partial_execution,
+    replay_partial_execution_v2, replay_partial_execution_v2_with_engine, start_partial_v2,
+    validate_choice_checkpoint, validate_partial_execution, validate_partial_execution_v2,
+    AuditedPrefix, ExecutionFault, ExecutionStage, PartialAnchor, PartialDecisionEvidence,
+    PartialExecution, PartialExecutionV2, PartialFailure, PartialFailureKind, PartialPrediction,
 };
 mod search;
 pub use search::{
