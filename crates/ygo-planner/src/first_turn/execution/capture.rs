@@ -106,6 +106,8 @@ pub struct PartialExecutionV2 {
     pub request: RunDuelRequest,
     pub start_request: RunDuelRequest,
     pub start_call: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub initial_attempt_checkpoint: Option<String>,
     pub last_result: Option<DuelResult>,
     pub last_audited_prefix: Option<AuditedPrefix>,
     pub queries: Vec<QueryWitness>,
@@ -366,10 +368,23 @@ pub fn start_partial_v2(
     request.validate_protocol()?;
     pack.validate()?;
     goal.validate()?;
-    if request.protocol_version != 6 || plan.goal_id != goal.id() {
+    if request.protocol_version != 6 || plan.goal_id != goal.id() || plan.knowledge_id != pack.id()
+    {
         return Err("partial start input/profile/goal mismatch".into());
     }
-    let before = journal.stats().map_err(|e| e.message)?.consumed;
+    let budget = journal.stats().map_err(|e| e.message)?;
+    if !(1..=512).contains(&budget.limit) {
+        return Err("partial group budget must be 1..512".into());
+    }
+    let before = budget.consumed;
+    let intent = initial_attempt_intent(request, &plan.id, &budget);
+    let initial_attempt_checkpoint = format!(
+        "immutable/partial-start/{}",
+        ygo_knowledge::hash(&serde_json::to_vec(&intent).unwrap())
+    );
+    journal
+        .save_checkpoint(&initial_attempt_checkpoint, &intent)
+        .map_err(|e| e.message)?;
     let adapter = JournaledAdapter::new(
         ProcessEngineAdapter::new(request.engine.clone()),
         journal.clone(),
@@ -431,6 +446,7 @@ pub fn start_partial_v2(
         request: request.clone(),
         start_request: request.clone(),
         start_call: before,
+        initial_attempt_checkpoint: Some(initial_attempt_checkpoint),
         last_result,
         last_audited_prefix: None,
         queries: vec![],
@@ -461,4 +477,12 @@ pub fn start_partial_v2(
         receipt: None,
         receipt_content: None,
     })
+}
+
+fn initial_attempt_intent(
+    request: &RunDuelRequest,
+    plan_id: &str,
+    budget: &LedgerStats,
+) -> serde_json::Value {
+    serde_json::json!({"version":1,"request":request,"plan_id":plan_id,"before_call":budget.consumed+1,"budget":budget})
 }

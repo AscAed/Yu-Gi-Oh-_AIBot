@@ -371,6 +371,8 @@ pub fn validate_partial_execution(
     let mut expected_request = report.start_request.clone();
     expected_request.decisions = report.result.resolved_decisions.clone();
     if report.schema_version != 1
+        || report.start_call > 512
+        || report.calls > 512
         || report.plan_id != plan.id
         || !same_json(&expected_request, &report.request)
         || report.scope != "partial_integration_native_execution; not full rule certification"
@@ -1009,6 +1011,9 @@ pub fn execute_partial_v2(
     let actual_start = observed(initial, queries, cat, pack)?;
     validate_forecast(plan, &actual_start.state, cat, pack, goal)?;
     let base = journal.stats().map_err(|e| e.message)?.consumed;
+    if !(1..=512).contains(&journal.stats().map_err(|e| e.message)?.limit) {
+        return Err("partial group budget must be 1..512".into());
+    }
     let charged_start = journal
         .load_result(base as u64, request)
         .map_err(|e| e.message)?
@@ -1454,6 +1459,7 @@ pub fn execute_partial_v2(
         request: q,
         start_request: request.clone(),
         start_call: base,
+        initial_attempt_checkpoint: None,
         last_result: Some(result),
         last_audited_prefix,
         queries: runner.queries,

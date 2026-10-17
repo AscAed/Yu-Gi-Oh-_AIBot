@@ -13,16 +13,24 @@ pub fn validate_partial_execution_v2(
     goal.validate()?;
     journal.verify().map_err(|e| e.message)?;
     if report.schema_version != 2
+        || report.start_call > 512
+        || report.calls > 512
         || report.plan_id != plan.id
         || plan.knowledge_id != pack.id()
         || plan.goal_id != goal.id()
         || report.scope != "partial_integration_native_execution; not full rule certification"
         || report.start_call + report.calls > journal.stats().map_err(|e| e.message)?.consumed
+        || !(1..=512).contains(&journal.stats().map_err(|e| e.message)?.limit)
     {
         return Err("diagnostic version, identity, scope, or cost differs".into());
     }
     if report.last_result.is_none() {
         return validate_failed_start(report, journal);
+    }
+    if report.initial_attempt_checkpoint.is_some() {
+        return Err(
+            "initial failure intent cannot be attached to a completed initial state".into(),
+        );
     }
     if report.audit_failure.is_none() {
         return validate_completed_capture(report, plan, cat, pack, goal, journal);
@@ -31,7 +39,7 @@ pub fn validate_partial_execution_v2(
 }
 
 fn validate_failed_start(report: &PartialExecutionV2, journal: &CallJournal) -> Result<(), String> {
-    if report.calls != 1
+    if report.calls > 1
         || report.faults.len() != 1
         || report.failure.is_none()
         || !same_json(&report.request, &report.start_request)
@@ -48,6 +56,51 @@ fn validate_failed_start(report: &PartialExecutionV2, journal: &CallJournal) -> 
         || !report.identity_gaps.is_empty()
     {
         return Err("failed initial call has invented state or evidence".into());
+    }
+    let budget = if let Some(key) = &report.initial_attempt_checkpoint {
+        let budget = journal
+            .checkpoint_budget(key)
+            .map_err(|e| e.message)?
+            .ok_or("missing initial attempt budget")?;
+        let intent = initial_attempt_intent(&report.start_request, &report.plan_id, &budget);
+        if *key
+            != format!(
+                "immutable/partial-start/{}",
+                ygo_knowledge::hash(&serde_json::to_vec(&intent).unwrap())
+            )
+            || journal.checkpoint(key).map_err(|e| e.message)? != Some(intent)
+            || report.start_call != budget.consumed
+        {
+            return Err("initial attempt request, identity, or budget differs".into());
+        }
+        Some(budget)
+    } else {
+        None
+    };
+    if report.calls == 0 {
+        let budget = budget.ok_or("initial budget refusal has no persistent intent")?;
+        if budget.consumed + budget.reserved < budget.limit {
+            return Err("initial call could still start".into());
+        }
+        let detail = "scope call budget exhausted";
+        let fault = ExecutionFault {
+            kind: PartialFailureKind::BudgetExhausted,
+            stage: ExecutionStage::Execution,
+            call: None,
+            step: None,
+            code: "journal_budget".into(),
+            detail: detail.into(),
+        };
+        let failure = PartialFailure {
+            kind: fault.kind,
+            step: 0,
+            prompt: None,
+            detail: detail.into(),
+        };
+        if !same_json(&report.faults, &vec![fault]) || !same_json(&report.failure, &Some(failure)) {
+            return Err("initial budget refusal classification differs".into());
+        }
+        return Ok(());
     }
     let call = report.start_call as u64 + 1;
     if journal.call_purpose(call).map_err(|e| e.message)? != CallPurpose::Execution {

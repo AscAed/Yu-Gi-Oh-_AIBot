@@ -71,6 +71,9 @@ fn a_worker_failure_returns_a_v2_diagnostic_instead_of_losing_the_prefix() {
     forged = serde_json::from_value(serde_json::to_value(&report).unwrap()).unwrap();
     forged.faults[0].stage = ExecutionStage::EndPhase;
     assert!(validate_partial_execution_v2(&forged, plan, &cat.data, &pack, &goal, &j).is_err());
+    forged = serde_json::from_value(serde_json::to_value(&report).unwrap()).unwrap();
+    forged.start_call = usize::MAX;
+    assert!(validate_partial_execution_v2(&forged, plan, &cat.data, &pack, &goal, &j).is_err());
     std::fs::write(
         output.join("report.json"),
         serde_json::to_vec_pretty(&report).unwrap(),
@@ -124,6 +127,35 @@ fn a_worker_failure_returns_a_v2_diagnostic_instead_of_losing_the_prefix() {
     std::fs::write(
         output.join("initial-failure.report.json"),
         serde_json::to_vec_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    let denied =
+        start_partial_v2(&q, plan, &cat.data, &pack, &goal, start_journal.clone()).unwrap();
+    assert!(denied.last_result.is_none());
+    assert_eq!(denied.calls, 0);
+    assert_eq!(denied.faults[0].call, None);
+    assert_eq!(
+        denied.failure.as_ref().unwrap().kind,
+        PartialFailureKind::BudgetExhausted
+    );
+    assert_eq!(start_journal.stats().unwrap().consumed, 1);
+    validate_partial_execution_v2(&denied, plan, &cat.data, &pack, &goal, &start_journal).unwrap();
+    let mut forged: PartialExecutionV2 =
+        serde_json::from_value(serde_json::to_value(&denied).unwrap()).unwrap();
+    forged.initial_attempt_checkpoint = None;
+    assert!(
+        validate_partial_execution_v2(&forged, plan, &cat.data, &pack, &goal, &start_journal)
+            .is_err()
+    );
+    forged = serde_json::from_value(serde_json::to_value(&denied).unwrap()).unwrap();
+    forged.faults[0].call = Some(2);
+    assert!(
+        validate_partial_execution_v2(&forged, plan, &cat.data, &pack, &goal, &start_journal)
+            .is_err()
+    );
+    std::fs::write(
+        output.join("initial-budget.report.json"),
+        serde_json::to_vec_pretty(&denied).unwrap(),
     )
     .unwrap();
 }
@@ -346,7 +378,7 @@ fn saved_local_reports_reject_relabelled_failures_and_anchor_or_resource_tamperi
     .unwrap();
     validate_partial_execution(&report, plan, &cat.data, &pack, &goal, &journal).unwrap();
     let spent = journal.stats().unwrap().consumed;
-    for variant in 0..6 {
+    for variant in 0..8 {
         let mut forged = report.clone();
         match variant {
             0 => forged.failure.as_mut().unwrap().kind = PartialFailureKind::CoverageGap,
@@ -358,7 +390,9 @@ fn saved_local_reports_reject_relabelled_failures_and_anchor_or_resource_tamperi
                 .insert(2, 99)
                 .map(|_| ())
                 .unwrap_or(()),
-            _ => forged.choices[0].instance_map.clear(),
+            5 => forged.choices[0].instance_map.clear(),
+            6 => forged.start_call = usize::MAX,
+            _ => forged.calls = usize::MAX,
         }
         assert!(
             validate_partial_execution(&forged, plan, &cat.data, &pack, &goal, &journal).is_err(),
