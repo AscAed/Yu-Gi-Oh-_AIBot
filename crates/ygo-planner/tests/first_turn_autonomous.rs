@@ -5,6 +5,77 @@ use ygo_knowledge::first_turn::FirstTurnKnowledge;
 use ygo_planner::first_turn::*;
 
 #[test]
+#[ignore = "opt-in: real 4-call truncation cap; uses saved forecasts via YGO_PILOT_REPORT_DIR"]
+fn a_tiny_native_budget_retains_the_audited_prefix_without_claiming_an_executed_choice() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = std::path::PathBuf::from(std::env::var("YGO_PILOT_REPORT_DIR").unwrap());
+    let saved: PartialExecution =
+        serde_json::from_slice(&std::fs::read(dir.join("pass.report.json")).unwrap()).unwrap();
+    let plans: PartialPlans =
+        serde_json::from_slice(&std::fs::read(dir.join("frozen-forecasts.json")).unwrap()).unwrap();
+    let plan = plans.plans.iter().find(|p| p.id == saved.plan_id).unwrap();
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let store =
+        ygo_storage::SnapshotStore::new(root.join("data/runtime/tournament-2026/snapshots"));
+    let cat = store
+        .catalog(&saved.start_request.versions.catalog)
+        .unwrap();
+    let goal:Goal=serde_json::from_value(serde_json::json!({"version":1,"expr":{"op":"all","args":[{"op":"count","filter":{"codes":[26692769],"locations":[4]},"min":1},{"op":"count","filter":{"codes":[25542642],"locations":[8],"position_mask":10},"min":1}]}})).unwrap();
+    let output_dir = dir.join(format!(
+        "budget-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&output_dir).unwrap();
+    let journal = CallJournal::open(
+        output_dir.join("budget.jsonl"),
+        "pilot-budget4",
+        &pack.id(),
+        4,
+    )
+    .unwrap();
+    let q = saved.start_request;
+    let initial = JournaledAdapter::new(
+        ProcessEngineAdapter::new(q.engine.clone()),
+        journal.clone(),
+        CallPurpose::Execution,
+    )
+    .run(&q)
+    .unwrap();
+    let queries = vec![QueryWitness::capture(&initial).unwrap()];
+    let report = execute_partial(
+        &q,
+        &initial,
+        &queries,
+        plan,
+        &cat.data,
+        &pack,
+        &goal,
+        journal.clone(),
+    )
+    .unwrap();
+    std::fs::write(
+        output_dir.join("report.json"),
+        serde_json::to_vec_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        report.failure.as_ref().unwrap().kind,
+        PartialFailureKind::BudgetExhausted
+    );
+    assert!(report.pending_choice.is_some());
+    assert!(report.choices.is_empty());
+    assert!(report.result.resolved_decisions.is_empty());
+    assert!(!report.terminal);
+    assert_eq!(report.audit_calls.len(), 2);
+    assert_eq!(journal.stats().unwrap().consumed, 3);
+    validate_partial_execution(&report, plan, &cat.data, &pack, &goal, &journal).unwrap();
+    println!("budget prefix3/4 calls; evidence={}", output_dir.display());
+}
+
+#[test]
 #[ignore = "opt-in: local persisted native reports; no engine call, requires YGO_PILOT_REPORT_DIR"]
 fn saved_local_reports_reject_relabelled_failures_and_anchor_or_resource_tampering() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

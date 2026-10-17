@@ -115,6 +115,7 @@ struct State {
     faulted: bool,
     recoveries: Vec<JournalRecovery>,
     checkpoints: BTreeMap<String, (String, usize, String)>,
+    checkpoint_budgets: BTreeMap<String, LedgerStats>,
 }
 
 /// An exclusively locked budget journal. Keep one instance alive for a scope.
@@ -344,6 +345,7 @@ impl State {
                 consumed,
                 charged_sequence,
             } => {
+                self.checkpoint_budgets.insert(name.clone(), self.stats());
                 self.checkpoints
                     .insert(name, (blob, consumed, charged_sequence));
             }
@@ -431,6 +433,7 @@ impl CallJournal {
             faulted: false,
             recoveries: Vec::new(),
             checkpoints: BTreeMap::new(),
+            checkpoint_budgets: BTreeMap::new(),
         };
         for line in bytes[..valid_length]
             .split(|b| *b == b'\n')
@@ -633,6 +636,14 @@ impl CallJournal {
             .checkpoints
             .get(name)
             .map(|(_, count, _)| *count))
+    }
+    /// Budget reconstructed from ledger entries at this checkpoint, rather than
+    /// trusted from the caller's search payload or a later ledger balance.
+    pub fn checkpoint_budget(&self, name: &str) -> Result<Option<LedgerStats>, WorkerError> {
+        if self.checkpoint(name)?.is_none() {
+            return Ok(None);
+        }
+        Ok(self.lock()?.checkpoint_budgets.get(name).cloned())
     }
     pub fn reserve(&self, token: &str, amount: usize) -> Result<(), WorkerError> {
         self.lock()?.append(Entry::Reserve {

@@ -201,6 +201,8 @@ pub struct PartialExecution {
     pub queries: Vec<QueryWitness>,
     pub predictions: Vec<PartialPrediction>,
     pub choices: Vec<PartialDecisionEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending_choice: Option<PartialDecisionEvidence>,
     pub failure: Option<PartialFailure>,
     pub interruption: Option<PartialAnchor>,
     pub terminal: bool,
@@ -339,8 +341,8 @@ pub fn validate_partial_execution(
         || report.scope != "partial_integration_native_execution; not full rule certification"
         || report.calls != report.choices.len() + report.audit_calls.len()
         || report.audit_calls.len() != report.queries.len() + 1
-        || report.start_call + report.calls > 512
-        || journal.stats().map_err(|e| e.message)?.limit != 512
+        || report.start_call + report.calls > journal.stats().map_err(|e| e.message)?.limit
+        || !(1..=512).contains(&journal.stats().map_err(|e| e.message)?.limit)
     {
         return Err("local execution version, identity, request, or budget differs".into());
     }
@@ -384,6 +386,26 @@ pub fn validate_partial_execution(
     if !same_native(results.last().unwrap(), &report.result) {
         return Err("reported final prefix differs from charged execution".into());
     }
+    if let Some(pending) = &report.pending_choice {
+        validate_choice_checkpoint(pending, &plan.id, results.last().unwrap(), journal)?;
+        let budget = journal
+            .checkpoint_budget(&choice_checkpoint(&plan.id, pending.prompt))
+            .map_err(|e| e.message)?
+            .ok_or("missing pre-call budget")?;
+        if pending.before_call != (report.start_call + report.choices.len() + 1) as u64
+            || budget
+                .limit
+                .saturating_sub(budget.consumed + budget.reserved)
+                >= 2
+            || journal
+                .call_purpose(pending.before_call)
+                .map_err(|e| e.message)?
+                != CallPurpose::Witness
+            || report.failure.as_ref().map(|f| f.kind) != Some(PartialFailureKind::BudgetExhausted)
+        {
+            return Err("unexecuted choice is not a proved budget truncation".into());
+        }
+    }
     for (i, call) in report.audit_calls.iter().enumerate() {
         if *call != (report.start_call + report.choices.len() + i + 1) as u64
             || journal.call_purpose(*call).map_err(|e| e.message)? != CallPurpose::Witness
@@ -426,8 +448,19 @@ pub fn validate_partial_execution(
             .choices
             .iter()
             .position(|e| e.step == Some(index))
-            .ok_or("prediction has no executed choice")?;
-        let first_choice = &report.choices[i];
+            .or_else(|| {
+                report
+                    .pending_choice
+                    .as_ref()
+                    .filter(|p| p.step == Some(index))
+                    .map(|_| report.choices.len())
+            })
+            .ok_or("prediction has no choice or proved unexecuted intent")?;
+        let first_choice = report
+            .choices
+            .get(i)
+            .or(report.pending_choice.as_ref())
+            .ok_or("missing predicted choice")?;
         let before = &results[i];
         let queries: Vec<_> = report
             .queries
@@ -561,6 +594,13 @@ pub fn validate_partial_execution(
             return Err("failure does not reference its actual stopped prompt".into());
         }
         match failure.kind {
+            PartialFailureKind::BudgetExhausted => {
+                let pending = report.pending_choice.as_ref().ok_or("budget failure lacks its unexecuted intent")?;
+                if failure.step != pending.step.unwrap_or(plan.steps.len())
+                    || !failure.detail.starts_with("budget_exhausted:") {
+                    return Err("budget failure classification differs".into());
+                }
+            }
             PartialFailureKind::RequiredInstanceUnknown => {
                 let planned = plan.steps.get(failure.step).ok_or("unknown-instance step outside plan")?;
                 let actual = observed(&report.result,&report.queries,cat,pack)?;
@@ -794,7 +834,15 @@ impl Runner {
             }
             Err(error) => {
                 self.journal.release(&token).map_err(|e| e.message)?;
-                Err(format!("engine_failure: {}", error.message))
+                Err(format!(
+                    "{}: {}",
+                    if error.code == "journal_budget" {
+                        "budget_exhausted"
+                    } else {
+                        "engine_failure"
+                    },
+                    error.message
+                ))
             }
         }
     }
@@ -858,6 +906,7 @@ pub fn execute_partial(
     let mut result = initial.clone();
     let mut predictions = vec![];
     let mut choices = vec![];
+    let mut pending_choice = None;
     let mut map = BTreeMap::new();
     let mut failure = None;
     let mut interruption = None;
@@ -1050,6 +1099,7 @@ pub fn execute_partial(
             }
         }
         // Goal facts are accepted only after actual End Phase processing.
+        current_step = plan.steps.len();
         for _ in 0..80 {
             if result.status == DuelStatus::EngineVerified {
                 return Ok(());
@@ -1118,6 +1168,13 @@ pub fn execute_partial(
             prompt: result.prompt.as_ref().map(|p| p.id),
             detail: error,
         });
+        if kind == PartialFailureKind::BudgetExhausted
+            && choices.last().is_some_and(|e| {
+                e.before_call > journal.stats().map(|s| s.consumed as u64).unwrap_or(0)
+            })
+        {
+            pending_choice = choices.pop();
+        }
     }
     q.decisions = result.resolved_decisions.clone();
     runner.release()?;
@@ -1146,6 +1203,7 @@ pub fn execute_partial(
         queries: runner.queries,
         predictions,
         choices,
+        pending_choice,
         failure,
         interruption,
         terminal,

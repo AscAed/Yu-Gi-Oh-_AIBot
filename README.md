@@ -4,6 +4,8 @@ Windows 本机 Combo CLI：固定完整卡组与五张起手，使用固定 API 
 
 已有v5单次灰流丽多响应点与两个展开的稳健比较。新的2026赛事原表主41＋额外15已通过来源／冻结规则和独立资产关口；完整首回合语义、v6及48手评估仍在实施。当前状态与离线复核见[原表重选说明](docs/TOURNAMENT_RESELECTION.md)。
 
+定向Scythe自主展开、受阻检查和灰后Boots恢复已完成两次真实三组验证（每次170调用）；首批依赖取得12项规则分支资格。该内部集成不开放正式v6，范围和剩余工作见[局部验收说明](docs/FIRST_TURN_PILOT.md)。
+
 ## 通用目标与收益验证
 
 规划 v3 支持 Rusty＋Fog、Cherubini＋Fog等结构化目标，并独立验证发动机会和有界后续收益。当前 profile 为 `phantom-goal-v2`；旧 `phantom-goal-v1` 本地报告需要重新生成，规划 v1/v2报告继续兼容。
