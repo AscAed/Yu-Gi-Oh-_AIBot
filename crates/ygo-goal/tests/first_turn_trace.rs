@@ -614,3 +614,97 @@ fn actual_resource_container_relations_are_explicit_and_locks_are_not_assumed() 
     assert_eq!(trace.restrictions.extra_xyz_only, Some(false));
     assert!(trace.restrictions.unknown_rules.is_empty());
 }
+
+#[test]
+fn a_newly_revealed_self_cost_binds_the_pre_cost_opponent_source_to_its_public_instance() {
+    let (result, witnesses) = read_capture(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-ash.json"
+    ));
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let trace = actual_trace_v6(&result, &catalog(), &pack, &witnesses).unwrap();
+    let ash = trace
+        .activations
+        .iter()
+        .find(|a| a.source.code == 14558127)
+        .unwrap();
+    let cost = trace
+        .movements
+        .iter()
+        .find(|m| {
+            result.events[m.event as usize - 1].fields["code"] == 14558127
+                && m.from.location == 2
+                && m.to.location == 16
+        })
+        .unwrap();
+    assert!(ash.source.identity_known);
+    assert_eq!(ash.source.instance, cost.instance);
+    assert_eq!(ash.source.location, 2);
+    assert_eq!(ash.after_cost.as_ref().unwrap().location, 16);
+    assert!(trace
+        .identity_bindings
+        .iter()
+        .any(|b| b.instance == cost.instance
+            && b.event == cost.event
+            && b.basis == "revealed_cost_source_coordinate"));
+}
+
+#[test]
+fn a_hidden_handler_is_not_rebound_through_intervening_hand_compression_or_shuffle() {
+    // These altered raw traces are rule-reconstruction negatives, not claimed
+    // engine runs. The handler's original coordinate is no longer a proof.
+    for shuffle in [false, true] {
+        let (mut r, mut witnesses) = read_capture(include_str!(
+            "../../../tests/fixtures/tournament-2026.trace-ash.json"
+        ));
+        let source = r
+            .events
+            .iter()
+            .position(|e| e.opcode == 70 && e.fields["code"] == 14558127)
+            .unwrap();
+        let cost = r.events[source + 1].raw.clone();
+        r.events.truncate(source + 1);
+        // Two copies can have the same name; this source was at hand index 1.
+        let mut raw = r.events[source].raw.clone();
+        raw[7..11].copy_from_slice(&1u32.to_le_bytes());
+        raw[17..21].copy_from_slice(&1u32.to_le_bytes());
+        r.events[source] = decode_frame(source as u64 + 1, &raw).unwrap();
+        let mut preceding = cost.clone();
+        if shuffle {
+            preceding = vec![33, 1];
+            preceding.extend(2u32.to_le_bytes());
+            preceding.extend(14558127u32.to_le_bytes());
+            preceding.extend(14558127u32.to_le_bytes());
+        } else {
+            preceding[1..5].copy_from_slice(&46072770u32.to_le_bytes());
+        }
+        r.events
+            .push(decode_frame(r.events.len() as u64 + 1, &preceding).unwrap());
+        let mut moved = cost;
+        moved[7..11].copy_from_slice(&1u32.to_le_bytes());
+        r.events
+            .push(decode_frame(r.events.len() as u64 + 1, &moved).unwrap());
+        r.events
+            .push(decode_frame(r.events.len() as u64 + 1, &[71, 2]).unwrap());
+        r.resolved_decisions
+            .retain(|d| d.prompt_id <= source as u64);
+        witnesses.truncate(1);
+        let trace = actual_trace_v6(
+            &r,
+            &catalog(),
+            &FirstTurnKnowledge::builtin().unwrap(),
+            &witnesses,
+        )
+        .unwrap();
+        let ash = trace
+            .activations
+            .iter()
+            .find(|a| a.source.code == 14558127)
+            .unwrap();
+        assert!(!ash.source.identity_known, "shuffle={shuffle}");
+        assert_eq!(ash.source.location, 2);
+        assert!(!trace
+            .identity_bindings
+            .iter()
+            .any(|b| b.prior_event == ash.event));
+    }
+}

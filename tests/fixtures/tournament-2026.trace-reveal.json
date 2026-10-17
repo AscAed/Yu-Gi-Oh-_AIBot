@@ -609,7 +609,8 @@
           "rank": 0,
           "sequence": 0,
           "status": 1024,
-          "type_flags": 65538
+          "type_flags": 65538,
+          "is_public": false
         },
         {
           "attack": 400,
@@ -630,7 +631,8 @@
           "rank": 0,
           "sequence": 1,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -651,7 +653,8 @@
           "rank": 0,
           "sequence": 2,
           "status": 1024,
-          "type_flags": 131076
+          "type_flags": 131076,
+          "is_public": false
         },
         {
           "attack": 800,
@@ -672,7 +675,8 @@
           "rank": 0,
           "sequence": 3,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 600,
@@ -693,7 +697,8 @@
           "rank": 0,
           "sequence": 4,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -714,7 +719,8 @@
           "rank": 0,
           "sequence": 5,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 200,
@@ -735,7 +741,8 @@
           "rank": 0,
           "sequence": 6,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -756,7 +763,8 @@
           "rank": 0,
           "sequence": 7,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 1300,
@@ -777,7 +785,8 @@
           "rank": 0,
           "sequence": 8,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -798,7 +807,8 @@
           "rank": 0,
           "sequence": 9,
           "status": 1024,
-          "type_flags": 4
+          "type_flags": 4,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -819,7 +829,8 @@
           "rank": 0,
           "sequence": 10,
           "status": 1024,
-          "type_flags": 4
+          "type_flags": 4,
+          "is_public": false
         },
         {
           "attack": 200,
@@ -840,7 +851,8 @@
           "rank": 0,
           "sequence": 11,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 600,
@@ -861,7 +873,8 @@
           "rank": 0,
           "sequence": 12,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -882,7 +895,8 @@
           "rank": 0,
           "sequence": 13,
           "status": 1024,
-          "type_flags": 2
+          "type_flags": 2,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -903,7 +917,8 @@
           "rank": 0,
           "sequence": 14,
           "status": 1024,
-          "type_flags": 4129
+          "type_flags": 4129,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -924,7 +939,8 @@
           "rank": 0,
           "sequence": 15,
           "status": 1024,
-          "type_flags": 2
+          "type_flags": 2,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -945,7 +961,8 @@
           "rank": 0,
           "sequence": 16,
           "status": 1024,
-          "type_flags": 2
+          "type_flags": 2,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -966,7 +983,8 @@
           "rank": 0,
           "sequence": 17,
           "status": 1024,
-          "type_flags": 4
+          "type_flags": 4,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -987,7 +1005,8 @@
           "rank": 0,
           "sequence": 18,
           "status": 1024,
-          "type_flags": 65538
+          "type_flags": 65538,
+          "is_public": false
         },
         {
           "attack": 100,
@@ -1008,7 +1027,8 @@
           "rank": 0,
           "sequence": 19,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1029,7 +1049,8 @@
           "rank": 0,
           "sequence": 20,
           "status": 1024,
-          "type_flags": 65538
+          "type_flags": 65538,
+          "is_public": false
         },
         {
           "attack": 500,
@@ -1050,7 +1071,8 @@
           "rank": 0,
           "sequence": 21,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 100,
@@ -1071,7 +1093,8 @@
           "rank": 0,
           "sequence": 22,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 1000,
@@ -1092,7 +1115,8 @@
           "rank": 0,
           "sequence": 23,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 1300,
@@ -1113,7 +1137,8 @@
           "rank": 0,
           "sequence": 24,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 400,
@@ -1134,7 +1159,8 @@
           "rank": 0,
           "sequence": 25,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -1155,7 +1181,8 @@
           "rank": 0,
           "sequence": 26,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1176,7 +1203,8 @@
           "rank": 0,
           "sequence": 27,
           "status": 1024,
-          "type_flags": 4
+          "type_flags": 4,
+          "is_public": false
         },
         {
           "attack": 2800,
@@ -1197,7 +1225,8 @@
           "rank": 0,
           "sequence": 28,
           "status": 1024,
-          "type_flags": 33554465
+          "type_flags": 33554465,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1218,7 +1247,8 @@
           "rank": 0,
           "sequence": 29,
           "status": 1024,
-          "type_flags": 4
+          "type_flags": 4,
+          "is_public": false
         },
         {
           "attack": 100,
@@ -1239,7 +1269,8 @@
           "rank": 0,
           "sequence": 30,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1260,7 +1291,8 @@
           "rank": 0,
           "sequence": 31,
           "status": 1024,
-          "type_flags": 2
+          "type_flags": 2,
+          "is_public": false
         },
         {
           "attack": 1000,
@@ -1281,7 +1313,8 @@
           "rank": 0,
           "sequence": 32,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1302,7 +1335,8 @@
           "rank": 0,
           "sequence": 33,
           "status": 1024,
-          "type_flags": 4129
+          "type_flags": 4129,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1323,7 +1357,8 @@
           "rank": 0,
           "sequence": 34,
           "status": 1024,
-          "type_flags": 131076
+          "type_flags": 131076,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -1344,7 +1379,8 @@
           "rank": 0,
           "sequence": 35,
           "status": 1024,
-          "type_flags": 4
+          "type_flags": 4,
+          "is_public": false
         },
         {
           "attack": 400,
@@ -1365,7 +1401,8 @@
           "rank": 0,
           "sequence": 0,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 600,
@@ -1386,7 +1423,8 @@
           "rank": 0,
           "sequence": 1,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 200,
@@ -1407,7 +1445,8 @@
           "rank": 0,
           "sequence": 2,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 1000,
@@ -1428,7 +1467,8 @@
           "rank": 0,
           "sequence": 3,
           "status": 1024,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": false
         },
         {
           "attack": 1000,
@@ -1449,7 +1489,8 @@
           "rank": 0,
           "sequence": 0,
           "status": 1073742848,
-          "type_flags": 33
+          "type_flags": 33,
+          "is_public": true
         },
         {
           "attack": 2100,
@@ -1470,7 +1511,8 @@
           "rank": 0,
           "sequence": 0,
           "status": 1024,
-          "type_flags": 67108897
+          "type_flags": 67108897,
+          "is_public": false
         },
         {
           "attack": 800,
@@ -1491,7 +1533,8 @@
           "rank": 0,
           "sequence": 1,
           "status": 1024,
-          "type_flags": 67108897
+          "type_flags": 67108897,
+          "is_public": false
         },
         {
           "attack": 500,
@@ -1512,7 +1555,8 @@
           "rank": 0,
           "sequence": 2,
           "status": 1024,
-          "type_flags": 67108897
+          "type_flags": 67108897,
+          "is_public": false
         },
         {
           "attack": 1600,
@@ -1533,7 +1577,8 @@
           "rank": 0,
           "sequence": 3,
           "status": 1024,
-          "type_flags": 67108897
+          "type_flags": 67108897,
+          "is_public": false
         },
         {
           "attack": 2400,
@@ -1554,7 +1599,8 @@
           "rank": 0,
           "sequence": 4,
           "status": 1024,
-          "type_flags": 67108897
+          "type_flags": 67108897,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -1575,7 +1621,8 @@
           "rank": 3,
           "sequence": 5,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -1596,7 +1643,8 @@
           "rank": 3,
           "sequence": 6,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -1617,7 +1665,8 @@
           "rank": 4,
           "sequence": 7,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 2550,
@@ -1638,7 +1687,8 @@
           "rank": 4,
           "sequence": 8,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 2600,
@@ -1659,7 +1709,8 @@
           "rank": 4,
           "sequence": 9,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 3000,
@@ -1680,7 +1731,8 @@
           "rank": 5,
           "sequence": 10,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -1701,7 +1753,8 @@
           "rank": 4,
           "sequence": 11,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 3000,
@@ -1722,7 +1775,8 @@
           "rank": 5,
           "sequence": 12,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -1743,7 +1797,8 @@
           "rank": 4,
           "sequence": 13,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 1900,
@@ -1764,7 +1819,8 @@
           "rank": 3,
           "sequence": 14,
           "status": 1024,
-          "type_flags": 8388641
+          "type_flags": 8388641,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -1785,7 +1841,8 @@
           "rank": 0,
           "sequence": 0,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1400,
@@ -1806,7 +1863,8 @@
           "rank": 0,
           "sequence": 1,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1100,
@@ -1827,7 +1885,8 @@
           "rank": 0,
           "sequence": 2,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -1848,7 +1907,8 @@
           "rank": 0,
           "sequence": 3,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -1869,7 +1929,8 @@
           "rank": 0,
           "sequence": 4,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1100,
@@ -1890,7 +1951,8 @@
           "rank": 0,
           "sequence": 5,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1800,
@@ -1911,7 +1973,8 @@
           "rank": 0,
           "sequence": 6,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -1932,7 +1995,8 @@
           "rank": 0,
           "sequence": 7,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -1953,7 +2017,8 @@
           "rank": 0,
           "sequence": 8,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -1974,7 +2039,8 @@
           "rank": 0,
           "sequence": 9,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2400,
@@ -1995,7 +2061,8 @@
           "rank": 0,
           "sequence": 10,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -2016,7 +2083,8 @@
           "rank": 0,
           "sequence": 11,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -2037,7 +2105,8 @@
           "rank": 0,
           "sequence": 12,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -2058,7 +2127,8 @@
           "rank": 0,
           "sequence": 13,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1800,
@@ -2079,7 +2149,8 @@
           "rank": 0,
           "sequence": 14,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1100,
@@ -2100,7 +2171,8 @@
           "rank": 0,
           "sequence": 15,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1300,
@@ -2121,7 +2193,8 @@
           "rank": 0,
           "sequence": 16,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -2142,7 +2215,8 @@
           "rank": 0,
           "sequence": 17,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1300,
@@ -2163,7 +2237,8 @@
           "rank": 0,
           "sequence": 18,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 3000,
@@ -2184,7 +2259,8 @@
           "rank": 0,
           "sequence": 19,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1300,
@@ -2205,7 +2281,8 @@
           "rank": 0,
           "sequence": 20,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -2226,7 +2303,8 @@
           "rank": 0,
           "sequence": 21,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2400,
@@ -2247,7 +2325,8 @@
           "rank": 0,
           "sequence": 22,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1400,
@@ -2268,7 +2347,8 @@
           "rank": 0,
           "sequence": 23,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1400,
@@ -2289,7 +2369,8 @@
           "rank": 0,
           "sequence": 24,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 800,
@@ -2310,7 +2391,8 @@
           "rank": 0,
           "sequence": 25,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -2331,7 +2413,8 @@
           "rank": 0,
           "sequence": 26,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1800,
@@ -2352,7 +2435,8 @@
           "rank": 0,
           "sequence": 27,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 800,
@@ -2373,7 +2457,8 @@
           "rank": 0,
           "sequence": 28,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -2394,7 +2479,8 @@
           "rank": 0,
           "sequence": 29,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -2415,7 +2501,8 @@
           "rank": 0,
           "sequence": 30,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2400,
@@ -2436,7 +2523,8 @@
           "rank": 0,
           "sequence": 31,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 3000,
@@ -2457,7 +2545,8 @@
           "rank": 0,
           "sequence": 32,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -2478,7 +2567,8 @@
           "rank": 0,
           "sequence": 33,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 1200,
@@ -2499,7 +2589,8 @@
           "rank": 0,
           "sequence": 34,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 3000,
@@ -2520,7 +2611,8 @@
           "rank": 0,
           "sequence": 35,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2500,
@@ -2541,7 +2633,8 @@
           "rank": 0,
           "sequence": 36,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 2000,
@@ -2562,7 +2655,8 @@
           "rank": 0,
           "sequence": 37,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 800,
@@ -2583,7 +2677,8 @@
           "rank": 0,
           "sequence": 38,
           "status": 1024,
-          "type_flags": 17
+          "type_flags": 17,
+          "is_public": false
         },
         {
           "attack": 0,
@@ -2604,7 +2699,8 @@
           "rank": 0,
           "sequence": 0,
           "status": 1024,
-          "type_flags": 4129
+          "type_flags": 4129,
+          "is_public": false
         }
       ],
       "lp": [
@@ -2959,7 +3055,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 400,
@@ -2980,7 +3077,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -3001,7 +3099,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 600,
@@ -3022,7 +3121,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 200,
@@ -3043,7 +3143,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 2100,
@@ -3064,7 +3165,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 800,
@@ -3085,7 +3187,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 500,
@@ -3106,7 +3209,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 1600,
@@ -3127,7 +3231,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2400,
@@ -3148,7 +3253,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -3169,7 +3275,8 @@
               "rank": 3,
               "sequence": 5,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -3190,7 +3297,8 @@
               "rank": 3,
               "sequence": 6,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -3211,7 +3319,8 @@
               "rank": 4,
               "sequence": 7,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2550,
@@ -3232,7 +3341,8 @@
               "rank": 4,
               "sequence": 8,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2600,
@@ -3253,7 +3363,8 @@
               "rank": 4,
               "sequence": 9,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -3274,7 +3385,8 @@
               "rank": 5,
               "sequence": 10,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -3295,7 +3407,8 @@
               "rank": 4,
               "sequence": 11,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -3316,7 +3429,8 @@
               "rank": 5,
               "sequence": 12,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -3337,7 +3451,8 @@
               "rank": 4,
               "sequence": 13,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 1900,
@@ -3358,7 +3473,8 @@
               "rank": 3,
               "sequence": 14,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             }
           ],
           "lp": [
@@ -3426,7 +3542,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 66560,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": true
             },
             {
               "attack": 400,
@@ -3447,7 +3564,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -3468,7 +3586,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 600,
@@ -3489,7 +3608,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 200,
@@ -3510,7 +3630,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 2100,
@@ -3531,7 +3652,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 800,
@@ -3552,7 +3674,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 500,
@@ -3573,7 +3696,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 1600,
@@ -3594,7 +3718,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2400,
@@ -3615,7 +3740,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -3636,7 +3762,8 @@
               "rank": 3,
               "sequence": 5,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -3657,7 +3784,8 @@
               "rank": 3,
               "sequence": 6,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -3678,7 +3806,8 @@
               "rank": 4,
               "sequence": 7,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2550,
@@ -3699,7 +3828,8 @@
               "rank": 4,
               "sequence": 8,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2600,
@@ -3720,7 +3850,8 @@
               "rank": 4,
               "sequence": 9,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -3741,7 +3872,8 @@
               "rank": 5,
               "sequence": 10,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -3762,7 +3894,8 @@
               "rank": 4,
               "sequence": 11,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -3783,7 +3916,8 @@
               "rank": 5,
               "sequence": 12,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -3804,7 +3938,8 @@
               "rank": 4,
               "sequence": 13,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 1900,
@@ -3825,7 +3960,8 @@
               "rank": 3,
               "sequence": 14,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             }
           ],
           "lp": [
@@ -3893,7 +4029,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 600,
@@ -3914,7 +4051,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 200,
@@ -3935,7 +4073,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -3956,7 +4095,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -3977,7 +4117,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 0,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 2100,
@@ -3998,7 +4139,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 800,
@@ -4019,7 +4161,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 500,
@@ -4040,7 +4183,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 1600,
@@ -4061,7 +4205,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2400,
@@ -4082,7 +4227,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -4103,7 +4249,8 @@
               "rank": 3,
               "sequence": 5,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -4124,7 +4271,8 @@
               "rank": 3,
               "sequence": 6,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -4145,7 +4293,8 @@
               "rank": 4,
               "sequence": 7,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2550,
@@ -4166,7 +4315,8 @@
               "rank": 4,
               "sequence": 8,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2600,
@@ -4187,7 +4337,8 @@
               "rank": 4,
               "sequence": 9,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -4208,7 +4359,8 @@
               "rank": 5,
               "sequence": 10,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -4229,7 +4381,8 @@
               "rank": 4,
               "sequence": 11,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -4250,7 +4403,8 @@
               "rank": 5,
               "sequence": 12,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -4271,7 +4425,8 @@
               "rank": 4,
               "sequence": 13,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 1900,
@@ -4292,7 +4447,8 @@
               "rank": 3,
               "sequence": 14,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             }
           ],
           "lp": [
@@ -4360,7 +4516,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 600,
@@ -4381,7 +4538,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 200,
@@ -4402,7 +4560,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -4423,7 +4582,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -4444,7 +4604,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 0,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 2100,
@@ -4465,7 +4626,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 800,
@@ -4486,7 +4648,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 500,
@@ -4507,7 +4670,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 1600,
@@ -4528,7 +4692,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2400,
@@ -4549,7 +4714,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -4570,7 +4736,8 @@
               "rank": 3,
               "sequence": 5,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -4591,7 +4758,8 @@
               "rank": 3,
               "sequence": 6,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -4612,7 +4780,8 @@
               "rank": 4,
               "sequence": 7,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2550,
@@ -4633,7 +4802,8 @@
               "rank": 4,
               "sequence": 8,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2600,
@@ -4654,7 +4824,8 @@
               "rank": 4,
               "sequence": 9,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -4675,7 +4846,8 @@
               "rank": 5,
               "sequence": 10,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -4696,7 +4868,8 @@
               "rank": 4,
               "sequence": 11,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -4717,7 +4890,8 @@
               "rank": 5,
               "sequence": 12,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -4738,7 +4912,8 @@
               "rank": 4,
               "sequence": 13,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 1900,
@@ -4759,7 +4934,8 @@
               "rank": 3,
               "sequence": 14,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             }
           ],
           "lp": [
@@ -4827,7 +5003,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 600,
@@ -4848,7 +5025,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 200,
@@ -4869,7 +5047,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -4890,7 +5069,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": false
             },
             {
               "attack": 1000,
@@ -4911,7 +5091,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1073742848,
-              "type_flags": 33
+              "type_flags": 33,
+              "is_public": true
             },
             {
               "attack": 2100,
@@ -4932,7 +5113,8 @@
               "rank": 0,
               "sequence": 0,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 800,
@@ -4953,7 +5135,8 @@
               "rank": 0,
               "sequence": 1,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 500,
@@ -4974,7 +5157,8 @@
               "rank": 0,
               "sequence": 2,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 1600,
@@ -4995,7 +5179,8 @@
               "rank": 0,
               "sequence": 3,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2400,
@@ -5016,7 +5201,8 @@
               "rank": 0,
               "sequence": 4,
               "status": 1024,
-              "type_flags": 67108897
+              "type_flags": 67108897,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -5037,7 +5223,8 @@
               "rank": 3,
               "sequence": 5,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -5058,7 +5245,8 @@
               "rank": 3,
               "sequence": 6,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2000,
@@ -5079,7 +5267,8 @@
               "rank": 4,
               "sequence": 7,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2550,
@@ -5100,7 +5289,8 @@
               "rank": 4,
               "sequence": 8,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2600,
@@ -5121,7 +5311,8 @@
               "rank": 4,
               "sequence": 9,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -5142,7 +5333,8 @@
               "rank": 5,
               "sequence": 10,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -5163,7 +5355,8 @@
               "rank": 4,
               "sequence": 11,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 3000,
@@ -5184,7 +5377,8 @@
               "rank": 5,
               "sequence": 12,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 2500,
@@ -5205,7 +5399,8 @@
               "rank": 4,
               "sequence": 13,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             },
             {
               "attack": 1900,
@@ -5226,7 +5421,8 @@
               "rank": 3,
               "sequence": 14,
               "status": 1024,
-              "type_flags": 8388641
+              "type_flags": 8388641,
+              "is_public": false
             }
           ],
           "lp": [

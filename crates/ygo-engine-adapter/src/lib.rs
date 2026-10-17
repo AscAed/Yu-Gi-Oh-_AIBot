@@ -246,6 +246,8 @@ pub struct StateCard {
     pub link: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link_marker: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_public: Option<bool>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Checkpoint {

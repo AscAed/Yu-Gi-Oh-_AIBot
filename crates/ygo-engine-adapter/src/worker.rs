@@ -479,6 +479,7 @@ fn checkpoint(
                             0x800 => card.base_defense = Some(field.u32()? as i32),
                             0x40000 => card.owner = Some(field.u8()?),
                             0x80000 => card.status = Some(field.u32()?),
+                            0x100000 if protocol >= 6 => card.is_public = Some(field.u8()? != 0),
                             0x800000 => {
                                 card.link = Some(field.u32()?);
                                 card.link_marker = Some(field.u32()?);

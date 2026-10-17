@@ -20,6 +20,31 @@ fn snapshot(card: &FactCard, tracked: &[FactCard], hosts: &BTreeMap<String, Stri
     c
 }
 
+// A later exposure can name an earlier hidden handler only while its container
+// coordinates have not been changed by a move, draw, or shuffle in between.
+fn source_coordinate_uninterrupted(
+    result: &DuelResult,
+    since: u64,
+    until: u64,
+    source: &FactCard,
+) -> bool {
+    !result
+        .events
+        .iter()
+        .filter(|e| e.sequence > since && e.sequence < until)
+        .any(|e| {
+            let same_container = |loc: &serde_json::Value| {
+                loc["player"].as_u64() == Some(u64::from(source.player))
+                    && loc["location"].as_u64() == Some(u64::from(source.location))
+            };
+            (e.opcode == 50
+                && (same_container(&e.fields["from"]) || same_container(&e.fields["to"])))
+                || (source.location == 2
+                    && matches!(e.opcode, 33 | 90)
+                    && e.fields["player"].as_u64() == Some(u64::from(source.player)))
+        })
+}
+
 fn relocate_materials(
     tracked: &mut [FactCard],
     hosts: &BTreeMap<String, String>,
@@ -82,7 +107,7 @@ pub fn actual_trace_v6(
     let mut pending_procedure: Option<(FactCard, u8)> = None;
     let mut procedure_attempts = Vec::new();
     let mut opaque_summon = false;
-    let mut pending_activations: Vec<(u32, u64, FactCard)> = vec![];
+    let mut pending_activations: Vec<(u32, u64, FactCard, u64)> = vec![];
     let mut chain_open = false;
     for e in result.events.iter().filter(|e| e.sequence >= first.event) {
         if e.opcode == 70 {
@@ -208,7 +233,7 @@ pub fn actual_trace_v6(
                                 sequence: source.sequence,
                                 ..Default::default()
                             });
-                        pending_activations.push((source.code, desc, c));
+                        pending_activations.push((source.code, desc, c, e.sequence));
                     }
                 }
             }
@@ -304,27 +329,52 @@ pub fn actual_trace_v6(
             // Initial hand cards need not have a preceding MOVE. Pin a source
             // observed in its legal prompt to its subsequent exact MOVE, rather
             // than abandoning that identity or guessing by card name at CHAINING.
-            for (activation_code, _, source) in &mut pending_activations {
+            for (activation_code, _, source, observed_at) in &mut pending_activations {
                 if !source.identity_known
                     && *activation_code == code
                     && source.player == n(from, "player") as u8
                     && source.location == n(from, "location") as u8
                     && source.sequence == n(from, "sequence")
+                    && source_coordinate_uninterrupted(result, *observed_at, e.sequence, source)
                 {
                     source.instance = c.instance.clone();
                     source.identity_known = c.identity_known;
                 }
             }
             if result.protocol_version >= 4 {
-                for (source, _) in chains.values_mut() {
+                for (chain, (source, _)) in &mut chains {
+                    let Some(activation) =
+                        chain_activation.get(chain).map(|i| &mut activations[*i])
+                    else {
+                        continue;
+                    };
                     if !source.identity_known
                         && source.code == code
                         && source.player == n(from, "player") as u8
                         && source.location == n(from, "location") as u8
                         && source.sequence == n(from, "sequence")
+                        && c.identity_known
+                        && n(&e.fields, "reason") & 128 != 0
+                        && source_coordinate_uninterrupted(
+                            result,
+                            activation.event,
+                            e.sequence,
+                            source,
+                        )
                     {
                         source.instance = c.instance.clone();
                         source.identity_known = c.identity_known;
+                        // Identity proof is retrospective; dynamic historical
+                        // attributes and activation range must remain untouched.
+                        activation.source.instance = c.instance.clone();
+                        activation.source.identity_known = true;
+                        identity_bindings.push(IdentityBinding {
+                            instance: c.instance.clone(),
+                            event: e.sequence,
+                            prior_event: activation.event,
+                            basis: "revealed_cost_source_coordinate".into(),
+                            rule_id: activation.rule_id.clone(),
+                        });
                     }
                 }
             }
@@ -491,17 +541,7 @@ pub fn actual_trace_v6(
                         })
                         .is_some_and(|m| m.from.location == 64);
                     let procedure = from_extra && procedure;
-                    let flags = cat.get(&CardId(code)).map_or_else(
-                        || {
-                            result
-                                .checkpoint
-                                .cards
-                                .iter()
-                                .find(|c| c.code == code)
-                                .map_or(0, |c| c.type_flags)
-                        },
-                        |c| c.type_flags,
-                    );
+                    let flags = cat.get(&CardId(code)).map_or(0, |c| c.type_flags);
                     let known_xyz = pack.rules.iter().any(|r| {
                         r.card_id == code && r.applicable && r.operation == Operation::XyzProcedure
                     });
@@ -516,12 +556,13 @@ pub fn actual_trace_v6(
                     }
                     let xyz = special && procedure && flags & 0x800000 != 0 && known_xyz;
                     let link = special && procedure && flags & 0x4000000 != 0 && known_link;
-                    c.proper_xyz =
-                        if flags & 0x800000 != 0 && (!known_xyz || (from_extra && !procedure)) {
-                            None
-                        } else {
-                            Some(xyz)
-                        };
+                    c.proper_xyz = if flags == 0
+                        || (flags & 0x800000 != 0 && (!known_xyz || (from_extra && !procedure)))
+                    {
+                        None
+                    } else {
+                        Some(xyz)
+                    };
                     c.type_flags = flags;
                     c.materials = materials;
                     history.push(HistoryFact {
@@ -558,7 +599,7 @@ pub fn actual_trace_v6(
             let loc = &e.fields["location"];
             let pending_index = pending_activations
                 .iter()
-                .rposition(|(c, d, _)| *c == code && *d == desc);
+                .rposition(|(c, d, _, _)| *c == code && *d == desc);
             // CHAINING carries the original trigger range separately from the
             // handler's current location after paying a banish/discard cost.
             let source_location = n(&e.fields, "trigger_location") as u8;
@@ -593,6 +634,7 @@ pub fn actual_trace_v6(
                     player: n(loc, "player") as u8,
                     location: n(loc, "location") as u8,
                     sequence: n(loc, "sequence"),
+                    position: n(loc, "position"),
                     ..Default::default()
                 });
             // Bind identity/activation zone at CHAINING. CHAINED below is

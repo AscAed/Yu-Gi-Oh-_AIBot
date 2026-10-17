@@ -1,5 +1,17 @@
 # First-turn v6 completion implementation plan
 
+## Approved revision from fd8e2a2
+
+The binding specification is now the user-approved "完成灰后自主恢复，收口证据合同，再推进完整v6与48手评估". Preserve all existing work and frozen assets. The milestones below remain in force; none is waived by partial native success.
+
+- Repair generic pre-cost source identity using raw coordinates and uninterrupted event order; preserve historical snapshots and unknown dependencies.
+- Freeze up to eight autonomous candidates before experiments. The first Scythe-sensitive generated candidate is a directed integration experiment, not the natural top recommendation.
+- Run pass, original-suffix-blocked, and autonomous-recovery groups, each capped at512 calls (1536 total). Discovery is charged to pass. Recovery starts at the settled interruption anchor, not the later failed original suffix.
+- Separate first prediction mismatch from first unavailable original action. Persist pre-choice predictions and independently replay anchors, queries and successful lines. Local report v1 remains internal and separate from formal v6 qualification.
+- Certify the new dependencies and actual opponent Ash response through reviewed native cases. Then complete all86 scoped rules and formal v6 before freezing/running the new16+32 evaluation.
+- Safe-checkpoint resume preserves normalized results, identities and charged call sequence; unknown in-flight calls stay charged. Keep all prior failures and audit costs separately.
+- Continue phase commits and full compatibility/dual-asset clean-checkout acceptance. Completion requires every milestone.
+
 Binding spec: the latest user-approved plan "先完成 v6 自主决策闭环，再补齐规则与48手评估" in this chat. The earlier plan and completed commits remain evidence; do not restart their tasks.
 
 ## Approved execution revision after 689e9b9
