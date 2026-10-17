@@ -20,7 +20,8 @@ pub use execution::{
 };
 mod search;
 pub use search::{
-    forecast_facts, propose_partial, validate_forecast, ForecastPlan, PartialPlans, SearchLimits,
+    forecast_facts, propose_partial, validate_forecast, ForecastPlan, PartialPlans,
+    ResumableSearch, SearchCheckpoint, SearchLimits,
 };
 mod observation;
 pub use observation::{actual_state, actual_trigger_state, observed_summon_trigger, ObservedState};

@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-10-18 独立符号前沿续跑
+
+默认Rust223通过、0失败、35忽略，格式及workspace Clippy通过，日志data/tmp/v6-search-resume-default.log及v6-search-resume-clippy.log。Python源码与合同未改变，上一异常基础检查点的30通过／7跳过仍作为本轮Python记录。
+
+新增三项回归：分别在1／7／33次展开后序列化恢复，与保留的旧连续算法逐项比较候选、排序、完整历史和方案ID；篡改context、游标、展开数、前沿或待排序节点时拒绝；持久账本关闭重开后恢复，收费序列及预留令牌保持一致。更换同数量的预留所有者仍会拒绝；模拟扣费后结果未保存的中断，1次未知消费保留，旧检查点不能抹去它。该扣费属于单元故障模拟，不计作原生引擎试验。
+
+恢复校验会重算既有符号前缀，不冒充零CPU成本。完整执行的提示进度、安全续跑、调用中崩溃恢复及矩阵编排尚未接通；未重新运行原生或干净部署。本轮原生异常开发账本仍为下节718次，规则资格仍为12项／1灰点。
+
 ## 2026-10-18 异常证据基础专项（非整轮验收）
 
 当前源码实跑：`cargo test --offline --locked --workspace` 为220通过、0失败、35忽略；Rust格式及workspace Clippy通过。Python 3.14默认37项中30通过、7项本机opt-in跳过。日志为data/tmp/v6-exception-default-final.log、v6-exception-clippy-final.log及v6-exception-python.log。未在本次重跑历史17项真实引擎全套、完整规则认证或干净部署。

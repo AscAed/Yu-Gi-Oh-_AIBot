@@ -1,5 +1,7 @@
 //! Bounded forecasts for internal integration. No engine verification is claimed.
 use super::*;
+mod resume;
+pub use resume::{ResumableSearch, SearchCheckpoint};
 use ygo_goal::{FactCard, Facts, Goal};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -81,7 +83,8 @@ fn resources(state: &CausalState) -> usize {
 fn hash<T: Serialize>(value: &T) -> String {
     ygo_knowledge::hash(&serde_json::to_vec(value).expect("forecast serialization"))
 }
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Node {
     state: CausalState,
     steps: Vec<Transition>,

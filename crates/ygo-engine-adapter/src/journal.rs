@@ -116,6 +116,7 @@ struct State {
     recoveries: Vec<JournalRecovery>,
     checkpoints: BTreeMap<String, (String, usize, String)>,
     checkpoint_budgets: BTreeMap<String, LedgerStats>,
+    checkpoint_reservations: BTreeMap<String, BTreeMap<String, usize>>,
 }
 
 /// An exclusively locked budget journal. Keep one instance alive for a scope.
@@ -347,6 +348,8 @@ impl State {
                 charged_sequence,
             } => {
                 self.checkpoint_budgets.insert(name.clone(), self.stats());
+                self.checkpoint_reservations
+                    .insert(name.clone(), self.reserved.clone());
                 self.checkpoints
                     .insert(name, (blob, consumed, charged_sequence));
             }
@@ -435,6 +438,7 @@ impl CallJournal {
             recoveries: Vec::new(),
             checkpoints: BTreeMap::new(),
             checkpoint_budgets: BTreeMap::new(),
+            checkpoint_reservations: BTreeMap::new(),
         };
         for line in bytes[..valid_length]
             .split(|b| *b == b'\n')
@@ -659,6 +663,16 @@ impl CallJournal {
             return Ok(None);
         }
         Ok(self.lock()?.checkpoint_budgets.get(name).cloned())
+    }
+    /// A safe resume must preserve reservation ownership as well as totals.
+    /// Both are reconstructed from journal entries, not the checkpoint payload.
+    pub fn matches_checkpoint_state(&self, name: &str) -> Result<bool, WorkerError> {
+        if self.checkpoint(name)?.is_none() {
+            return Ok(false);
+        }
+        let state = self.lock()?;
+        Ok(state.checkpoint_budgets.get(name) == Some(&state.stats())
+            && state.checkpoint_reservations.get(name) == Some(&state.reserved))
     }
     pub fn reserve(&self, token: &str, amount: usize) -> Result<(), WorkerError> {
         self.lock()?.append(Entry::Reserve {

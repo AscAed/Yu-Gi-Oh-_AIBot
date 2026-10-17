@@ -81,6 +81,107 @@ fn fixture() -> (CausalState, Catalog, Goal) {
     (state, cat, goal)
 }
 #[test]
+fn a_persistent_search_checkpoint_binds_reservations_and_rejects_an_inflight_debit() {
+    use ygo_engine_adapter::{CallJournal, CallPurpose, RunDuelRequest};
+    let (initial, cat, goal) = fixture();
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let limits = SearchLimits::default();
+    let mut session = ResumableSearch::begin(&initial, &cat, &pack, &goal, &limits).unwrap();
+    session.advance(7).unwrap();
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../data/tmp")
+        .join(format!(
+            "search-resume-{}.jsonl",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+    let journal = CallJournal::open(&path, "symbolic-unit", "not-native-proof", 512).unwrap();
+    journal.reserve("original-witness", 3).unwrap();
+    let key = session.persist(&journal).unwrap();
+    let before = journal.charged_sequence_id().unwrap();
+    journal.release("original-witness").unwrap();
+    journal.reserve("different-witness", 3).unwrap();
+    assert!(ResumableSearch::load(&journal, &key, &initial, &cat, &pack, &goal, &limits).is_err());
+    journal.release("different-witness").unwrap();
+    journal.reserve("original-witness", 3).unwrap();
+    drop(journal);
+    let journal = CallJournal::open(&path, "symbolic-unit", "not-native-proof", 512).unwrap();
+    let resumed = ResumableSearch::load(&journal, &key, &initial, &cat, &pack, &goal, &limits)
+        .unwrap()
+        .finish()
+        .unwrap();
+    let baseline = propose_partial(&initial, &cat, &pack, &goal, &limits).unwrap();
+    assert_eq!(
+        serde_json::to_value(resumed).unwrap(),
+        serde_json::to_value(baseline).unwrap()
+    );
+    assert_eq!(journal.charged_sequence_id().unwrap(), before);
+    assert_eq!(journal.stats().unwrap().consumed, 0);
+    assert_eq!(
+        journal.remaining_reservation("original-witness").unwrap(),
+        Some(3)
+    );
+    // Simulate interruption after the durable debit and before result persistence.
+    let q:RunDuelRequest=serde_json::from_value(serde_json::json!({"protocol_version":2,"engine":{},"deck":{"main":[],"extra":[],"side":[]},"opening_hand":[],"seed":1,"decisions":[],"versions":ygo_engine_adapter::RuntimeVersions::default()})).unwrap();
+    journal
+        .begin_call(&q, CallPurpose::Execution, None)
+        .unwrap();
+    assert!(ResumableSearch::load(&journal, &key, &initial, &cat, &pack, &goal, &limits).is_err());
+    assert_eq!(journal.stats().unwrap().consumed, 1);
+    assert_eq!(journal.stats().unwrap().unknown, 1);
+}
+
+#[test]
+fn resuming_a_symbolic_frontier_preserves_candidate_order_and_full_history() {
+    let (initial, cat, goal) = fixture();
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let limits = SearchLimits::default();
+    let baseline = propose_partial(&initial, &cat, &pack, &goal, &limits).unwrap();
+    for pause in [1, 7, 33] {
+        let mut session = ResumableSearch::begin(&initial, &cat, &pack, &goal, &limits).unwrap();
+        session.advance(pause).unwrap();
+        let saved: SearchCheckpoint =
+            serde_json::from_value(serde_json::to_value(session.snapshot()).unwrap()).unwrap();
+        let resumed = ResumableSearch::resume(&saved, &initial, &cat, &pack, &goal, &limits)
+            .unwrap()
+            .finish()
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(&resumed).unwrap(),
+            serde_json::to_value(&baseline).unwrap()
+        );
+    }
+}
+
+#[test]
+fn altered_frontiers_and_expansion_balances_cannot_resume() {
+    let (initial, cat, goal) = fixture();
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let limits = SearchLimits::default();
+    let mut session = ResumableSearch::begin(&initial, &cat, &pack, &goal, &limits).unwrap();
+    session.advance(7).unwrap();
+    let saved = serde_json::to_value(session.snapshot()).unwrap();
+    for field in ["context", "cursor", "output", "frontier", "next"] {
+        let mut changed = saved.clone();
+        match field {
+            "context" => changed[field] = serde_json::json!("forged"),
+            "cursor" => changed[field] = serde_json::json!(99),
+            "output" => changed[field]["expanded"] = serde_json::json!(0),
+            "frontier" => changed[field] = serde_json::json!([]),
+            "next" => changed[field] = serde_json::json!([]),
+            _ => unreachable!(),
+        }
+        let forged: SearchCheckpoint = serde_json::from_value(changed).unwrap();
+        assert!(
+            ResumableSearch::resume(&forged, &initial, &cat, &pack, &goal, &limits).is_err(),
+            "{field}"
+        );
+    }
+}
+
+#[test]
 fn resource_search_finds_new_pilot_actions_without_importing_human_preparation() {
     let (s, cat, g) = fixture();
     let pack = FirstTurnKnowledge::builtin().unwrap();
