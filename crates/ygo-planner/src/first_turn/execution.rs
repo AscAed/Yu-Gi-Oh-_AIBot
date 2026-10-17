@@ -3,10 +3,14 @@ use super::*;
 use std::sync::Arc;
 use ygo_engine_adapter::*;
 use ygo_goal::{actual_trace_v6, verify_query_replays, Goal, QueryWitness, TraceWindow};
+mod capture;
+pub use capture::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartialDecisionEvidence {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checkpoint_id: Option<String>,
     pub before_call: u64,
     pub step: Option<usize>,
     pub prompt: u64,
@@ -28,6 +32,20 @@ fn prefix_id(result: &DuelResult) -> String {
 fn choice_checkpoint(plan_id: &str, prompt: u64) -> String {
     format!("partial-{plan_id}-before-choice-{prompt}")
 }
+fn immutable_choice_checkpoint(plan: &str, evidence: &PartialDecisionEvidence) -> String {
+    let mut value = serde_json::to_value(evidence).unwrap();
+    value.as_object_mut().unwrap().remove("checkpoint_id");
+    format!(
+        "immutable/partial-choice/{}",
+        ygo_knowledge::hash(&serde_json::to_vec(&(plan, value)).unwrap())
+    )
+}
+fn evidence_checkpoint(plan: &str, evidence: &PartialDecisionEvidence) -> String {
+    evidence
+        .checkpoint_id
+        .clone()
+        .unwrap_or_else(|| choice_checkpoint(plan, evidence.prompt))
+}
 fn validate_raw_choice(result: &DuelResult, choice: &Choice) -> Result<u64, String> {
     let frame = result.events.last().ok_or("missing actual raw prompt")?;
     let parsed = parse_prompt(frame.sequence, &frame.raw)?.ok_or("unsupported actual prompt")?;
@@ -47,10 +65,11 @@ fn persist_choice(
     choice: Choice,
     map: &BTreeMap<String, String>,
     used: &BTreeSet<usize>,
-) -> Result<PartialDecisionEvidence, String> {
+) -> Result<PartialDecisionEvidence, StepFailure> {
     let prompt = validate_raw_choice(result, &choice)?;
-    let evidence = PartialDecisionEvidence {
-        before_call: journal.stats().map_err(|e| e.message)?.consumed as u64 + 1,
+    let mut evidence = PartialDecisionEvidence {
+        checkpoint_id: None,
+        before_call: journal.stats().map_err(StepFailure::journal)?.consumed as u64 + 1,
         step,
         prompt,
         prefix_id: prefix_id(result),
@@ -59,12 +78,13 @@ fn persist_choice(
         instance_map: map.clone(),
         used_roles: used.clone(),
     };
+    evidence.checkpoint_id = Some(immutable_choice_checkpoint(plan, &evidence));
     journal
         .save_checkpoint(
-            &choice_checkpoint(plan, prompt),
+            &evidence_checkpoint(plan, &evidence),
             &serde_json::to_value(&evidence).unwrap(),
         )
-        .map_err(|e| e.message)?;
+        .map_err(StepFailure::journal)?;
     Ok(evidence)
 }
 pub fn validate_choice_checkpoint(
@@ -73,7 +93,10 @@ pub fn validate_choice_checkpoint(
     before: &DuelResult,
     journal: &CallJournal,
 ) -> Result<(), String> {
-    let name = choice_checkpoint(plan, evidence.prompt);
+    let name = evidence_checkpoint(plan, evidence);
+    if evidence.checkpoint_id.is_some() && name != immutable_choice_checkpoint(plan, evidence) {
+        return Err("choice checkpoint identity differs".into());
+    }
     let saved = journal
         .checkpoint(&name)
         .map_err(|e| e.message)?
@@ -144,6 +167,8 @@ fn comparisons(
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartialPrediction {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checkpoint_id: Option<String>,
     pub step: usize,
     pub before_call: u64,
     pub at_prompt: u64,
@@ -155,6 +180,16 @@ pub struct PartialPrediction {
     pub expected_following_rules: Vec<String>,
     pub differences: Vec<String>,
     pub after_prompt: Option<u64>,
+}
+fn immutable_prediction_checkpoint(plan: &str, prediction: &PartialPrediction) -> String {
+    let mut original = prediction.clone();
+    original.checkpoint_id = None;
+    original.differences.clear();
+    original.after_prompt = None;
+    format!(
+        "immutable/partial-prediction/{}",
+        ygo_knowledge::hash(&serde_json::to_vec(&(plan, original)).unwrap())
+    )
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -389,7 +424,7 @@ pub fn validate_partial_execution(
     if let Some(pending) = &report.pending_choice {
         validate_choice_checkpoint(pending, &plan.id, results.last().unwrap(), journal)?;
         let budget = journal
-            .checkpoint_budget(&choice_checkpoint(&plan.id, pending.prompt))
+            .checkpoint_budget(&evidence_checkpoint(&plan.id, pending))
             .map_err(|e| e.message)?
             .ok_or("missing pre-call budget")?;
         if pending.before_call != (report.start_call + report.choices.len() + 1) as u64
@@ -432,6 +467,66 @@ pub fn validate_partial_execution(
             }
         }
     }
+    let map = validate_predictions(report, plan, cat, pack, goal, journal, &start, &results)?;
+    if let Some(failure) = &report.failure {
+        if failure.prompt != report.result.prompt.as_ref().map(|p| p.id) {
+            return Err("failure does not reference its actual stopped prompt".into());
+        }
+        match failure.kind {
+            PartialFailureKind::BudgetExhausted => {
+                let pending = report.pending_choice.as_ref().ok_or("budget failure lacks its unexecuted intent")?;
+                if failure.step != pending.step.unwrap_or(plan.steps.len())
+                    || !failure.detail.starts_with("budget_exhausted:") {
+                    return Err("budget failure classification differs".into());
+                }
+            }
+            PartialFailureKind::RequiredInstanceUnknown => {
+                let planned = plan.steps.get(failure.step).ok_or("unknown-instance step outside plan")?;
+                let actual = observed(&report.result,&report.queries,cat,pack)?;
+                let unknown = required_instances_unknown(planned,&actual.state,&map);
+                if failure.step != report.predictions.len() || unknown.is_empty()
+                    || failure.detail != format!("required_instance_unknown: {}",unknown.join(",")) {
+                    return Err("required unknown instance dependency differs".into());
+                }
+            }
+            PartialFailureKind::OriginalPlanBlocked => {
+                let planned = plan.steps.get(failure.step).ok_or("blocked step outside plan")?;
+                let actual = observed(&report.result, &report.queries, cat, pack)?;
+                if failure.step != report.predictions.len()
+                    || failure.detail != format!("original_plan_blocked: {} prerequisites unavailable", planned.rule_id)
+                    || successors(&actual.state, cat, pack).transitions.iter().any(|t|same_action(planned,t,&map)) {
+                    return Err("blocked classification or failed original step differs".into());
+                }
+            }
+            PartialFailureKind::PredictionMismatch => {
+                let p = report.predictions.last().ok_or("prediction mismatch has no prediction")?;
+                if failure.step != p.step || p.differences.is_empty()
+                    || failure.detail != format!("prediction_mismatch: {}: {}",p.selected.rule_id,p.differences.join("; ")) {
+                    return Err("prediction failure classification differs".into());
+                }
+            }
+            PartialFailureKind::BoundedRecoveryNotFound => {
+                if failure.step != plan.steps.len() || report.predictions.len() != plan.steps.len()
+                    || report.terminal && report.goal.result == ygo_goal::Truth::Yes {
+                    return Err("bounded goal failure differs".into());
+                }
+            }
+            _ => return Err("this partial local validator lacks a complete witness for the reported failure category".into()),
+        }
+    }
+    Ok(())
+}
+#[allow(clippy::too_many_arguments)]
+fn validate_predictions(
+    report: &PartialExecution,
+    plan: &ForecastPlan,
+    cat: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    journal: &CallJournal,
+    start: &ObservedState,
+    results: &[DuelResult],
+) -> Result<BTreeMap<String, String>, String> {
     let mut map: BTreeMap<_, _> = start
         .state
         .cards
@@ -461,7 +556,9 @@ pub fn validate_partial_execution(
             .get(i)
             .or(report.pending_choice.as_ref())
             .ok_or("missing predicted choice")?;
-        let before = &results[i];
+        let before = results
+            .get(i)
+            .ok_or("prediction refers beyond the actual prefix")?;
         let queries: Vec<_> = report
             .queries
             .iter()
@@ -510,7 +607,15 @@ pub fn validate_partial_execution(
         let mut original = prediction.clone();
         original.differences.clear();
         original.after_prompt = None;
-        let name = format!("partial-{}-prediction-{index}", plan.id);
+        let name = prediction
+            .checkpoint_id
+            .clone()
+            .unwrap_or_else(|| format!("partial-{}-prediction-{index}", plan.id));
+        if prediction.checkpoint_id.is_some()
+            && name != immutable_prediction_checkpoint(&plan.id, prediction)
+        {
+            return Err("semantic prediction checkpoint identity differs".into());
+        }
         if journal.checkpoint(&name).map_err(|e| e.message)?
             != Some(serde_json::to_value(&original).unwrap())
             || journal
@@ -589,53 +694,7 @@ pub fn validate_partial_execution(
     {
         return Err("goal or terminal verification status differs".into());
     }
-    if let Some(failure) = &report.failure {
-        if failure.prompt != report.result.prompt.as_ref().map(|p| p.id) {
-            return Err("failure does not reference its actual stopped prompt".into());
-        }
-        match failure.kind {
-            PartialFailureKind::BudgetExhausted => {
-                let pending = report.pending_choice.as_ref().ok_or("budget failure lacks its unexecuted intent")?;
-                if failure.step != pending.step.unwrap_or(plan.steps.len())
-                    || !failure.detail.starts_with("budget_exhausted:") {
-                    return Err("budget failure classification differs".into());
-                }
-            }
-            PartialFailureKind::RequiredInstanceUnknown => {
-                let planned = plan.steps.get(failure.step).ok_or("unknown-instance step outside plan")?;
-                let actual = observed(&report.result,&report.queries,cat,pack)?;
-                let unknown = required_instances_unknown(planned,&actual.state,&map);
-                if failure.step != report.predictions.len() || unknown.is_empty()
-                    || failure.detail != format!("required_instance_unknown: {}",unknown.join(",")) {
-                    return Err("required unknown instance dependency differs".into());
-                }
-            }
-            PartialFailureKind::OriginalPlanBlocked => {
-                let planned = plan.steps.get(failure.step).ok_or("blocked step outside plan")?;
-                let actual = observed(&report.result, &report.queries, cat, pack)?;
-                if failure.step != report.predictions.len()
-                    || failure.detail != format!("original_plan_blocked: {} prerequisites unavailable", planned.rule_id)
-                    || successors(&actual.state, cat, pack).transitions.iter().any(|t|same_action(planned,t,&map)) {
-                    return Err("blocked classification or failed original step differs".into());
-                }
-            }
-            PartialFailureKind::PredictionMismatch => {
-                let p = report.predictions.last().ok_or("prediction mismatch has no prediction")?;
-                if failure.step != p.step || p.differences.is_empty()
-                    || failure.detail != format!("prediction_mismatch: {}: {}",p.selected.rule_id,p.differences.join("; ")) {
-                    return Err("prediction failure classification differs".into());
-                }
-            }
-            PartialFailureKind::BoundedRecoveryNotFound => {
-                if failure.step != plan.steps.len() || report.predictions.len() != plan.steps.len()
-                    || report.terminal && report.goal.result == ygo_goal::Truth::Yes {
-                    return Err("bounded goal failure differs".into());
-                }
-            }
-            _ => return Err("this partial local validator lacks a complete witness for the reported failure category".into()),
-        }
-    }
-    Ok(())
+    Ok(map)
 }
 /// An imported local report never inherits a native qualification from JSON.
 #[allow(clippy::too_many_arguments)]
@@ -805,44 +864,99 @@ fn follow_choice(
     }
     Err(format!("unsupported following prompt {}", p.opcode))
 }
-struct Runner {
-    adapter: JournaledAdapter<ProcessEngineAdapter>,
+struct Runner<A: EngineAdapter> {
+    adapter: JournaledAdapter<A>,
     journal: Arc<CallJournal>,
     held: Vec<String>,
     queries: Vec<QueryWitness>,
     base: usize,
+    latest: Option<DuelResult>,
+    faults: Vec<ExecutionFault>,
+    stage: ExecutionStage,
+    step: Option<usize>,
 }
-impl Runner {
+impl<A: EngineAdapter> Runner<A> {
+    fn record_error(
+        &mut self,
+        error: WorkerError,
+        stage: ExecutionStage,
+        call: Option<u64>,
+    ) -> String {
+        let kind = worker_failure_kind(&error.code);
+        let detail = format!("{}: {}", failure_label(kind), error.message);
+        self.faults.push(ExecutionFault {
+            kind,
+            stage,
+            call,
+            step: self.step,
+            code: error.code,
+            detail: error.message,
+        });
+        detail
+    }
     fn run(&mut self, q: &RunDuelRequest) -> Result<DuelResult, String> {
+        let before_call = self.journal.stats().map_err(|e| e.message)?.consumed as u64;
         let token = format!(
             "partial-query-{}-{}",
             self.base,
             self.journal.stats().map_err(|e| e.message)?.consumed
         );
-        self.journal
-            .reserve(&token, 1)
-            .map_err(|e| format!("budget_exhausted: {}", e.message))?;
+        if let Err(error) = self.journal.reserve(&token, 1) {
+            return Err(self.record_error(error, self.stage, None));
+        }
+        self.held.push(token.clone());
         match self.adapter.run(q) {
             Ok(result) => {
+                self.latest = Some(result.clone());
                 if result.prompt.is_some() && result.error.is_none() {
-                    self.queries.push(QueryWitness::capture(&result)?);
-                    self.held.push(token);
+                    match QueryWitness::capture(&result) {
+                        Ok(witness) => self.queries.push(witness),
+                        Err(detail) => {
+                            self.faults.push(ExecutionFault {
+                                kind: if result.status == DuelStatus::DecisionRequired {
+                                    PartialFailureKind::EngineFailure
+                                } else {
+                                    PartialFailureKind::CoverageGap
+                                },
+                                stage: ExecutionStage::QueryCapture,
+                                call: Some(
+                                    self.journal.stats().map_err(|e| e.message)?.consumed as u64,
+                                ),
+                                step: self.step,
+                                code: "query_capture".into(),
+                                detail: detail.clone(),
+                            });
+                            return Err(detail);
+                        }
+                    }
                 } else {
-                    self.journal.release(&token).map_err(|e| e.message)?;
+                    if let Some(error) = &result.error {
+                        self.record_error(
+                            error.clone(),
+                            self.stage,
+                            Some(self.journal.stats().map_err(|e| e.message)?.consumed as u64),
+                        );
+                    }
+                    if let Err(error) = self.journal.release(&token) {
+                        return Err(self.record_error(error, ExecutionStage::Cleanup, None));
+                    }
+                    self.held.retain(|t| t != &token);
                 }
                 Ok(result)
             }
             Err(error) => {
-                self.journal.release(&token).map_err(|e| e.message)?;
-                Err(format!(
-                    "{}: {}",
-                    if error.code == "journal_budget" {
-                        "budget_exhausted"
-                    } else {
-                        "engine_failure"
-                    },
-                    error.message
-                ))
+                let charged = self.journal.stats().map_err(|e| e.message)?.consumed as u64;
+                let detail = self.record_error(
+                    error,
+                    self.stage,
+                    (charged > before_call).then_some(charged),
+                );
+                if let Err(error) = self.journal.release(&token) {
+                    self.record_error(error, ExecutionStage::Cleanup, None);
+                } else {
+                    self.held.retain(|t| t != &token);
+                }
+                Err(detail)
             }
         }
     }
@@ -867,6 +981,21 @@ pub fn execute_partial(
     goal: &Goal,
     journal: Arc<CallJournal>,
 ) -> Result<PartialExecution, String> {
+    execute_partial_v2(request, initial, queries, plan, cat, pack, goal, journal)?.into_legacy()
+}
+
+/// Keep actual results and audit failures even when no recommendation qualifies.
+#[allow(clippy::too_many_arguments)]
+pub fn execute_partial_v2(
+    request: &RunDuelRequest,
+    initial: &DuelResult,
+    queries: &[QueryWitness],
+    plan: &ForecastPlan,
+    cat: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    journal: Arc<CallJournal>,
+) -> Result<PartialExecutionV2, String> {
     request.validate_protocol()?;
     goal.validate()?;
     pack.validate()?;
@@ -888,9 +1017,7 @@ pub fn execute_partial(
         return Err("initial result differs from charged call".into());
     }
     let held = format!("partial-witness-{base}");
-    journal
-        .reserve(&held, queries.len() + 1)
-        .map_err(|e| e.message)?;
+    let reserve_error = journal.reserve(&held, queries.len() + 1).err();
     let mut runner = Runner {
         adapter: JournaledAdapter::new(
             ProcessEngineAdapter::new(request.engine.clone()),
@@ -898,9 +1025,17 @@ pub fn execute_partial(
             CallPurpose::Execution,
         ),
         journal: journal.clone(),
-        held: vec![held],
+        held: if reserve_error.is_none() {
+            vec![held]
+        } else {
+            vec![]
+        },
         queries: queries.to_vec(),
         base,
+        latest: None,
+        faults: vec![],
+        stage: ExecutionStage::Execution,
+        step: None,
     };
     let mut q = request.clone();
     let mut result = initial.clone();
@@ -912,17 +1047,26 @@ pub fn execute_partial(
     let mut interruption = None;
     let mut current_step = 0;
     let mut identity_gaps = vec![];
-    let execution = (|| -> Result<(), String> {
-        let start = observed(&result, &runner.queries, cat, pack)?;
+    let execution = (|| -> Result<(), StepFailure> {
+        if let Some(error) = reserve_error {
+            return Err(StepFailure::journal(error));
+        }
+        let start = observed(&result, &runner.queries, cat, pack).map_err(StepFailure::coverage)?;
         for c in &start.state.cards {
             map.insert(c.id.clone(), c.id.clone());
         }
         for (index, planned) in plan.steps.iter().enumerate() {
             current_step = index;
-            let before = observed(&result, &runner.queries, cat, pack)?;
+            runner.step = Some(index);
+            let before =
+                observed(&result, &runner.queries, cat, pack).map_err(StepFailure::coverage)?;
             let unknown = required_instances_unknown(planned, &before.state, &map);
             if !unknown.is_empty() {
-                return Err(format!("required_instance_unknown: {}", unknown.join(",")));
+                return Err(StepFailure::new(
+                    PartialFailureKind::RequiredInstanceUnknown,
+                    "required_instance",
+                    format!("required_instance_unknown: {}", unknown.join(",")),
+                ));
             }
             let options = successors(&before.state, cat, pack);
             let step = options
@@ -930,15 +1074,23 @@ pub fn execute_partial(
                 .iter()
                 .find(|t| same_action(planned, t, &map))
                 .ok_or_else(|| {
-                    format!(
-                        "original_plan_blocked: {} prerequisites unavailable",
-                        planned.rule_id
+                    StepFailure::new(
+                        PartialFailureKind::OriginalPlanBlocked,
+                        "prerequisites",
+                        format!(
+                            "original_plan_blocked: {} prerequisites unavailable",
+                            planned.rule_id
+                        ),
                     )
                 })?
                 .clone();
             let source = lookup(&before.state, &step.source).ok_or("source instance missing")?;
             if !source.identity_known {
-                return Err("source identity unknown".into());
+                return Err(StepFailure::new(
+                    PartialFailureKind::RequiredInstanceUnknown,
+                    "source_identity",
+                    "source identity unknown",
+                ));
             }
             let trigger = before.state.pending.iter().any(|p| {
                 p.rule_id == step.rule_id && p.source == step.source && p.eligibility == Truth::Yes
@@ -947,9 +1099,10 @@ pub fn execute_partial(
             let mut choice = bind_start(&result, &source.card, rule, step.kind, trigger)?;
             let mut used = BTreeSet::new();
             let mut started = false;
-            let entry = PartialPrediction {
+            let mut entry = PartialPrediction {
+                checkpoint_id: None,
                 step: index,
-                before_call: journal.stats().map_err(|e| e.message)?.consumed as u64 + 1,
+                before_call: journal.stats().map_err(StepFailure::journal)?.consumed as u64 + 1,
                 at_prompt: result.prompt.as_ref().ok_or("missing start prompt")?.id,
                 goal_before: ygo_goal::evaluate(
                     &goal.expr,
@@ -971,12 +1124,13 @@ pub fn execute_partial(
                 differences: vec![],
                 after_prompt: None,
             };
+            entry.checkpoint_id = Some(immutable_prediction_checkpoint(&plan.id, &entry));
             journal
                 .save_checkpoint(
-                    &format!("partial-{}-prediction-{index}", plan.id),
+                    entry.checkpoint_id.as_ref().unwrap(),
                     &serde_json::to_value(&entry).unwrap(),
                 )
-                .map_err(|e| e.message)?;
+                .map_err(StepFailure::journal)?;
             predictions.push(entry);
             let begin = result.events.len();
             for _ in 0..80 {
@@ -1003,11 +1157,19 @@ pub fn execute_partial(
                 let old = result.events.clone();
                 let next = runner.run(&q)?;
                 if next.events.len() < old.len() || next.events[..old.len()] != old {
-                    return Err("engine raw prefix changed".into());
+                    return Err(StepFailure::new(
+                        PartialFailureKind::EngineFailure,
+                        "raw_prefix",
+                        "engine raw prefix changed",
+                    ));
                 }
                 result = next;
                 if let Some(error) = &result.error {
-                    return Err(format!("engine_failure: {}", error.message));
+                    return Err(StepFailure::new(
+                        PartialFailureKind::EngineFailure,
+                        "worker_result",
+                        format!("engine_failure: {}", error.message),
+                    ));
                 }
                 for d in result
                     .resolved_decisions
@@ -1042,7 +1204,8 @@ pub fn execute_partial(
                 {
                     // Only a closed observed window may complete this operation. A foreign
                     // optional prompt or an unresolved chain stops the unsupported branch.
-                    let after = observed(&result, &runner.queries, cat, pack)?;
+                    let after = observed(&result, &runner.queries, cat, pack)
+                        .map_err(StepFailure::coverage)?;
                     let comparison = compare_resources(&step.after_resolution, &after.public);
                     let mut differences = comparison.differences;
                     if step.after_resolution.normal_remaining != after.state.normal_remaining {
@@ -1060,7 +1223,8 @@ pub fn execute_partial(
                     if negated && interruption.is_none() {
                         // Optional triggers are not anchors. This strict builder
                         // requires the actual settled own action window.
-                        let anchor_state = actual_state(&result, &runner.queries, cat, pack)?;
+                        let anchor_state = actual_state(&result, &runner.queries, cat, pack)
+                            .map_err(StepFailure::coverage)?;
                         let mut anchor_request = request.clone();
                         anchor_request.decisions = result.resolved_decisions.clone();
                         interruption = Some(PartialAnchor {
@@ -1073,11 +1237,15 @@ pub fn execute_partial(
                         });
                     }
                     if (comparison.result != Truth::Yes || !differences.is_empty()) && !negated {
-                        return Err(format!(
-                            "{}: {}: {}",
-                            "prediction_mismatch",
-                            step.rule_id,
-                            differences.join("; ")
+                        return Err(StepFailure::new(
+                            PartialFailureKind::PredictionMismatch,
+                            "resources",
+                            format!(
+                                "{}: {}: {}",
+                                "prediction_mismatch",
+                                step.rule_id,
+                                differences.join("; ")
+                            ),
                         ));
                     }
                     identity_gaps.extend(update_map(
@@ -1100,6 +1268,8 @@ pub fn execute_partial(
         }
         // Goal facts are accepted only after actual End Phase processing.
         current_step = plan.steps.len();
+        runner.step = None;
+        runner.stage = ExecutionStage::EndPhase;
         for _ in 0..80 {
             if result.status == DuelStatus::EngineVerified {
                 return Ok(());
@@ -1116,7 +1286,11 @@ pub fn execute_partial(
             } else if p.opcode == 16 {
                 Choice::Chain { index: None }
             } else {
-                return Err("coverage_gap: unmodeled end phase processing".into());
+                return Err(StepFailure::new(
+                    PartialFailureKind::CoverageGap,
+                    "end_processing",
+                    "coverage_gap: unmodeled end phase processing",
+                ));
             };
             if !p.actions.iter().any(|a| a.choice == choice) {
                 return Err("end phase choice not legal".into());
@@ -1138,35 +1312,41 @@ pub fn execute_partial(
             });
             result = runner.run(&q)?;
             if result.error.is_some() {
-                return Err("engine_failure during end processing".into());
+                return Err(StepFailure::new(
+                    PartialFailureKind::EngineFailure,
+                    "worker_result",
+                    "engine_failure during end processing",
+                ));
             }
         }
-        Err("end processing step budget".into())
+        Err(StepFailure::new(
+            PartialFailureKind::BudgetExhausted,
+            "end_step_limit",
+            "end processing step budget",
+        ))
     })();
+    if let Some(latest) = runner.latest.take() {
+        result = latest;
+    }
     if let Err(error) = execution {
-        let kind = if error.starts_with("original_plan_blocked:") {
-            PartialFailureKind::OriginalPlanBlocked
-        } else if error.starts_with("required_instance_unknown:")
-            || error.contains("identity unknown")
-            || error.contains("unbound planned instance")
-        {
-            PartialFailureKind::RequiredInstanceUnknown
-        } else if error.starts_with("prediction_mismatch:") {
-            PartialFailureKind::PredictionMismatch
-        } else if error.starts_with("budget_exhausted:") {
-            PartialFailureKind::BudgetExhausted
-        } else if error.starts_with("engine_failure") {
-            PartialFailureKind::EngineFailure
-        } else if error.starts_with("coverage_gap:") || error.contains("unknown") {
-            PartialFailureKind::CoverageGap
+        let kind = if let Some(fault) = runner.faults.first() {
+            fault.kind
         } else {
-            PartialFailureKind::PromptBindingFailed
+            runner.faults.push(ExecutionFault {
+                kind: error.kind,
+                stage: error.stage.unwrap_or(runner.stage),
+                call: None,
+                step: Some(current_step),
+                code: error.code.into(),
+                detail: error.detail.clone(),
+            });
+            error.kind
         };
         failure = Some(PartialFailure {
             kind,
             step: current_step,
             prompt: result.prompt.as_ref().map(|p| p.id),
-            detail: error,
+            detail: error.detail,
         });
         if kind == PartialFailureKind::BudgetExhausted
             && choices.last().is_some_and(|e| {
@@ -1177,12 +1357,87 @@ pub fn execute_partial(
         }
     }
     q.decisions = result.resolved_decisions.clone();
-    runner.release()?;
-    let audit = verify_query_replays(&q, &result, &runner.queries, journal.clone())?;
-    let actual = actual_trace_v6(&result, cat, pack, &runner.queries)?;
-    let terminal = actual.window == TraceWindow::OwnTurnEnded;
-    let evaluation = ygo_goal::evaluate(&goal.expr, &actual.facts, &Default::default());
-    if failure.is_none() && (!terminal || evaluation.result != ygo_goal::Truth::Yes) {
+    if let Err(error) = runner.release() {
+        runner.faults.push(ExecutionFault {
+            kind: PartialFailureKind::EngineFailure,
+            stage: ExecutionStage::Cleanup,
+            call: None,
+            step: None,
+            code: "reservation_release".into(),
+            detail: error,
+        });
+    }
+    let (receipt, audit_failure, audit_calls) = match ygo_goal::verify_query_replays_recorded(
+        &q,
+        &result,
+        &runner.queries,
+        journal.clone(),
+    ) {
+        Ok(audit) => {
+            let calls = audit.call_ids.clone();
+            (Some(audit), None, calls)
+        }
+        Err(error) => {
+            let calls = error.call_ids.clone();
+            (None, Some(error), calls)
+        }
+    };
+    let last_audited_prefix = if receipt.is_some() {
+        audit_calls.last().map(|call| AuditedPrefix {
+            request: q.clone(),
+            result: result.clone(),
+            witness_call: *call,
+        })
+    } else if let Some(error) = &audit_failure {
+        if error.completed_witnesses > 0 {
+            let index = error.completed_witnesses - 1;
+            let mut prefix = q.clone();
+            prefix
+                .decisions
+                .retain(|d| d.prompt_id < runner.queries[index].event);
+            let call = error.call_ids[index];
+            journal
+                .load_result(call, &prefix)
+                .ok()
+                .flatten()
+                .map(|result| AuditedPrefix {
+                    request: prefix,
+                    result,
+                    witness_call: call,
+                })
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    let (terminal, evaluation) = match actual_trace_v6(&result, cat, pack, &runner.queries) {
+        Ok(actual) => (
+            Some(actual.window == TraceWindow::OwnTurnEnded),
+            Some(ygo_goal::evaluate(
+                &goal.expr,
+                &actual.facts,
+                &Default::default(),
+            )),
+        ),
+        Err(error) => {
+            runner.faults.push(ExecutionFault {
+                kind: PartialFailureKind::CoverageGap,
+                stage: ExecutionStage::Observation,
+                call: None,
+                step: Some(current_step),
+                code: "actual_trace".into(),
+                detail: error,
+            });
+            (None, None)
+        }
+    };
+    if failure.is_none()
+        && (terminal != Some(true)
+            || evaluation
+                .as_ref()
+                .map_or(true, |e| e.result != ygo_goal::Truth::Yes))
+    {
         failure = Some(PartialFailure {
             kind: PartialFailureKind::BoundedRecoveryNotFound,
             step: plan.steps.len(),
@@ -1192,31 +1447,146 @@ pub fn execute_partial(
     }
     identity_gaps.sort();
     identity_gaps.dedup();
-    Ok(PartialExecution {
-        schema_version: 1,
+    let mut report = PartialExecutionV2 {
+        schema_version: 2,
         scope: "partial_integration_native_execution; not full rule certification".into(),
         plan_id: plan.id.clone(),
         request: q,
         start_request: request.clone(),
         start_call: base,
-        result,
+        last_result: Some(result),
+        last_audited_prefix,
         queries: runner.queries,
         predictions,
         choices,
         pending_choice,
         failure,
         interruption,
-        terminal,
-        goal: evaluation,
-        audit_calls: audit.call_ids,
+        faults: runner.faults,
+        observed_terminal: terminal,
+        observed_goal: evaluation,
+        audit_failure,
+        receipt,
+        receipt_content: None,
+        audit_calls,
         calls: journal.stats().map_err(|e| e.message)?.consumed - base,
         identity_gaps,
-    })
+    };
+    report.seal();
+    Ok(report)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    struct FailedWorker(&'static str);
+    impl EngineAdapter for FailedWorker {
+        fn doctor(&self) -> DoctorReport {
+            panic!("no uncharged probe")
+        }
+        fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+            Err(WorkerError::new(
+                self.0,
+                "test",
+                "identity unknown in worker diagnostics",
+            ))
+        }
+    }
+    #[test]
+    fn worker_failure_types_survive_misleading_text_and_keep_their_debit() {
+        let (q, _) = initial();
+        for code in ["worker_exit", "worker_timeout", "worker_output"] {
+            for stage in [ExecutionStage::Execution, ExecutionStage::EndPhase] {
+                let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../data/tmp")
+                    .join(format!(
+                        "typed-worker-{}.jsonl",
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_nanos()
+                    ));
+                let j = CallJournal::open(path, "fault-injection", "unit-not-native-proof", 512)
+                    .unwrap();
+                let mut runner = Runner {
+                    adapter: JournaledAdapter::new(
+                        FailedWorker(code),
+                        j.clone(),
+                        CallPurpose::Execution,
+                    ),
+                    journal: j.clone(),
+                    held: vec![],
+                    queries: vec![],
+                    base: 0,
+                    latest: None,
+                    faults: vec![],
+                    stage,
+                    step: (stage == ExecutionStage::Execution).then_some(1),
+                };
+                assert!(runner.run(&q).is_err());
+                assert_eq!(runner.faults.len(), 1);
+                assert_eq!(runner.faults[0].kind, PartialFailureKind::EngineFailure);
+                assert_eq!(runner.faults[0].code, code);
+                assert_eq!(runner.faults[0].stage, stage);
+                assert_eq!(runner.faults[0].call, Some(1));
+                assert!(runner.latest.is_none());
+                assert_eq!(j.stats().unwrap().consumed, 1);
+                assert_eq!(j.stats().unwrap().reserved, 0);
+                assert_eq!(
+                    j.load_outcome(1, &q).unwrap().unwrap().unwrap_err().code,
+                    code
+                );
+            }
+        }
+    }
+    #[test]
+    fn a_corrupt_query_keeps_the_new_result_without_minting_a_witness() {
+        struct CorruptQuery(DuelResult);
+        impl EngineAdapter for CorruptQuery {
+            fn doctor(&self) -> DoctorReport {
+                panic!("no uncharged probe")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        let (q, mut result) = initial();
+        result.prompt.as_mut().unwrap().id += 1;
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/tmp")
+            .join(format!(
+                "corrupt-query-{}.jsonl",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        let j = CallJournal::open(path, "fault-injection", "unit-not-native-proof", 512).unwrap();
+        let mut runner = Runner {
+            adapter: JournaledAdapter::new(
+                CorruptQuery(result.clone()),
+                j.clone(),
+                CallPurpose::Execution,
+            ),
+            journal: j.clone(),
+            held: vec![],
+            queries: vec![],
+            base: 0,
+            latest: None,
+            faults: vec![],
+            stage: ExecutionStage::Execution,
+            step: Some(0),
+        };
+        assert!(runner.run(&q).is_err());
+        assert!(same_native(runner.latest.as_ref().unwrap(), &result));
+        assert!(runner.queries.is_empty());
+        assert_eq!(runner.faults[0].kind, PartialFailureKind::EngineFailure);
+        assert_eq!(runner.faults[0].stage, ExecutionStage::QueryCapture);
+        assert_eq!(runner.faults[0].call, Some(1));
+        runner.release().unwrap();
+        assert_eq!(j.stats().unwrap().consumed, 1);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+    }
     fn initial() -> (RunDuelRequest, DuelResult) {
         let mut v: serde_json::Value = serde_json::from_str(include_str!(
             "../../../../tests/fixtures/tournament-2026.trace-resource.json"
@@ -1250,6 +1620,45 @@ mod tests {
             serde_json::from_value(value["cases"][0]["runtime_request"].clone()).unwrap();
         q.decisions.clear();
         (q, r)
+    }
+    #[test]
+    fn a_second_intent_at_the_same_prompt_cannot_replace_the_first_prediction() {
+        let (_, r) = initial();
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/tmp")
+            .join(format!(
+                "choice-retry-{}.jsonl",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        let j = CallJournal::open(path, "retry", "fixture", 4).unwrap();
+        let actions = &r.prompt.as_ref().unwrap().actions;
+        assert!(actions.len() > 1);
+        let first = persist_choice(
+            &j,
+            "forecast",
+            &r,
+            Some(0),
+            actions[0].choice.clone(),
+            &BTreeMap::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
+        let second = persist_choice(
+            &j,
+            "forecast",
+            &r,
+            Some(0),
+            actions[1].choice.clone(),
+            &BTreeMap::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
+        validate_choice_checkpoint(&first, "forecast", &r, &j).unwrap();
+        validate_choice_checkpoint(&second, "forecast", &r, &j).unwrap();
+        assert_eq!(j.stats().unwrap().consumed, 0);
     }
     #[test]
     fn a_pre_choice_checkpoint_rejects_changed_timing_public_facts_and_action() {

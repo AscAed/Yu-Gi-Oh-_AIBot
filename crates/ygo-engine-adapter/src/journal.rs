@@ -262,6 +262,7 @@ impl State {
                 charged_sequence,
                 ..
             } if name.is_empty()
+                || (name.starts_with("immutable/") && self.checkpoints.contains_key(name))
                 || *consumed != self.calls.len()
                 || self.stats().unknown != self.stats().abandoned
                 || *charged_sequence != self.sequence_id(*consumed)? =>
@@ -598,6 +599,20 @@ impl CallJournal {
         let charged_sequence = state.sequence_id(consumed)?;
         let payload = serde_json::json!({"search":search,"budget":state.stats(),"reservations":state.reserved,
             "charged_sequence":charged_sequence});
+        if name.starts_with("immutable/") {
+            if let Some((hash, count, sequence)) = state.checkpoints.get(name) {
+                if *hash == digest(&encoded(&payload)?)
+                    && *count == consumed
+                    && *sequence == charged_sequence
+                {
+                    return Ok(());
+                }
+                return Err(fail(
+                    "journal_checkpoint",
+                    "immutable checkpoint already exists",
+                ));
+            }
+        }
         let blob = self.put_blob("checkpoints", &encoded(&payload)?)?;
         state.append(Entry::Checkpoint {
             name: name.into(),
@@ -756,6 +771,15 @@ impl CallJournal {
         call_id: u64,
         request: &RunDuelRequest,
     ) -> Result<Option<DuelResult>, WorkerError> {
+        self.load_outcome(call_id, request)?.transpose()
+    }
+    /// Distinguish a recorded worker error from a corrupt or mismatched journal.
+    /// None is a charged call whose result is still unknown; it is never free.
+    pub fn load_outcome(
+        &self,
+        call_id: u64,
+        request: &RunDuelRequest,
+    ) -> Result<Option<Result<DuelResult, WorkerError>>, WorkerError> {
         let call = self
             .lock()?
             .calls
@@ -765,7 +789,7 @@ impl CallJournal {
         if call.request != request_hash(request)? {
             return Err(fail("journal_request", "resume input differs"));
         }
-        self.restore(&call)?.transpose()
+        self.restore(&call)
     }
     fn restore(&self, call: &Call) -> Result<Option<Result<DuelResult, WorkerError>>, WorkerError> {
         let Some((reference, raw_hash, normalized_hash)) = &call.completed else {
@@ -898,6 +922,33 @@ mod tests {
             self.0.fetch_add(1, Ordering::SeqCst);
             Ok(DuelResult::failure(fail("test", "test")))
         }
+    }
+    #[test]
+    fn immutable_prediction_survives_a_conflicting_write_and_reopen() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/tmp")
+            .join(format!(
+                "immutable-checkpoint-{}.jsonl",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        let j = CallJournal::open(&path, "case", "frozen", 4).unwrap();
+        j.save_checkpoint("immutable/prediction", &serde_json::json!({"choice":1}))
+            .unwrap();
+        j.save_checkpoint("immutable/prediction", &serde_json::json!({"choice":1}))
+            .unwrap();
+        assert!(j
+            .save_checkpoint("immutable/prediction", &serde_json::json!({"choice":2}))
+            .is_err());
+        drop(j);
+        let j = CallJournal::open(&path, "case", "frozen", 4).unwrap();
+        assert_eq!(
+            j.checkpoint("immutable/prediction").unwrap().unwrap(),
+            serde_json::json!({"choice":1})
+        );
+        assert_eq!(j.stats().unwrap().consumed, 0);
     }
     #[test]
     fn failed_debit_write_prevents_engine_start() {

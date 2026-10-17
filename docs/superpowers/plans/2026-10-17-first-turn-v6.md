@@ -1,5 +1,18 @@
 # First-turn v6 completion implementation plan
 
+## Approved continuation from 73414c6 (2026-10-18)
+
+The binding specification is the user-approved “完成异常证据闭环、完整v6与48手评估”. Continue ALL remaining delivery: exception evidence and reliable resume, remaining74 rule qualifications/full86 semantics, formalv6, frozen48 evaluation, final dual-asset clean-checkout acceptance. Preserve the already certified12 branches, Scythe response qualification, autonomous recovery, original deck, assets, core and all prior debit histories.
+
+- Introduce internal local-reportv2; keep localv1 strict reading and all formalv1–v5 paths. Typed execution and audit failures retain the last obtained result, independently audited prefix, pending choice, original worker error and charged calls separately.
+- Freeze predictions with immutable content-bound checkpoints. Retried prompts cannot replace earlier intent. Persist the complete search/frontier/mapping/budget state before claiming reliable resume.
+- A partial diagnostic, a satisfied board before End Phase, or a replayed retained prefix cannot become a successful recommendation. Formalv6 remains gated by full coverage and native response evidence.
+- Rule statuses separately track curated knowledge, implementation, paired cases, independent certification and actual Ash legality. Keep all86 entries unless a source-backed retained reclassification is reviewed.
+- Only after full semantics, freeze independent human baselines,16 functional and32 tournament hands, seed1, strategies and budgets. Costs for exceptions, rule tests, human baselines and repeat audits remain outside matrix proportions.
+- Finish complete compatibility, native/default/Python checks and final clean offline deployment. Until every gate passes, the overall task stays incomplete.
+
+The previous milestones and ledger remain evidence; do not restart completed work. The conservative per-call query reservation may stop a72-cap run before End Phase even though a73-cap run can finish using72 actual calls; retain that disclosed budget boundary until an equally safe optimization is proved.
+
 ## Approved revision from fd8e2a2
 
 The binding specification is now the user-approved "完成灰后自主恢复，收口证据合同，再推进完整v6与48手评估". Preserve all existing work and frozen assets. The milestones below remain in force; none is waived by partial native success.

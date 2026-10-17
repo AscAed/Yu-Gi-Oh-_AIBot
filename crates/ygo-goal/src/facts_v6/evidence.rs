@@ -93,6 +93,187 @@ pub fn verify_query_replays(
     )
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryAuditStage {
+    Validation,
+    Reservation,
+    PrefixReplay,
+    RootReplay,
+    Cleanup,
+}
+
+/// Diagnostic progress is serializable; it cannot grant a native receipt.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QueryAuditFailure {
+    pub checkpoint: Option<Box<String>>,
+    pub stage: QueryAuditStage,
+    pub code: String,
+    pub detail: String,
+    pub completed_witnesses: usize,
+    pub call_ids: Vec<u64>,
+    pub failed_call: Option<u64>,
+    pub cleanup_error: Option<Box<String>>,
+}
+impl std::fmt::Display for QueryAuditFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.detail)
+    }
+}
+
+/// Retain the exact charged progress when an independent audit cannot finish.
+pub fn verify_query_replays_recorded(
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
+) -> Result<AuditedQueries, QueryAuditFailure> {
+    audit_queries_recorded(
+        ygo_engine_adapter::ProcessEngineAdapter::new(request.engine.clone()),
+        request,
+        result,
+        witnesses,
+        journal,
+    )
+}
+
+/// Verify a recorded failed audit against immutable intent and stored outcomes.
+/// This validates diagnostics only; it cannot construct an AuditedQueries receipt.
+pub fn validate_query_audit_failure(
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    failure: &QueryAuditFailure,
+    journal: &ygo_engine_adapter::CallJournal,
+) -> Result<(), String> {
+    request.validate_protocol()?;
+    validate_evidence(result, witnesses)?;
+    if request.protocol_version != 6
+        || request.versions != result.versions
+        || !result.resolved_decisions.starts_with(&request.decisions)
+    {
+        return Err("failed audit input differs".into());
+    }
+    journal.verify().map_err(|e| e.message)?;
+    let checkpoint = failure
+        .checkpoint
+        .as_deref()
+        .ok_or("failed audit has no persistent intent")?;
+    let start = journal
+        .checkpoint_consumed(checkpoint)
+        .map_err(|e| e.message)?
+        .ok_or("missing audit intent")? as u64;
+    let intent = serde_json::json!({"request":request_hash(request), "result":normalized_hash(result),
+        "queries":digest(&witnesses), "before_call":start + 1});
+    if checkpoint != &format!("immutable/query-audit/{}", digest(&intent))
+        || journal.checkpoint(checkpoint).map_err(|e| e.message)? != Some(intent)
+    {
+        return Err("failed audit intent was changed".into());
+    }
+    let mut expected = QueryAuditFailure {
+        checkpoint: Some(Box::new(checkpoint.clone())),
+        stage: QueryAuditStage::Reservation,
+        code: "journal_budget".into(),
+        detail: "reservation exceeds scope budget".into(),
+        completed_witnesses: 0,
+        call_ids: failure.call_ids.clone(),
+        failed_call: None,
+        cleanup_error: None,
+    };
+    if failure.call_ids.is_empty() {
+        let budget = journal
+            .checkpoint_budget(checkpoint)
+            .map_err(|e| e.message)?
+            .ok_or("missing audit budget")?;
+        if witnesses.len()
+            < budget
+                .limit
+                .saturating_sub(budget.consumed + budget.reserved)
+        {
+            return Err("audit reservation could fit; failure is unproved".into());
+        }
+    } else {
+        if failure.call_ids.len() > witnesses.len() + 1 {
+            return Err("extra audit calls".into());
+        }
+        let mut found_failure = false;
+        for (i, call) in failure.call_ids.iter().enumerate() {
+            if *call != start + i as u64 + 1
+                || journal.call_purpose(*call).map_err(|e| e.message)?
+                    != ygo_engine_adapter::CallPurpose::Witness
+            {
+                return Err("failed audit call sequence differs".into());
+            }
+            let mut q = request.clone();
+            q.decisions = result.resolved_decisions.clone();
+            if let Some(witness) = witnesses.get(i) {
+                q.decisions.retain(|d| d.prompt_id < witness.event);
+            }
+            let outcome = journal
+                .load_outcome(*call, &q)
+                .map_err(|e| e.message)?
+                .ok_or("audit attempt still has an unknown outcome")?;
+            expected.stage = if i < witnesses.len() {
+                QueryAuditStage::PrefixReplay
+            } else {
+                QueryAuditStage::RootReplay
+            };
+            let mismatch = match outcome {
+                Err(error) => Some((error.code, error.message)),
+                Ok(actual) => {
+                    if let Some(witness) = witnesses.get(i) {
+                        match QueryWitness::capture(&actual) {
+                            Err(detail) => Some(("query_capture".into(), detail)),
+                            Ok(query)
+                                if query.event != witness.event
+                                    || serde_json::to_value(&query).unwrap()
+                                        != serde_json::to_value(witness).unwrap() =>
+                            {
+                                Some((
+                                    "query_mismatch".into(),
+                                    "public query differs from independent native prefix".into(),
+                                ))
+                            }
+                            Ok(_) if actual.versions != result.versions => {
+                                Some(("versions".into(), "query prefix runtime changed".into()))
+                            }
+                            Ok(_) => None,
+                        }
+                    } else if normalized_hash(&actual) != normalized_hash(result) {
+                        Some((
+                            "root_mismatch".into(),
+                            "complete root differs from independent native replay".into(),
+                        ))
+                    } else {
+                        None
+                    }
+                }
+            };
+            if let Some((code, detail)) = mismatch {
+                if i + 1 != failure.call_ids.len() {
+                    return Err("audit continued after its first failure".into());
+                }
+                expected.code = code;
+                expected.detail = detail;
+                expected.failed_call = Some(*call);
+                found_failure = true;
+                break;
+            }
+            if i < witnesses.len() {
+                expected.completed_witnesses += 1;
+            }
+        }
+        if !found_failure {
+            return Err("audit contains no proved failure".into());
+        }
+    }
+    if serde_json::to_value(expected).unwrap() != serde_json::to_value(failure).unwrap() {
+        return Err("audit failure stage, progress, or original error differs".into());
+    }
+    Ok(())
+}
+
 fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
     inner: A,
     request: &ygo_engine_adapter::RunDuelRequest,
@@ -100,21 +281,69 @@ fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
     witnesses: &[QueryWitness],
     journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
 ) -> Result<AuditedQueries, String> {
-    validate_evidence(result, witnesses)?;
-    if !result.resolved_decisions.starts_with(&request.decisions) {
-        return Err("query audit request decisions differ from the actual prefix".into());
+    audit_queries_recorded(inner, request, result, witnesses, journal).map_err(|e| e.to_string())
+}
+
+fn audit_queries_recorded<A: ygo_engine_adapter::EngineAdapter>(
+    inner: A,
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
+) -> Result<AuditedQueries, QueryAuditFailure> {
+    let failure = |stage, code: &str, detail: String| QueryAuditFailure {
+        stage,
+        code: code.into(),
+        detail,
+        completed_witnesses: 0,
+        call_ids: vec![],
+        failed_call: None,
+        cleanup_error: None,
+        checkpoint: None,
+    };
+    request
+        .validate_protocol()
+        .map_err(|e| failure(QueryAuditStage::Validation, "protocol", e))?;
+    if request.protocol_version != 6 || request.versions != result.versions {
+        return Err(failure(
+            QueryAuditStage::Validation,
+            "versions",
+            "query audit runtime versions differ".into(),
+        ));
     }
-    let start = journal.stats().map_err(|e| e.message)?.consumed as u64;
+    validate_evidence(result, witnesses)
+        .map_err(|e| failure(QueryAuditStage::Validation, "evidence", e))?;
+    if !result.resolved_decisions.starts_with(&request.decisions) {
+        return Err(failure(
+            QueryAuditStage::Validation,
+            "request_prefix",
+            "query audit request decisions differ from the actual prefix".into(),
+        ));
+    }
+    let start = journal
+        .stats()
+        .map_err(|e| failure(QueryAuditStage::Reservation, &e.code, e.message.clone()))?
+        .consumed as u64;
     let token = format!("query-audit-{}-{start}", normalized_hash(result));
+    let intent = serde_json::json!({"request":request_hash(request), "result":normalized_hash(result),
+        "queries":digest(&witnesses), "before_call":start + 1});
+    let checkpoint = format!("immutable/query-audit/{}", digest(&intent));
     journal
-        .reserve(&token, witnesses.len() + 1)
-        .map_err(|e| e.message)?;
+        .save_checkpoint(&checkpoint, &intent)
+        .map_err(|e| failure(QueryAuditStage::Reservation, &e.code, e.message.clone()))?;
+    journal.reserve(&token, witnesses.len() + 1).map_err(|e| {
+        let mut fault = failure(QueryAuditStage::Reservation, &e.code, e.message.clone());
+        fault.checkpoint = Some(Box::new(checkpoint.clone()));
+        fault
+    })?;
     let adapter = ygo_engine_adapter::JournaledAdapter::new(
         inner,
         journal.clone(),
         ygo_engine_adapter::CallPurpose::Witness,
     );
-    let checked = (|| {
+    let mut completed = 0;
+    let mut stage = QueryAuditStage::PrefixReplay;
+    let checked: Result<AuditedQueries, (String, String)> = (|| {
         for witness in witnesses {
             let mut prefix = request.clone();
             prefix.decisions = result
@@ -125,22 +354,33 @@ fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
                 .collect();
             let actual = adapter
                 .run_reserved(&prefix, &token)
-                .map_err(|e| e.message)?;
-            let queried = QueryWitness::capture(&actual)?;
+                .map_err(|e| (e.code, e.message))?;
+            let queried =
+                QueryWitness::capture(&actual).map_err(|e| ("query_capture".into(), e))?;
             if queried.event != witness.event
                 || serde_json::to_value(&queried).unwrap() != serde_json::to_value(witness).unwrap()
             {
-                return Err("public query differs from independent native prefix".into());
+                return Err((
+                    "query_mismatch".into(),
+                    "public query differs from independent native prefix".into(),
+                ));
             }
             if actual.versions != result.versions {
-                return Err("query prefix runtime changed".into());
+                return Err(("versions".into(), "query prefix runtime changed".into()));
             }
+            completed += 1;
         }
+        stage = QueryAuditStage::RootReplay;
         let mut full = request.clone();
         full.decisions = result.resolved_decisions.clone();
-        let replay = adapter.run_reserved(&full, &token).map_err(|e| e.message)?;
+        let replay = adapter
+            .run_reserved(&full, &token)
+            .map_err(|e| (e.code, e.message))?;
         if normalized_hash(&replay) != normalized_hash(result) {
-            return Err("complete root differs from independent native replay".into());
+            return Err((
+                "root_mismatch".into(),
+                "complete root differs from independent native replay".into(),
+            ));
         }
         Ok(AuditedQueries {
             request_hash: request_hash(request),
@@ -149,14 +389,41 @@ fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
             call_ids: (start + 1..=start + witnesses.len() as u64 + 1).collect(),
         })
     })();
-    if journal
+    let cleanup = journal
         .remaining_reservation(&token)
-        .map_err(|e| e.message)?
-        .is_some()
-    {
-        journal.release(&token).map_err(|e| e.message)?;
+        .and_then(|remaining| {
+            if remaining.is_some() {
+                journal.release(&token)
+            } else {
+                Ok(())
+            }
+        })
+        .err()
+        .map(|e| e.message);
+    let end = journal
+        .stats()
+        .map_err(|e| failure(QueryAuditStage::Cleanup, &e.code, e.message.clone()))?
+        .consumed as u64;
+    match (checked, cleanup) {
+        (Ok(receipt), None) => Ok(receipt),
+        (checked, cleanup) => {
+            let (code, detail) = checked.err().unwrap_or_else(|| {
+                stage = QueryAuditStage::Cleanup;
+                ("journal_cleanup".into(), cleanup.clone().unwrap())
+            });
+            Err(QueryAuditFailure {
+                checkpoint: Some(Box::new(checkpoint)),
+                stage,
+                code,
+                detail,
+                completed_witnesses: completed,
+                call_ids: (start + 1..=end).collect(),
+                failed_call: (end > start + completed as u64 && stage != QueryAuditStage::Cleanup)
+                    .then_some(end),
+                cleanup_error: cleanup.map(Box::new),
+            })
+        }
     }
-    checked
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -644,6 +911,117 @@ mod tests {
             witnesses: witnesses.to_vec(),
             calls: calls.clone(),
         }
+    }
+    #[test]
+    fn a_worker_failure_retains_completed_witnesses_and_the_charged_attempt() {
+        struct FailingOracle {
+            inner: RecordedOracle,
+        }
+        impl ygo_engine_adapter::EngineAdapter for FailingOracle {
+            fn doctor(&self) -> ygo_engine_adapter::DoctorReport {
+                self.inner.doctor()
+            }
+            fn run(
+                &self,
+                q: &ygo_engine_adapter::RunDuelRequest,
+            ) -> Result<DuelResult, ygo_engine_adapter::WorkerError> {
+                if self.inner.calls.load(Ordering::SeqCst) == 2 {
+                    self.inner.calls.fetch_add(1, Ordering::SeqCst);
+                    return Err(ygo_engine_adapter::WorkerError::new(
+                        "worker_exit",
+                        "test",
+                        "stopped",
+                    ));
+                }
+                self.inner.run(q)
+            }
+        }
+        let (root, witnesses, request) = fixture();
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries_recorded(
+            FailingOracle {
+                inner: oracle(&root, &witnesses, &calls),
+            },
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(error.stage, QueryAuditStage::PrefixReplay);
+        assert_eq!(error.code, "worker_exit");
+        assert_eq!(error.completed_witnesses, 2);
+        assert_eq!(error.call_ids, vec![1, 2, 3]);
+        assert_eq!(error.failed_call, Some(3));
+        assert_eq!(j.stats().unwrap().consumed, 3);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+    }
+    #[test]
+    fn a_root_replay_failure_does_not_discard_seven_verified_queries() {
+        struct FailRoot {
+            inner: RecordedOracle,
+        }
+        impl ygo_engine_adapter::EngineAdapter for FailRoot {
+            fn doctor(&self) -> ygo_engine_adapter::DoctorReport {
+                self.inner.doctor()
+            }
+            fn run(
+                &self,
+                q: &ygo_engine_adapter::RunDuelRequest,
+            ) -> Result<DuelResult, ygo_engine_adapter::WorkerError> {
+                if self.inner.calls.load(Ordering::SeqCst) == 7 {
+                    return Err(ygo_engine_adapter::WorkerError::new(
+                        "worker_timeout",
+                        "test",
+                        "timeout",
+                    ));
+                }
+                self.inner.run(q)
+            }
+        }
+        let (root, witnesses, request) = fixture();
+        let j = journal(8);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries_recorded(
+            FailRoot {
+                inner: oracle(&root, &witnesses, &calls),
+            },
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(error.stage, QueryAuditStage::RootReplay);
+        assert_eq!(error.completed_witnesses, 7);
+        assert_eq!(error.failed_call, Some(8));
+        assert_eq!(error.call_ids, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        validate_query_audit_failure(&request, &root, &witnesses, &error, &j).unwrap();
+        let mut forged = error.clone();
+        forged.completed_witnesses = 8;
+        assert!(validate_query_audit_failure(&request, &root, &witnesses, &forged, &j).is_err());
+        forged = error.clone();
+        forged.stage = QueryAuditStage::PrefixReplay;
+        assert!(validate_query_audit_failure(&request, &root, &witnesses, &forged, &j).is_err());
+        assert_eq!(j.stats().unwrap().consumed, 8);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+        let denied = audit_queries_recorded(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(denied.stage, QueryAuditStage::Reservation);
+        assert_eq!(denied.code, "journal_budget");
+        assert!(denied.call_ids.is_empty());
+        assert_eq!(denied.failed_call, None);
+        validate_query_audit_failure(&request, &root, &witnesses, &denied, &j).unwrap();
     }
     #[test]
     fn query_audit_reexecutes_each_prefix_and_root_and_charges_repeated_audits() {
