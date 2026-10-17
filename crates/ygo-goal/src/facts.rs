@@ -516,6 +516,7 @@ pub fn actual_facts(result: &DuelResult, cat: &Catalog, pack: &KnowledgePack) ->
                 rank: c.rank,
                 proper_xyz: known.and_then(|c| c.proper_xyz),
                 materials: c.overlay.clone(),
+                materials_complete: None,
             }
         })
         .collect();

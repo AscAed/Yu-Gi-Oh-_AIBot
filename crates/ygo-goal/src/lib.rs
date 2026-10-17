@@ -41,3 +41,5 @@ mod model;
 pub use model::*;
 mod facts;
 pub use facts::*;
+mod facts_v6;
+pub use facts_v6::*;

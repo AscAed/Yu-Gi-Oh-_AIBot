@@ -250,6 +250,10 @@ pub struct FactCard {
     pub rank: Option<u32>,
     pub proper_xyz: Option<bool>,
     pub materials: Vec<u32>,
+    /// V6 can explicitly withhold an unproven material snapshot. Omitted in
+    /// legacy facts to preserve their serialized contracts and identities.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub materials_complete: Option<bool>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -332,15 +336,21 @@ impl Filter {
                 }
             }));
         }
-        if self.materials_min.is_some_and(|n| c.materials.len() < n) {
-            return Truth::No;
-        }
-        let mut mats = c.materials.clone();
-        for code in &self.material_codes {
-            let Some(i) = mats.iter().position(|c| c == code) else {
+        if c.materials_complete == Some(false)
+            && (self.materials_min.is_some_and(|n| n > 0) || !self.material_codes.is_empty())
+        {
+            values.push(Truth::Unknown);
+        } else {
+            if self.materials_min.is_some_and(|n| c.materials.len() < n) {
                 return Truth::No;
-            };
-            mats.remove(i);
+            }
+            let mut mats = c.materials.clone();
+            for code in &self.material_codes {
+                let Some(i) = mats.iter().position(|c| c == code) else {
+                    return Truth::No;
+                };
+                mats.remove(i);
+            }
         }
         Truth::all(values)
     }

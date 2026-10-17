@@ -1,6 +1,20 @@
 # First-turn v6 completion implementation plan
 
-Binding spec: the user-approved plan "补齐v6语义闭环，完成48手固定评估" in this chat.
+Binding spec: the latest user-approved plan "先完成 v6 自主决策闭环，再补齐规则与48手评估" in this chat. The earlier plan and completed commits remain evidence; do not restart their tasks.
+
+## Approved execution revision after 689e9b9
+
+Baseline:689e9b9 plus the four preserved v6 trace files. Execute inline; final whole-branch review only after all milestones.
+
+- [ ] R1: Finish actual v6 state/normal/usage/material/redirect/restriction reconstruction, public visibility and query replay. Typed activation/procedure/continuous/delayed counterexamples and verifier-only runtime certificates; focused regressions, fmt/Clippy/default checks, commit.
+- [ ] R2: Independent human pass and Scythe-Ash baselines for Decayed/Tsuchinoko/Soleret/Scales/Doll Hammer. Add dependent operators and autonomous goal-driven selection/recovery through an internal, explicitly partial integration entry. Preserve pre-Ash choices and replay all dependencies; commit.
+- [ ] R3: Complete all remaining scoped resource/summon/chain/end-phase rules and paired native evidence. Classification changes retain source and reasons. Full certification required before production v6 CLI/schema/API availability; commit by rule group and then formal v6.
+- [ ] R4: Freeze manual16 pass/8 Ash baselines, functional16 and tournament32 suites before formal evaluation. Hook the durable journal/search checkpoints into Python run/verify; charged crash handling, schema/tampering/denominator tests; commit.
+- [ ] R5: Execute all48, retain unknown/absent/truncated results, replay successes, old regressions, full Rust/native/Python checks, final clean-checkout dual frozen deployment/repeat audit, docs and fresh final review; commit. Only all milestones passing completes the delivery.
+
+R2 uses original deck and goal Rusty+setFog; the explicit pilot hand is [46072770,99745551,83566725,25538345,44088353]. Human recipes are independent oracles, never planner scripts. Pilot calls are separate from matrix metrics. No expansion of opponent actions or assets.
+
+The original Task1/2 below are already complete (cb7c167/9676fd7); Task3 is partial (29aca36/d3dba3f/689e9b9). Remaining tasks are reordered by R1-R5, not waived.
 
 Goal: preserve the legal Aug17 main41/extra15 original deck and both frozen asset groups;
 complete first-turn knowledge, causal planning/recovery and the fixed 16+32 evaluation.

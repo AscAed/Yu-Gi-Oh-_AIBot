@@ -72,6 +72,7 @@ pub fn facts(
                 .map_or(0, |c| c.level),
         ),
         proper_xyz: Some(r.xyz_summoned),
+        materials_complete: None,
         materials: context
             .cards
             .iter()

@@ -634,6 +634,9 @@ impl CallJournal {
             token: token.into(),
         })
     }
+    pub fn remaining_reservation(&self, token: &str) -> Result<Option<usize>, WorkerError> {
+        Ok(self.lock()?.reserved.get(token).copied())
+    }
     /// The returned call is charged even if the process crashes immediately.
     pub fn begin_call(
         &self,
