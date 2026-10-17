@@ -140,7 +140,7 @@ fn revealed_same_name_cost_does_not_swap_the_self_summoning_instance() {
             && h.card.instance == original
             && h.card.identity_known));
     let audited = verify_query_replays(&q, &result, &witnesses, journal.clone()).unwrap();
-    assert!(audited.matches(&result, &witnesses));
+    assert!(audited.matches(&q, &result, &witnesses));
     assert_eq!(journal.stats().unwrap().consumed, 12);
     std::fs::write(path.with_extension("audit.json"),serde_json::to_vec_pretty(&serde_json::json!({"actor":original,"query_calls":audited.call_ids,"charged":journal.stats().unwrap().consumed})).unwrap()).unwrap();
 }

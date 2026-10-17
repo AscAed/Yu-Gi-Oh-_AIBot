@@ -781,3 +781,38 @@ fn resource_predictions_are_recorded_before_native_execution_and_independently_r
     assert_eq!(journal.stats().unwrap().consumed, 18);
     journal.verify().unwrap();
 }
+
+#[test]
+fn unknown_extra_only_lock_does_not_block_main_deck_summons() {
+    let mut s = state();
+    s.extra_xyz_only = None;
+    assert!(
+        successors(&s, &catalog(), &FirstTurnKnowledge::builtin().unwrap())
+            .transitions
+            .iter()
+            .any(|t| t.rule_id == "83566725:empty_field_special")
+    );
+}
+
+#[test]
+fn missing_material_type_is_unknown_instead_of_a_known_filter_failure() {
+    let s = choose(&state(), "83566725:empty_field_special").after_resolution;
+    let s = choose(&s, "83566725:deck_set").after_resolution;
+    let mut s = choose(&s, "85257384:trap_monster_special").after_resolution;
+    let c = s
+        .cards
+        .iter_mut()
+        .find(|c| c.card.code == 85257384 && c.card.location == 4)
+        .unwrap();
+    c.card.type_flags = 0;
+    c.attributes_known = false;
+    let result = successors(&s, &catalog(), &FirstTurnKnowledge::builtin().unwrap());
+    assert!(!result
+        .transitions
+        .iter()
+        .any(|t| t.rule_id == "78449284:two_dark_level_three"));
+    assert!(result
+        .unknowns
+        .iter()
+        .any(|s| s.contains("attributes unknown")));
+}

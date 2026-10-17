@@ -40,14 +40,30 @@ impl QueryWitness {
 /// Not deserializable or externally constructible: hashes alone cannot mint a
 /// successful native query audit. Portable reports retain the supporting ledger.
 pub struct AuditedQueries {
+    request_hash: String,
     result_hash: String,
     queries_hash: String,
     pub call_ids: Vec<u64>,
 }
 impl AuditedQueries {
-    pub fn matches(&self, result: &DuelResult, witnesses: &[QueryWitness]) -> bool {
-        self.result_hash == normalized_hash(result) && self.queries_hash == digest(&witnesses)
+    pub fn matches(
+        &self,
+        request: &ygo_engine_adapter::RunDuelRequest,
+        result: &DuelResult,
+        witnesses: &[QueryWitness],
+    ) -> bool {
+        self.request_hash == request_hash(request)
+            && self.result_hash == normalized_hash(result)
+            && self.queries_hash == digest(&witnesses)
     }
+}
+
+fn request_hash(request: &ygo_engine_adapter::RunDuelRequest) -> String {
+    let mut normalized = request.clone();
+    // Machine-local paths and timeouts do not define the duel. Asset content is
+    // already bound by RuntimeVersions and independently checked by the worker.
+    normalized.engine = Default::default();
+    digest(&normalized)
 }
 
 fn normalized_hash(result: &DuelResult) -> String {
@@ -85,6 +101,9 @@ fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
     journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
 ) -> Result<AuditedQueries, String> {
     validate_evidence(result, witnesses)?;
+    if !result.resolved_decisions.starts_with(&request.decisions) {
+        return Err("query audit request decisions differ from the actual prefix".into());
+    }
     let start = journal.stats().map_err(|e| e.message)?.consumed as u64;
     let token = format!("query-audit-{}-{start}", normalized_hash(result));
     journal
@@ -124,6 +143,7 @@ fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
             return Err("complete root differs from independent native replay".into());
         }
         Ok(AuditedQueries {
+            request_hash: request_hash(request),
             result_hash: normalized_hash(result),
             queries_hash: digest(&witnesses),
             call_ids: (start + 1..=start + witnesses.len() as u64 + 1).collect(),
@@ -200,6 +220,8 @@ pub struct FirstTurnTrace {
     pub draws: Vec<DrawWitness>,
     pub window: TraceWindow,
     pub identity_bindings: Vec<IdentityBinding>,
+    pub material_hosts: BTreeMap<String, String>,
+    pub restrictions: super::ActualRestrictions,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -367,6 +389,19 @@ pub(super) fn validate_evidence(
             .any(|loc| loc["player"].as_u64().map_or(true, |p| p > 1))
         {
             return Err("invalid raw controller coordinate".into());
+        }
+    }
+    for e in &result.events {
+        if e.opcode == 70 && e.fields["player"].as_u64().map_or(true, |p| p > 1) {
+            return Err("invalid raw activating player".into());
+        }
+        if let Ok(metadata) = ygo_engine_adapter::prompt_metadata(e.sequence, &e.raw) {
+            if metadata
+                .iter()
+                .any(|m| m.source.iter().chain(&m.selected).any(|c| c.player > 1))
+            {
+                return Err("invalid raw prompt card controller".into());
+            }
         }
     }
     let mut previous_decision = 0;
@@ -624,10 +659,47 @@ mod tests {
         )
         .unwrap();
         assert_eq!(receipt.call_ids.len(), 8);
-        assert!(receipt.matches(&root, &witnesses));
+        assert!(receipt.matches(&request, &root, &witnesses));
+        let mut changed_request = request.clone();
+        changed_request.seed += 1;
+        assert!(
+            !receipt.matches(&changed_request, &root, &witnesses),
+            "receipt must reject a different request"
+        );
+        let mut relocated = request.clone();
+        relocated.engine = Default::default();
+        assert!(receipt.matches(&relocated, &root, &witnesses));
+        for field in [
+            "seed",
+            "opening_hand",
+            "deck",
+            "versions",
+            "interruption",
+            "first_turn",
+            "scenario",
+            "probe_only",
+        ] {
+            let mut changed = serde_json::to_value(&request).unwrap();
+            match field {
+                "seed" => changed[field] = serde_json::json!(2),
+                "opening_hand" => changed[field][0] = serde_json::json!(123),
+                "deck" => changed[field]["main"][0] = serde_json::json!(123),
+                "versions" => changed[field]["catalog"] = serde_json::json!("different"),
+                "interruption" => changed[field]["policy"] = serde_json::json!("ash_effect_once"),
+                "first_turn" => changed[field]["knowledge_id"] = serde_json::json!("different"),
+                "scenario" => changed[field] = serde_json::json!("different"),
+                "probe_only" => changed[field] = serde_json::json!(true),
+                _ => unreachable!(),
+            }
+            // first_turn's field layout is itself strict: malformed changes
+            // are rejected before an authenticated request can be constructed.
+            if let Ok(changed) = serde_json::from_value(changed) {
+                assert!(!receipt.matches(&changed, &root, &witnesses), "{field}");
+            }
+        }
         let mut forged = root.clone();
         forged.checkpoint.cards[0].attack += 1;
-        assert!(!receipt.matches(&forged, &witnesses));
+        assert!(!receipt.matches(&request, &forged, &witnesses));
         audit_queries(
             oracle(&root, &witnesses, &calls),
             &request,
@@ -672,6 +744,27 @@ mod tests {
             j.clone()
         )
         .is_err());
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(j.stats().unwrap().consumed, 0);
+    }
+
+    #[test]
+    fn mismatched_request_prefix_is_rejected_before_debit() {
+        let (root, witnesses, mut request) = fixture();
+        request.decisions = root.resolved_decisions.clone();
+        request.decisions[0].player = 1;
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert!(error.contains("request decisions"));
         assert_eq!(calls.load(Ordering::SeqCst), 0);
         assert_eq!(j.stats().unwrap().consumed, 0);
     }

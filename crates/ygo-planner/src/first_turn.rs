@@ -7,6 +7,8 @@ use ygo_knowledge::{
     first_turn::{FirstTurnKnowledge, FirstTurnRule, Operation, Selection},
     Truth,
 };
+mod observation;
+pub use observation::{actual_state, ObservedState};
 
 const IMPLEMENTED: [&str; 6] = [
     "83566725:empty_field_special",
@@ -21,6 +23,8 @@ const IMPLEMENTED: [&str; 6] = [
 #[serde(deny_unknown_fields)]
 pub struct KnownInstance {
     pub id: String,
+    pub identity_known: bool,
+    pub attributes_known: bool,
     pub card: StateCard,
     pub printed: PrintedAttributes,
     pub host: Option<String>,
@@ -99,6 +103,7 @@ pub struct CausalState {
     pub pending: Vec<PendingTrigger>,
     pub special_allowed: Option<bool>,
     pub dark_only: Option<bool>,
+    pub extra_xyz_only: Option<bool>,
     pub next_entity: u64,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -366,6 +371,8 @@ impl CausalState {
             }
             cards.push(KnownInstance {
                 id,
+                identity_known: true,
+                attributes_known: true,
                 printed: PrintedAttributes::from(card),
                 card: card.clone(),
                 host: None,
@@ -384,6 +391,7 @@ impl CausalState {
             pending: vec![],
             special_allowed: Some(true),
             dark_only: Some(false),
+            extra_xyz_only: Some(false),
             next_entity: 0,
         })
     }
@@ -434,10 +442,15 @@ fn move_known(s: &mut CausalState, id: &str, zone: u8, position: u32) -> Result<
         _ => 0,
     };
     let target = s.cards.iter_mut().find(|c| c.id == id).unwrap();
-    if old.card.location == 4 && zone != 4 {
+    if (old.card.location == 4 && zone != 4) || old.card.location == 132 {
         target.epoch += 1;
         target.proper_xyz = Some(false);
         target.printed.restore(&mut target.card);
+        target.attributes_known = target.card.type_flags != 0
+            && target.card.level.is_some()
+            && target.card.rank.is_some()
+            && target.card.attribute.is_some()
+            && target.card.race.is_some();
     }
     target.card.location =
         if old.card.location == 4 && zone == 16 && old.leave_field_banish == Some(true) {
@@ -508,6 +521,8 @@ fn deck_card(
     let printed = PrintedAttributes::from(&card);
     s.cards.push(KnownInstance {
         id: id.clone(),
+        identity_known: true,
+        attributes_known: true,
         card,
         printed,
         host: None,
@@ -565,6 +580,9 @@ fn queue_summon(s: &mut CausalState, id: &str, pack: &FirstTurnKnowledge, catalo
     }
 }
 fn match_selection(c: &KnownInstance, selection: &Selection, catalog: &Catalog) -> Truth {
+    if !c.identity_known {
+        return Truth::Unknown;
+    }
     if c.card.player != selection.controller || !selection.locations.contains(&c.card.location) {
         return Truth::No;
     }
@@ -574,6 +592,27 @@ fn match_selection(c: &KnownInstance, selection: &Selection, catalog: &Catalog) 
     let Some(base) = catalog.get(&CardId(c.card.code)) else {
         return Truth::Unknown;
     };
+    if c.card.type_flags == 0
+        && (selection.filter.type_mask != 0
+            || selection.actual_level.is_some()
+            || selection.actual_rank.is_some()
+            || selection.filter.level.is_some()
+            || selection.filter.max_level.is_some())
+    {
+        return Truth::Unknown;
+    }
+    if (selection.filter.level.is_some() || selection.filter.max_level.is_some())
+        && c.card.level.is_none()
+    {
+        return Truth::Unknown;
+    }
+    if let Some(required) = selection.actual_rank {
+        match c.card.rank {
+            Some(rank) if rank == required => {}
+            Some(_) => return Truth::No,
+            None => return Truth::Unknown,
+        }
+    }
     if selection.filter.attribute.is_some() && c.card.attribute.is_none() {
         return Truth::Unknown;
     }
@@ -656,7 +695,14 @@ fn emit(
         after_resolution,
     });
 }
-fn summon_allowed(s: &CausalState, attribute: Option<u32>) -> Truth {
+fn summon_allowed(s: &CausalState, attribute: Option<u32>, origin: u8, type_flags: u32) -> Truth {
+    if origin == 64 {
+        match (s.extra_xyz_only, type_flags & 0x800000 != 0) {
+            (Some(true), false) if type_flags != 0 => return Truth::No,
+            (Some(true), false) | (None, false) => return Truth::Unknown,
+            _ => {}
+        }
+    }
     match (s.special_allowed, s.dark_only) {
         (Some(false), _) => Truth::No,
         (None, _) | (_, None) => Truth::Unknown,
@@ -681,6 +727,11 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
         .iter()
         .filter(|c| c.card.player == 0 && c.host.is_none())
     {
+        if !source.identity_known {
+            out.unknowns
+                .push(format!("unknown source identity: {}", source.id));
+            continue;
+        }
         for rule in pack.rules.iter().filter(|r| {
             r.applicable
                 && r.card_id == source.card.code
@@ -733,7 +784,12 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                     if state.cards.iter().any(|c| own(c, 4)) || free_main(state).is_none() {
                         continue;
                     }
-                    match summon_allowed(state, source.card.attribute) {
+                    match summon_allowed(
+                        state,
+                        source.card.attribute,
+                        source.card.location,
+                        source.card.type_flags,
+                    ) {
                         Truth::Yes => {}
                         Truth::Unknown => {
                             out.unknowns
@@ -801,7 +857,7 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                         out.unknowns.push(format!("{}: set turn unknown", rule.id));
                         continue;
                     }
-                    match summon_allowed(state, Some(32)) {
+                    match summon_allowed(state, Some(32), source.card.location, 0x11) {
                         Truth::Yes => {}
                         Truth::Unknown => {
                             out.unknowns
@@ -847,7 +903,12 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                             Truth::No => {}
                         }
                     }
-                    match summon_allowed(state, source.card.attribute) {
+                    match summon_allowed(
+                        state,
+                        source.card.attribute,
+                        source.card.location,
+                        source.card.type_flags,
+                    ) {
                         Truth::Yes => {}
                         Truth::No => continue,
                         Truth::Unknown => {
@@ -916,10 +977,17 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
                         .iter()
                         .filter(|c| c.host.as_deref() == Some(&source.id))
                     {
+                        if !material.identity_known {
+                            out.unknowns
+                                .push(format!("{}: material identity unknown", rule.id));
+                            continue;
+                        }
                         for code in deck_options(state, selection, catalog) {
                             match summon_allowed(
                                 state,
                                 catalog.get(&CardId(code)).map(|c| c.attribute),
+                                1,
+                                catalog.get(&CardId(code)).map_or(0, |c| c.type_flags),
                             ) {
                                 Truth::Yes => {}
                                 Truth::No => continue,
@@ -969,4 +1037,30 @@ pub fn successors(state: &CausalState, catalog: &Catalog, pack: &FirstTurnKnowle
         )
     });
     out
+}
+
+#[cfg(test)]
+mod summon_restriction_tests {
+    use super::*;
+    #[test]
+    fn extra_xyz_only_applies_to_extra_summons_and_unknown_types_remain_unknown() {
+        let mut s = CausalState {
+            cards: vec![],
+            deck_counts: Default::default(),
+            normal_remaining: Some(1),
+            used: Default::default(),
+            pending: vec![],
+            special_allowed: Some(true),
+            dark_only: Some(false),
+            extra_xyz_only: Some(true),
+            next_entity: 0,
+        };
+        assert_eq!(summon_allowed(&s, Some(32), 64, 0x4000001), Truth::No);
+        assert_eq!(summon_allowed(&s, Some(32), 64, 0x800001), Truth::Yes);
+        assert_eq!(summon_allowed(&s, Some(32), 64, 0), Truth::Unknown);
+        assert_eq!(summon_allowed(&s, Some(32), 1, 0x21), Truth::Yes);
+        s.extra_xyz_only = None;
+        assert_eq!(summon_allowed(&s, Some(32), 64, 0x4000001), Truth::Unknown);
+        assert_eq!(summon_allowed(&s, Some(32), 64, 0x800001), Truth::Yes);
+    }
 }

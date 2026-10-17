@@ -487,7 +487,7 @@ fn captured_queries_match_fresh_native_prefixes_and_complete_replay() {
     )
     .unwrap();
     let receipt = verify_query_replays(&request, &result, &witnesses, journal.clone()).unwrap();
-    assert!(receipt.matches(&result, &witnesses));
+    assert!(receipt.matches(&request, &result, &witnesses));
     assert_eq!(journal.stats().unwrap().consumed, 8);
     let pack = FirstTurnKnowledge::builtin().unwrap();
     let trace = actual_trace_v6(&result, &catalog(), &pack, &witnesses).unwrap();
@@ -532,7 +532,7 @@ fn captured_ash_anchor_queries_match_independent_native_replay() {
     )
     .unwrap();
     let receipt = verify_query_replays(&request, &result, &witnesses, journal.clone()).unwrap();
-    assert!(receipt.matches(&result, &witnesses));
+    assert!(receipt.matches(&request, &result, &witnesses));
     assert_eq!(journal.stats().unwrap().consumed, 7);
     let pack = FirstTurnKnowledge::builtin().unwrap();
     let trace = actual_trace_v6(&result, &catalog(), &pack, &witnesses).unwrap();
@@ -583,4 +583,34 @@ fn invalid_raw_controller_coordinates_are_rejected_without_indexing_outside_reso
         &witnesses
     )
     .is_err());
+}
+
+#[test]
+fn actual_resource_container_relations_are_explicit_and_locks_are_not_assumed() {
+    let (result, witnesses) = read_capture(include_str!(
+        "../../../tests/fixtures/tournament-2026.trace-ash.json"
+    ));
+    let trace = actual_trace_v6(
+        &result,
+        &catalog(),
+        &FirstTurnKnowledge::builtin().unwrap(),
+        &witnesses,
+    )
+    .unwrap();
+    let host = trace
+        .facts
+        .cards
+        .iter()
+        .find(|c| c.code == 78449284 && c.location == 4)
+        .unwrap();
+    assert_eq!(
+        trace
+            .material_hosts
+            .get(&trace.material_instances[0].instance),
+        Some(&host.instance)
+    );
+    assert_eq!(trace.restrictions.special_allowed, Some(true));
+    assert_eq!(trace.restrictions.dark_only, Some(false));
+    assert_eq!(trace.restrictions.extra_xyz_only, Some(false));
+    assert!(trace.restrictions.unknown_rules.is_empty());
 }

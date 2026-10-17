@@ -5,8 +5,10 @@ use ygo_domain::{CardId, Catalog};
 use ygo_engine_adapter::{prompt_metadata, Choice, DuelResult};
 use ygo_knowledge::first_turn::{FirstTurnKnowledge, Operation};
 mod evidence;
+mod restrictions;
 pub use evidence::*;
 use evidence::{from_query, public_location, reconcile, validate_evidence};
+pub use restrictions::ActualRestrictions;
 
 fn snapshot(card: &FactCard, tracked: &[FactCard], hosts: &BTreeMap<String, String>) -> FactCard {
     let mut c = card.clone();
@@ -42,6 +44,7 @@ pub fn actual_trace_v6(
     pack: &FirstTurnKnowledge,
     witnesses: &[QueryWitness],
 ) -> Result<FirstTurnTrace, String> {
+    pack.validate()?;
     validate_evidence(result, witnesses)?;
     let first = &witnesses[0];
     let mut tracked: Vec<FactCard> = first
@@ -75,7 +78,9 @@ pub fn actual_trace_v6(
     let mut chains: BTreeMap<u64, (FactCard, Option<String>)> = BTreeMap::new();
     let mut finalized_chains = std::collections::BTreeSet::new();
     let mut negated_chains = std::collections::BTreeSet::new();
-    let mut summoning: Vec<(FactCard, bool, u64)> = vec![];
+    let mut summoning: Vec<(FactCard, bool, u64, bool)> = vec![];
+    let mut pending_procedure: Option<(FactCard, u8)> = None;
+    let mut procedure_attempts = Vec::new();
     let mut opaque_summon = false;
     let mut pending_activations: Vec<(u32, u64, FactCard)> = vec![];
     let mut chain_open = false;
@@ -143,12 +148,38 @@ pub fn actual_trace_v6(
                 c.position = n(&e.fields, "position");
             }
         }
+        if e.opcode == 11 {
+            pending_procedure = None;
+        }
         if let Some(d) = result
             .resolved_decisions
             .iter()
             .find(|d| d.prompt_id == e.sequence)
         {
             if let Ok(ms) = prompt_metadata(e.sequence, &e.raw) {
+                if e.opcode == 11 {
+                    if let Some(m) = ms.iter().find(|m| m.choice == d.choice) {
+                        if let (Some(source), Choice::Command { command, .. }) =
+                            (&m.source, &m.choice)
+                        {
+                            if matches!(command, 0 | 1 | 3) {
+                                let candidates = tracked
+                                    .iter()
+                                    .filter(|c| {
+                                        c.identity_known
+                                            && c.code == source.code
+                                            && c.player == source.player
+                                            && c.location == source.location
+                                            && c.sequence == source.sequence
+                                    })
+                                    .collect::<Vec<_>>();
+                                if candidates.len() == 1 {
+                                    pending_procedure = Some((candidates[0].clone(), *command));
+                                }
+                            }
+                        }
+                    }
+                }
                 if let Some(m) = ms.iter().find(|m| {
                     m.choice == d.choice
                         && matches!(
@@ -391,6 +422,17 @@ pub fn actual_trace_v6(
             }
             tracked.push(c);
         }
+        if e.opcode == 54 {
+            if let Some((source, command)) = pending_procedure.take() {
+                let loc = &e.fields["location"];
+                if command == 3
+                    && source.code == n(&e.fields, "code")
+                    && source.player == n(loc, "player") as u8
+                {
+                    procedure_attempts.push((source, 54));
+                }
+            }
+        }
         if matches!(e.opcode, 60 | 62) {
             let loc = &e.fields["location"];
             let candidates: Vec<_> = tracked
@@ -402,11 +444,22 @@ pub fn actual_trace_v6(
                         && c.sequence == n(loc, "sequence")
                 })
                 .collect();
+            let procedure = pending_procedure.take().is_some_and(|(source, command)| {
+                let matched = candidates.len() == 1
+                    && candidates[0].identity_known
+                    && source.instance == candidates[0].instance
+                    && ((e.opcode == 62 && command == 1) || (e.opcode == 60 && command == 0));
+                if matched {
+                    procedure_attempts.push((source, e.opcode));
+                }
+                matched
+            });
             if candidates.len() == 1 && candidates[0].identity_known {
                 summoning.push((
                     snapshot(candidates[0], &tracked, &hosts),
                     e.opcode == 62,
                     e.sequence,
+                    procedure,
                 ));
             } else {
                 opaque_summon = true;
@@ -417,7 +470,7 @@ pub fn actual_trace_v6(
                 opaque_summon = true;
             }
             let mut seen = std::collections::BTreeSet::new();
-            for (source, special, begin) in std::mem::take(&mut summoning) {
+            for (source, special, begin, procedure) in std::mem::take(&mut summoning) {
                 if special != (e.opcode == 63) || !seen.insert(source.instance.clone()) {
                     opaque_summon = true;
                     continue;
@@ -430,33 +483,14 @@ pub fn actual_trace_v6(
                         && c.location == 4
                 }) {
                     let code = c.code;
-                    let last_move = result.events.iter().rev().find(|f| {
-                        f.sequence < begin
-                            && f.opcode == 50
-                            && f.fields["code"].as_u64() == Some(code as u64)
-                            && f.fields["to"]["location"] == 4
-                            && f.fields["to"]["player"] == source.player
-                            && f.fields["to"]["sequence"] == source.sequence
-                    });
-                    let from_extra = last_move.is_some_and(|f| f.fields["from"]["location"] == 64);
-                    let procedure = from_extra
-                        && result
-                            .resolved_decisions
-                            .iter()
-                            .filter(|d| d.prompt_id < begin)
-                            .rev()
-                            .find_map(|d| {
-                                result
-                                    .events
-                                    .iter()
-                                    .find(|f| f.sequence == d.prompt_id && f.opcode == 11)
-                                    .and_then(|f| prompt_metadata(f.sequence, &f.raw).ok())
-                                    .and_then(|ms| ms.into_iter().find(|m| m.choice == d.choice))
-                            })
-                            .is_some_and(|m| {
-                                matches!(m.choice, Choice::Command { command: 1, .. })
-                                    && m.source.is_some_and(|s| s.code == code && s.location == 64)
-                            });
+                    let from_extra = movements
+                        .iter()
+                        .rev()
+                        .find(|m| {
+                            m.instance == source.instance && m.event < begin && m.to.location == 4
+                        })
+                        .is_some_and(|m| m.from.location == 64);
+                    let procedure = from_extra && procedure;
                     let flags = cat.get(&CardId(code)).map_or_else(
                         || {
                             result
@@ -802,7 +836,8 @@ pub fn actual_trace_v6(
         .filter(|c| c.location == 132)
         .cloned()
         .collect();
-    let (normal_remaining, used) = usage_from_trace(result, pack, &activations);
+    let (normal_remaining, used) =
+        usage_from_trace(result, pack, &activations, &procedure_attempts);
     let closed = !chain_open && chains.is_empty() && summoning.is_empty();
     let window = if !closed {
         TraceWindow::Pending
@@ -838,17 +873,20 @@ pub fn actual_trace_v6(
     } else {
         TraceWindow::Unknown
     };
+    let facts = Facts {
+        known_effects,
+        cards,
+        history,
+        history_complete: !opaque_summon
+            && closed
+            && result.coverage_gaps.is_empty()
+            && result.error.is_none()
+            && result.status != ygo_engine_adapter::DuelStatus::Failed,
+    };
+    let restrictions =
+        restrictions::reconstruct(result, pack, &facts, &activations, &movements, &epochs);
     Ok(FirstTurnTrace {
-        facts: Facts {
-            known_effects,
-            cards,
-            history,
-            history_complete: !opaque_summon
-                && closed
-                && result.coverage_gaps.is_empty()
-                && result.error.is_none()
-                && result.status != ygo_engine_adapter::DuelStatus::Failed,
-        },
+        facts,
         material_instances,
         activations,
         movements,
@@ -858,6 +896,8 @@ pub fn actual_trace_v6(
         draws,
         window,
         identity_bindings,
+        material_hosts: hosts,
+        restrictions,
     })
 }
 
@@ -865,6 +905,7 @@ fn usage_from_trace(
     result: &DuelResult,
     pack: &FirstTurnKnowledge,
     activations: &[ActivationWitness],
+    procedures: &[(FactCard, u8)],
 ) -> (Option<u8>, BTreeMap<String, usize>) {
     let mut used = BTreeMap::new();
     let mut normal = Some(1u8);
@@ -892,37 +933,12 @@ fn usage_from_trace(
         if e.opcode == 60 && e.fields["location"]["player"] == 0 {
             normal = normal.map(|v| v.saturating_sub(1));
         }
-        if !matches!(e.opcode, 54 | 62) {
-            continue;
-        }
-        let Some(m) = result
-            .resolved_decisions
-            .iter()
-            .filter(|d| d.prompt_id < e.sequence && d.player == 0)
-            .rev()
-            .find_map(|d| {
-                let event = &result.events[d.prompt_id as usize - 1];
-                (event.opcode == 11)
-                    .then(|| prompt_metadata(event.sequence, &event.raw).ok())
-                    .flatten()
-                    .and_then(|ms| ms.into_iter().find(|m| m.choice == d.choice))
-            })
-        else {
-            continue;
-        };
-        let Some(source) = m.source else {
-            continue;
-        };
-        if source.code as u64 != e.fields["code"].as_u64().unwrap_or(0)
-            || source.location != 2
-            || e.fields["location"]["player"] != 0
-        {
-            continue;
-        }
-        if e.opcode == 54 && matches!(m.choice, Choice::Command { command: 3, .. }) {
+    }
+    for (source, opcode) in procedures.iter().filter(|(source, _)| source.player == 0) {
+        if *opcode == 54 && source.location == 2 {
             normal = normal.map(|v| v.saturating_sub(1));
         }
-        if e.opcode == 62 && matches!(m.choice, Choice::Command { command: 1, .. }) {
+        if *opcode == 62 && source.location == 2 {
             let rules = pack
                 .rules
                 .iter()
