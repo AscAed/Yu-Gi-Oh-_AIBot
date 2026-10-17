@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "knowledge_id": "first-turn-knowledge-419cdd70cb1e3a913d80d7beabc05a153b339659f14f52578c04e4fdcf429658",
+  "cases": [
+    {
+      "case_id": "soleret-empty-positive",
+      "rule_id": "83566725:empty_field_special",
+      "case_sha256": "e80258dec43b5b16c15c4682e14877fd3894bbe6a68ee01aebefa8234e329015",
+      "kind": "procedure"
+    },
+    {
+      "case_id": "soleret-occupied-negative",
+      "rule_id": "83566725:empty_field_special",
+      "case_sha256": "996d8e0a9424ec809f15ca4f78ad7e1dee85b3457e9da5c5b05c4e5be86d8d2d",
+      "kind": "negative"
+    },
+    {
+      "case_id": "soleret-set-positive",
+      "rule_id": "83566725:deck_set",
+      "case_sha256": "5a49fcc285a6bb35095ba3ea80bad3d31c7ae8f122a6fd9fce5d0618fd5aca5d",
+      "kind": "positive"
+    },
+    {
+      "case_id": "soleret-set-window-negative",
+      "rule_id": "83566725:deck_set",
+      "case_sha256": "3c1ef7920330fd02e408c23a1eba7b56cb8a14b845abd8b6d6edb563a5dcb9c4",
+      "kind": "negative"
+    },
+    {
+      "case_id": "veil-trap-monster-positive",
+      "rule_id": "85257384:trap_monster_special",
+      "case_sha256": "f27c153158b618b627f3cbca46388a1cfd92cd81c688dd17002c7eec86aadf6a",
+      "kind": "positive"
+    },
+    {
+      "case_id": "veil-no-trap-source-negative",
+      "rule_id": "85257384:trap_monster_special",
+      "case_sha256": "3756c7bd5f0490b9c4d4388fd0be893642ae99ec8f59fbe1c7e3ea1eb0e564c0",
+      "kind": "negative"
+    },
+    {
+      "case_id": "scythe-xyz-positive",
+      "rule_id": "78449284:two_dark_level_three",
+      "case_sha256": "0a45cd73ae2e0a9eb74826b48ba9b9dc16f4944a88f3ecac8ee3b31ffde55703",
+      "kind": "procedure"
+    },
+    {
+      "case_id": "scythe-xyz-no-materials-negative",
+      "rule_id": "78449284:two_dark_level_three",
+      "case_sha256": "eb9f71523dd1aec37597902cfefe5a828bfe2976f3fe8081fa665c2a2d9d29a2",
+      "kind": "negative"
+    },
+    {
+      "case_id": "scythe-deck-special-positive",
+      "rule_id": "78449284:deck_special",
+      "case_sha256": "6f312ca869e8cfc886ce7bc2e47b643dcbd59bcffe71bc950fe5be40ba7213aa",
+      "kind": "positive"
+    },
+    {
+      "case_id": "scythe-name-use-negative",
+      "rule_id": "78449284:deck_special",
+      "case_sha256": "8e808cdd5db4a05ca69d09f9630e7a29d28b8e4c51b4b201071b61bcbaea7afe",
+      "kind": "negative"
+    },
+    {
+      "case_id": "decayed-search-positive",
+      "rule_id": "46072770:monster_search",
+      "case_sha256": "35ddb99451b9d373a8a7feb7cb5bdeda53c7eab92ae0a0c8ae42d7432ec9abc3",
+      "kind": "positive"
+    },
+    {
+      "case_id": "decayed-search-window-negative",
+      "rule_id": "46072770:monster_search",
+      "case_sha256": "8e13defc7b90b93ba7cf8d71498d5fdfa5dcae6e3a2398a46d3a23bec6b74478",
+      "kind": "negative"
+    }
+  ]
+}

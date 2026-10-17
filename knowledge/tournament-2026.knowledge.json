@@ -2219,7 +2219,7 @@
       "id": "26692769:deck_mill_and_set",
       "card_id": 26692769,
       "applicable": true,
-      "operation": "discard_mill",
+      "operation": "deck_mill_set",
       "description": 27989396946944,
       "source_locations": 4,
       "deck_interaction": "effect_mill",

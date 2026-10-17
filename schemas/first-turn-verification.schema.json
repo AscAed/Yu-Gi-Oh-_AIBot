@@ -52,7 +52,11 @@
               "positive",
               "negative",
               "procedure",
-              "continuous"
+              "continuous",
+              "procedure_negative",
+              "continuous_negative",
+              "delayed",
+              "delayed_negative"
             ]
           },
           "passed": {

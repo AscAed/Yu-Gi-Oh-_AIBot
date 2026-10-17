@@ -96,3 +96,15 @@ fn curated_first_turn_sources_match_actual_frozen_asset_bytes() {
     changed.cards[0].text_sha256 = "0".repeat(64);
     assert!(changed.validate_sources(&root).is_err());
 }
+
+#[test]
+fn rusty_deck_mill_set_is_not_a_hand_discard_operation() {
+    let pack = ygo_knowledge::first_turn::FirstTurnKnowledge::builtin().unwrap();
+    let effect = pack.rule("26692769:deck_mill_and_set").unwrap();
+    assert_eq!(
+        effect.operation,
+        ygo_knowledge::first_turn::Operation::DeckMillSet
+    );
+    assert!(effect.costs.is_empty());
+    assert!(effect.selections.iter().all(|s| s.stage != "cost"));
+}

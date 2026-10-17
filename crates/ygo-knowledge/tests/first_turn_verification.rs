@@ -93,6 +93,45 @@ fn a_partial_case_suite_never_claims_full_verified_coverage() {
 }
 
 #[test]
+fn continuous_rules_cannot_be_verified_by_an_absent_activation_option() {
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let suite: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-resource.json"
+    ))
+    .unwrap();
+    let mut c = suite
+        .cases
+        .iter()
+        .find(|c| c.kind == CaseKind::Negative)
+        .unwrap()
+        .clone();
+    c.rule_id = "42141493:shared_mulcharmy_activation_limit".into();
+    assert!(c.validate(&pack).is_err());
+    c.kind = CaseKind::ContinuousNegative;
+    c.validate(&pack).unwrap();
+    c.rule_id = "78449284:two_dark_level_three".into();
+    assert!(c.validate(&pack).is_err());
+}
+
+#[test]
+fn delayed_counterexamples_require_the_completed_end_phase_boundary() {
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let suite: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-resource.json"
+    ))
+    .unwrap();
+    let mut c = suite.cases[0].clone();
+    c.rule_id = "42141493:end_phase_random_hand_reduction".into();
+    c.kind = CaseKind::DelayedNegative;
+    c.focus = None;
+    assert!(c.validate(&pack).is_err());
+    c.observation = Observation::EndPhaseComplete;
+    c.validate(&pack).unwrap();
+    c.kind = CaseKind::Continuous;
+    assert!(c.validate(&pack).is_err());
+}
+
+#[test]
 fn a_special_procedure_is_not_confused_with_a_legal_normal_summon() {
     let pack = FirstTurnKnowledge::builtin().unwrap();
     let rule = pack.rule("83566725:empty_field_special").unwrap();
@@ -277,12 +316,35 @@ fn resource_cases_resolve_replay_and_resume_without_extra_charges() {
         serde_json::to_value(&resumed).unwrap()
     );
     let audit_dir = output.join("independent-audit");
-    let audit = verify_report(&pack, &suite, &first, &environment, &output, &audit_dir).unwrap();
+    let qualified = ygo_knowledge::first_turn::certification::VerifiedKnowledge::audit(
+        &pack,
+        &suite,
+        &first,
+        &environment,
+        &output,
+        &audit_dir,
+    )
+    .unwrap();
+    assert_eq!(qualified.certificates().len(), 6);
+    assert!(qualified.require_verified_coverage().is_err());
+    assert!(qualified.verified_ash_effects().is_empty());
+    assert_eq!(qualified.knowledge().id(), pack.id());
+    let audit = &qualified.audits()[0];
     assert_eq!(
         audit.cases.iter().map(|c| c.ledger.consumed).sum::<usize>(),
         42
     );
-    let repeat = verify_report(&pack, &suite, &first, &environment, &output, &audit_dir).unwrap();
+    let qualified_repeat = ygo_knowledge::first_turn::certification::VerifiedKnowledge::audit(
+        &pack,
+        &suite,
+        &first,
+        &environment,
+        &output,
+        &audit_dir,
+    )
+    .unwrap();
+    assert_eq!(qualified.id(), qualified_repeat.id());
+    let repeat = &qualified_repeat.audits()[0];
     assert_eq!(
         repeat
             .cases

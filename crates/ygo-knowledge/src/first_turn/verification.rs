@@ -82,6 +82,57 @@ pub enum CaseKind {
     Negative,
     Procedure,
     Continuous,
+    ProcedureNegative,
+    ContinuousNegative,
+    Delayed,
+    DelayedNegative,
+}
+
+fn procedure_rule(rule: &FirstTurnRule) -> bool {
+    rule.description.is_none()
+        && matches!(
+            rule.operation,
+            super::Operation::NormalSummonSet
+                | super::Operation::EmptyFieldSpecial
+                | super::Operation::PhantomFieldSpecial
+                | super::Operation::ExactDarkGraveSpecial
+                | super::Operation::LinkProcedure
+                | super::Operation::XyzProcedure
+        )
+}
+fn delayed_rule(rule: &FirstTurnRule) -> bool {
+    matches!(
+        rule.operation,
+        super::Operation::DelayedExosisterSet | super::Operation::EndPhaseHandReduce
+    )
+}
+impl CaseKind {
+    fn absence(self) -> bool {
+        matches!(self, Self::Negative | Self::ProcedureNegative)
+    }
+    fn bound(self, rule: &FirstTurnRule) -> bool {
+        matches!(self, Self::Positive | Self::Procedure)
+            || matches!(self, Self::Delayed | Self::DelayedNegative) && rule.description.is_some()
+    }
+    fn resolution(self, rule: &FirstTurnRule) -> bool {
+        self == Self::Positive
+            || matches!(self, Self::Delayed | Self::DelayedNegative) && rule.description.is_some()
+    }
+    pub(super) fn positive(self) -> bool {
+        matches!(
+            self,
+            Self::Positive | Self::Procedure | Self::Continuous | Self::Delayed
+        )
+    }
+    pub(super) fn negative(self) -> bool {
+        matches!(
+            self,
+            Self::Negative
+                | Self::ProcedureNegative
+                | Self::ContinuousNegative
+                | Self::DelayedNegative
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -390,22 +441,36 @@ impl NativeCase {
         {
             return Err("invalid case deck shape".into());
         }
+        if self.kind.bound(rule) && self.focus.map_or(true, |i| i >= self.decisions.len()) {
+            return Err("positive case needs a tested choice".into());
+        }
+        if self.focus.is_some_and(|i| i >= self.decisions.len()) {
+            return Err("invalid preparation boundary".into());
+        }
         match self.kind {
-            CaseKind::Positive | CaseKind::Procedure
-                if self.focus.map_or(true, |i| i >= self.decisions.len()) =>
-            {
-                return Err("positive case needs a tested choice".into())
+            CaseKind::Procedure | CaseKind::ProcedureNegative if !procedure_rule(rule) => {
+                return Err("procedure case does not describe a summon procedure".into())
             }
             CaseKind::Positive if rule.description.is_none() => {
                 return Err("activation case requires an effect description".into())
             }
-            CaseKind::Negative
+            CaseKind::Negative | CaseKind::ProcedureNegative
                 if self.focus.is_some() || self.observation == Observation::EndPhaseComplete =>
             {
                 return Err("negative case needs an actual action window".into())
             }
-            CaseKind::Continuous if self.focus.is_some_and(|i| i >= self.decisions.len()) => {
-                return Err("invalid continuous-rule boundary".into())
+            CaseKind::Negative if rule.description.is_none() && !procedure_rule(rule) => {
+                return Err("continuous/delayed rules need observable counterexamples".into())
+            }
+            CaseKind::Continuous | CaseKind::ContinuousNegative
+                if rule.description.is_some() || procedure_rule(rule) || delayed_rule(rule) =>
+            {
+                return Err("continuous case does not describe a continuous rule".into())
+            }
+            CaseKind::Delayed | CaseKind::DelayedNegative
+                if !delayed_rule(rule) || self.observation != Observation::EndPhaseComplete =>
+            {
+                return Err("delayed cases require their completed end-phase boundary".into())
             }
             _ => {}
         }
@@ -651,9 +716,11 @@ impl NativeVerificationReport {
                         .iter()
                         .any(|id| *id == 0 || *id > budget.consumed as u64)
                     || unique.len() != refs.len()
-                    || (case.kind == CaseKind::Negative) != result.after_call.is_none()
-                    || (case.kind == CaseKind::Positive && result.resolution_events.len() != 4)
-                    || (case.kind != CaseKind::Positive && !result.resolution_events.is_empty())
+                    || case.kind.absence() != result.after_call.is_none()
+                    || (case.kind.resolution(pack.rule(&case.rule_id).unwrap())
+                        && result.resolution_events.len() != 4)
+                    || (!case.kind.resolution(pack.rule(&case.rule_id).unwrap())
+                        && !result.resolution_events.is_empty())
                     || result.resolution_events.windows(2).any(|v| v[0] >= v[1])
                     || result.replay_calls.windows(2).any(|v| v[0] >= v[1])
                     || result
@@ -664,7 +731,7 @@ impl NativeVerificationReport {
                 {
                     return Err("invalid successful native evidence references".into());
                 }
-                if matches!(case.kind, CaseKind::Positive | CaseKind::Procedure) {
+                if case.kind.bound(pack.rule(&case.rule_id).unwrap()) {
                     let binding = result
                         .binding
                         .as_ref()
@@ -713,12 +780,8 @@ fn missing_rules(pack: &FirstTurnKnowledge, outputs: &[NativeCaseResult]) -> Vec
                 .iter()
                 .filter(|c| c.rule_id == r.id && c.passed)
                 .collect();
-            !successful.iter().any(|c| {
-                matches!(
-                    c.kind,
-                    CaseKind::Positive | CaseKind::Procedure | CaseKind::Continuous
-                )
-            }) || !successful.iter().any(|c| c.kind == CaseKind::Negative)
+            !successful.iter().any(|c| c.kind.positive())
+                || !successful.iter().any(|c| c.kind.negative())
         })
         .map(|r| r.id.clone())
         .collect()
@@ -832,7 +895,22 @@ fn observation(result: &DuelResult, expected: Observation) -> Result<(), String>
             result.status == DuelStatus::DecisionRequired && result.prompt.is_some()
         }
         Observation::EndPhaseComplete => {
-            result.status == DuelStatus::EngineVerified && result.prompt.is_none()
+            let frames = result
+                .events
+                .iter()
+                .map(raw_event)
+                .collect::<Result<Vec<_>, _>>()?;
+            let boundary = frames
+                .iter()
+                .rev()
+                .find(|e| e.opcode == 41 && e.fields["phase"] == 512);
+            result.status == DuelStatus::EngineVerified
+                && result.prompt.is_none()
+                && boundary.is_some_and(|end| {
+                    frames.iter().any(|e| {
+                        e.sequence > end.sequence && e.opcode == 40 && e.fields["player"] == 1
+                    })
+                })
         }
     };
     if ok {
@@ -1022,7 +1100,7 @@ fn run_cases(
             }
             let (id, before) = case_stage("before", &before_request, &adapter, &journal, reuse)?;
             result.before_call = id;
-            if case.kind == CaseKind::Negative {
+            if case.kind.absence() {
                 observation(&before, case.observation)?;
                 if metadata(&before)?.iter().any(|a| {
                     action_matches(
@@ -1037,7 +1115,7 @@ fn run_cases(
                 }) {
                     return Err("negative still offers the tested action".into());
                 }
-            } else if matches!(case.kind, CaseKind::Positive | CaseKind::Procedure) {
+            } else if case.kind.bound(pack.rule(&case.rule_id).unwrap()) {
                 let choice = &case.decisions[case.focus.unwrap()];
                 if before.prompt.as_ref().map(|p| (p.id, p.player))
                     != Some((choice.prompt_id, choice.player))
@@ -1052,7 +1130,7 @@ fn run_cases(
                     .find(|a| a.choice == choice.choice)
                     .and_then(|a| bind_test_choice(rule, a, case.kind));
             }
-            let after = if case.kind == CaseKind::Negative {
+            let after = if case.kind.absence() {
                 before.clone()
             } else {
                 let (id, after) = case_stage("after", &request, &adapter, &journal, reuse)?;
@@ -1060,12 +1138,12 @@ fn run_cases(
                 observation(&after, case.observation)?;
                 after
             };
-            let since = if case.kind == CaseKind::Negative {
+            let since = if case.kind.absence() {
                 0
             } else {
                 before.events.last().map_or(0, |e| e.sequence)
             };
-            if case.kind == CaseKind::Positive {
+            if case.kind.resolution(pack.rule(&case.rule_id).unwrap()) {
                 result.resolution_events = resolution_witness(rule, &after, since)?;
                 if let Some(binding) = &result.binding {
                     if binding.kind == "generic_trigger_requires_chain_confirmation" {
@@ -1132,7 +1210,7 @@ fn run_cases(
     Ok(report)
 }
 
-fn persisted_observations(
+pub(super) fn persisted_observations(
     case: &NativeCase,
     result: &NativeCaseResult,
     directory: &Path,
@@ -1224,7 +1302,7 @@ pub fn verify_report(
     for ((case, result), (before_call, after)) in
         suite.cases.iter().zip(&report.cases).zip(&originals)
     {
-        if case.kind == CaseKind::Positive {
+        if case.kind.resolution(pack.rule(&case.rule_id).unwrap()) {
             let since = before_call.events.last().map_or(0, |e| e.sequence);
             if resolution_witness(pack.rule(&case.rule_id).unwrap(), after, since)?
                 != result.resolution_events
@@ -1264,4 +1342,20 @@ pub fn verify_report(
         }
     }
     Ok(audit)
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::*;
+    #[test]
+    fn native_verified_status_alone_does_not_prove_completed_end_phase() {
+        let mut result = DuelResult::failure(WorkerError::new("test", "test", "test"));
+        result.status = DuelStatus::EngineVerified;
+        result.error = None;
+        assert!(observation(&result, Observation::EndPhaseComplete).is_err());
+        result.events.push(decode_frame(1, &[41, 0, 2]).unwrap());
+        assert!(observation(&result, Observation::EndPhaseComplete).is_err());
+        result.events.push(decode_frame(2, &[40, 1]).unwrap());
+        observation(&result, Observation::EndPhaseComplete).unwrap();
+    }
 }

@@ -7,6 +7,18 @@ from test_schemas import ROOT, validator
 
 
 class FirstTurnSchemas(unittest.TestCase):
+    def test_observable_counterexamples_and_delayed_boundary_have_distinct_contracts(self):
+        check = validator('first-turn-cases.schema.json')
+        suite = json.loads((ROOT / 'tests/fixtures/tournament-2026.rules-resource.json').read_text(encoding='utf-8'))
+        for kind in ['continuous_negative', 'delayed', 'delayed_negative']:
+            changed = copy.deepcopy(suite)
+            changed['cases'][0]['kind'] = kind
+            if kind.startswith('delayed'):
+                changed['cases'][0]['observation'] = 'own_main_window'
+                self.assertTrue(list(check.iter_errors(changed)))
+                changed['cases'][0]['observation'] = 'end_phase_complete'
+            check.validate(changed)
+
     def test_native_cases_require_explicit_scope_and_strict_assertions(self):
         check = validator('first-turn-cases.schema.json')
         suite = json.loads((ROOT / 'tests/fixtures/tournament-2026.rules-resource.json').read_text(encoding='utf-8'))
