@@ -1,6 +1,94 @@
 use ygo_engine_adapter::*;
 use ygo_knowledge::first_turn::{verification::*, FirstTurnKnowledge};
 
+#[test]
+#[ignore = "opt-in: refreshed rule cases plus native Scythe Ash qualification; charged outside matrix"]
+fn current_query_cases_and_actual_ash_response_grant_only_scoped_qualification() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let mut suite: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-resource.json"
+    ))
+    .unwrap();
+    let ash: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-ash.json"
+    ))
+    .unwrap();
+    suite.cases.extend(ash.cases);
+    let assets = root.join("data/runtime/tournament-2026/frozen");
+    let store =
+        ygo_storage::SnapshotStore::new(root.join("data/runtime/tournament-2026/snapshots"));
+    let active: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(store.root.join("active.json")).unwrap()).unwrap();
+    let engine = ProcessEngineConfig::from_toml(
+        &std::fs::read_to_string(root.join("data/runtime/tournament-2026/engine-development.toml"))
+            .unwrap(),
+    )
+    .unwrap();
+    let environment = NativeEnvironment {
+        engine,
+        asset_root: &assets,
+        store: &store,
+        catalog_id: active["catalog_id"].as_str().unwrap(),
+        banlist_id: active["banlist_id"].as_str().unwrap(),
+    };
+    let dir = root
+        .join("data/runtime/tournament-2026/rule-audits")
+        .join(format!(
+            "resource-ash-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+    let report = verify_cases(&pack, &suite, &environment, &dir).unwrap();
+    std::fs::write(
+        dir.join("report.json"),
+        serde_json::to_vec_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        report.passed,
+        "{:?}",
+        report
+            .cases
+            .iter()
+            .filter(|c| !c.passed)
+            .map(|c| (&c.case_id, &c.error))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        report
+            .cases
+            .iter()
+            .map(|c| c.ledger.consumed)
+            .sum::<usize>(),
+        46
+    );
+    let view = ygo_knowledge::first_turn::certification::VerifiedKnowledge::audit(
+        &pack,
+        &suite,
+        &report,
+        &environment,
+        &dir,
+        &dir.join("independent-audit"),
+    )
+    .unwrap();
+    assert_eq!(view.certificates().len(), 6);
+    assert_eq!(
+        view.verified_ash_effects()
+            .iter()
+            .map(|r| r.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["78449284:deck_special"]
+    );
+    assert!(view.require_verified_coverage().is_err());
+    println!(
+        "native rule execution46 + independent qualification46 =92 calls; reports={}",
+        dir.display()
+    );
+}
+
 fn case() -> NativeCase {
     serde_json::from_value(serde_json::json!({
         "id":"scythe-positive","rule_id":"78449284:deck_special","kind":"positive",
@@ -46,6 +134,27 @@ fn case_contract_requires_legal_inputs_focus_and_independent_assertions() {
     c.kind = CaseKind::Negative;
     c.focus = None;
     assert!(c.validate(&pack).is_err());
+}
+
+#[test]
+fn an_ash_response_case_is_a_separate_branch_and_requires_an_ashable_target() {
+    let pack = FirstTurnKnowledge::builtin().unwrap();
+    let mut suite: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-resource.json"
+    ))
+    .unwrap();
+    let mut value = serde_json::to_value(&suite.cases[8]).unwrap();
+    value["kind"] = serde_json::json!("ash_response");
+    let c: NativeCase = serde_json::from_value(value).expect("explicit native Ash branch kind");
+    c.validate(&pack).unwrap();
+    suite.cases = vec![c.clone()];
+    suite.validate(&pack).unwrap();
+    let mut wrong = c;
+    wrong.rule_id = "83566725:deck_set".into();
+    assert!(
+        wrong.validate(&pack).is_err(),
+        "deck setting alone is not an Ash target"
+    );
 }
 
 #[test]

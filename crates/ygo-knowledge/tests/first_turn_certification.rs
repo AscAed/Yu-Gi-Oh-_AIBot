@@ -36,3 +36,15 @@ fn an_uncertified_view_cannot_promote_curated_status_or_potential_ash_effects() 
     assert!(view.verified_ash_effects().is_empty());
     assert!(view.require_verified_coverage().is_err());
 }
+
+#[test]
+fn reviewed_scythe_response_preserves_the_manual_case_identity() {
+    let suite: NativeCases = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/tournament-2026.rules-ash.json"
+    ))
+    .unwrap();
+    ReviewedCases::builtin()
+        .unwrap()
+        .validate_suite(&FirstTurnKnowledge::builtin().unwrap(), &suite)
+        .unwrap();
+}

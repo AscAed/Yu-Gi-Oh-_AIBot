@@ -62,7 +62,8 @@ impl ReviewedCases {
     }
 }
 
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct AshLegality {
     pub target_activation: u64,
     pub target_chain: u64,
@@ -71,6 +72,9 @@ pub struct AshLegality {
     pub response_chain: u64,
     pub discard_cost: u64,
     pub chain_end: u64,
+    pub solving: u64,
+    pub negation: u64,
+    pub resolution: u64,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -200,7 +204,11 @@ impl VerifiedKnowledge {
                 limitations: case.limitations.clone(),
                 before_sha256: observation_hash(&before),
                 after_sha256: observation_hash(&after),
-                ash: ash_legality(pack.rule(&case.rule_id).unwrap(), &after)?,
+                ash: if case.kind == CaseKind::AshResponse {
+                    ash_legality(pack.rule(&case.rule_id).unwrap(), &after)?
+                } else {
+                    None
+                },
             };
             view.cases.insert(case.id.clone(), certificate);
         }
@@ -275,7 +283,10 @@ fn observation_hash(result: &DuelResult) -> String {
     crate::hash(&serde_json::to_vec(&normalized).unwrap())
 }
 
-fn ash_legality(rule: &FirstTurnRule, result: &DuelResult) -> Result<Option<AshLegality>, String> {
+pub(super) fn ash_legality(
+    rule: &FirstTurnRule,
+    result: &DuelResult,
+) -> Result<Option<AshLegality>, String> {
     if !rule.deck_interaction.is_ash_candidate() {
         return Ok(None);
     }
@@ -366,6 +377,17 @@ fn ash_legality(rule: &FirstTurnRule, result: &DuelResult) -> Result<Option<AshL
         .iter()
         .find(|e| e.sequence > cost.sequence && e.opcode == 74)
         .ok_or("Ash response chain not finished")?;
+    if cost.fields["from"] != ash.fields["location"]
+        || events.iter().any(|e| {
+            e.sequence > ash.sequence
+                && e.sequence < cost.sequence
+                && e.opcode == 50
+                && (e.fields["from"]["player"] == 1 && e.fields["from"]["location"] == 2
+                    || e.fields["to"]["player"] == 1 && e.fields["to"]["location"] == 2)
+        })
+    {
+        return Err("Ash discard does not bind its pre-cost source coordinate".into());
+    }
     if !events.iter().any(|e| {
         e.opcode == 71
             && e.sequence > cost.sequence
@@ -374,6 +396,33 @@ fn ash_legality(rule: &FirstTurnRule, result: &DuelResult) -> Result<Option<AshL
     }) {
         return Err("Ash cost lacks its completed chain registration".into());
     }
+    let solving = events
+        .iter()
+        .find(|e| {
+            e.sequence > cost.sequence
+                && e.sequence < end.sequence
+                && e.opcode == 72
+                && e.fields["chain"].as_u64() == Some(chain + 1)
+        })
+        .ok_or("Ash never started resolving")?;
+    let negation = events
+        .iter()
+        .find(|e| {
+            e.sequence > solving.sequence
+                && e.sequence < end.sequence
+                && e.opcode == 76
+                && e.fields["chain"].as_u64() == Some(chain)
+        })
+        .ok_or("target lacks actual Ash effect negation")?;
+    let resolution = events
+        .iter()
+        .find(|e| {
+            e.sequence > negation.sequence
+                && e.sequence < end.sequence
+                && e.opcode == 73
+                && e.fields["chain"].as_u64() == Some(chain + 1)
+        })
+        .ok_or("Ash never completed resolving")?;
     Ok(Some(AshLegality {
         target_activation: target.sequence,
         target_chain: chain,
@@ -382,6 +431,9 @@ fn ash_legality(rule: &FirstTurnRule, result: &DuelResult) -> Result<Option<AshL
         response_chain: chain + 1,
         discard_cost: cost.sequence,
         chain_end: end.sequence,
+        solving: solving.sequence,
+        negation: negation.sequence,
+        resolution: resolution.sequence,
     }))
 }
 
@@ -438,5 +490,29 @@ mod tests {
             .find(|r| r.operation == super::super::Operation::CostMillBoost)
             .unwrap();
         assert!(ash_legality(rule, &ash_record()).unwrap().is_none());
+    }
+    #[test]
+    fn an_ash_branch_requires_actual_negation_and_its_own_discard_coordinates() {
+        let pack = FirstTurnKnowledge::builtin().unwrap();
+        let rule = pack.rule("78449284:deck_special").unwrap();
+        let mut r = ash_record();
+        r.events.retain(|e| e.opcode != 76);
+        assert!(
+            ash_legality(rule, &r).is_err(),
+            "cost plus chain end does not prove negation"
+        );
+        let mut r = ash_record();
+        let e = r
+            .events
+            .iter_mut()
+            .find(|e| e.opcode == 50 && e.fields["code"] == 14558127)
+            .unwrap();
+        let mut raw = e.raw.clone();
+        raw[7..11].copy_from_slice(&1u32.to_le_bytes());
+        *e = decode_frame(e.sequence, &raw).unwrap();
+        assert!(
+            ash_legality(rule, &r).is_err(),
+            "another hand coordinate is not this handler's fee"
+        );
     }
 }

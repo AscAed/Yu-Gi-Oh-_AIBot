@@ -7,6 +7,16 @@ from test_schemas import ROOT, validator
 
 
 class FirstTurnSchemas(unittest.TestCase):
+    def test_native_ash_branch_requires_its_own_focus_and_scoped_recipe(self):
+        check = validator('first-turn-cases.schema.json')
+        suite = json.loads((ROOT / 'tests/fixtures/tournament-2026.rules-ash.json').read_text(encoding='utf-8'))
+        check.validate(suite)
+        for field, value in [('focus', None), ('kind', 'claimed_verified'),
+                             ('scope', 'tournament_sample')]:
+            changed = copy.deepcopy(suite)
+            changed['cases'][0][field] = value
+            self.assertTrue(list(check.iter_errors(changed)), field)
+
     def test_observable_counterexamples_and_delayed_boundary_have_distinct_contracts(self):
         check = validator('first-turn-cases.schema.json')
         suite = json.loads((ROOT / 'tests/fixtures/tournament-2026.rules-resource.json').read_text(encoding='utf-8'))

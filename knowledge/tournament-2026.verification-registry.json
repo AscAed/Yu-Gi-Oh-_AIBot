@@ -73,6 +73,12 @@
       "rule_id": "46072770:monster_search",
       "case_sha256": "8e13defc7b90b93ba7cf8d71498d5fdfa5dcae6e3a2398a46d3a23bec6b74478",
       "kind": "negative"
+    },
+    {
+      "case_id": "scythe-native-ash-response",
+      "rule_id": "78449284:deck_special",
+      "case_sha256": "5b4d7b54858c3d9d844f7a08e710a5c4b2c1fddf08dddbb45c869f15b584bb7f",
+      "kind": "ash_response"
     }
   ]
 }

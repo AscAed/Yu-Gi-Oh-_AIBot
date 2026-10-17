@@ -56,7 +56,8 @@
               "procedure_negative",
               "continuous_negative",
               "delayed",
-              "delayed_negative"
+              "delayed_negative",
+              "ash_response"
             ]
           },
           "passed": {

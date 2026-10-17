@@ -86,6 +86,8 @@ pub enum CaseKind {
     ContinuousNegative,
     Delayed,
     DelayedNegative,
+    /// Own tested activation is interrupted by a native opponent Ash response.
+    AshResponse,
 }
 
 fn procedure_rule(rule: &FirstTurnRule) -> bool {
@@ -111,7 +113,7 @@ impl CaseKind {
         matches!(self, Self::Negative | Self::ProcedureNegative)
     }
     fn bound(self, rule: &FirstTurnRule) -> bool {
-        matches!(self, Self::Positive | Self::Procedure)
+        matches!(self, Self::Positive | Self::Procedure | Self::AshResponse)
             || matches!(self, Self::Delayed | Self::DelayedNegative) && rule.description.is_some()
     }
     fn resolution(self, rule: &FirstTurnRule) -> bool {
@@ -448,6 +450,11 @@ impl NativeCase {
             return Err("invalid preparation boundary".into());
         }
         match self.kind {
+            CaseKind::AshResponse
+                if rule.description.is_none() || !rule.deck_interaction.is_ash_candidate() =>
+            {
+                return Err("Ash response case needs a supported Ash-sensitive activation".into())
+            }
             CaseKind::Procedure | CaseKind::ProcedureNegative if !procedure_rule(rule) => {
                 return Err("procedure case does not describe a summon procedure".into())
             }
@@ -681,9 +688,20 @@ impl NativeVerificationReport {
                 || r.coverage_id != pack.coverage_id
                 || r.knowledge_id != pack.id()
                 || r.ash_effects != expected_descriptors
-                || interruption.policy != "pass"
+                || interruption.policy
+                    != if case.kind == CaseKind::AshResponse {
+                        "ash_effect_once"
+                    } else {
+                        "pass"
+                    }
                 || interruption.opponent_deck != opponent
-                || interruption.effect_id != expected_descriptors[0].effect_id
+                || interruption.effect_id
+                    != if case.kind == CaseKind::AshResponse {
+                        &case.rule_id
+                    } else {
+                        &expected_descriptors[0].effect_id
+                    }
+                    .as_str()
                 || q.versions.rules != "ocg-mr5"
                 || q.versions.initializer != FIRST_TURN_INITIALIZER
                 || q.versions.banlist != recipe["banlist_id"]
@@ -1033,12 +1051,21 @@ fn run_cases(
         request.interruption = Some(InterruptionConfig {
             opponent_deck: opponent.clone(),
             opponent_hand: vec![CardId(14558127)],
-            policy: "pass".into(),
-            effect_id: descriptors
-                .first()
-                .ok_or("missing native verification response descriptor")?
-                .effect_id
-                .clone(),
+            policy: if case.kind == CaseKind::AshResponse {
+                "ash_effect_once"
+            } else {
+                "pass"
+            }
+            .into(),
+            effect_id: if case.kind == CaseKind::AshResponse {
+                case.rule_id.clone()
+            } else {
+                descriptors
+                    .first()
+                    .ok_or("missing native verification response descriptor")?
+                    .effect_id
+                    .clone()
+            },
             occurrence: 1,
         });
         request.decisions = case.decisions.clone();
@@ -1163,6 +1190,15 @@ fn run_cases(
                             );
                         }
                     }
+                }
+            }
+            if case.kind == CaseKind::AshResponse {
+                let ash = super::certification::ash_legality(rule, &after)?
+                    .ok_or("native Ash response evidence not reached")?;
+                if ash.target_activation <= since {
+                    return Err(
+                        "Ash responded during preparation rather than to the tested choice".into(),
+                    );
                 }
             }
             for assertion in &case.assertions {

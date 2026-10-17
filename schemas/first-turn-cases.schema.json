@@ -32,7 +32,8 @@
               "procedure_negative",
               "continuous_negative",
               "delayed",
-              "delayed_negative"
+              "delayed_negative",
+              "ash_response"
             ]
           },
           "scope": {
@@ -440,7 +441,8 @@
                 "kind": {
                   "enum": [
                     "positive",
-                    "procedure"
+                    "procedure",
+                    "ash_response"
                   ]
                 }
               }
