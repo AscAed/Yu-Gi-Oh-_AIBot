@@ -2,13 +2,13 @@
 
 最新扩充为26案例、12项成对规则资格和1项实际Scythe灰点资格；完整覆盖仍缺74项。新增依赖案例位于`tests/fixtures/tournament-2026.rules-dependencies.json`。素材禁止使用实际素材选择提示的`material_option`断言，结合在场及额外资源查询；普通操作窗口没有某个发动选项不能证明持续规则。
 
-此前公开查询口径下，原12项规则案例和新增1项Scythe灰响应案例已重新执行及独立认证，共92次。新增`ash_response`类型分别证明我方被测发动、对方合法灰选项、费用前手牌坐标、弃牌、实际无效与闭链；被无效的目标效果不计入正向结算。运行时为6项成对规则／1项实际灰点资格，整包仍缺80项。案例文件为`tests/fixtures/tournament-2026.rules-ash.json`，不替代自主线路其他新依赖的分支证据。
+此前公开查询口径下，原12项规则案例和新增1项Scythe灰响应案例已重新执行及独立认证，共92次。新增`ash_response`类型分别证明我方被测发动、对方合法灰选项、费用前手牌坐标、弃牌、实际无效与闭链；被无效的目标效果不计入正向结算。当时的阶段报告记录6项成对规则／0项灰点、整包缺80项。该数字已被后续案例更新；当前认证状态见本文件开头和TASKS.md。案例文件为`tests/fixtures/tournament-2026.rules-ash.json`，不替代自主线路其他新依赖的分支证据。
 
 `knowledge validate --knowledge knowledge/tournament-2026.knowledge.json`只检查结构、来源和冻结引用。它不执行效果，也不读取某条成功线路来提升知识包状态。
 
 新包的`knowledge verify --knowledge … --cases … --output … --store …`按独立原生案例执行。每例明确完整合法牌组、五张起手、seed1、人工准备决策、被测选择、预期断言、观察窗口和覆盖限制；当前案例固定标为`independent_rule_verification`，不能计入赛事样本或人工赛事基准。
 
-本机开发配置须指向当前编译的worker与独立2026资产组。旧部署worker不支持v6；不得仅更换卡库后直接使用旧worker。
+本机开发配置须指向当前编译的worker与独立2026资产组。不得仅更换卡库后使用不支持运行协议v6的历史worker；这里的旧worker限制不能用来推断2026-10-19刷新后的普通包已具有正式v6规划入口。
 
 ```powershell
 cargo build -p ygo-cli -p ygo-engine-adapter --offline --locked
@@ -17,7 +17,7 @@ target/debug/ygo-cli.exe knowledge validate --knowledge knowledge/tournament-202
 target/debug/ygo-cli.exe knowledge verify --knowledge knowledge/tournament-2026.knowledge.json --cases tests/fixtures/tournament-2026.rules-resource.json --output data/runtime/tournament-2026/resource-verification.json --store data/runtime/tournament-2026/snapshots
 ```
 
-开发配置是本机文件，需使用已有冻结资产的实际路径，并将worker指向`target/debug/ygo-engine-worker.exe`。本轮不覆盖旧部署目录；最终双资产部署仍待实现。
+开发配置是本机文件，需使用已有冻结资产的实际路径，并将worker指向`target/debug/ygo-engine-worker.exe`。赛事验真不覆盖普通部署目录；普通包已于2026-10-19单独刷新，但不含赛事资产，最终干净双资产部署仍待实现，见[DEPLOYMENT](DEPLOYMENT.md)。
 
 每例512次调用上限，输出旁的`.calls`目录保存独立账本及内容寻址证据。调用前落盘扣费，结果不明仍计费；再次运行同一目录复用安全检查点。原生失败结果也保留，worker内容哈希改变后使用不同核算身份。崩溃的不明调用可以披露后继续，但不退款，重试再次收费。
 
@@ -29,13 +29,13 @@ target/debug/ygo-cli.exe knowledge verify --knowledge knowledge/tournament-2026.
 
 合同使用`first-turn-cases.schema.json`、`first-turn-runtime.schema.json`及`first-turn-verification.schema.json`；旧协议不变。新合同对旧共享类型的嵌套字段额外收紧，不修改旧请求的序列化与身份。
 
-首批12个案例覆盖6项规则，报告仍列出80项缺少成对案例。`rules-resource.contract.json`是删去本机绝对路径的合同夹具，不提供真实日志，不替代本机验真报告。原生案例通过也不代表规划器转移已实现；知识包维持未完成验真的状态，正式v6与48手评估继续实施。
+首批12个案例曾覆盖6项规则；本地规则集现已扩展到26案例、12项成对规则资格和1项实际灰响应资格，完整语义资格仍缺74项。`rules-resource.contract.json`是删去本机绝对路径的合同夹具，不提供真实日志，不替代本机验真报告。原生案例通过也不代表规划器转移已实现；知识包维持未完成验真的状态，正式v6与48手评估继续实施。
 
 ## 首批因果模型对照
 
-`ygo-planner::first_turn`目前仅注册上述6项规则。转移保存费用后的资源和假定结算后的资源，不把牌库送墓、取除素材或成为素材混为一类。未知等级或召唤限制不生成有效候选；可选触发放弃不消耗次数，目标已耗尽不凭空创建触发。
+`ygo-planner::first_turn` 当前实现白名单含10个卡片/操作分支（分布于6张牌），不是这6张牌的完整效果实现。转移保存费用后的资源和假定结算后的资源，不把牌库送墓、取除素材或成为素材混为一类。未知等级或召唤限制不生成有效候选；可选触发放弃不消耗次数，目标已耗尽不凭空创建触发。
 
-本机专项`cargo test -p ygo-planner --test first_turn --offline --locked -- --ignored --nocapture`从公开初态生成预测，先保存到持久账本，再执行独立人工准备步骤，分别检查资源和重放。它是转移模型的对照实验，不是规划器自行选择的路线；没有做出默认目标，也不提供恢复状态验收。当前还需扩展其他规则、完整事件／限制重建、自动搜索与提示绑定。
+本机专项`cargo test -p ygo-planner --test first_turn --offline --locked -- --ignored --nocapture`从公开初态生成预测，先保存到持久账本，再执行独立人工准备步骤，分别检查资源和重放。它是转移模型的对照实验，不是规划器自行选择的路线；没有做出默认目标，也不提供完整恢复状态验收。当前还需扩展其他规则、完整事件／限制重建、自动搜索与提示绑定。
 
 静态查询属性需按卡片当前类型处理：冻结CDB可能为陷阱保存怪兽化参数，未怪兽化时不能把它们当作当前等级、属性或攻守。原先省略非怪兽字段的对比结果保留为诊断；当前严格对照同时核验这些字段，并检查素材容器一致性。普通超量与升阶叠放的旧素材去向分开建模，不能共用自动继承规则。
 
@@ -51,7 +51,7 @@ QueryWitness绑定原始帧和决策前缀；verify_query_replays通过统一持
 
 VerifiedKnowledge保留不可变知识包，仅通过已审阅案例清单、原持久证据与新原生审计构造；其类型不提供JSON反序列化。清单固定case内容哈希，避免任意恒真断言被当成规则证明。原实验verify入口仍可运行其他案例，但不能据此取得正式资格。
 
-资格分别保存正例、反例、分支限制、冻结正文／Lua哈希与实际观察身份。成对规则资格不证明未测分支或规划转移；动态灰点还要求实际合法响应、源效果链位置和弃牌费用证据。当前6项成对资格、0项灰点资格，其余80项被完整覆盖关口拒绝。
+资格分别保存正例、反例、分支限制、冻结正文／Lua哈希与实际观察身份。成对规则资格不证明未测分支或规划转移；动态灰点还要求实际合法响应、源效果链位置和弃牌费用证据。历史资格视图曾为6项成对资格、0项灰点资格；后续原生案例将当前认证推进到12项成对规则、1项实际灰点，仍不满足完整覆盖关口。
 
 手续不可行、持续反例和延迟反例采用不同案例类型。延迟处理要求实际结束阶段及之后的回合边界，不能只凭engine_verified状态。Rusty原先混用discard_mill的分类已修正为deck_mill_set，无弃牌费用；更新知识身份后，六项旧案例重新验真。源牌表、Lua、CDB和core保持不变。
 

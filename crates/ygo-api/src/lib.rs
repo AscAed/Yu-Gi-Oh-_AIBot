@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use ygo_domain::{Banlist, CardId, Deck, DeckValidationRules, EngineEvent, ValidationReport};
+use ygo_domain::{Banlist, Deck, DeckValidationRules, EngineEvent, ValidationReport};
 use ygo_search::{CandidateLine, SearchConfig, Searcher};
 pub mod combo;
 pub mod planning;
@@ -64,20 +64,6 @@ impl ApiService {
             .deck
             .as_ref()
             .map(|deck| self.validate_deck(deck, banlist))
-    }
-
-    pub fn placeholder_combo(&self, card: CardId, banlist: &Banlist) -> ComboResult {
-        ComboResult {
-            verification: VerificationLevel::Unsupported,
-            events: vec![EngineEvent::Failure {
-                reason: "external engine not connected".to_string(),
-            }],
-            score: 0,
-            rules: self.ruleset().to_string(),
-            banlist: banlist.version.clone(),
-            catalog: "unavailable".to_string(),
-            engine: Some(format!("requested-card:{}", card.0)),
-        }
     }
 }
 

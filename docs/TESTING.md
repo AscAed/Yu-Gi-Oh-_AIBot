@@ -1,5 +1,76 @@
 # 本机验证记录
 
+## 2026-10-19 工作树整理与文档/环境复核
+
+源码基线（本次提交的父版本）为 `54e8e10dab05a7d94196ceebc4febf18978117e0`；验证在提交前完成，记录随本次交付固化。复核覆盖文档重构、`.gitignore` 去重和 `ApiService::placeholder_combo` 删除。该方法仓库内无调用方；正式Combo与规划版本路由未改。
+
+- `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`、`git diff --check`：通过。
+- `cargo test --workspace --offline --locked`：225 passed，0 failed，36 ignored；忽略项需显式冻结资产、账本报告或人工基准。
+- `$env:PYTHONPATH='python'; py -m unittest discover -s tests -p 'test_*.py'`：37 discovered，30 passed，7 skipped。
+- `cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored --nocapture`：1项本机Rabbit真实引擎golden测试通过。
+- 普通发布包和赛事开发配置 `engine doctor` 均为 `ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通目录为13,665张卡；禁限表203项、生效日2026-10-01。该目录计数不证明全正式OCG覆盖。
+- 普通包CLI与现存 `target/release/ygo-cli.exe` SHA256相同（`54804730…1432a89f`）；worker与 `target/release/ygo-engine-worker.exe` SHA256相同（`ad4a5929…f37fd11c`）。哈希相同仅确认现存构建产物，不证明由当前源码干净重建。
+- 全仓Markdown扫描65份、143条相对文件链接，0断链；PRODUCT_VISION中16项需求均有计划映射，P0–P8共35项未来任务。独立只读审查未发现最终全卡/全局最优门槛降级；COMBO-01阶段现统一为P5/P6，并映射至P2.2、P5.3–P5.4和P6.1。
+- `.gitignore` 已移除被整目录规则覆盖的逐JSON重复项，并按构建环境、本机资产、部署产物分组；`git check-ignore -v`确认本机配置、运行/数据目录、`target/`、`dist/`和`.venv/`仍被忽略，源码和文档未被忽略。无已跟踪文件被忽略。
+- `cargo machete` 未安装；未联网安装工具。此次源码清理仅删除确认无调用方的占位API。`data/runtime/`、`data/tmp/`、`dist/`和`target/`含本机资产、持久账本、部署或构建证据，未作递归清理。
+
+本次复核没有重建部署包、重新进行规则认证、正式v6、16+32手评估或独立干净checkout验收。上述跳过项与缺口仍按TASKS跟踪。
+
+## 2026-10-19 产品目标与路线文档交付：只读运行复核
+
+本条对应PRODUCT_VISION、OPTIMALITY_RESEARCH和2026-10-19产品演进计划的文档交付，晚于下方“完整自检”。HEAD为 `54e8e10dab05a7d94196ceebc4febf18978117e0`；开始时已有未提交源码/文档修改，本轮仅写Markdown，不提交、不构建、不部署、不清理资产。
+
+实际运行以下本机命令，均退出0：
+
+```powershell
+./dist/ygo-local/ygo.cmd engine doctor
+./dist/ygo-local/ygo.cmd catalog status
+./dist/ygo-local/ygo.cmd banlist status
+Get-FileHash dist/ygo-local/ygo.exe,dist/ygo-local/ygo-engine-worker.exe,target/release/ygo-cli.exe,target/release/ygo-engine-worker.exe -Algorithm SHA256
+Get-Content dist/ygo-local/build-hashes.json
+$env:YGO_ENGINE_CONFIG='data/runtime/tournament-2026/engine-development.toml'
+./target/debug/ygo-cli.exe engine doctor
+./target/debug/ygo-cli.exe knowledge validate --knowledge knowledge/tournament-2026.knowledge.json
+```
+
+上述最后三行是独立终端调用内的赛事配置；普通包wrapper固定其自己的配置。哈希逐项核对：
+
+| 观察 | 结果及限制 |
+|---|---|
+| 普通包doctor | ready/abi_ok/assets_ok=true，issues=[]，smoke_ok=null |
+| 赛事开发doctor | 同样就绪，smoke_ok=null；使用独立冻结资产和debug worker，不是统一发布包 |
+| 普通CLI与现存release/包内清单 | SHA256 `54804730b3a507c0143c627d5e5c61b2acc03964c9a7cda7c803b6101432a89f` 一致 |
+| 普通worker与现存release/包内清单 | SHA256 `ad4a592981535144190ec44e0dd8c4aca951ec21c0206a1346961484f37fd11c` 一致 |
+| 普通catalog | 13,665张，ID `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`；不是全正式OCG完整性证明 |
+| 普通banlist | 203项，生效2026-10-01，ID `banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`；本轮不重新核对官方逐项名单 |
+| 赛事知识来源 | sources_verified=true，39卡/102规则，14潜在灰点，静态verified_ash_effects=0，complete_semantic_coverage=false |
+
+知识身份为 `first-turn-knowledge-419cdd70cb1e3a913d80d7beabc05a153b339659f14f52578c04e4fdcf429658`。静态包声明不等于独立原生认证；下方历史记录的运行时12项指定分支/1灰点没有在本轮重认证，也没有因来源检查而提升。doctor产生ABI探针请求，不是决斗smoke，不计入未来赛事矩阵或规则认证；本轮没有进行新的规则/策略实验。
+
+文档验收使用Python标准库内联检查：文件集合为Git跟踪Markdown与docs递归Markdown的并集（排除忽略的dist/运行目录），去除代码块后检查相对文件链接存在；将PRODUCT_VISION表格的需求编号逐项核对PROJECT_ASSESSMENT与实施计划，并核对阶段及任务状态。最终实跑：38份Markdown、95条相对文件链接均存在；16项需求无遗漏/重复，P0–P8齐全，35项未来工程任务均未勾选。该检查验证链接目标和编号映射，不代替内容审阅或证明研究可行性。`git diff --check`退出0，Git提示的既有LF/CRLF转换警告不是空白检查失败。
+
+独立只读文档审查发现两项重要缺口，已一次修正：研究终止定义补充首回合合法提前胜/负/平及其目标评价、终止后无后继动作；新增P5.4输入牌组识别任务，明确主题/字段/玩法/互动输出、setcode事实与推断分层、混合/未知牌组验收并修正COMBO-01映射。修正后重新运行链接、16项需求/阶段/任务检查，并定向核对两项修正文字与映射，全部通过；未声称又运行了一轮独立审查。
+
+范围检查以本轮开始时266个Git跟踪文件的内容SHA256为基线，比对收尾内容及新增路径：非Markdown变化0，删除0，HEAD未改变，新增文件仅三份目标文档。已有 `crates/ygo-api/src/lib.rs` 修改属于前次工作，其本轮前后SHA256均为 `c74dee19f8fb794a7b6bf0193272a09458f437ec74bac8734697010a11e4cd48`，不能算本轮源码改动。普通二进制的一致哈希不证明它由最新工作区干净构建；本轮未运行Rust/Python全套、真实决斗重放、v6、48手或干净checkout验收。下方225项Rust、30项Python等为前次自检证据，不能移作本轮新结果。
+
+## 2026-10-19 完整自检、当前部署与文档重构
+
+基线代码提交 `54e8e10`。当前工作区移除了仓库内唯一引用点的旧 `ApiService::placeholder_combo` 占位方法（未触及正式 Combo/规划版本路由）；下列 Rust 检查是在该修改之后运行。工作区保持未提交状态，报告中的历史 commit 不包含本次修改。
+
+- `cargo fmt --all -- --check`：通过。
+- `cargo clippy --workspace --all-targets --offline --locked -- -D warnings`：通过，0 warning。
+- `cargo test --workspace --offline --locked`：225 passed，0 failed，36 ignored。忽略项是需显式选择冻结资产、账本报告或人工基准的 opt-in 案例。
+- `$env:PYTHONPATH='python'; py -m unittest discover -s tests -p 'test_*.py'`：37 discovered，30 passed，7 skipped。
+- `cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored --nocapture`：1 个真实本机引擎 golden 测试通过。
+- `scripts/deploy-local.ps1 -Offline -FrozenRuntime`：成功重建并更新本机 `dist/ygo-local`；catalog 13,665 张，禁限表 203 项（2026-10-01 生效）。`engine doctor` 返回 `ready=true`、ABI/资产均通过、`issues=[]`。
+- 用当前部署二进制运行 `combo analyze`：Rabbit 固定五张起手得到 5 条候选、735 个前缀节点、54.398 秒墙钟预算，终止原因 `time_budget`；5 条均由当前部署包 `combo replay` 独立重放通过。评分为 heuristic，不将排名解释为全局最优。
+- `target/debug/ygo-cli.exe knowledge validate --knowledge knowledge/tournament-2026.knowledge.json`（赛事隔离配置）：来源校验通过，39 张、102 条分类；`complete_semantic_coverage=false`。这不是规则验真或 v6 完成证明。
+- Markdown 相对链接检查 33 个源码文档通过；`git diff --check` 通过。环境清理只做审计，没有删除本机数据、报告、账本或构建缓存。
+
+自检分析报告保存在忽略目录 `data/runtime/self-audit-current.json`；最新本机执行文件哈希见 `dist/ygo-local/build-hashes.json`。普通发布包不包含 `knowledge/tournament-2026.knowledge.json` 与独立赛事资产，因此验证该包不等于部署了新本家规划功能。
+
+本轮没有运行正式 v6规划或 16+32 手评估；完整语义覆盖、端到端执行续跑、第三方逐资产许可清单和独立干净 checkout 双资产验收仍未完成。
+
 ## 2026-10-18 费用支付后的运行中故障
 
 实跑原生前缀，在Scythe已经取除1张素材、仍等待牌库对象选择的提示处注入已标记的worker退出。实际查询中宿主只剩1张素材，原始MOVE从132到16且费用位0x80成立；这些断言依据原始事件／查询和人工预期，不使用符号预测当作实际变化。已有前缀独立重放通过，但仍不是终场或恢复锚点，不能取得成功推荐或规则资格。

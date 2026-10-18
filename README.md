@@ -1,51 +1,37 @@
 # Yu-Gi-Oh! AI
 
-Windows 本机 Combo CLI：固定完整卡组与五张起手，使用固定 API 11.0 的 x64 ocgcore 执行先攻首回合、无干扰展开。新增幻影骑士团人工效果知识与因果规划：先提出带资源依据的目标方案，再绑定真实提示执行并独立重放。自动构筑、手坑和 HTTP 接口列入后续范围。
+本仓库是 Windows 本机的 Yu-Gi-Oh! OCG/MR5 Combo 研究工具。当前包含真实 ocgcore 执行、固定起手的有限搜索、版本化知识/目标规划、报告重放，以及一个仍在内部集成阶段的新本家首回合规划器。
 
-已有v5单次灰流丽多响应点与两个展开的稳健比较。新的2026赛事原表主41＋额外15已通过来源／冻结规则和独立资产关口；完整首回合语义、v6及48手评估仍在实施。当前状态与离线复核见[原表重选说明](docs/TOURNAMENT_RESELECTION.md)。
+**能力边界：**当前不是自动构筑器，也不支持任意卡效、任意手坑、后攻或完整对局。新首回合模块的局部实验不代表正式 v6；符合规则的行为仍以真实引擎和独立重放为准。评分是启发式；有界搜索不能证明全局最优。
 
-定向Scythe自主展开、受阻检查和灰后Boots恢复已完成两次真实三组验证（每次170调用）；首批依赖取得12项规则分支资格。该内部集成不开放正式v6，范围和剩余工作见[局部验收说明](docs/FIRST_TURN_PILOT.md)。
+产品方向是中文本机浏览器卡组工作台，以及构筑与Combo评估反馈闭环。基础功能离线、大模型可选；最终AI要求冻结版本全部正式OCG与明确首回合情景的全局最优证明，该研究可行性尚未建立。详见[产品愿景](docs/PRODUCT_VISION.md)、[差距评估](docs/PROJECT_ASSESSMENT.md)和[分阶段实施计划](docs/superpowers/plans/2026-10-19-product-evolution.md)。编辑器等预览成果不能替代最终验收。
 
-## 通用目标与收益验证
+## 本机快速运行
 
-规划 v3 支持 Rusty＋Fog、Cherubini＋Fog等结构化目标，并独立验证发动机会和有界后续收益。当前 profile 为 `phantom-goal-v2`；旧 `phantom-goal-v1` 本地报告需要重新生成，规划 v1/v2报告继续兼容。
+需要 Windows x64、Rust stable、Python 3.10+、Git、Visual Studio 2022 C++ x64 工具及本机 Project Ignis 资产。配置和数据为本机路径，不进入源码库。
 
-    ./dist/ygo-local/ygo.cmd combo plan --input tests/fixtures/goal-cherubini.request.json --output data/runtime/goal-cherubini-report.json
-    ./dist/ygo-local/ygo.cmd combo plan-replay --input data/runtime/goal-cherubini-report.json
+```powershell
+./scripts/build-engine.ps1 -Offline
+./scripts/deploy-local.ps1 -Offline -FrozenRuntime
+./dist/ygo-local/ygo.cmd engine doctor
+./dist/ygo-local/ygo.cmd combo analyze --input tests/fixtures/rabbit.request.json --output data/runtime/report.json
+./dist/ygo-local/ygo.cmd combo replay --input data/runtime/report.json
+```
 
-历史记录区分破坏前、送墓后和费用后的发动源快照；重放一致之外，测试也核对原始召唤批次与素材移动。接口、预算和限制见 [目标规划说明](docs/GOAL_PLANNING.md)，最终状态见 [验证记录](docs/TESTING.md)。
+首次准备引擎或依赖需要联网时，仓库脚本会在同一进程设置本机代理；细节与资产要求见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。当前正式规划 v1–v5 示例、知识验真和特定 profile 的使用方式见对应功能文档。
 
-## Break Sword 与逐效果验真
+## 开发验证
 
-新增 v2 规划与真实效果案例验真：16个支持效果分别记录符号预测、原生提示、结算后反例和独立重放；受控对方场面支持 Break Sword 超量、破坏、复活后继续达成目标。旧 v1 入口与报告仍可重放。使用、场景含义及范围见 [逐效果验真说明](docs/BREAK_SWORD_VERIFICATION.md)。
+```powershell
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --offline -- -D warnings
+cargo test --workspace --offline --locked
+$env:PYTHONPATH='python'
+py -m unittest discover -s tests -p 'test_*.py'
+```
 
-## 本机运行
+资产依赖测试需显式启用；所有测试状态和可复验命令集中记录在 [`docs/TESTING.md`](docs/TESTING.md)。
 
-在仓库根目录执行：
+## 项目文档
 
-    ./scripts/build-engine.ps1
-    ./scripts/deploy-local.ps1
-    ./dist/ygo-local/ygo.cmd engine doctor
-    ./dist/ygo-local/ygo.cmd combo analyze --input tests/fixtures/rabbit.request.json --output data/runtime/report.json
-    ./dist/ygo-local/ygo.cmd combo replay --input data/runtime/report.json
-
-已有冻结资产的语义规划入口：
-
-    ./scripts/deploy-local.ps1 -Offline -FrozenRuntime
-    ./dist/ygo-local/ygo.cmd knowledge validate
-    ./dist/ygo-local/ygo.cmd combo plan --input tests/fixtures/phantom.request.json --output data/runtime/phantom-plan-report.json
-    ./dist/ygo-local/ygo.cmd combo plan-replay --input data/runtime/phantom-plan-report.json
-
-效果范围、决策依据、合同和限制见 [语义规划说明](docs/SEMANTIC_PLANNING.md)。
-
-首次构建需要 Rust、Python 与 Visual Studio 2022 C++ x64 工具。构建脚本会在同一进程注入本地 Clash Verge 代理 127.0.0.1:7897；有缓存时可使用 -Offline。数据库、脚本、DLL、快照和个人配置保持在忽略目录；发布目录配置引用当前机器上的外部资产，部署包需要按本机路径重新生成。
-
-完整安装步骤、命令及运行边界见 [部署说明](docs/DEPLOYMENT.md)。[任务表](TASKS.md)、[协议](docs/ENGINE_PROTOCOL.md)、[搜索与评分](docs/SEARCH_AND_SCORING.md)描述当前实现。[现状审查](docs/PROJECT_ASSESSMENT.md)、[验证记录](docs/TESTING.md)、[路线图](docs/ROADMAP.md)总结部署状态和后续计划。
-
-目标表达式、第二目标和有界收益分支见 [GOAL_PLANNING.md](docs/GOAL_PLANNING.md)。新入口使用规划请求/报告v3，原版本继续兼容。
-
-## 单次灰流丽与恢复规划
-
-v4入口、固定响应场景、三组预算和独立证据见 [RECOVERY_PLANNING.md](docs/RECOVERY_PLANNING.md)。使用 `combo plan --input tests/fixtures/ash-recovery.request.json`，报告通过 `combo plan-replay` 独立核验。旧版本入口保持兼容；首版不覆盖任意手坑或提前规避策略。
-
-灰流丽多响应点与稳健展开顺序：见 [ASH_STRATEGY_PLANNING.md](docs/ASH_STRATEGY_PLANNING.md)，使用 `tests/fixtures/ash-strategy.request.json` 及原有 `combo plan` / `combo plan-replay`。
+从 [`docs/INDEX.md`](docs/INDEX.md) 开始。当前任务和功能门禁以 [`TASKS.md`](TASKS.md) 为准；模块能力和限制见 [`docs/PROJECT_ASSESSMENT.md`](docs/PROJECT_ASSESSMENT.md)，工作顺序见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。

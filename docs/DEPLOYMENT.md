@@ -1,8 +1,28 @@
 # Windows 本机部署与验收
 
+## 当前代码与本机包
+
+当前 Rust 源码包含 v1–v5 正式 Combo 规划分派，以及未开放为正式规划入口的 first-turn 内部预测/局部执行与知识验真。部署脚本会把当前 workspace CLI 和 worker 复制到 `dist/ygo-local`，但不因此使尚未通过完整语义关口的 first-turn 成为正式 v6。部署包绑定当前仓库路径，不能直接搬到另一台机器。
+
+当前 `deploy-local.ps1` 只打包 Phantom v1/v2 知识和普通运行资产；不会复制赛事 `tournament-2026` 知识包或其隔离 CDB/Lua/core。赛事规则验真须按 `FIRST_TURN_VERIFICATION.md` 使用独立开发配置，不可通过替换普通包中的 CDB 来混用两套资产。
+
+前次自检已于2026-10-19按冻结资产重建普通 `dist/ygo-local`，不再是初次盘点时的10月16日旧包。本轮文档交付只读核对CLI/worker与现存release构建、包内 `build-hashes.json` 一致，普通包及赛事开发配置doctor均就绪。该哈希一致性不证明构建对应最新工作区；最新源码的独立干净checkout双资产验收仍未完成，精确命令/身份见[TESTING](TESTING.md)。本轮没有重建部署或重跑smoke，doctor的smoke_ok=null。
+
+普通发布包、赛事开发配置和最终干净双资产包是三种不同状态：赛事当前引用独立冻结资产及debug worker，不是正式v6发布包。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
+
+使用已有冻结运行资产离线更新本机发布目录：
+
+```powershell
+./scripts/deploy-local.ps1 -Offline -FrozenRuntime
+```
+
+此命令会重建整个 Rust workspace 并覆盖 `dist/ygo-local` 的同名发布文件。先确保旧包所引用的验收报告已保留；脚本不会清理 data/runtime 或 data/tmp。
+
 2026-10-14：新增知识/规划 CLI，见 [SEMANTIC_PLANNING.md](SEMANTIC_PLANNING.md)。已有冻结资产使用 `./scripts/deploy-local.ps1 -Offline -FrozenRuntime`，保留 CDB、Lua、core 版本，重新构建 CLI/worker 并验证知识来源。普通部署会从 Ignis 准备资产；冻结部署不会覆盖资产。包内新增 knowledge 与 Phantom 请求 fixture，wrapper 设置知识路径。
 
-运行范围：OCG/MR5，双方 8000 LP，先攻首回合，固定五张手牌、seed 初始化剩余牌库，无对手干扰。对手使用相同主卡组作为惰性占位库、初始手牌为空，只在可选响应窗口选择不响应；尚不支持指定对手卡组、手坑、后攻或构筑。
+通用 `combo analyze` 的基线范围：OCG/MR5，双方8000 LP，先攻首回合，固定五张手牌、seed初始化剩余牌库、无对手干扰；对手相同主卡组作惰性占位库，初始手牌为空，只选择可选不响应。另有版本化规划v4/v5的指定单灰合成场景，见[恢复规划](RECOVERY_PLANNING.md)及[灰流丽策略](ASH_STRATEGY_PLANNING.md)。这不提供任意对手、通用手坑、后攻或构筑能力。
+
+中文浏览器、一键启动、可迁移路径及引擎切换是[产品路线](ROADMAP.md)P3/P8的未来任务；当前没有HTTP/UI服务，也没有可直接向普通用户转发的便携安装包。
 
 ## 环境准备
 
@@ -52,6 +72,6 @@ $env:YGO_LIVE_ENGINE='1'
 py -m unittest discover -s tests -p 'test_runtime_build.py'
 ```
 
-CI 不携带真实资产，四项 Rust 引擎测试明确标记 ignored；Python 引擎和本机报告用例默认 skipped。真实黄金线路 fixture 验证救援兔未使用怪兽的结束阶段破坏、霍普两张超量素材、LAN 连接终场及提示编号不匹配；规划测试验证 Phantom 目标、来源与报告伪造拒绝和预算降级。完整命令与当前结果见 [TESTING.md](TESTING.md)。
+CI不携带真实资产；依赖冻结资产/账本报告的Rust测试为显式opt-in，Python引擎和本机报告用例默认skipped。历史“四项”不是当前测试数量，最新完整套件计数见[TESTING](TESTING.md)。真实黄金线路fixture验证救援兔未使用怪兽的结束阶段破坏、霍普两张超量素材、LAN连接终场及提示编号不匹配；规划测试验证Phantom目标、来源与报告伪造拒绝和预算降级。
 
 首版未知决策停止分支，未知信息帧保留原始字节、结果为 partial；只有完全解码、终场已结算且独立重放一致的线路才能标记 engine_verified。评分总为 heuristic。旧 rabbit-v1 评分只覆盖救援兔、霍普、宝石骑士珍珠及 LAN 的小型验收场景；其余卡效强度列为覆盖缺口、计零，不代表实际弱度。新规划入口使用 rusty-fog 目标和资源/决策排序，逐效果范围见 SEMANTIC_PLANNING.md。

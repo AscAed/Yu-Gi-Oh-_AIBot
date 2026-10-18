@@ -1,5 +1,7 @@
 # 灰流丽多响应点与稳健展开顺序
 
+范围提示：本页是v5固定场景的合同和历史验收，文末后续安排已由[ROADMAP](ROADMAP.md)统筹；该矩阵不提供[产品目标](PRODUCT_VISION.md)要求的全卡或全局最优证明。
+
 基线782eca9。新接口为规划请求/报告、分析及运行协议v5；profile为`phantom-ash-strategy-v1`，初始化为`fixed-ash-strategy-v1`。旧v1—v4合同、身份和重放路径继续保留。本轮完整检查及干净部署验收通过，结果见TESTING.md。
 
 ## 使用
