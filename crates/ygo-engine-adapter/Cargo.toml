@@ -1,0 +1,15 @@
+[package]
+name = "ygo-engine-adapter"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+ygo-domain = { path = "../ygo-domain" }
+libloading = "0.8"
+sha2.workspace = true
+rusqlite.workspace = true

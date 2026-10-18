@@ -1,0 +1,44 @@
+{
+  "schema_version": "2",
+  "source": "fixture",
+  "cards": [
+    {
+      "id": 10000001,
+      "name": "Sample Starter",
+      "kind": "monster",
+      "archetypes": [
+        "Sample"
+      ],
+      "alias": 0,
+      "type_flags": 17,
+      "setcodes": [],
+      "level": 0,
+      "attribute": 0,
+      "race": 0,
+      "attack": 0,
+      "defense": 0,
+      "lscale": 0,
+      "rscale": 0,
+      "link_marker": 0
+    },
+    {
+      "id": 10000002,
+      "name": "Sample Extender",
+      "kind": "spell",
+      "archetypes": [
+        "Sample"
+      ],
+      "alias": 0,
+      "type_flags": 2,
+      "setcodes": [],
+      "level": 0,
+      "attribute": 0,
+      "race": 0,
+      "attack": 0,
+      "defense": 0,
+      "lscale": 0,
+      "rscale": 0,
+      "link_marker": 0
+    }
+  ]
+}

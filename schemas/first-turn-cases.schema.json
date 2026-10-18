@@ -1,0 +1,550 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "First-turn native rule cases v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "knowledge_id": {
+      "type": "string",
+      "pattern": "^first-turn-knowledge-[0-9a-f]{64}$"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "positive",
+              "negative",
+              "procedure",
+              "continuous",
+              "procedure_negative",
+              "continuous_negative",
+              "delayed",
+              "delayed_negative",
+              "ash_response"
+            ]
+          },
+          "scope": {
+            "const": "independent_rule_verification"
+          },
+          "deck": {
+            "type": "object",
+            "properties": {
+              "main": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4294967295
+                },
+                "minItems": 40,
+                "maxItems": 60
+              },
+              "extra": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4294967295
+                },
+                "minItems": 0,
+                "maxItems": 15
+              },
+              "side": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4294967295
+                },
+                "minItems": 0,
+                "maxItems": 15
+              }
+            },
+            "required": [
+              "main",
+              "extra",
+              "side"
+            ],
+            "additionalProperties": false
+          },
+          "opening_hand": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "minItems": 5,
+            "maxItems": 5
+          },
+          "seed": {
+            "const": 1
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "plan-result-v2.schema.json#/$defs/decision"
+            },
+            "maxItems": 1024
+          },
+          "focus": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observation": {
+            "enum": [
+              "own_main_window",
+              "decision_window",
+              "end_phase_complete"
+            ]
+          },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "count"
+                    },
+                    "card_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4294967295
+                    },
+                    "player": {
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    },
+                    "location": {
+                      "enum": [
+                        1,
+                        2,
+                        4,
+                        8,
+                        16,
+                        32,
+                        64
+                      ]
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 60
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "card_id",
+                    "player",
+                    "location",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "delta"
+                    },
+                    "card_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4294967295
+                    },
+                    "player": {
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    },
+                    "location": {
+                      "enum": [
+                        1,
+                        2,
+                        4,
+                        8,
+                        16,
+                        32,
+                        64
+                      ]
+                    },
+                    "change": {
+                      "type": "integer",
+                      "minimum": -60,
+                      "maximum": 60
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "card_id",
+                    "player",
+                    "location",
+                    "change"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "instance"
+                    },
+                    "card_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4294967295
+                    },
+                    "player": {
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    },
+                    "location": {
+                      "enum": [
+                        1,
+                        2,
+                        4,
+                        8,
+                        16,
+                        32,
+                        64
+                      ]
+                    },
+                    "sequence": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rank": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "position": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "materials": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4294967295
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "attribute": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status_all": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "card_id",
+                    "player",
+                    "location",
+                    "sequence",
+                    "level",
+                    "rank",
+                    "position",
+                    "materials",
+                    "attribute",
+                    "status_all"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "event"
+                    },
+                    "opcode": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 255
+                    },
+                    "fields": {
+                      "type": "object"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "opcode",
+                    "fields",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "reason"
+                    },
+                    "card_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4294967295
+                    },
+                    "player": {
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    },
+                    "from": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 255
+                    },
+                    "to": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 255
+                    },
+                    "all_bits": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "card_id",
+                    "player",
+                    "from",
+                    "to",
+                    "all_bits",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "material_option"
+                    },
+                    "card_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4294967295
+                    },
+                    "player": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "offered": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "card_id",
+                    "player",
+                    "offered"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "minItems": 1
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "id",
+          "rule_id",
+          "kind",
+          "scope",
+          "deck",
+          "opening_hand",
+          "seed",
+          "decisions",
+          "focus",
+          "observation",
+          "assertions",
+          "branch",
+          "limitations"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "positive",
+                    "procedure",
+                    "ash_response"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "focus": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "decisions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "plan-result-v2.schema.json#/$defs/decision"
+                  },
+                  "minItems": 1,
+                  "maxItems": 1024
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "negative",
+                    "procedure_negative"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "focus": {
+                  "type": "null"
+                },
+                "observation": {
+                  "enum": [
+                    "own_main_window",
+                    "decision_window"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "delayed",
+                    "delayed_negative"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "observation": {
+                  "const": "end_phase_complete"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "knowledge_id",
+    "cases"
+  ],
+  "additionalProperties": false
+}

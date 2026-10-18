@@ -1,0 +1,875 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 5
+    },
+    "planner_profile": {
+      "const": "phantom-ash-strategy-v1"
+    },
+    "request": {
+      "$ref": "plan-request-v5.schema.json"
+    },
+    "knowledge_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "opponent_knowledge": {
+      "type": "object",
+      "properties": {
+        "card_id": {
+          "const": 14558127
+        },
+        "name": {
+          "type": "string"
+        },
+        "text_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "script": {
+          "const": "official/c14558127.lua"
+        },
+        "script_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "14558127:negate"
+              },
+              "description_index": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rule": {
+                "const": "ash_negate"
+              },
+              "supported": {
+                "type": "boolean"
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "costs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "candidate_filter": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "excluded": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "setcodes": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "type_mask": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "level": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "max_level": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "race": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "attribute": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "operations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "trigger": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usage_key": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "restrictions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence_cases": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "description_index",
+              "rule",
+              "supported",
+              "conditions",
+              "costs",
+              "candidate_filter",
+              "operations",
+              "trigger",
+              "usage_key",
+              "restrictions",
+              "evidence_cases"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "card_id",
+        "name",
+        "text_sha256",
+        "script",
+        "script_sha256",
+        "effects"
+      ]
+    },
+    "discoveries": {
+      "type": "array",
+      "items": {
+        "$ref": "plan-arm-v5.schema.json"
+      },
+      "maxItems": 2,
+      "minItems": 1
+    },
+    "strategies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "proposal": {
+            "$ref": "plan-arm-v5.schema.json#/$defs/proposal"
+          },
+          "first_sensitive": {
+            "enum": [
+              "25538345:mill",
+              "36426778:search",
+              "90432163:search",
+              "63821877:mill",
+              "26692769:mill_set",
+              "32807846:search",
+              "81439173:mill",
+              "none"
+            ]
+          },
+          "prediction": {
+            "type": "string"
+          },
+          "discovery": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "selected_execution": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "enum": [
+                    "pass",
+                    "25538345:mill",
+                    "36426778:search",
+                    "90432163:search",
+                    "63821877:mill",
+                    "26692769:mill_set",
+                    "32807846:search",
+                    "81439173:mill"
+                  ]
+                },
+                "classification": {
+                  "enum": [
+                    "unknown",
+                    "no_interference",
+                    "original_plan_interrupted",
+                    "response_point_not_reached",
+                    "response_illegal",
+                    "budget_or_execution_incomplete",
+                    "budget_exhausted",
+                    "recovery_coverage_gap",
+                    "engine_failure"
+                  ]
+                },
+                "original": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "plan-arm-v5.schema.json"
+                    }
+                  ]
+                },
+                "anchor": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "runtime": {
+                          "$ref": "plan-arm-v5.schema.json#/$defs/runtime"
+                        },
+                        "observation": {
+                          "$ref": "plan-arm-v5.schema.json#/$defs/observation"
+                        },
+                        "state": {
+                          "$ref": "plan-arm-v5.schema.json#/$defs/state"
+                        },
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "consumed_steps": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 32
+                        },
+                        "settlements": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "effect_id": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "before": {
+                                "$ref": "plan-arm-v5.schema.json#/$defs/witness"
+                              },
+                              "selected": {
+                                "$ref": "plan-arm-v5.schema.json#/$defs/decision"
+                              }
+                            },
+                            "required": [
+                              "effect_id",
+                              "reason",
+                              "before",
+                              "selected"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 32
+                        },
+                        "witness": {
+                          "$ref": "plan-arm-v5.schema.json#/$defs/witness"
+                        },
+                        "used_calls": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reserved_calls": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "replay_verified": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "runtime",
+                        "observation",
+                        "state",
+                        "id",
+                        "consumed_steps",
+                        "settlements",
+                        "witness",
+                        "used_calls",
+                        "reserved_calls",
+                        "replay_verified"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "recovery": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "plan-arm-v5.schema.json"
+                    }
+                  ]
+                },
+                "outcome": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "execution_id": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "score": {
+                          "type": "object",
+                          "properties": {
+                            "goal": {
+                              "type": "boolean"
+                            },
+                            "gains": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            },
+                            "main_resources": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "verification_decisions": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "goal",
+                            "gains",
+                            "main_resources",
+                            "verification_decisions"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "evaluation": {
+                          "$ref": "plan-arm-v5.schema.json#/$defs/evaluation"
+                        },
+                        "witnesses": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "execution_id",
+                        "score",
+                        "evaluation",
+                        "witnesses"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 512
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "failed_settlement": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "selections": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "effect_id": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "before": {
+                                "$ref": "plan-arm-v5.schema.json#/$defs/witness"
+                              },
+                              "selected": {
+                                "$ref": "plan-arm-v5.schema.json#/$defs/decision"
+                              }
+                            },
+                            "required": [
+                              "effect_id",
+                              "reason",
+                              "before",
+                              "selected"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 32
+                        },
+                        "observation": {
+                          "$ref": "plan-arm-v5.schema.json#/$defs/observation"
+                        },
+                        "used_calls": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 512
+                        },
+                        "replay_attempts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 33
+                        },
+                        "error": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "selections",
+                        "observation",
+                        "used_calls",
+                        "replay_attempts",
+                        "error"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "comparison": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "pass_execution_id": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "reference_window_id": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{64}$"
+                            }
+                          ]
+                        },
+                        "actual_anchor_id": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{64}$"
+                            }
+                          ]
+                        },
+                        "interruption_changes": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "player": {
+                                    "enum": [
+                                      0,
+                                      1
+                                    ]
+                                  },
+                                  "code": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "location": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "before": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "after": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "delta": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "player",
+                                  "code",
+                                  "location",
+                                  "before",
+                                  "after",
+                                  "delta"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "recovery_changes": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "player": {
+                                    "enum": [
+                                      0,
+                                      1
+                                    ]
+                                  },
+                                  "code": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "location": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "before": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "after": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "delta": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "player",
+                                  "code",
+                                  "location",
+                                  "before",
+                                  "after",
+                                  "delta"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "terminal_difference": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "player": {
+                                    "enum": [
+                                      0,
+                                      1
+                                    ]
+                                  },
+                                  "code": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "location": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "before": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "after": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "delta": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "player",
+                                  "code",
+                                  "location",
+                                  "before",
+                                  "after",
+                                  "delta"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "lost_goal_conditions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "window_semantics": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "pass_execution_id",
+                        "reference_window_id",
+                        "actual_anchor_id",
+                        "interruption_changes",
+                        "recovery_changes",
+                        "terminal_difference",
+                        "lost_goal_conditions",
+                        "window_semantics"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "policy",
+                "classification",
+                "original",
+                "anchor",
+                "recovery",
+                "outcome",
+                "calls",
+                "detail",
+                "failed_settlement",
+                "comparison"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 8,
+            "minItems": 8
+          },
+          "worst_first": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "goal": {
+                      "type": "boolean"
+                    },
+                    "gains": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "integer"
+                          }
+                        ]
+                      },
+                      "maxItems": 64
+                    },
+                    "main_resources": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "verification_decisions": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "goal",
+                    "gains",
+                    "main_resources",
+                    "verification_decisions"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 8,
+                "minItems": 8
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "proposal",
+          "first_sensitive",
+          "prediction",
+          "discovery",
+          "selected_execution",
+          "cells",
+          "worst_first"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 2
+    },
+    "ranking": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "maxItems": 2
+    },
+    "comparison": {
+      "type": "string"
+    },
+    "total_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 8192
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "planner_profile",
+    "request",
+    "knowledge_id",
+    "opponent_knowledge",
+    "discoveries",
+    "strategies",
+    "ranking",
+    "comparison",
+    "total_calls",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Two-strategy bounded Ash response matrix v5"
+}

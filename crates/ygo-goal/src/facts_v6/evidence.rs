@@ -1,0 +1,1169 @@
+use crate::{FactCard, Facts};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
+use ygo_engine_adapter::DuelResult;
+
+/// Public query at a stopped prompt, bound to the exact raw and decision prefix.
+/// Its authenticity must additionally be checked by independent native replay.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QueryWitness {
+    pub event: u64,
+    pub raw_prefix_sha256: String,
+    pub decisions_sha256: String,
+    pub public: ygo_engine_adapter::FirstTurnPublicState,
+}
+
+impl QueryWitness {
+    pub fn capture(result: &DuelResult) -> Result<Self, String> {
+        let event = result.events.last().ok_or("missing stopped frame")?;
+        let prompt = result.prompt.as_ref().ok_or("missing stopped prompt")?;
+        if result.status != ygo_engine_adapter::DuelStatus::DecisionRequired
+            || result.error.is_some()
+            || prompt.id != event.sequence
+            || ygo_engine_adapter::parse_prompt(event.sequence, &event.raw)?.as_ref()
+                != Some(prompt)
+        {
+            return Err("query capture requires the actual stopped prompt".into());
+        }
+        let raw: Vec<_> = result.events.iter().map(|e| &e.raw).collect();
+        Ok(Self {
+            event: event.sequence,
+            raw_prefix_sha256: digest(&raw),
+            decisions_sha256: digest(&result.resolved_decisions),
+            public: ygo_engine_adapter::first_turn_public_state(&result.checkpoint),
+        })
+    }
+}
+
+/// Not deserializable or externally constructible: hashes alone cannot mint a
+/// successful native query audit. Portable reports retain the supporting ledger.
+pub struct AuditedQueries {
+    request_hash: String,
+    result_hash: String,
+    queries_hash: String,
+    pub call_ids: Vec<u64>,
+}
+impl AuditedQueries {
+    pub fn matches(
+        &self,
+        request: &ygo_engine_adapter::RunDuelRequest,
+        result: &DuelResult,
+        witnesses: &[QueryWitness],
+    ) -> bool {
+        self.request_hash == request_hash(request)
+            && self.result_hash == normalized_hash(result)
+            && self.queries_hash == digest(&witnesses)
+    }
+}
+
+fn request_hash(request: &ygo_engine_adapter::RunDuelRequest) -> String {
+    let mut normalized = request.clone();
+    // Machine-local paths and timeouts do not define the duel. Asset content is
+    // already bound by RuntimeVersions and independently checked by the worker.
+    normalized.engine = Default::default();
+    digest(&normalized)
+}
+
+fn normalized_hash(result: &DuelResult) -> String {
+    let mut normalized = result.clone();
+    normalized.peak_working_set_bytes = None;
+    digest(&normalized)
+}
+
+/// Fresh, charged native reruns of each public query and the complete root.
+/// This does not reuse cached results or certify semantic rule coverage.
+pub fn verify_query_replays(
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
+) -> Result<AuditedQueries, String> {
+    request.validate_protocol()?;
+    if request.protocol_version != 6 || request.versions != result.versions {
+        return Err("query audit runtime versions differ".into());
+    }
+    audit_queries(
+        ygo_engine_adapter::ProcessEngineAdapter::new(request.engine.clone()),
+        request,
+        result,
+        witnesses,
+        journal,
+    )
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryAuditStage {
+    Validation,
+    Reservation,
+    PrefixReplay,
+    RootReplay,
+    Cleanup,
+}
+
+/// Diagnostic progress is serializable; it cannot grant a native receipt.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QueryAuditFailure {
+    pub checkpoint: Option<Box<String>>,
+    pub stage: QueryAuditStage,
+    pub code: String,
+    pub detail: String,
+    pub completed_witnesses: usize,
+    pub call_ids: Vec<u64>,
+    pub failed_call: Option<u64>,
+    pub cleanup_error: Option<Box<String>>,
+}
+impl std::fmt::Display for QueryAuditFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.detail)
+    }
+}
+
+/// Retain the exact charged progress when an independent audit cannot finish.
+pub fn verify_query_replays_recorded(
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
+) -> Result<AuditedQueries, QueryAuditFailure> {
+    audit_queries_recorded(
+        ygo_engine_adapter::ProcessEngineAdapter::new(request.engine.clone()),
+        request,
+        result,
+        witnesses,
+        journal,
+    )
+}
+
+/// Verify a recorded failed audit against immutable intent and stored outcomes.
+/// This validates diagnostics only; it cannot construct an AuditedQueries receipt.
+pub fn validate_query_audit_failure(
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    failure: &QueryAuditFailure,
+    journal: &ygo_engine_adapter::CallJournal,
+) -> Result<(), String> {
+    request.validate_protocol()?;
+    validate_evidence(result, witnesses)?;
+    if request.protocol_version != 6
+        || request.versions != result.versions
+        || !result.resolved_decisions.starts_with(&request.decisions)
+    {
+        return Err("failed audit input differs".into());
+    }
+    journal.verify().map_err(|e| e.message)?;
+    let checkpoint = failure
+        .checkpoint
+        .as_deref()
+        .ok_or("failed audit has no persistent intent")?;
+    let start = journal
+        .checkpoint_consumed(checkpoint)
+        .map_err(|e| e.message)?
+        .ok_or("missing audit intent")? as u64;
+    let intent = serde_json::json!({"request":request_hash(request), "result":normalized_hash(result),
+        "queries":digest(&witnesses), "before_call":start + 1});
+    if checkpoint != &format!("immutable/query-audit/{}", digest(&intent))
+        || journal.checkpoint(checkpoint).map_err(|e| e.message)? != Some(intent)
+    {
+        return Err("failed audit intent was changed".into());
+    }
+    let mut expected = QueryAuditFailure {
+        checkpoint: Some(Box::new(checkpoint.clone())),
+        stage: QueryAuditStage::Reservation,
+        code: "journal_budget".into(),
+        detail: "reservation exceeds scope budget".into(),
+        completed_witnesses: 0,
+        call_ids: failure.call_ids.clone(),
+        failed_call: None,
+        cleanup_error: None,
+    };
+    if failure.call_ids.is_empty() {
+        let budget = journal
+            .checkpoint_budget(checkpoint)
+            .map_err(|e| e.message)?
+            .ok_or("missing audit budget")?;
+        if witnesses.len()
+            < budget
+                .limit
+                .saturating_sub(budget.consumed + budget.reserved)
+        {
+            return Err("audit reservation could fit; failure is unproved".into());
+        }
+    } else {
+        if failure.call_ids.len() > witnesses.len() + 1 {
+            return Err("extra audit calls".into());
+        }
+        let mut found_failure = false;
+        for (i, call) in failure.call_ids.iter().enumerate() {
+            if *call != start + i as u64 + 1
+                || journal.call_purpose(*call).map_err(|e| e.message)?
+                    != ygo_engine_adapter::CallPurpose::Witness
+            {
+                return Err("failed audit call sequence differs".into());
+            }
+            let mut q = request.clone();
+            q.decisions = result.resolved_decisions.clone();
+            if let Some(witness) = witnesses.get(i) {
+                q.decisions.retain(|d| d.prompt_id < witness.event);
+            }
+            let outcome = journal
+                .load_outcome(*call, &q)
+                .map_err(|e| e.message)?
+                .ok_or("audit attempt still has an unknown outcome")?;
+            expected.stage = if i < witnesses.len() {
+                QueryAuditStage::PrefixReplay
+            } else {
+                QueryAuditStage::RootReplay
+            };
+            let mismatch = match outcome {
+                Err(error) => Some((error.code, error.message)),
+                Ok(actual) => {
+                    if let Some(witness) = witnesses.get(i) {
+                        match QueryWitness::capture(&actual) {
+                            Err(detail) => Some(("query_capture".into(), detail)),
+                            Ok(query)
+                                if query.event != witness.event
+                                    || serde_json::to_value(&query).unwrap()
+                                        != serde_json::to_value(witness).unwrap() =>
+                            {
+                                Some((
+                                    "query_mismatch".into(),
+                                    "public query differs from independent native prefix".into(),
+                                ))
+                            }
+                            Ok(_) if actual.versions != result.versions => {
+                                Some(("versions".into(), "query prefix runtime changed".into()))
+                            }
+                            Ok(_) => None,
+                        }
+                    } else if normalized_hash(&actual) != normalized_hash(result) {
+                        Some((
+                            "root_mismatch".into(),
+                            "complete root differs from independent native replay".into(),
+                        ))
+                    } else {
+                        None
+                    }
+                }
+            };
+            if let Some((code, detail)) = mismatch {
+                if i + 1 != failure.call_ids.len() {
+                    return Err("audit continued after its first failure".into());
+                }
+                expected.code = code;
+                expected.detail = detail;
+                expected.failed_call = Some(*call);
+                found_failure = true;
+                break;
+            }
+            if i < witnesses.len() {
+                expected.completed_witnesses += 1;
+            }
+        }
+        if !found_failure {
+            return Err("audit contains no proved failure".into());
+        }
+    }
+    if serde_json::to_value(expected).unwrap() != serde_json::to_value(failure).unwrap() {
+        return Err("audit failure stage, progress, or original error differs".into());
+    }
+    Ok(())
+}
+
+fn audit_queries<A: ygo_engine_adapter::EngineAdapter>(
+    inner: A,
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
+) -> Result<AuditedQueries, String> {
+    audit_queries_recorded(inner, request, result, witnesses, journal).map_err(|e| e.to_string())
+}
+
+fn audit_queries_recorded<A: ygo_engine_adapter::EngineAdapter>(
+    inner: A,
+    request: &ygo_engine_adapter::RunDuelRequest,
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+    journal: std::sync::Arc<ygo_engine_adapter::CallJournal>,
+) -> Result<AuditedQueries, QueryAuditFailure> {
+    let failure = |stage, code: &str, detail: String| QueryAuditFailure {
+        stage,
+        code: code.into(),
+        detail,
+        completed_witnesses: 0,
+        call_ids: vec![],
+        failed_call: None,
+        cleanup_error: None,
+        checkpoint: None,
+    };
+    request
+        .validate_protocol()
+        .map_err(|e| failure(QueryAuditStage::Validation, "protocol", e))?;
+    if request.protocol_version != 6 || request.versions != result.versions {
+        return Err(failure(
+            QueryAuditStage::Validation,
+            "versions",
+            "query audit runtime versions differ".into(),
+        ));
+    }
+    validate_evidence(result, witnesses)
+        .map_err(|e| failure(QueryAuditStage::Validation, "evidence", e))?;
+    if !result.resolved_decisions.starts_with(&request.decisions) {
+        return Err(failure(
+            QueryAuditStage::Validation,
+            "request_prefix",
+            "query audit request decisions differ from the actual prefix".into(),
+        ));
+    }
+    let start = journal
+        .stats()
+        .map_err(|e| failure(QueryAuditStage::Reservation, &e.code, e.message.clone()))?
+        .consumed as u64;
+    let token = format!("query-audit-{}-{start}", normalized_hash(result));
+    let intent = serde_json::json!({"request":request_hash(request), "result":normalized_hash(result),
+        "queries":digest(&witnesses), "before_call":start + 1});
+    let checkpoint = format!("immutable/query-audit/{}", digest(&intent));
+    journal
+        .save_checkpoint(&checkpoint, &intent)
+        .map_err(|e| failure(QueryAuditStage::Reservation, &e.code, e.message.clone()))?;
+    journal.reserve(&token, witnesses.len() + 1).map_err(|e| {
+        let mut fault = failure(QueryAuditStage::Reservation, &e.code, e.message.clone());
+        fault.checkpoint = Some(Box::new(checkpoint.clone()));
+        fault
+    })?;
+    let adapter = ygo_engine_adapter::JournaledAdapter::new(
+        inner,
+        journal.clone(),
+        ygo_engine_adapter::CallPurpose::Witness,
+    );
+    let mut completed = 0;
+    let mut stage = QueryAuditStage::PrefixReplay;
+    let checked: Result<AuditedQueries, (String, String)> = (|| {
+        for witness in witnesses {
+            let mut prefix = request.clone();
+            prefix.decisions = result
+                .resolved_decisions
+                .iter()
+                .filter(|d| d.prompt_id < witness.event)
+                .cloned()
+                .collect();
+            let actual = adapter
+                .run_reserved(&prefix, &token)
+                .map_err(|e| (e.code, e.message))?;
+            let queried =
+                QueryWitness::capture(&actual).map_err(|e| ("query_capture".into(), e))?;
+            if queried.event != witness.event
+                || serde_json::to_value(&queried).unwrap() != serde_json::to_value(witness).unwrap()
+            {
+                return Err((
+                    "query_mismatch".into(),
+                    "public query differs from independent native prefix".into(),
+                ));
+            }
+            if actual.versions != result.versions {
+                return Err(("versions".into(), "query prefix runtime changed".into()));
+            }
+            completed += 1;
+        }
+        stage = QueryAuditStage::RootReplay;
+        let mut full = request.clone();
+        full.decisions = result.resolved_decisions.clone();
+        let replay = adapter
+            .run_reserved(&full, &token)
+            .map_err(|e| (e.code, e.message))?;
+        if normalized_hash(&replay) != normalized_hash(result) {
+            return Err((
+                "root_mismatch".into(),
+                "complete root differs from independent native replay".into(),
+            ));
+        }
+        Ok(AuditedQueries {
+            request_hash: request_hash(request),
+            result_hash: normalized_hash(result),
+            queries_hash: digest(&witnesses),
+            call_ids: (start + 1..=start + witnesses.len() as u64 + 1).collect(),
+        })
+    })();
+    let cleanup = journal
+        .remaining_reservation(&token)
+        .and_then(|remaining| {
+            if remaining.is_some() {
+                journal.release(&token)
+            } else {
+                Ok(())
+            }
+        })
+        .err()
+        .map(|e| e.message);
+    let end = journal
+        .stats()
+        .map_err(|e| failure(QueryAuditStage::Cleanup, &e.code, e.message.clone()))?
+        .consumed as u64;
+    match (checked, cleanup) {
+        (Ok(receipt), None) => Ok(receipt),
+        (checked, cleanup) => {
+            let (code, detail) = checked.err().unwrap_or_else(|| {
+                stage = QueryAuditStage::Cleanup;
+                ("journal_cleanup".into(), cleanup.clone().unwrap())
+            });
+            Err(QueryAuditFailure {
+                checkpoint: Some(Box::new(checkpoint)),
+                stage,
+                code,
+                detail,
+                completed_witnesses: completed,
+                call_ids: (start + 1..=end).collect(),
+                failed_call: (end > start + completed as u64 && stage != QueryAuditStage::Cleanup)
+                    .then_some(end),
+                cleanup_error: cleanup.map(Box::new),
+            })
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationWitness {
+    pub event: u64,
+    pub chain: u64,
+    pub rule_id: Option<String>,
+    pub source: FactCard,
+    pub after_cost: Option<FactCard>,
+    pub resolved: bool,
+    pub negated: bool,
+    pub activation_negated: bool,
+    pub solving_event: Option<u64>,
+    pub resolution_event: Option<u64>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DrawWitness {
+    pub event: u64,
+    pub player: u8,
+    pub count: usize,
+    /// Only our actually drawn identities; opponent draws expose count only.
+    pub cards: Vec<u32>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ObservedLocation {
+    pub player: u8,
+    pub location: u8,
+    /// Hidden deck/hand/extra positions never enter the planning state.
+    pub sequence: Option<u32>,
+    pub position: Option<u32>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MovementWitness {
+    pub instance: String,
+    pub identity_known: bool,
+    pub event: u64,
+    pub reason: u32,
+    pub from: ObservedLocation,
+    pub to: ObservedLocation,
+    pub epoch_before: u64,
+    pub epoch_after: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FirstTurnTrace {
+    pub facts: Facts,
+    pub material_instances: Vec<FactCard>,
+    pub activations: Vec<ActivationWitness>,
+    pub movements: Vec<MovementWitness>,
+    pub epochs: BTreeMap<String, u64>,
+    pub normal_remaining: Option<u8>,
+    pub used: BTreeMap<String, usize>,
+    pub draws: Vec<DrawWitness>,
+    pub window: TraceWindow,
+    pub identity_bindings: Vec<IdentityBinding>,
+    pub material_hosts: BTreeMap<String, String>,
+    pub restrictions: super::ActualRestrictions,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IdentityBinding {
+    pub instance: String,
+    pub event: u64,
+    pub prior_event: u64,
+    pub basis: String,
+    pub rule_id: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TraceWindow {
+    OwnMainAction,
+    Pending,
+    OwnTurnEnded,
+    Unknown,
+}
+
+fn digest(value: &impl Serialize) -> String {
+    format!("{:x}", Sha256::digest(serde_json::to_vec(value).unwrap()))
+}
+
+pub(super) fn from_query(
+    c: &ygo_engine_adapter::StateCard,
+    instance: String,
+    identity_known: bool,
+    proper_xyz: Option<bool>,
+) -> FactCard {
+    FactCard {
+        instance,
+        identity_known,
+        type_flags: c.type_flags,
+        code: c.code,
+        player: c.player,
+        location: c.location,
+        sequence: c.sequence,
+        position: c.position,
+        level: c.level,
+        rank: c.rank,
+        proper_xyz,
+        materials: c.overlay.clone(),
+        materials_complete: Some(true),
+    }
+}
+
+pub(super) fn public_location(v: &serde_json::Value) -> ObservedLocation {
+    let player = v["player"].as_u64().unwrap_or(0) as u8;
+    let location = v["location"].as_u64().unwrap_or(0) as u8;
+    let hidden = location == 1 || (player == 1 && matches!(location, 2 | 64));
+    ObservedLocation {
+        player,
+        location,
+        sequence: (!hidden).then(|| v["sequence"].as_u64().unwrap_or(0) as u32),
+        position: (!hidden).then(|| v["position"].as_u64().unwrap_or(0) as u32),
+    }
+}
+
+pub(super) fn reconcile(
+    tracked: &mut [FactCard],
+    cards: &[ygo_engine_adapter::StateCard],
+    shuffled: &mut BTreeMap<String, u64>,
+    bindings: &mut Vec<IdentityBinding>,
+    event: u64,
+) {
+    for c in tracked.iter_mut() {
+        let matches = cards
+            .iter()
+            .filter(|q| {
+                q.code == c.code
+                    && q.player == c.player
+                    && q.location == c.location
+                    && q.sequence == c.sequence
+            })
+            .collect::<Vec<_>>();
+        if matches.len() == 1 {
+            *c = from_query(
+                matches[0],
+                c.instance.clone(),
+                c.identity_known,
+                c.proper_xyz,
+            );
+        }
+    }
+    // A shuffle does not tell same-name instances apart. Only a unique leftover
+    // original and a unique unassigned actual slot permit this bijection.
+    for i in 0..tracked.len() {
+        let c = &tracked[i];
+        if c.identity_known
+            || c.location != 2
+            || c.sequence != u32::MAX
+            || !shuffled.contains_key(&c.instance)
+        {
+            continue;
+        }
+        let originals = tracked
+            .iter()
+            .filter(|x| {
+                x.code == c.code
+                    && x.player == c.player
+                    && x.location == 2
+                    && !x.identity_known
+                    && shuffled.contains_key(&x.instance)
+            })
+            .count();
+        let unassigned = cards
+            .iter()
+            .filter(|q| {
+                q.code == c.code
+                    && q.player == c.player
+                    && q.location == 2
+                    && !tracked.iter().any(|x| {
+                        x.player == q.player
+                            && x.location == 2
+                            && x.sequence == q.sequence
+                            && x.sequence != u32::MAX
+                    })
+            })
+            .collect::<Vec<_>>();
+        if originals == 1 && unassigned.len() == 1 {
+            let prior_event = shuffled.remove(&c.instance).unwrap();
+            bindings.push(IdentityBinding {
+                instance: c.instance.clone(),
+                event,
+                prior_event,
+                basis: "unique_unassigned_query_after_shuffle".into(),
+                rule_id: None,
+            });
+            tracked[i] = from_query(unassigned[0], c.instance.clone(), true, c.proper_xyz);
+        }
+    }
+}
+
+pub(super) fn validate_evidence(
+    result: &DuelResult,
+    witnesses: &[QueryWitness],
+) -> Result<(), String> {
+    if result.protocol_version != 6
+        || result.versions.initializer != ygo_engine_adapter::FIRST_TURN_INITIALIZER
+        || witnesses.is_empty()
+    {
+        return Err("v6 trace requires its initializer and initial public witness".into());
+    }
+    for (i, e) in result.events.iter().enumerate() {
+        let decoded = ygo_engine_adapter::decode_frame(i as u64 + 1, &e.raw)?;
+        if e.sequence != decoded.sequence
+            || e.opcode != decoded.opcode
+            || e.fields != decoded.fields
+            || e.supported != decoded.supported
+        {
+            return Err("decoded event does not match original raw frame".into());
+        }
+        let locations: Vec<_> = match e.opcode {
+            50 => vec![&e.fields["from"], &e.fields["to"]],
+            54 | 60 | 62 | 70 => vec![&e.fields["location"]],
+            83 => e.fields["targets"]
+                .as_array()
+                .map_or_else(Vec::new, |xs| xs.iter().collect()),
+            _ => vec![],
+        };
+        if locations
+            .iter()
+            .any(|loc| loc["player"].as_u64().map_or(true, |p| p > 1))
+        {
+            return Err("invalid raw controller coordinate".into());
+        }
+    }
+    for e in &result.events {
+        if e.opcode == 70 && e.fields["player"].as_u64().map_or(true, |p| p > 1) {
+            return Err("invalid raw activating player".into());
+        }
+        if let Ok(metadata) = ygo_engine_adapter::prompt_metadata(e.sequence, &e.raw) {
+            if metadata
+                .iter()
+                .any(|m| m.source.iter().chain(&m.selected).any(|c| c.player > 1))
+            {
+                return Err("invalid raw prompt card controller".into());
+            }
+        }
+    }
+    let mut previous_decision = 0;
+    for d in &result.resolved_decisions {
+        let event = result
+            .events
+            .get(
+                d.prompt_id
+                    .checked_sub(1)
+                    .ok_or("invalid decision sequence")? as usize,
+            )
+            .ok_or("missing decision prompt")?;
+        let prompt = ygo_engine_adapter::parse_prompt(d.prompt_id, &event.raw)?
+            .ok_or("decision has no supported prompt")?;
+        if d.player > 1
+            || d.prompt_id <= previous_decision
+            || prompt.player != d.player
+            || !prompt.actions.iter().any(|a| a.choice == d.choice)
+        {
+            return Err("invalid or unordered actual decision".into());
+        }
+        previous_decision = d.prompt_id;
+    }
+    let mut previous = 0;
+    for w in witnesses {
+        if w.event <= previous || w.event as usize > result.events.len() {
+            return Err("invalid query witness sequence".into());
+        }
+        let raw: Vec<_> = result.events[..w.event as usize]
+            .iter()
+            .map(|e| &e.raw)
+            .collect();
+        let decisions: Vec<_> = result
+            .resolved_decisions
+            .iter()
+            .filter(|d| d.prompt_id < w.event)
+            .collect();
+        if digest(&raw) != w.raw_prefix_sha256 || digest(&decisions) != w.decisions_sha256 {
+            return Err("query witness prefix mismatch".into());
+        }
+        let event = &result.events[w.event as usize - 1];
+        if ygo_engine_adapter::parse_prompt(w.event, &event.raw)?.is_none() {
+            return Err("public query witness is not at a stopped prompt".into());
+        }
+        let mut positions = std::collections::BTreeSet::new();
+        for c in &w.public.visible.cards {
+            if c.player > 1
+                || !matches!(c.location, 2 | 4 | 8 | 16 | 32 | 64)
+                || (c.player == 1 && (matches!(c.location, 2 | 64) || c.position & 5 == 0))
+                || !positions.insert((c.player, c.location, c.sequence))
+            {
+                return Err("invalid or hidden public query card".into());
+            }
+        }
+        previous = w.event;
+    }
+    let first = &witnesses[0];
+    if first.public.visible.turn != 1
+        || first.public.visible.turn_player != 0
+        || first.public.visible.phase != 4
+        || result
+            .resolved_decisions
+            .iter()
+            .any(|d| d.prompt_id < first.event)
+        || first
+            .public
+            .visible
+            .cards
+            .iter()
+            .any(|c| c.player != 0 || !matches!(c.location, 2 | 64))
+        || first
+            .public
+            .visible
+            .cards
+            .iter()
+            .filter(|c| c.location == 2)
+            .count()
+            != 5
+    {
+        return Err("trace must start at the untouched own first main phase".into());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+    use ygo_engine_adapter::*;
+
+    #[test]
+    fn same_name_count_mismatch_never_picks_an_original_by_name() {
+        let mut tracked = vec![
+            FactCard {
+                instance: "a".into(),
+                code: 7,
+                location: 2,
+                sequence: u32::MAX,
+                ..Default::default()
+            },
+            FactCard {
+                instance: "b".into(),
+                code: 7,
+                location: 2,
+                sequence: u32::MAX,
+                ..Default::default()
+            },
+        ];
+        let cards = vec![StateCard {
+            code: 7,
+            location: 2,
+            sequence: 0,
+            ..Default::default()
+        }];
+        let mut shuffled = BTreeMap::from([("a".into(), 1), ("b".into(), 1)]);
+        let mut bindings = vec![];
+        reconcile(&mut tracked, &cards, &mut shuffled, &mut bindings, 2);
+        assert!(tracked
+            .iter()
+            .all(|c| !c.identity_known && c.sequence == u32::MAX));
+        assert!(bindings.is_empty());
+    }
+
+    fn fixture() -> (DuelResult, Vec<QueryWitness>, RunDuelRequest) {
+        let mut data: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/tournament-2026.trace-resource.json"
+        ))
+        .unwrap();
+        data["result"]["events"] = serde_json::json!([]);
+        let mut result: DuelResult = serde_json::from_value(data["result"].clone()).unwrap();
+        result.events = data["frames"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+            .map(|(i, raw)| {
+                decode_frame(
+                    i as u64 + 1,
+                    &serde_json::from_value::<Vec<u8>>(raw.clone()).unwrap(),
+                )
+                .unwrap()
+            })
+            .collect();
+        let witnesses = serde_json::from_value(data["witnesses"].clone()).unwrap();
+        let report: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/tournament-2026.rules-resource.contract.json"
+        ))
+        .unwrap();
+        (
+            result,
+            witnesses,
+            serde_json::from_value(report["cases"][0]["runtime_request"].clone()).unwrap(),
+        )
+    }
+    fn journal(limit: usize) -> Arc<CallJournal> {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data/tmp")
+            .join(format!(
+                "query-audit-{}-{}.jsonl",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        CallJournal::open(&p, "query-audit-unit", "recorded-oracle", limit).unwrap()
+    }
+    struct RecordedOracle {
+        root: DuelResult,
+        witnesses: Vec<QueryWitness>,
+        calls: Arc<AtomicUsize>,
+    }
+    impl EngineAdapter for RecordedOracle {
+        fn doctor(&self) -> DoctorReport {
+            panic!("audit must not use uncharged doctor")
+        }
+        fn run(&self, request: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            if request.decisions == self.root.resolved_decisions {
+                return Ok(self.root.clone());
+            }
+            let witness = self
+                .witnesses
+                .iter()
+                .find(|w| {
+                    self.root
+                        .resolved_decisions
+                        .iter()
+                        .filter(|d| d.prompt_id < w.event)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        == request.decisions
+                })
+                .unwrap();
+            let mut result = self.root.clone();
+            result.events.truncate(witness.event as usize);
+            result.resolved_decisions = request.decisions.clone();
+            result.prompt =
+                parse_prompt(witness.event, &result.events.last().unwrap().raw).unwrap();
+            result.checkpoint = witness.public.visible.clone();
+            for (code, count) in &witness.public.own_deck_counts {
+                for _ in 0..*count {
+                    result.checkpoint.cards.push(StateCard {
+                        code: *code,
+                        player: 0,
+                        location: 1,
+                        ..Default::default()
+                    });
+                }
+            }
+            for _ in 0..witness.public.opponent_hand_count {
+                result.checkpoint.cards.push(StateCard {
+                    code: 14558127,
+                    player: 1,
+                    location: 2,
+                    ..Default::default()
+                });
+            }
+            for _ in 0..witness.public.opponent_deck_count {
+                result.checkpoint.cards.push(StateCard {
+                    code: 0,
+                    player: 1,
+                    location: 1,
+                    ..Default::default()
+                });
+            }
+            Ok(result)
+        }
+    }
+    fn oracle(
+        root: &DuelResult,
+        witnesses: &[QueryWitness],
+        calls: &Arc<AtomicUsize>,
+    ) -> RecordedOracle {
+        RecordedOracle {
+            root: root.clone(),
+            witnesses: witnesses.to_vec(),
+            calls: calls.clone(),
+        }
+    }
+    #[test]
+    fn a_mismatched_result_protocol_is_rejected_before_any_replay_debit() {
+        let (mut root, witnesses, request) = fixture();
+        root.protocol_version = 5;
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries_recorded(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .expect("wrong protocol must not obtain a receipt");
+        assert_eq!(error.stage, QueryAuditStage::Validation);
+        assert!(error.call_ids.is_empty());
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(j.stats().unwrap().consumed, 0);
+    }
+    #[test]
+    fn a_worker_failure_retains_completed_witnesses_and_the_charged_attempt() {
+        struct FailingOracle {
+            inner: RecordedOracle,
+        }
+        impl ygo_engine_adapter::EngineAdapter for FailingOracle {
+            fn doctor(&self) -> ygo_engine_adapter::DoctorReport {
+                self.inner.doctor()
+            }
+            fn run(
+                &self,
+                q: &ygo_engine_adapter::RunDuelRequest,
+            ) -> Result<DuelResult, ygo_engine_adapter::WorkerError> {
+                if self.inner.calls.load(Ordering::SeqCst) == 2 {
+                    self.inner.calls.fetch_add(1, Ordering::SeqCst);
+                    return Err(ygo_engine_adapter::WorkerError::new(
+                        "worker_exit",
+                        "test",
+                        "stopped",
+                    ));
+                }
+                self.inner.run(q)
+            }
+        }
+        let (root, witnesses, request) = fixture();
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries_recorded(
+            FailingOracle {
+                inner: oracle(&root, &witnesses, &calls),
+            },
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(error.stage, QueryAuditStage::PrefixReplay);
+        assert_eq!(error.code, "worker_exit");
+        assert_eq!(error.completed_witnesses, 2);
+        assert_eq!(error.call_ids, vec![1, 2, 3]);
+        assert_eq!(error.failed_call, Some(3));
+        assert_eq!(j.stats().unwrap().consumed, 3);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+    }
+    #[test]
+    fn a_root_replay_failure_does_not_discard_seven_verified_queries() {
+        struct FailRoot {
+            inner: RecordedOracle,
+        }
+        impl ygo_engine_adapter::EngineAdapter for FailRoot {
+            fn doctor(&self) -> ygo_engine_adapter::DoctorReport {
+                self.inner.doctor()
+            }
+            fn run(
+                &self,
+                q: &ygo_engine_adapter::RunDuelRequest,
+            ) -> Result<DuelResult, ygo_engine_adapter::WorkerError> {
+                if self.inner.calls.load(Ordering::SeqCst) == 7 {
+                    return Err(ygo_engine_adapter::WorkerError::new(
+                        "worker_timeout",
+                        "test",
+                        "timeout",
+                    ));
+                }
+                self.inner.run(q)
+            }
+        }
+        let (root, witnesses, request) = fixture();
+        let j = journal(8);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries_recorded(
+            FailRoot {
+                inner: oracle(&root, &witnesses, &calls),
+            },
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(error.stage, QueryAuditStage::RootReplay);
+        assert_eq!(error.completed_witnesses, 7);
+        assert_eq!(error.failed_call, Some(8));
+        assert_eq!(error.call_ids, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        validate_query_audit_failure(&request, &root, &witnesses, &error, &j).unwrap();
+        let mut forged = error.clone();
+        forged.completed_witnesses = 8;
+        assert!(validate_query_audit_failure(&request, &root, &witnesses, &forged, &j).is_err());
+        forged = error.clone();
+        forged.stage = QueryAuditStage::PrefixReplay;
+        assert!(validate_query_audit_failure(&request, &root, &witnesses, &forged, &j).is_err());
+        assert_eq!(j.stats().unwrap().consumed, 8);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+        let denied = audit_queries_recorded(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert_eq!(denied.stage, QueryAuditStage::Reservation);
+        assert_eq!(denied.code, "journal_budget");
+        assert!(denied.call_ids.is_empty());
+        assert_eq!(denied.failed_call, None);
+        validate_query_audit_failure(&request, &root, &witnesses, &denied, &j).unwrap();
+    }
+    #[test]
+    fn query_audit_reexecutes_each_prefix_and_root_and_charges_repeated_audits() {
+        let (root, witnesses, request) = fixture();
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let receipt = audit_queries(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .unwrap();
+        assert_eq!(receipt.call_ids.len(), 8);
+        assert!(receipt.matches(&request, &root, &witnesses));
+        let mut changed_request = request.clone();
+        changed_request.seed += 1;
+        assert!(
+            !receipt.matches(&changed_request, &root, &witnesses),
+            "receipt must reject a different request"
+        );
+        let mut relocated = request.clone();
+        relocated.engine = Default::default();
+        assert!(receipt.matches(&relocated, &root, &witnesses));
+        for field in [
+            "seed",
+            "opening_hand",
+            "deck",
+            "versions",
+            "interruption",
+            "first_turn",
+            "scenario",
+            "probe_only",
+        ] {
+            let mut changed = serde_json::to_value(&request).unwrap();
+            match field {
+                "seed" => changed[field] = serde_json::json!(2),
+                "opening_hand" => changed[field][0] = serde_json::json!(123),
+                "deck" => changed[field]["main"][0] = serde_json::json!(123),
+                "versions" => changed[field]["catalog"] = serde_json::json!("different"),
+                "interruption" => changed[field]["policy"] = serde_json::json!("ash_effect_once"),
+                "first_turn" => changed[field]["knowledge_id"] = serde_json::json!("different"),
+                "scenario" => changed[field] = serde_json::json!("different"),
+                "probe_only" => changed[field] = serde_json::json!(true),
+                _ => unreachable!(),
+            }
+            // first_turn's field layout is itself strict: malformed changes
+            // are rejected before an authenticated request can be constructed.
+            if let Ok(changed) = serde_json::from_value(changed) {
+                assert!(!receipt.matches(&changed, &root, &witnesses), "{field}");
+            }
+        }
+        let mut forged = root.clone();
+        forged.checkpoint.cards[0].attack += 1;
+        assert!(!receipt.matches(&request, &forged, &witnesses));
+        audit_queries(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .unwrap();
+        assert_eq!(calls.load(Ordering::SeqCst), 16);
+        assert_eq!(j.stats().unwrap().consumed, 16);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+    }
+    #[test]
+    fn a_forged_query_is_rejected_by_new_observation_despite_matching_prefix_hashes() {
+        let (root, witnesses, request) = fixture();
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut forged = witnesses.clone();
+        forged[0].public.visible.cards[0].level = Some(99);
+        assert!(audit_queries(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &forged,
+            j.clone()
+        )
+        .is_err());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(j.stats().unwrap().consumed, 1);
+        assert_eq!(j.stats().unwrap().reserved, 0);
+    }
+    #[test]
+    fn insufficient_replay_reservation_prevents_starting_any_audit_call() {
+        let (root, witnesses, request) = fixture();
+        let j = journal(7);
+        let calls = Arc::new(AtomicUsize::new(0));
+        assert!(audit_queries(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone()
+        )
+        .is_err());
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(j.stats().unwrap().consumed, 0);
+    }
+
+    #[test]
+    fn mismatched_request_prefix_is_rejected_before_debit() {
+        let (root, witnesses, mut request) = fixture();
+        request.decisions = root.resolved_decisions.clone();
+        request.decisions[0].player = 1;
+        let j = journal(512);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let error = audit_queries(
+            oracle(&root, &witnesses, &calls),
+            &request,
+            &root,
+            &witnesses,
+            j.clone(),
+        )
+        .err()
+        .unwrap();
+        assert!(error.contains("request decisions"));
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(j.stats().unwrap().consumed, 0);
+    }
+}

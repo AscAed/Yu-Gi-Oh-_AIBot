@@ -1,0 +1,753 @@
+{
+  "schema_version": 1,
+  "search": {
+    "start": "2026-01-01",
+    "cutoff": "2026-10-16",
+    "order": [
+      "complete_original_evidence",
+      "event_date_desc",
+      "normalized_url"
+    ],
+    "scope": "15 acquired event posts across discovered 2026 OCG records; aggregate search is discovery only; not a claim of exhaustive global enumeration"
+  },
+  "selected": {
+    "url": "https://x.com/T_NANKOKU_TCG/status/2089313186457780709",
+    "event_date": "2026-08-17",
+    "publisher": "T_NANKOKU_TCG",
+    "player": "たまもん",
+    "result": "winner, store ranking duel, 6 participants",
+    "evidence": [
+      {
+        "file": "2089313186457780709/post.json",
+        "url": "https://cdn.syndication.twimg.com/tweet-result?id=2089313186457780709&lang=ja&token=0",
+        "sha256": "4acc8bc7da6ae5ffd8e2b7f49de4fd87179b17f6be8fee12d4d138e94b140742"
+      },
+      {
+        "file": "2089313186457780709/photo-0.jpg",
+        "url": "https://pbs.twimg.com/media/HP67QpnbIAAT-Yd.jpg?name=orig",
+        "sha256": "1e8369a35fe3e67b2fcad4d3d880335cc2d5d1f0b2ee19e914aa0e538aabac13"
+      }
+    ]
+  },
+  "transcription": {
+    "counts": {
+      "main": 41,
+      "extra": 15
+    },
+    "independent_check": true,
+    "all_counts_resolved": true,
+    "corrections": [
+      "Danger!? Tsuchinoko? x2",
+      "Forbidden Droplet x2",
+      "Exosister Karmael 77675029",
+      "Four Heavenly Dragons 90091224"
+    ]
+  },
+  "side": {
+    "status": "unpublished",
+    "legality_verified": false
+  },
+  "deck_sha256": "5533c9f0aae115e9a408a26acb6d037d38c9505c1e78970431ffc19ab92cdb88",
+  "asset_group_id": "asset-group-228cca96b5cf16a5e8d8f397cb30db073b483e75ddb0536d7d5f6f28783af340",
+  "rules": {
+    "effective_date": "2026-10-01",
+    "snapshot_id": "banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783",
+    "source_commit": "1051a65ab853fd84521aa919d1859f9468816c56",
+    "source_sha256": "e85912d33eaada6817477c3a8fac0ef0c3e77b6ca25de924826e7f5cbc7e25ab",
+    "matched_official_rows": 207,
+    "differences": [],
+    "unresolved": [],
+    "unmatched_snapshot_ids": [],
+    "evidence": [
+      {
+        "file": "official-october.html",
+        "url": "https://www.yugioh-card.com/japan/event/limitregulation/?list=202610",
+        "sha256": "83d2585bb026c968c0dc5fea748537b43773ae2652e8284b579c638dd58cb164"
+      },
+      {
+        "file": "rule-comparison.json",
+        "url": "local:full-official-name-to-id-comparison",
+        "sha256": "7ca61a363ef2a49c80fd7bc8562f8eaad80f71666c3e48669d0503255ec147df"
+      }
+    ]
+  },
+  "releases": [
+    {
+      "card_id": 1621413,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 4993187,
+      "ocg_released_by": "2026-02-28",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/4993187.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=22715&ope=2&request_locale=ja",
+          "sha256": "af89bd923e165d92d839adae0378bea44b889c5a24297c43f53250695698446b"
+        }
+      ]
+    },
+    {
+      "card_id": 10045474,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 14558127,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 16195942,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 23434538,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 24299458,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 25538345,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 25542642,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 26692769,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 28781003,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 29301450,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 32807846,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 36426778,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 40366667,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 42141493,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 44088353,
+      "ocg_released_by": "2026-07-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/44088353.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=23148&ope=2&request_locale=ja",
+          "sha256": "96b9414eaa30d2aecd1fed2d2d0aa96136d853d8615729b31b78123a2afc76a7"
+        }
+      ]
+    },
+    {
+      "card_id": 46072770,
+      "ocg_released_by": "2026-04-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/46072770.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=22967&ope=2&request_locale=ja",
+          "sha256": "647f22ffac331ac2254734658aa72732734c143396d3ca57aceea5789aa64d24"
+        }
+      ]
+    },
+    {
+      "card_id": 52159691,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 58699500,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 62104532,
+      "ocg_released_by": "2026-04-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/62104532.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=23006&ope=2&request_locale=ja",
+          "sha256": "0ab05a7ce943caded2a81742ce563a1952383f044ceb37bb64a4f90d46d2a1ee"
+        }
+      ]
+    },
+    {
+      "card_id": 62709239,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 63821877,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 64276752,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 65192027,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 65741786,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 77675029,
+      "ocg_released_by": "2025-10-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/77675029.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=22147&ope=2&request_locale=ja",
+          "sha256": "d568239b6eb839cf6a30c363b939966fd24602845a105ede9458229cfd5c1bc7"
+        }
+      ]
+    },
+    {
+      "card_id": 78449284,
+      "ocg_released_by": "2026-04-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/78449284.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=22986&ope=2&request_locale=ja",
+          "sha256": "4c870423c28adecf3602c9ca381b1ee8408cb6729e8c1bc3503d7e6db144bbb3"
+        }
+      ]
+    },
+    {
+      "card_id": 81439173,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 83566725,
+      "ocg_released_by": "2026-04-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/83566725.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=22968&ope=2&request_locale=ja",
+          "sha256": "1c5ca959da47bfb21a69d227b069dc55841f20b321c24fe51964451f971779bc"
+        }
+      ]
+    },
+    {
+      "card_id": 85257384,
+      "ocg_released_by": "2026-04-25",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/85257384.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=23022&ope=2&request_locale=ja",
+          "sha256": "063ef4e59fd36c318cf571bcc51378039ad3237b665fafe6569c443d628c0a33"
+        }
+      ]
+    },
+    {
+      "card_id": 88504133,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 88544390,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 90091224,
+      "ocg_released_by": "2026-03-20",
+      "basis": "official Japanese product release listing; canonical current CDB id",
+      "evidence": [
+        {
+          "file": "releases/90091224.html",
+          "url": "https://www.db.yugioh-card.com/yugiohdb/card_search.action?cid=22730&ope=2&request_locale=ja",
+          "sha256": "f1348a016e40cd56a402bdcac57430d30df01f6152f7b40370693b1fd4166c72"
+        }
+      ]
+    },
+    {
+      "card_id": 90432163,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 91279700,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 94145021,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 98431356,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    },
+    {
+      "card_id": 99745551,
+      "ocg_released_by": "2025-12-07",
+      "basis": "canonical OCG id already present in pinned historical catalog; original Japanese physical print independently transcribed",
+      "evidence": [
+        {
+          "file": "releases/historical.cdb",
+          "url": "https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/20965954a05b05a04c5098d47d400623c7ba9cf4/cards.cdb",
+          "sha256": "6cefca4ecb661928992c00ab06347cb87b4ffb6e3d4c62a1f6bde9f972271c33"
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "url": "https://x.com/tuitekoreruka/status/2107807838823420230",
+      "published_at": "2026-10-07T12:18:44.000Z",
+      "status": "rejected",
+      "reason": "repost with incomplete extra; main photo has Premature Burial x2 versus frozen Limited1",
+      "post_sha256": "e3681d1bd8ce79a6ab6f01d2f58eec19b9f0befbb21b69631aa8df8944ee61a9",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HUBwB81b0AAHm5M.jpg?name=orig",
+          "sha256": "43912505bf79e885582bbf003e4e5aa366b9351033fa1a040f81ab1119644d5e"
+        },
+        {
+          "url": "https://pbs.twimg.com/media/HUBwB81aUAEsk2N.jpg?name=orig",
+          "sha256": "e9a60d3238f668f743d8d7b992ee752f080d968bcb421723f2fb3166e92ecf99"
+        },
+        {
+          "url": "https://pbs.twimg.com/media/HUBwB9FbEAAm3ly.jpg?name=orig",
+          "sha256": "bbacb10587046eb7aad3cd755ffadc89774be62fa5ba9cfc62eb895e5b1e3158"
+        },
+        {
+          "url": "https://pbs.twimg.com/media/HUBwB9NaoAAutV5.jpg?name=orig",
+          "sha256": "a372fc15ef830867440677d86f86e1ec5f34581b3acbddca1e7325326f5f0dfe"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/720nature/status/2098376623225790673",
+      "published_at": "2026-09-11T11:42:27.000Z",
+      "status": "rejected",
+      "reason": "Number 67 35772782 forbidden in frozen table",
+      "post_sha256": "667ae00a8dfbabba56c15d56ab93da7538f38cccf3c032b075d5a967de0599fc",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HR7uahoaAAAXIXx.jpg?name=orig",
+          "sha256": "accfe2104c0bf719ebe016b8824194915aec8cead662c76ef0e92296d8cac12a"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/T_NANKOKU_TCG/status/2093621655402864995",
+      "published_at": "2026-08-29T08:47:54.000Z",
+      "status": "rejected",
+      "reason": "Evilswarm Ouroboros 38273745 forbidden in frozen table",
+      "post_sha256": "37b6771f848e40733f30c536327743fb68aa304fbe26538e753ad4b5344ce53e",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HQ4JdRkboAIyOEV.jpg?name=orig",
+          "sha256": "4f745234da9c6491bbda8ba78c0e7b21190b8261ef59ae0df062871ad427e612"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/T_NANKOKU_TCG/status/2092206670944563219",
+      "published_at": "2026-08-25T11:05:16.000Z",
+      "status": "incomplete",
+      "reason": "only three cards pictured; no complete main/extra",
+      "post_sha256": "8b621f52209c8a64411b201390326019746c54947946c67c3b66a8fe3f30310d",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HQkC1TkakAAvDhA.jpg?name=orig",
+          "sha256": "5356042dfd2119eb85edd2f3723aa59719bd049776dc941c69878b075c5cb7b5"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/T_NANKOKU_TCG/status/2089313186457780709",
+      "published_at": "2026-08-17T11:27:35.000Z",
+      "status": "selected",
+      "reason": "complete readable original main41/extra15, independent transcription and frozen-rule legal",
+      "post_sha256": "4acc8bc7da6ae5ffd8e2b7f49de4fd87179b17f6be8fee12d4d138e94b140742",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HP67QpnbIAAT-Yd.jpg?name=orig",
+          "sha256": "1e8369a35fe3e67b2fcad4d3d880335cc2d5d1f0b2ee19e914aa0e538aabac13"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/stllt_tokyoa/status/2086761706915803165",
+      "published_at": "2026-08-10T10:28:55.000Z",
+      "status": "incomplete",
+      "reason": "prize pack obscures part of trap row; no confirmed rule violation asserted",
+      "post_sha256": "52171fea4bd2eda3d74c10e7f05de2e071782f5f10864b8bacf48c2c38ccf836",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HPWqtiubsAAkAXy.jpg?name=orig",
+          "sha256": "e9b7d52536c75af899ce7ef2ed020234e4c237affa693919cfad0c891f3888ae"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/tuitekoreruka/status/2085380388722286892",
+      "published_at": "2026-08-06T15:00:03.000Z",
+      "status": "unresolved",
+      "reason": "repost provenance and gold alternate Droll quantity not independently resolved",
+      "post_sha256": "eba7674828f64229b41e285ee7ec4eaef8d1e6ad9e69c1bbe42b9413c6510626",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HO9T0MPa0AAmJee.jpg?name=orig",
+          "sha256": "efa5db9188154b352e341e8c5b6b95e4b6f29bc3c38608716eb423465fcbf895"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/tcg_mobara/status/2055578300714770538",
+      "published_at": "2026-05-16T09:17:12.000Z",
+      "status": "rejected",
+      "reason": "Called by the Grave 24224830 at least1, frozen Forbidden0",
+      "post_sha256": "67f7af119d3f272828ca65664c1b14e5e05da149a6f45bd9bbd10cd4cfe9407b",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HIbhivMa4AAzL-n.jpg?name=orig",
+          "sha256": "7c43063392f7a34095d0b932dfbbb239832784d04296928046e46f24a81dda70"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/CS_shiga/status/2049448038163423597",
+      "published_at": "2026-04-29T11:17:43.000Z",
+      "status": "rejected",
+      "reason": "Called by the Grave 24224830 at least1, frozen Forbidden0",
+      "post_sha256": "a213eefbcd663081c6d90e2fc99aeb91fd807def43ed1cc0abcff032a9bd4782",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HHEaIRcbMAANE-J.jpg?name=orig",
+          "sha256": "04eb7c0a4c0aea242e385b2108a851f8dec3edb2a996a6850ac7c58c6360847c"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/BOHobbyKokutai/status/2049104453383659746",
+      "published_at": "2026-04-28T12:32:26.000Z",
+      "status": "unresolved",
+      "reason": "card identity/count and primary provenance not independently confirmed",
+      "post_sha256": "ed46b8d71c89a19c9cfbd9a31b7109381788f092b1512181403c8416491cc3f3",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HG_hovfagAAXjR7.jpg?name=orig",
+          "sha256": "4efca3fae9626335986b787a416d5570ac21e2c9e3a99c7b35e88ff231b21d40"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/cardbox_kaike/status/2048707554650607723",
+      "published_at": "2026-04-27T10:15:18.000Z",
+      "status": "rejected",
+      "reason": "Called by the Grave 24224830 at least1, frozen Forbidden0",
+      "post_sha256": "aa1753ca871e82820ad88ee39f589504d641af4c0b555009c39b05773e3e523e",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HG54p1ybQAAEoA3.jpg?name=orig",
+          "sha256": "d8d4872fd48ab337391a6c6634c977abf787b11f7502b90b1425136f87ff8fff"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/Tateretsuya_/status/2048321367129706998",
+      "published_at": "2026-04-26T08:40:44.000Z",
+      "status": "rejected",
+      "reason": "Called by the Grave 24224830 visible by printed id, frozen Forbidden0",
+      "post_sha256": "19542778e4fd7784fd1c95eaab86cbce55f6ec60cae03c7c75232b8a46036e12",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HG0Zau3bkAAjDvU.jpg?name=orig",
+          "sha256": "ee7387356173074286661450cbfd31db91996fc01a45edaca16beb4b067cdc6b"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/stllt_ngy/status/2048352848208089234",
+      "published_at": "2026-04-26T10:45:50.000Z",
+      "status": "unresolved",
+      "reason": "low resolution prevents independent complete transcription",
+      "post_sha256": "df161b53d8bf37e3d9ae77bcb4ddc672d93c93299e975f76c1b4801bc3b58770",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HG02BUcaYAAvNxo.jpg?name=orig",
+          "sha256": "6208c17e115168f668a799c2eb6d91df3572b0e56744c0a4af45eadf6f9e04d2"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/torecatown_mi/status/2048353200949154117",
+      "published_at": "2026-04-26T10:47:14.000Z",
+      "status": "rejected",
+      "reason": "Called by the Grave 24224830 at least1, frozen Forbidden0",
+      "post_sha256": "4f6d45aa00f40a0f77eac00a842477174fd41990baedf7540ac781e920078ee8",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HG01aNKaUAA2zHK.jpg?name=orig",
+          "sha256": "8bb1b68e90929d7b08ff33d35a69ef6f46b58e60e05b8b8c048b586a0c4e87b7"
+        }
+      ]
+    },
+    {
+      "url": "https://x.com/dawrkn/status/2047966581846942192",
+      "published_at": "2026-04-25T09:10:57.000Z",
+      "status": "rejected",
+      "reason": "Called by the Grave 24224830 at least1, frozen Forbidden0",
+      "post_sha256": "4346fdcdf47027b42e488b5688c6c5a32f20ca8f7488e071860a433da527cb37",
+      "photos": [
+        {
+          "url": "https://pbs.twimg.com/media/HGvWvxtagAA0Wft.jpg?name=orig",
+          "sha256": "5551b5b528050baadfb49d619ed14c731abb27830d186e5dce267301bf8eb1bc"
+        }
+      ]
+    }
+  ]
+}

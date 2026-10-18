@@ -1,0 +1,2454 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Recovery arm v4",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 4
+    },
+    "planner_profile": {
+      "const": "phantom-recovery-v1"
+    },
+    "goal_id": {
+      "type": "string",
+      "pattern": "^goal-[a-f0-9]{64}$"
+    },
+    "knowledge_id": {
+      "type": "string",
+      "pattern": "^knowledge-[a-f0-9]{64}$"
+    },
+    "knowledge": {
+      "$ref": "knowledge-v2.schema.json"
+    },
+    "request": {
+      "$ref": "plan-request-v3.schema.json"
+    },
+    "proposals": {
+      "$ref": "#/$defs/proposals"
+    },
+    "executions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/execution"
+      }
+    },
+    "catalog_projection": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "card.schema.json#/properties/cards/items"
+      }
+    },
+    "forecasts": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/forecast"
+        },
+        "maxItems": 32
+      }
+    },
+    "assessments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assessment"
+      },
+      "maxItems": 8
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/recommendation"
+      },
+      "maxItems": 8
+    },
+    "witnesses": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/witness"
+      }
+    },
+    "ledger": {
+      "$ref": "#/$defs/ledger"
+    },
+    "analysis": {
+      "$ref": "combo-result-v4.schema.json"
+    },
+    "failure_summary": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "rules_rejected",
+          "coverage_gap",
+          "prediction_mismatch",
+          "prompt_unbound",
+          "budget_exhausted",
+          "engine_failure",
+          "no_plan_found"
+        ]
+      }
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "$ref": "#/$defs/runtime"
+        },
+        "initial": {
+          "$ref": "#/$defs/state"
+        },
+        "anchor": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/observation"
+            }
+          ]
+        },
+        "knowledge_bundle_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "runtime",
+        "initial",
+        "anchor",
+        "knowledge_bundle_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "planner_profile",
+    "goal_id",
+    "knowledge_id",
+    "knowledge",
+    "request",
+    "proposals",
+    "executions",
+    "catalog_projection",
+    "forecasts",
+    "assessments",
+    "recommendations",
+    "witnesses",
+    "ledger",
+    "analysis",
+    "failure_summary",
+    "context"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "resource": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "type": "string"
+        },
+        "code": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "location": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "redirect": {
+          "type": "boolean"
+        },
+        "player": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "overlay_host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "xyz_summoned": {
+          "type": "boolean"
+        },
+        "base_level": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "instance",
+        "code",
+        "location",
+        "level",
+        "redirect",
+        "player",
+        "overlay_host",
+        "xyz_summoned",
+        "base_level",
+        "epoch"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "cards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resource"
+          }
+        },
+        "used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "normal_left": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pending": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "items": false,
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "dark_only": {
+          "type": "boolean"
+        },
+        "destroyed_xyz": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "cards",
+        "used",
+        "normal_left",
+        "pending",
+        "dark_only",
+        "destroyed_xyz"
+      ],
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "normal_summon",
+            "special_summon",
+            "activate",
+            "trigger",
+            "link_summon",
+            "set",
+            "end_turn",
+            "xyz_summon"
+          ]
+        },
+        "effect_id": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/resource"
+        },
+        "costs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resource"
+          }
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resource"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "after": {
+          "$ref": "#/$defs/state"
+        }
+      },
+      "required": [
+        "kind",
+        "effect_id",
+        "source",
+        "costs",
+        "targets",
+        "reason",
+        "after"
+      ],
+      "additionalProperties": false
+    },
+    "proposal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          },
+          "minItems": 0,
+          "maxItems": 32
+        },
+        "goal_predicted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "steps",
+        "goal_predicted"
+      ],
+      "additionalProperties": false
+    },
+    "proposals": {
+      "type": "object",
+      "properties": {
+        "plans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/proposal"
+          },
+          "maxItems": 8
+        },
+        "expansions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "termination": {
+          "type": "string"
+        },
+        "coverage_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "plans",
+        "expansions",
+        "termination",
+        "coverage_gaps"
+      ],
+      "additionalProperties": false
+    },
+    "card_reference": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "player": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "location": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "code",
+        "player",
+        "location",
+        "sequence",
+        "position"
+      ],
+      "additionalProperties": false
+    },
+    "choice": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "command"
+            },
+            "command": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "command",
+            "index"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "cards"
+            },
+            "indices": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "indices"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "toggle"
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "index"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "finish"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "yes_no"
+            },
+            "yes": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "yes"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "option"
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "index"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "place"
+            },
+            "zones": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "player": {
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  },
+                  "location": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "player",
+                  "location",
+                  "sequence"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "zones"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "position"
+            },
+            "position": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "position"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "chain"
+            },
+            "index": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "index"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "decision": {
+      "type": "object",
+      "properties": {
+        "prompt_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "player": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "choice": {
+          "$ref": "#/$defs/choice"
+        }
+      },
+      "required": [
+        "prompt_id",
+        "player",
+        "choice"
+      ],
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "choice": {
+          "$ref": "#/$defs/choice"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/card_reference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effect_description": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selected": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/card_reference"
+          }
+        },
+        "selection_group": {
+          "anyOf": [
+            {
+              "enum": [
+                0,
+                1
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "choice",
+        "source",
+        "effect_description",
+        "selected",
+        "selection_group"
+      ],
+      "additionalProperties": false
+    },
+    "prediction": {
+      "type": "object",
+      "properties": {
+        "semantic_step": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "effect_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "before_prefix": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "before_events": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata"
+          },
+          "minItems": 1
+        },
+        "selected": {
+          "$ref": "#/$defs/decision"
+        },
+        "after_events": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "before_checkpoint": {
+          "type": "object",
+          "properties": {
+            "turn": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "turn_player": {
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "phase": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lp": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "cards": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "location": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "type_flags": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "level": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "player": {
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  },
+                  "attack": {
+                    "type": "integer"
+                  },
+                  "defense": {
+                    "type": "integer"
+                  },
+                  "overlay": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "required": [
+                  "code",
+                  "location",
+                  "sequence",
+                  "position",
+                  "type_flags",
+                  "level",
+                  "rank",
+                  "player",
+                  "attack",
+                  "defense",
+                  "overlay"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "turn",
+            "turn_player",
+            "phase",
+            "lp",
+            "cards"
+          ],
+          "additionalProperties": false
+        },
+        "comparisons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/comparison"
+          },
+          "minItems": 1
+        },
+        "outcome": {
+          "enum": [
+            "observed",
+            "unobserved"
+          ]
+        }
+      },
+      "required": [
+        "semantic_step",
+        "effect_id",
+        "reason",
+        "before_prefix",
+        "before_events",
+        "alternatives",
+        "selected",
+        "after_events",
+        "before_checkpoint",
+        "comparisons",
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 4
+        },
+        "status": {
+          "enum": [
+            "engine_verified",
+            "decision_required",
+            "partial",
+            "failed",
+            "probe_passed"
+          ]
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "opcode": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "raw": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              },
+              "supported": {
+                "type": "boolean"
+              },
+              "fields": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "sequence",
+              "opcode",
+              "raw",
+              "supported",
+              "fields"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "player": {
+                  "enum": [
+                    0,
+                    1
+                  ]
+                },
+                "opcode": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "choice": {
+                        "$ref": "plan-result-v2.schema.json#/$defs/choice"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "card_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "bytes": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 255
+                        }
+                      }
+                    },
+                    "required": [
+                      "choice",
+                      "label",
+                      "card_ids",
+                      "bytes"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "player",
+                "opcode",
+                "actions"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkpoint": {
+          "type": "object",
+          "properties": {
+            "turn": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "turn_player": {
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "phase": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lp": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "cards": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "location": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "type_flags": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "level": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "player": {
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  },
+                  "attack": {
+                    "type": "integer"
+                  },
+                  "defense": {
+                    "type": "integer"
+                  },
+                  "overlay": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "required": [
+                  "code",
+                  "location",
+                  "sequence",
+                  "position",
+                  "type_flags",
+                  "level",
+                  "rank",
+                  "player",
+                  "attack",
+                  "defense",
+                  "overlay"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "turn",
+            "turn_player",
+            "phase",
+            "lp",
+            "cards"
+          ],
+          "additionalProperties": false
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "stage": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "stage",
+                "message"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "versions": {
+          "type": "object",
+          "properties": {
+            "rules": {
+              "const": "ocg-mr5"
+            },
+            "catalog": {
+              "type": "string"
+            },
+            "banlist": {
+              "type": "string"
+            },
+            "engine_sha256": {
+              "type": "string"
+            },
+            "cdb_sha256": {
+              "type": "string"
+            },
+            "scripts_sha256": {
+              "type": "string"
+            },
+            "core_commit": {
+              "type": "string"
+            },
+            "initializer": {
+              "const": "fixed-interruption-v1"
+            }
+          },
+          "required": [
+            "rules",
+            "catalog",
+            "banlist",
+            "engine_sha256",
+            "cdb_sha256",
+            "scripts_sha256",
+            "core_commit",
+            "initializer"
+          ],
+          "additionalProperties": false
+        },
+        "loaded_scripts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "choice": {
+                "$ref": "plan-result-v2.schema.json#/$defs/choice"
+              },
+              "label": {
+                "type": "string"
+              },
+              "card_ids": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "bytes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              }
+            },
+            "required": [
+              "choice",
+              "label",
+              "card_ids",
+              "bytes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "resolved_decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "plan-result-v2.schema.json#/$defs/decision"
+          }
+        },
+        "coverage_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "peak_working_set_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "protocol_version",
+        "status",
+        "events",
+        "prompt",
+        "checkpoint",
+        "error",
+        "versions",
+        "loaded_scripts",
+        "steps",
+        "resolved_decisions",
+        "coverage_gaps",
+        "peak_working_set_bytes"
+      ],
+      "additionalProperties": false
+    },
+    "attempt": {
+      "type": "object",
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "status": {
+          "enum": [
+            "unverified",
+            "engine_verified",
+            "prediction_rejected"
+          ]
+        },
+        "goal_achieved": {
+          "type": "boolean"
+        },
+        "line_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "predictions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prediction"
+          }
+        },
+        "discrepancies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "grave_resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/observation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "enum": [
+                "rules_rejected",
+                "coverage_gap",
+                "prediction_mismatch",
+                "prompt_unbound",
+                "budget_exhausted",
+                "engine_failure",
+                "no_plan_found"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "proposal_id",
+        "status",
+        "goal_achieved",
+        "line_id",
+        "predictions",
+        "discrepancies",
+        "grave_resources",
+        "observation",
+        "failure"
+      ],
+      "additionalProperties": false
+    },
+    "comparison": {
+      "type": "object",
+      "required": [
+        "choice",
+        "selected",
+        "reasons",
+        "consumer_effects"
+      ],
+      "properties": {
+        "choice": {
+          "$ref": "#/$defs/choice"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "consumer_effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "trace": {
+      "type": "object",
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "status": {
+          "enum": [
+            "unverified",
+            "engine_verified",
+            "prediction_rejected"
+          ]
+        },
+        "predictions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prediction"
+          }
+        },
+        "discrepancies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "grave_resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/observation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "enum": [
+                "rules_rejected",
+                "coverage_gap",
+                "prediction_mismatch",
+                "prompt_unbound",
+                "budget_exhausted",
+                "engine_failure",
+                "no_plan_found"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "execution_verified": {
+          "type": "boolean"
+        },
+        "execution_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "proposal_id",
+        "status",
+        "execution_verified",
+        "execution_id",
+        "predictions",
+        "discrepancies",
+        "grave_resources",
+        "observation",
+        "failure"
+      ],
+      "additionalProperties": false
+    },
+    "evaluation": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "type": "string"
+        },
+        "result": {
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ]
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evaluation"
+          },
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "node",
+        "result",
+        "observed",
+        "matches",
+        "reason",
+        "children"
+      ],
+      "additionalProperties": false
+    },
+    "fact_card": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "type": "string"
+        },
+        "identity_known": {
+          "type": "boolean"
+        },
+        "type_flags": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "code": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "player": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "location": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "level": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rank": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proper_xyz": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "required": [
+        "instance",
+        "identity_known",
+        "type_flags",
+        "code",
+        "player",
+        "location",
+        "sequence",
+        "position",
+        "level",
+        "rank",
+        "proper_xyz",
+        "materials"
+      ],
+      "additionalProperties": false
+    },
+    "history_fact": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "card": {
+          "$ref": "#/$defs/fact_card"
+        },
+        "effect_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason_complete": {
+          "type": "boolean"
+        },
+        "event": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "kind",
+        "card",
+        "effect_id",
+        "reason",
+        "reason_complete",
+        "event"
+      ],
+      "additionalProperties": false
+    },
+    "facts": {
+      "type": "object",
+      "properties": {
+        "known_effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fact_card"
+          }
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/history_fact"
+          }
+        },
+        "history_complete": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "known_effects",
+        "cards",
+        "history",
+        "history_complete"
+      ],
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 4
+        },
+        "engine": {
+          "type": "object",
+          "properties": {
+            "worker_path": {
+              "type": "string"
+            },
+            "ocgcore_path": {
+              "type": "string"
+            },
+            "catalog_path": {
+              "type": "string"
+            },
+            "scripts_path": {
+              "type": "string"
+            },
+            "script_manifest_path": {
+              "type": "string"
+            },
+            "engine_manifest_path": {
+              "type": "string"
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "worker_path",
+            "ocgcore_path",
+            "catalog_path",
+            "scripts_path",
+            "script_manifest_path",
+            "engine_manifest_path",
+            "timeout_ms"
+          ],
+          "additionalProperties": false
+        },
+        "deck": {
+          "type": "object",
+          "required": [
+            "main",
+            "extra",
+            "side"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "main": {
+              "type": "array",
+              "minItems": 40,
+              "maxItems": 60,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            },
+            "extra": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 15,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            },
+            "side": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 15,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            }
+          }
+        },
+        "opening_hand": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "plan-result-v2.schema.json#/$defs/decision"
+          }
+        },
+        "versions": {
+          "type": "object",
+          "properties": {
+            "rules": {
+              "const": "ocg-mr5"
+            },
+            "catalog": {
+              "type": "string"
+            },
+            "banlist": {
+              "type": "string"
+            },
+            "engine_sha256": {
+              "type": "string"
+            },
+            "cdb_sha256": {
+              "type": "string"
+            },
+            "scripts_sha256": {
+              "type": "string"
+            },
+            "core_commit": {
+              "type": "string"
+            },
+            "initializer": {
+              "const": "fixed-interruption-v1"
+            }
+          },
+          "required": [
+            "rules",
+            "catalog",
+            "banlist",
+            "engine_sha256",
+            "cdb_sha256",
+            "scripts_sha256",
+            "core_commit",
+            "initializer"
+          ],
+          "additionalProperties": false
+        },
+        "probe_only": {
+          "const": false
+        },
+        "scenario": {
+          "enum": [
+            null,
+            "ryu-ran"
+          ]
+        },
+        "interruption": {
+          "type": "object",
+          "properties": {
+            "opponent_deck": {
+              "type": "object",
+              "required": [
+                "main",
+                "extra",
+                "side"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "main": {
+                  "type": "array",
+                  "minItems": 40,
+                  "maxItems": 60,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                  }
+                },
+                "extra": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 15,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                  }
+                },
+                "side": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 15,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                  }
+                }
+              }
+            },
+            "opponent_hand": {
+              "const": [
+                14558127
+              ]
+            },
+            "policy": {
+              "enum": [
+                "pass",
+                "ash_scales_once"
+              ]
+            },
+            "effect_id": {
+              "const": "25538345:mill"
+            },
+            "occurrence": {
+              "const": 1
+            }
+          },
+          "required": [
+            "opponent_deck",
+            "opponent_hand",
+            "policy",
+            "effect_id",
+            "occurrence"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "engine",
+        "deck",
+        "opening_hand",
+        "seed",
+        "decisions",
+        "versions",
+        "probe_only",
+        "interruption"
+      ],
+      "additionalProperties": false
+    },
+    "forecast": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "symbolic_prediction"
+        },
+        "proposal_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "semantic_step": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "effect_id": {
+          "type": "string"
+        },
+        "before": {
+          "$ref": "#/$defs/facts"
+        },
+        "goal_before": {
+          "$ref": "#/$defs/evaluation"
+        },
+        "goal_after": {
+          "$ref": "#/$defs/evaluation"
+        },
+        "branch_before": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/evaluation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "branch_after": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/evaluation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "missing_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contribution_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lost_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "consumers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gain_prediction": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "proposal_id",
+        "semantic_step",
+        "effect_id",
+        "before",
+        "goal_before",
+        "goal_after",
+        "branch_before",
+        "branch_after",
+        "missing_nodes",
+        "contribution_nodes",
+        "lost_nodes",
+        "consumers",
+        "gain_prediction"
+      ],
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "runtime": {
+          "$ref": "#/$defs/runtime"
+        },
+        "proposal": {
+          "$ref": "#/$defs/proposal"
+        },
+        "trace": {
+          "$ref": "#/$defs/trace"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts"
+        }
+      },
+      "required": [
+        "id",
+        "purpose",
+        "runtime",
+        "proposal",
+        "trace",
+        "facts"
+      ],
+      "additionalProperties": false
+    },
+    "probe": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "type": "string"
+        },
+        "anchor": {
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/evaluation"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxItems": 8
+        },
+        "best": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gains": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "lost_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "expansion_start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expansion_end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "plans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/proposal"
+          },
+          "maxItems": 8
+        }
+      },
+      "required": [
+        "node",
+        "anchor",
+        "result",
+        "candidates",
+        "best",
+        "gains",
+        "lost_conditions",
+        "reason",
+        "expansion_start",
+        "expansion_end",
+        "attempted",
+        "plans"
+      ],
+      "additionalProperties": false
+    },
+    "assessment": {
+      "type": "object",
+      "properties": {
+        "execution": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluation": {
+          "$ref": "#/$defs/evaluation"
+        },
+        "probes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/probe"
+          },
+          "maxItems": 64
+        },
+        "verification": {
+          "enum": [
+            "unverified",
+            "engine_observed",
+            "independently_replayed"
+          ]
+        }
+      },
+      "required": [
+        "execution",
+        "evaluation",
+        "probes",
+        "verification"
+      ],
+      "additionalProperties": false
+    },
+    "recommendation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "execution_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "execution": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluation": {
+          "$ref": "#/$defs/evaluation"
+        },
+        "probes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/probe"
+          },
+          "maxItems": 64
+        },
+        "gains": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "witness_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "execution_id",
+        "execution",
+        "evaluation",
+        "probes",
+        "gains",
+        "witness_ids"
+      ],
+      "additionalProperties": false
+    },
+    "witness": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "$ref": "#/$defs/runtime"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "opcode": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "raw": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              },
+              "supported": {
+                "type": "boolean"
+              },
+              "fields": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "sequence",
+              "opcode",
+              "raw",
+              "supported",
+              "fields"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "checkpoint": {
+          "type": "object",
+          "properties": {
+            "turn": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "turn_player": {
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "phase": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lp": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "cards": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "location": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "type_flags": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "level": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "player": {
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  },
+                  "attack": {
+                    "type": "integer"
+                  },
+                  "defense": {
+                    "type": "integer"
+                  },
+                  "overlay": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "required": [
+                  "code",
+                  "location",
+                  "sequence",
+                  "position",
+                  "type_flags",
+                  "level",
+                  "rank",
+                  "player",
+                  "attack",
+                  "defense",
+                  "overlay"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "turn",
+            "turn_player",
+            "phase",
+            "lp",
+            "cards"
+          ],
+          "additionalProperties": false
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision"
+          }
+        },
+        "status": {
+          "enum": [
+            "engine_verified",
+            "decision_required",
+            "partial",
+            "failed",
+            "probe_passed"
+          ]
+        },
+        "replay_verified": {
+          "type": "boolean"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "choice": {
+                "$ref": "plan-result-v2.schema.json#/$defs/choice"
+              },
+              "label": {
+                "type": "string"
+              },
+              "card_ids": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "bytes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              }
+            },
+            "required": [
+              "choice",
+              "label",
+              "card_ids",
+              "bytes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "loaded_scripts": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "runtime",
+        "events",
+        "checkpoint",
+        "decisions",
+        "status",
+        "replay_verified",
+        "steps",
+        "loaded_scripts"
+      ],
+      "additionalProperties": false
+    },
+    "ledger": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "used_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reserved_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "main_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "auxiliary_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "witness_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expansions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "aux_candidates": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "limit",
+        "used_calls",
+        "reserved_calls",
+        "main_calls",
+        "auxiliary_calls",
+        "witness_calls",
+        "expansions",
+        "aux_candidates"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

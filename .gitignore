@@ -1,0 +1,22 @@
+# Local build and Python environment
+/target/
+/.venv/
+*.egg-info/
+
+# Python bytecode and generated logs
+__pycache__/
+*.py[cod]
+*.log
+
+# Machine-specific engine configuration and local data/assets
+/configs/engine.toml
+/configs/engine.toml.*
+/data/tmp/
+/data/runtime/
+/data/raw/
+/data/normalized/
+/data/snapshots/
+
+# Local plans and deployment output
+/.superpowers/
+/dist/

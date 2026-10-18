@@ -1,0 +1,20 @@
+[package]
+name = "ygo-planner"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+ygo-domain = { path = "../ygo-domain" }
+ygo-knowledge = { path = "../ygo-knowledge" }
+ygo-engine-adapter = { path = "../ygo-engine-adapter" }
+ygo-search = { path = "../ygo-search" }
+
+ygo-goal = { path = "../ygo-goal" }
+
+[dev-dependencies]
+ygo-storage = { path = "../ygo-storage" }

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PlanRequest v3",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 3
+    },
+    "analysis": {
+      "$ref": "combo-request.schema.json"
+    },
+    "goal": {
+      "$ref": "goal.schema.json"
+    },
+    "knowledge_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^knowledge-[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "max_proposals": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "max_steps": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32
+    },
+    "scenario": {
+      "enum": [
+        null,
+        "ryu-ran"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "analysis",
+    "goal"
+  ],
+  "additionalProperties": false
+}

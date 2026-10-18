@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Knowledge phantom-v2",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "profile_version": {
+      "const": "phantom-v2"
+    },
+    "cdb_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "scripts_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evidence_status": {
+      "const": "curated_hypotheses"
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "script": {
+            "type": "string",
+            "pattern": "^official/c[0-9]+\\.lua$"
+          },
+          "script_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "description_index": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "rule": {
+                  "enum": [
+                    "scale_mill",
+                    "scale_revive",
+                    "boots_summon",
+                    "boots_search",
+                    "cloak_search",
+                    "gloves_mill",
+                    "greaves_summon",
+                    "greaves_revive",
+                    "brigandine",
+                    "fog_revive",
+                    "rota",
+                    "fool",
+                    "cherubini_mill",
+                    "rusty_mill_set",
+                    "break_revive",
+                    "unsupported",
+                    "break_destroy"
+                  ]
+                },
+                "supported": {
+                  "type": "boolean"
+                },
+                "conditions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                },
+                "costs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "candidate_filter": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "excluded": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "setcodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "type_mask": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "level": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "max_level": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "race": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "attribute": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "operations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                },
+                "trigger": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "usage_key": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "restrictions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "evidence_cases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "description_index",
+                "rule",
+                "supported",
+                "conditions",
+                "costs",
+                "candidate_filter",
+                "operations",
+                "trigger",
+                "usage_key",
+                "restrictions",
+                "evidence_cases"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "card_id",
+          "name",
+          "text_sha256",
+          "script",
+          "script_sha256",
+          "effects"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 12,
+      "maxItems": 12
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile_version",
+    "cdb_sha256",
+    "scripts_sha256",
+    "evidence_status",
+    "cards"
+  ],
+  "additionalProperties": false
+}

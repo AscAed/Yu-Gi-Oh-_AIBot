@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Controlled Ash recovery request v4",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 5
+    },
+    "analysis": {
+      "allOf": [
+        {
+          "$ref": "combo-request.schema.json"
+        },
+        {
+          "properties": {
+            "search": {
+              "properties": {
+                "node_budget": {
+                  "maximum": 512
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "goal": {
+      "$ref": "goal.schema.json"
+    },
+    "knowledge_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max_proposals": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "max_steps": {
+      "type": "integer",
+      "minimum": 4,
+      "maximum": 32
+    },
+    "opponent": {
+      "type": "object",
+      "properties": {
+        "opponent_deck": {
+          "type": "object",
+          "required": [
+            "main",
+            "extra",
+            "side"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "main": {
+              "type": "array",
+              "minItems": 40,
+              "maxItems": 60,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            },
+            "extra": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 15,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            },
+            "side": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 15,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              }
+            }
+          }
+        },
+        "opponent_hand": {
+          "const": [
+            14558127
+          ]
+        },
+        "policy": {
+          "const": "pass"
+        },
+        "effect_id": {
+          "enum": [
+            "25538345:mill",
+            "36426778:search",
+            "90432163:search",
+            "63821877:mill",
+            "26692769:mill_set",
+            "32807846:search",
+            "81439173:mill"
+          ]
+        },
+        "occurrence": {
+          "const": 1
+        }
+      },
+      "required": [
+        "opponent_deck",
+        "opponent_hand",
+        "policy",
+        "effect_id",
+        "occurrence"
+      ],
+      "additionalProperties": false
+    },
+    "max_strategies": {
+      "const": 2
+    },
+    "total_budget": {
+      "const": 8192
+    },
+    "policies": {
+      "const": [
+        "pass",
+        "25538345:mill",
+        "36426778:search",
+        "90432163:search",
+        "63821877:mill",
+        "26692769:mill_set",
+        "32807846:search",
+        "81439173:mill"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "analysis",
+    "goal",
+    "knowledge_id",
+    "max_steps",
+    "max_proposals",
+    "opponent",
+    "max_strategies",
+    "total_budget",
+    "policies"
+  ],
+  "additionalProperties": false
+}

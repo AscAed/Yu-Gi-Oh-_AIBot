@@ -1,0 +1,1057 @@
+//! Protocol v6 reconstruction; legacy history/identity paths remain unchanged.
+use crate::{FactCard, Facts, HistoryFact};
+use std::collections::BTreeMap;
+use ygo_domain::{CardId, Catalog};
+use ygo_engine_adapter::{prompt_metadata, Choice, DuelResult};
+use ygo_knowledge::first_turn::{FirstTurnKnowledge, Operation};
+mod evidence;
+mod restrictions;
+pub use evidence::*;
+use evidence::{from_query, public_location, reconcile, validate_evidence};
+pub use restrictions::ActualRestrictions;
+
+fn snapshot(card: &FactCard, tracked: &[FactCard], hosts: &BTreeMap<String, String>) -> FactCard {
+    let mut c = card.clone();
+    c.materials = tracked
+        .iter()
+        .filter(|m| c.location == 4 && hosts.get(&m.instance) == Some(&c.instance))
+        .map(|m| m.code)
+        .collect();
+    c
+}
+
+// A later exposure can name an earlier hidden handler only while its container
+// coordinates have not been changed by a move, draw, or shuffle in between.
+fn source_coordinate_uninterrupted(
+    result: &DuelResult,
+    since: u64,
+    until: u64,
+    source: &FactCard,
+) -> bool {
+    !result
+        .events
+        .iter()
+        .filter(|e| e.sequence > since && e.sequence < until)
+        .any(|e| {
+            let same_container = |loc: &serde_json::Value| {
+                loc["player"].as_u64() == Some(u64::from(source.player))
+                    && loc["location"].as_u64() == Some(u64::from(source.location))
+            };
+            (e.opcode == 50
+                && (same_container(&e.fields["from"]) || same_container(&e.fields["to"])))
+                || (source.location == 2
+                    && matches!(e.opcode, 33 | 90)
+                    && e.fields["player"].as_u64() == Some(u64::from(source.player)))
+        })
+}
+
+fn relocate_materials(
+    tracked: &mut [FactCard],
+    hosts: &BTreeMap<String, String>,
+    host: &str,
+    to: &serde_json::Value,
+) {
+    for child in tracked
+        .iter_mut()
+        .filter(|m| hosts.get(&m.instance).is_some_and(|id| id == host))
+    {
+        child.player = to["player"].as_u64().unwrap_or(0) as u8;
+        child.location = to["location"].as_u64().unwrap_or(0) as u8 | 128;
+        child.sequence = to["sequence"].as_u64().unwrap_or(0) as u32;
+    }
+}
+
+/// Reconstruct instance history from raw decoded moves and successful summon/chain events.
+/// Unresolvable identities remain unknown; proposal history is never consulted.
+pub fn actual_trace_v6(
+    result: &DuelResult,
+    cat: &Catalog,
+    pack: &FirstTurnKnowledge,
+    witnesses: &[QueryWitness],
+) -> Result<FirstTurnTrace, String> {
+    pack.validate()?;
+    validate_evidence(result, witnesses)?;
+    let first = &witnesses[0];
+    let mut tracked: Vec<FactCard> = first
+        .public
+        .visible
+        .cards
+        .iter()
+        .map(|c| {
+            from_query(
+                c,
+                format!("observed:{}:{}:{}:0", c.player, c.location, c.sequence),
+                true,
+                Some(false),
+            )
+        })
+        .collect();
+    let mut hosts: BTreeMap<String, String> = BTreeMap::new();
+    let mut activations: Vec<ActivationWitness> = vec![];
+    let mut shuffled_origins: BTreeMap<String, u64> = BTreeMap::new();
+    let mut identity_bindings = vec![];
+    let mut resolving_chain: Option<u64> = None;
+    let mut chain_activation: BTreeMap<u64, usize> = BTreeMap::new();
+    let mut movements = vec![];
+    let mut draws = vec![];
+    let mut hand_count = [5usize, first.public.opponent_hand_count];
+    let mut epochs = tracked
+        .iter()
+        .map(|c| (c.instance.clone(), 0u64))
+        .collect::<BTreeMap<_, _>>();
+    let mut history = vec![];
+    let mut chains: BTreeMap<u64, (FactCard, Option<String>)> = BTreeMap::new();
+    let mut finalized_chains = std::collections::BTreeSet::new();
+    let mut negated_chains = std::collections::BTreeSet::new();
+    let mut summoning: Vec<(FactCard, bool, u64, bool)> = vec![];
+    let mut pending_procedure: Option<(FactCard, u8)> = None;
+    let mut procedure_attempts = Vec::new();
+    let mut opaque_summon = false;
+    let mut pending_activations: Vec<(u32, u64, FactCard, u64)> = vec![];
+    let mut chain_open = false;
+    for e in result.events.iter().filter(|e| e.sequence >= first.event) {
+        if e.opcode == 70 {
+            chain_open = true;
+        }
+        if e.opcode == 74 {
+            chain_open = false;
+            resolving_chain = None;
+        }
+        if let Some(w) = witnesses.iter().find(|w| w.event == e.sequence) {
+            reconcile(
+                &mut tracked,
+                &w.public.visible.cards,
+                &mut shuffled_origins,
+                &mut identity_bindings,
+                e.sequence,
+            );
+        }
+        let n = |v: &serde_json::Value, k: &str| v[k].as_u64().unwrap_or(0) as u32;
+        if e.opcode == 90 {
+            let player = n(&e.fields, "player") as u8;
+            let cards = e.fields["cards"]
+                .as_array()
+                .ok_or("draw lacks card records")?;
+            if player > 1 {
+                return Err("invalid draw player".into());
+            }
+            let mut exposed = vec![];
+            for (i, raw) in cards.iter().enumerate() {
+                if player == 0 {
+                    let code = n(raw, "code") & 0x7fffffff;
+                    let instance = format!("draw:{}:{i}", e.sequence);
+                    tracked.push(FactCard {
+                        instance: instance.clone(),
+                        identity_known: code != 0,
+                        code,
+                        player,
+                        location: 2,
+                        sequence: hand_count[0] as u32,
+                        position: n(raw, "position"),
+                        proper_xyz: Some(false),
+                        ..Default::default()
+                    });
+                    epochs.insert(instance, 0);
+                    exposed.push(code);
+                }
+                hand_count[player as usize] += 1;
+            }
+            draws.push(DrawWitness {
+                event: e.sequence,
+                player,
+                count: cards.len(),
+                cards: exposed,
+            });
+        }
+        if e.opcode == 53 {
+            for c in tracked.iter_mut().filter(|c| {
+                c.code == n(&e.fields, "code")
+                    && c.player == n(&e.fields, "player") as u8
+                    && c.location == n(&e.fields, "location") as u8
+                    && c.sequence == n(&e.fields, "sequence")
+            }) {
+                c.position = n(&e.fields, "position");
+            }
+        }
+        if e.opcode == 11 {
+            pending_procedure = None;
+        }
+        if let Some(d) = result
+            .resolved_decisions
+            .iter()
+            .find(|d| d.prompt_id == e.sequence)
+        {
+            if let Ok(ms) = prompt_metadata(e.sequence, &e.raw) {
+                if e.opcode == 11 {
+                    if let Some(m) = ms.iter().find(|m| m.choice == d.choice) {
+                        if let (Some(source), Choice::Command { command, .. }) =
+                            (&m.source, &m.choice)
+                        {
+                            if matches!(command, 0 | 1 | 3) {
+                                let candidates = tracked
+                                    .iter()
+                                    .filter(|c| {
+                                        c.identity_known
+                                            && c.code == source.code
+                                            && c.player == source.player
+                                            && c.location == source.location
+                                            && c.sequence == source.sequence
+                                    })
+                                    .collect::<Vec<_>>();
+                                if candidates.len() == 1 {
+                                    pending_procedure = Some((candidates[0].clone(), *command));
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some(m) = ms.iter().find(|m| {
+                    m.choice == d.choice
+                        && matches!(
+                            m.choice,
+                            Choice::Command { command: 5, .. }
+                                | Choice::Chain { index: Some(_) }
+                                | Choice::YesNo { yes: true }
+                        )
+                }) {
+                    if let (Some(source), Some(desc)) = (&m.source, m.effect_description) {
+                        let c = tracked
+                            .iter()
+                            .find(|c| {
+                                c.code == source.code
+                                    && c.player == source.player
+                                    && c.location == source.location
+                                    && c.sequence == source.sequence
+                            })
+                            .cloned()
+                            .unwrap_or_else(|| FactCard {
+                                materials_complete: Some(false),
+                                instance: format!("activation:{}", e.sequence),
+                                code: source.code,
+                                player: source.player,
+                                location: source.location,
+                                sequence: source.sequence,
+                                ..Default::default()
+                            });
+                        pending_activations.push((source.code, desc, c, e.sequence));
+                    }
+                }
+            }
+        }
+        if e.opcode == 50 {
+            let code = n(&e.fields, "code");
+            let from = &e.fields["from"];
+            let to = &e.fields["to"];
+            for (loc, entering) in [(from, false), (to, true)] {
+                if n(loc, "location") == 2 {
+                    let count = &mut hand_count[n(loc, "player") as usize];
+                    if entering {
+                        *count += 1;
+                    } else {
+                        *count = count.saturating_sub(1);
+                    }
+                }
+            }
+            let exact = tracked
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| {
+                    c.code == code
+                        && c.player == n(from, "player") as u8
+                        && c.location == n(from, "location") as u8
+                        && c.sequence == n(from, "sequence")
+                        && (c.location & 128 == 0 || c.position == n(from, "position"))
+                })
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>();
+            let exact = (exact.len() == 1).then(|| exact[0]);
+            let rebound = if exact.map_or(true, |i| !tracked[i].identity_known)
+                && n(from, "location") == 2
+                && n(to, "location") == 4
+                && n(&e.fields, "reason") & 2048 != 0
+            {
+                resolving_chain.and_then(|chain| {
+                    chains.get(&chain).and_then(|(source, id)| {
+                        let rule = id.as_deref().and_then(|id| pack.rule(id))?;
+                        let self_special = matches!(
+                            rule.operation,
+                            Operation::RevealSpecial
+                                | Operation::DetachSelfSpecial
+                                | Operation::SpecialOnPhantomSummon
+                                | Operation::DangerReveal
+                        );
+                        if !self_special
+                            || !source.identity_known
+                            || source.code != code
+                            || source.player != n(from, "player") as u8
+                        {
+                            return None;
+                        }
+                        tracked
+                            .iter()
+                            .position(|c| {
+                                c.instance == source.instance && c.location == 2 && c.code == code
+                            })
+                            .map(|i| (i, chain, rule.id.clone()))
+                    })
+                })
+            } else {
+                None
+            };
+            let old = rebound.as_ref().map(|(i, _, _)| *i).or(exact);
+            let mut c = old.map(|i| tracked.remove(i)).unwrap_or_else(|| FactCard {
+                materials_complete: Some(false),
+                instance: format!("observed:{}", e.sequence),
+                identity_known: !tracked.iter().any(|c| {
+                    c.code == code
+                        && c.player == n(from, "player") as u8
+                        && c.location == n(from, "location") as u8
+                        && c.sequence == u32::MAX
+                }),
+                code,
+                proper_xyz: Some(false),
+                ..Default::default()
+            });
+            if let Some((_, chain, rule_id)) = rebound {
+                c.identity_known = true;
+                shuffled_origins.remove(&c.instance);
+                identity_bindings.push(IdentityBinding {
+                    instance: c.instance.clone(),
+                    event: e.sequence,
+                    prior_event: activations[*chain_activation
+                        .get(&chain)
+                        .ok_or("missing resolving source")?]
+                    .event,
+                    basis: "known_handler_self_special_during_resolution".into(),
+                    rule_id: Some(rule_id),
+                });
+            }
+            // Initial hand cards need not have a preceding MOVE. Pin a source
+            // observed in its legal prompt to its subsequent exact MOVE, rather
+            // than abandoning that identity or guessing by card name at CHAINING.
+            for (activation_code, _, source, observed_at) in &mut pending_activations {
+                if !source.identity_known
+                    && *activation_code == code
+                    && source.player == n(from, "player") as u8
+                    && source.location == n(from, "location") as u8
+                    && source.sequence == n(from, "sequence")
+                    && source_coordinate_uninterrupted(result, *observed_at, e.sequence, source)
+                {
+                    source.instance = c.instance.clone();
+                    source.identity_known = c.identity_known;
+                }
+            }
+            if result.protocol_version >= 4 {
+                for (chain, (source, _)) in &mut chains {
+                    let Some(activation) =
+                        chain_activation.get(chain).map(|i| &mut activations[*i])
+                    else {
+                        continue;
+                    };
+                    if !source.identity_known
+                        && source.code == code
+                        && source.player == n(from, "player") as u8
+                        && source.location == n(from, "location") as u8
+                        && source.sequence == n(from, "sequence")
+                        && c.identity_known
+                        && n(&e.fields, "reason") & 128 != 0
+                        && source_coordinate_uninterrupted(
+                            result,
+                            activation.event,
+                            e.sequence,
+                            source,
+                        )
+                    {
+                        source.instance = c.instance.clone();
+                        source.identity_known = c.identity_known;
+                        // Identity proof is retrospective; dynamic historical
+                        // attributes and activation range must remain untouched.
+                        activation.source.instance = c.instance.clone();
+                        activation.source.identity_known = true;
+                        identity_bindings.push(IdentityBinding {
+                            instance: c.instance.clone(),
+                            event: e.sequence,
+                            prior_event: activation.event,
+                            basis: "revealed_cost_source_coordinate".into(),
+                            rule_id: activation.rule_id.clone(),
+                        });
+                    }
+                }
+            }
+            // Destruction observes the origin before overlays follow their host.
+            let mut origin = snapshot(&c, &tracked, &hosts);
+            origin.player = n(from, "player") as u8;
+            origin.location = n(from, "location") as u8;
+            origin.sequence = n(from, "sequence");
+            origin.position = n(from, "position");
+            for other in &mut tracked {
+                if other.player == n(from, "player") as u8
+                    && other.location == n(from, "location") as u8
+                    && matches!(other.location, 1 | 2 | 16 | 32 | 64)
+                    && other.sequence != u32::MAX
+                    && other.sequence > n(from, "sequence")
+                {
+                    other.sequence -= 1;
+                }
+                if other.location & 128 != 0
+                    && other.player == n(from, "player") as u8
+                    && other.location == n(from, "location") as u8
+                    && other.sequence == n(from, "sequence")
+                    && other.position > n(from, "position")
+                {
+                    other.position -= 1;
+                }
+            }
+            if n(to, "location") & 128 != 0 {
+                let targets = tracked
+                    .iter()
+                    .filter(|h| {
+                        h.player == n(to, "player") as u8
+                            && h.location == (n(to, "location") as u8 & 127)
+                            && h.sequence == n(to, "sequence")
+                    })
+                    .collect::<Vec<_>>();
+                if targets.len() == 1 && targets[0].identity_known {
+                    hosts.insert(c.instance.clone(), targets[0].instance.clone());
+                } else {
+                    c.identity_known = false;
+                    opaque_summon = true;
+                }
+            } else {
+                hosts.remove(&c.instance);
+            }
+            relocate_materials(&mut tracked, &hosts, &c.instance, to);
+            let epoch = epochs.entry(c.instance.clone()).or_default();
+            let previous_epoch = *epoch;
+            if n(from, "location") == 4 && n(to, "location") != 4 {
+                *epoch += 1;
+            }
+            movements.push(MovementWitness {
+                instance: c.instance.clone(),
+                identity_known: c.identity_known,
+                event: e.sequence,
+                reason: n(&e.fields, "reason"),
+                from: public_location(from),
+                to: public_location(to),
+                epoch_before: previous_epoch,
+                epoch_after: *epoch,
+            });
+            if n(from, "location") != n(to, "location") {
+                c.level = None;
+                c.rank = None;
+                c.type_flags = 0;
+            }
+            c.player = n(to, "player") as u8;
+            c.location = n(to, "location") as u8;
+            c.sequence = n(to, "sequence");
+            c.position = n(to, "position");
+            c = snapshot(&c, &tracked, &hosts);
+            if c.location == 4 && n(from, "location") != 4 {
+                c.proper_xyz = Some(false);
+            }
+            let reason = n(&e.fields, "reason");
+            if c.location == 16 {
+                history.push(HistoryFact {
+                    kind: "sent_to_grave".into(),
+                    card: c.clone(),
+                    effect_id: None,
+                    reason,
+                    reason_complete: true,
+                    event: e.sequence,
+                });
+            }
+            if reason & 1 != 0 {
+                history.push(HistoryFact {
+                    kind: "destroyed".into(),
+                    card: origin,
+                    effect_id: None,
+                    reason,
+                    reason_complete: true,
+                    event: e.sequence,
+                });
+            }
+            tracked.push(c);
+        }
+        if e.opcode == 54 {
+            if let Some((source, command)) = pending_procedure.take() {
+                let loc = &e.fields["location"];
+                if command == 3
+                    && source.code == n(&e.fields, "code")
+                    && source.player == n(loc, "player") as u8
+                {
+                    procedure_attempts.push((source, 54));
+                }
+            }
+        }
+        if matches!(e.opcode, 60 | 62) {
+            let loc = &e.fields["location"];
+            let candidates: Vec<_> = tracked
+                .iter()
+                .filter(|c| {
+                    c.code == n(&e.fields, "code")
+                        && c.player == n(loc, "player") as u8
+                        && c.location == n(loc, "location") as u8
+                        && c.sequence == n(loc, "sequence")
+                })
+                .collect();
+            let procedure = pending_procedure.take().is_some_and(|(source, command)| {
+                let matched = candidates.len() == 1
+                    && candidates[0].identity_known
+                    && source.instance == candidates[0].instance
+                    && ((e.opcode == 62 && command == 1) || (e.opcode == 60 && command == 0));
+                if matched {
+                    procedure_attempts.push((source, e.opcode));
+                }
+                matched
+            });
+            if candidates.len() == 1 && candidates[0].identity_known {
+                summoning.push((
+                    snapshot(candidates[0], &tracked, &hosts),
+                    e.opcode == 62,
+                    e.sequence,
+                    procedure,
+                ));
+            } else {
+                opaque_summon = true;
+            }
+        }
+        if matches!(e.opcode, 61 | 63) {
+            if summoning.is_empty() {
+                opaque_summon = true;
+            }
+            let mut seen = std::collections::BTreeSet::new();
+            for (source, special, begin, procedure) in std::mem::take(&mut summoning) {
+                if special != (e.opcode == 63) || !seen.insert(source.instance.clone()) {
+                    opaque_summon = true;
+                    continue;
+                }
+                let materials = snapshot(&source, &tracked, &hosts).materials;
+                if let Some(c) = tracked.iter_mut().find(|c| {
+                    c.instance == source.instance
+                        && c.player == source.player
+                        && c.sequence == source.sequence
+                        && c.location == 4
+                }) {
+                    let code = c.code;
+                    let from_extra = movements
+                        .iter()
+                        .rev()
+                        .find(|m| {
+                            m.instance == source.instance && m.event < begin && m.to.location == 4
+                        })
+                        .is_some_and(|m| m.from.location == 64);
+                    let procedure = from_extra && procedure;
+                    let flags = cat.get(&CardId(code)).map_or(0, |c| c.type_flags);
+                    let known_xyz = pack.rules.iter().any(|r| {
+                        r.card_id == code && r.applicable && r.operation == Operation::XyzProcedure
+                    });
+                    let known_link = pack.rules.iter().any(|r| {
+                        r.card_id == code && r.applicable && r.operation == Operation::LinkProcedure
+                    });
+                    if procedure
+                        && ((flags & 0x800000 != 0 && !known_xyz)
+                            || (flags & 0x4000000 != 0 && !known_link))
+                    {
+                        opaque_summon = true;
+                    }
+                    let xyz = special && procedure && flags & 0x800000 != 0 && known_xyz;
+                    let link = special && procedure && flags & 0x4000000 != 0 && known_link;
+                    c.proper_xyz = if flags == 0
+                        || (flags & 0x800000 != 0 && (!known_xyz || (from_extra && !procedure)))
+                    {
+                        None
+                    } else {
+                        Some(xyz)
+                    };
+                    c.type_flags = flags;
+                    c.materials = materials;
+                    history.push(HistoryFact {
+                        kind: if special {
+                            "special_summon"
+                        } else {
+                            "normal_summon"
+                        }
+                        .into(),
+                        card: c.clone(),
+                        effect_id: None,
+                        reason: 0,
+                        reason_complete: true,
+                        event: e.sequence,
+                    });
+                    if xyz || link {
+                        history.push(HistoryFact {
+                            kind: if xyz { "xyz_summon" } else { "link_summon" }.into(),
+                            card: c.clone(),
+                            effect_id: None,
+                            reason: 0,
+                            reason_complete: true,
+                            event: e.sequence,
+                        });
+                    }
+                } else {
+                    opaque_summon = true;
+                }
+            }
+        }
+        if e.opcode == 70 {
+            let code = n(&e.fields, "code");
+            let desc = e.fields["description"].as_u64().unwrap_or(0);
+            let loc = &e.fields["location"];
+            let pending_index = pending_activations
+                .iter()
+                .rposition(|(c, d, _, _)| *c == code && *d == desc);
+            // CHAINING carries the original trigger range separately from the
+            // handler's current location after paying a banish/discard cost.
+            let source_location = n(&e.fields, "trigger_location") as u8;
+            let matching = pack
+                .rules
+                .iter()
+                .filter(|r| {
+                    r.applicable
+                        && r.card_id == code
+                        && r.description == Some(desc)
+                        && r.source_locations & source_location != 0
+                })
+                .collect::<Vec<_>>();
+            let id = (matching.len() == 1).then(|| matching[0].id.clone());
+            let pending = pending_index.map(|i| pending_activations.remove(i).2);
+            let mut c = pending
+                .or_else(|| {
+                    tracked
+                        .iter()
+                        .find(|c| {
+                            c.code == code
+                                && c.player == n(loc, "player") as u8
+                                && c.location == n(loc, "location") as u8
+                                && c.sequence == n(loc, "sequence")
+                        })
+                        .cloned()
+                })
+                .unwrap_or_else(|| FactCard {
+                    materials_complete: Some(false),
+                    instance: format!("chain:{}", e.sequence),
+                    code,
+                    player: n(loc, "player") as u8,
+                    location: n(loc, "location") as u8,
+                    sequence: n(loc, "sequence"),
+                    position: n(loc, "position"),
+                    ..Default::default()
+                });
+            // Bind identity/activation zone at CHAINING. CHAINED below is
+            // emitted after cost and target selection and finalizes materials.
+            if let Some(current) = tracked.iter().find(|x| x.instance == c.instance) {
+                if c.identity_known
+                    && current.identity_known
+                    && (current.player != n(loc, "player") as u8
+                        || current.location != n(loc, "location") as u8
+                        || current.sequence != n(loc, "sequence"))
+                {
+                    return Err(
+                        "actual activation handler contradicts its known source instance".into(),
+                    );
+                }
+                c.materials = snapshot(current, &tracked, &hosts).materials;
+            } else {
+                c.materials.clear();
+                c.materials_complete = Some(false);
+                c.identity_known = false;
+                // V4 may observe CHAINING before a hand source pays its cost.
+                // Finalization at CHAINED must still resolve that exact instance.
+                if result.protocol_version < 4 {
+                    opaque_summon = true;
+                }
+            }
+            // A spell offered in hand activates in the spell/trap zone.
+            // Preserve its pinned identity, not the pre-command coordinates.
+            let before_cost = c.clone();
+            c.player = n(&e.fields, "player") as u8;
+            c.location = source_location;
+            c.sequence = n(&e.fields, "sequence");
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            chain_activation.insert(chain, activations.len());
+            activations.push(ActivationWitness {
+                event: e.sequence,
+                chain,
+                rule_id: id.clone(),
+                source: before_cost,
+                after_cost: None,
+                resolved: false,
+                negated: false,
+                activation_negated: false,
+                solving_event: None,
+                resolution_event: None,
+            });
+            if id.is_none() {
+                opaque_summon = true;
+            }
+            chains.insert(chain, (c, id));
+        }
+        if e.opcode == 71 {
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if let Some((source, _)) = chains.get_mut(&chain) {
+                if let Some(current) = tracked.iter().find(|x| x.instance == source.instance) {
+                    source.materials = snapshot(current, &tracked, &hosts).materials;
+                    finalized_chains.insert(chain);
+                } else if source.location == 2 {
+                    // A hand trigger without a cost moves only during resolution.
+                    // MOVE must still pin its exact identity before CHAIN_SOLVED.
+                    source.materials.clear();
+                    finalized_chains.insert(chain);
+                } else {
+                    source.materials.clear();
+                    source.materials_complete = Some(false);
+                    source.identity_known = false;
+                    opaque_summon = true;
+                }
+            } else {
+                opaque_summon = true;
+            }
+        }
+        if e.opcode == 71 {
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if let (Some(i), Some((source, _))) = (chain_activation.get(&chain), chains.get(&chain))
+            {
+                activations[*i].after_cost = Some(
+                    tracked
+                        .iter()
+                        .find(|c| c.instance == source.instance)
+                        .map(|c| snapshot(c, &tracked, &hosts))
+                        .unwrap_or_else(|| source.clone()),
+                );
+            }
+        }
+        if e.opcode == 72 {
+            resolving_chain = e.fields["chain"].as_u64();
+            if let Some(i) = chain_activation.get(&e.fields["chain"].as_u64().unwrap_or(0)) {
+                activations[*i].solving_event = Some(e.sequence);
+            } else {
+                opaque_summon = true;
+            }
+        }
+        if e.opcode == 73 {
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if resolving_chain == Some(chain) {
+                resolving_chain = None;
+            }
+            if result.protocol_version >= 4 && negated_chains.remove(&chain) {
+                continue;
+            }
+            if !chain_activation
+                .get(&chain)
+                .is_some_and(|i| activations[*i].solving_event.is_some())
+            {
+                opaque_summon = true;
+                chains.remove(&chain);
+                finalized_chains.remove(&chain);
+                continue;
+            }
+            if let Some((mut c, id)) = chains.remove(&chain) {
+                if !finalized_chains.remove(&chain) {
+                    c.materials.clear();
+                    c.materials_complete = Some(false);
+                    opaque_summon = true;
+                }
+                if result.protocol_version == 5 && !c.identity_known {
+                    opaque_summon = true;
+                }
+                if let Some(i) = chain_activation.get(&chain) {
+                    activations[*i].resolved = true;
+                    activations[*i].resolution_event = Some(e.sequence);
+                }
+                history.push(HistoryFact {
+                    kind: "effect_resolved".into(),
+                    card: c,
+                    effect_id: id,
+                    reason: 0,
+                    reason_complete: true,
+                    event: e.sequence,
+                });
+            } else {
+                opaque_summon = true;
+            }
+        }
+        if matches!(e.opcode, 75 | 76) {
+            let chain = e.fields["chain"].as_u64().unwrap_or(0);
+            if let Some(i) = chain_activation.get(&chain) {
+                activations[*i].negated = true;
+                activations[*i].activation_negated = e.opcode == 75;
+                activations[*i].resolution_event = Some(e.sequence);
+            }
+            if result.protocol_version >= 4 {
+                if !finalized_chains.contains(&chain) {
+                    opaque_summon = true;
+                }
+                if let Some((c, id)) = chains.get(&chain) {
+                    history.push(HistoryFact {
+                        kind: if e.opcode == 76 {
+                            "effect_negated"
+                        } else {
+                            "activation_negated"
+                        }
+                        .into(),
+                        card: c.clone(),
+                        effect_id: id.clone(),
+                        reason: 0,
+                        reason_complete: true,
+                        event: e.sequence,
+                    });
+                    negated_chains.insert(chain);
+                } else {
+                    opaque_summon = true;
+                }
+            }
+            chains.remove(&chain);
+            finalized_chains.remove(&chain);
+        }
+        if e.opcode == 33 {
+            for c in tracked
+                .iter_mut()
+                .filter(|c| c.location == 2 && c.player == n(&e.fields, "player") as u8)
+            {
+                let codes = e.fields["cards"].as_array().cloned().unwrap_or_default();
+                let positions: Vec<_> = codes
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, code)| code.as_u64() == Some(c.code as u64))
+                    .map(|(i, _)| i as u32)
+                    .collect();
+                c.sequence = if positions.len() == 1 {
+                    positions[0]
+                } else {
+                    if c.identity_known {
+                        shuffled_origins.insert(c.instance.clone(), e.sequence);
+                    }
+                    c.identity_known = false;
+                    u32::MAX
+                };
+            }
+        }
+    }
+    let public = ygo_engine_adapter::first_turn_public_state(&result.checkpoint);
+    let cards = public
+        .visible
+        .cards
+        .iter()
+        .map(|c| {
+            let matches: Vec<_> = tracked
+                .iter()
+                .filter(|x| {
+                    x.code == c.code
+                        && x.player == c.player
+                        && x.location == c.location
+                        && x.sequence == c.sequence
+                })
+                .collect();
+            let known = if matches.len() == 1 {
+                Some(matches[0])
+            } else {
+                None
+            };
+            FactCard {
+                instance: known.map_or_else(
+                    || format!("checkpoint:{}:{}:{}", c.player, c.location, c.sequence),
+                    |x| x.instance.clone(),
+                ),
+                identity_known: known.is_some_and(|c| c.identity_known),
+                type_flags: c.type_flags,
+                code: c.code,
+                player: c.player,
+                location: c.location,
+                sequence: c.sequence,
+                position: c.position,
+                level: c.level,
+                rank: c.rank,
+                proper_xyz: known.and_then(|c| c.proper_xyz),
+                materials: c.overlay.clone(),
+                materials_complete: Some(true),
+            }
+        })
+        .collect();
+    let known_effects = pack
+        .rules
+        .iter()
+        .filter(|r| r.applicable && r.description.is_some())
+        .map(|r| r.id.clone())
+        .collect();
+    let material_instances = tracked
+        .iter()
+        .filter(|c| c.location == 132)
+        .cloned()
+        .collect();
+    let (normal_remaining, used) =
+        usage_from_trace(result, pack, &activations, &procedure_attempts);
+    let closed = !chain_open && chains.is_empty() && summoning.is_empty();
+    let window = if !closed {
+        TraceWindow::Pending
+    } else if result.error.is_none()
+        && result.status == ygo_engine_adapter::DuelStatus::DecisionRequired
+        && result.prompt.as_ref().is_some_and(|p| {
+            p.player == 0
+                && p.opcode == 11
+                && result.events.last().is_some_and(|e| e.sequence == p.id)
+        })
+        && result.checkpoint.turn == 1
+        && result.checkpoint.turn_player == 0
+        && result.checkpoint.phase == 4
+    {
+        TraceWindow::OwnMainAction
+    } else if result.status == ygo_engine_adapter::DuelStatus::EngineVerified
+        && result.error.is_none()
+        && result
+            .events
+            .iter()
+            .any(|e| e.opcode == 41 && e.fields["phase"] == 512)
+        && result
+            .events
+            .iter()
+            .any(|e| e.opcode == 40 && e.fields["player"] == 1)
+    {
+        TraceWindow::OwnTurnEnded
+    } else if result.status == ygo_engine_adapter::DuelStatus::DecisionRequired
+        && result.error.is_none()
+        && result.prompt.is_some()
+    {
+        TraceWindow::Pending
+    } else {
+        TraceWindow::Unknown
+    };
+    let facts = Facts {
+        known_effects,
+        cards,
+        history,
+        history_complete: !opaque_summon
+            && closed
+            && result.coverage_gaps.is_empty()
+            && result.error.is_none()
+            && result.status != ygo_engine_adapter::DuelStatus::Failed,
+    };
+    let restrictions =
+        restrictions::reconstruct(result, pack, &facts, &activations, &movements, &epochs);
+    Ok(FirstTurnTrace {
+        facts,
+        material_instances,
+        activations,
+        movements,
+        epochs,
+        normal_remaining,
+        used,
+        draws,
+        window,
+        identity_bindings,
+        material_hosts: hosts,
+        restrictions,
+    })
+}
+
+fn usage_from_trace(
+    result: &DuelResult,
+    pack: &FirstTurnKnowledge,
+    activations: &[ActivationWitness],
+    procedures: &[(FactCard, u8)],
+) -> (Option<u8>, BTreeMap<String, usize>) {
+    let mut used = BTreeMap::new();
+    let mut normal = Some(1u8);
+    for a in activations {
+        let Some(rule) = a.rule_id.as_deref().and_then(|id| pack.rule(id)) else {
+            normal = None;
+            continue;
+        };
+        let key = match rule.usage.scope.as_str() {
+            "name_use" => rule.usage.key.clone(),
+            "name_activation" if !a.activation_negated => rule.usage.key.clone(),
+            "shared_mulcharmy_activation" => Some("shared_mulcharmy_activation".into()),
+            _ => None,
+        };
+        if let Some(key) = key {
+            let key = if a.source.player == 0 {
+                key
+            } else {
+                format!("p{}:{key}", a.source.player)
+            };
+            *used.entry(key).or_default() += 1;
+        }
+    }
+    for e in &result.events {
+        if e.opcode == 60 && e.fields["location"]["player"] == 0 {
+            normal = normal.map(|v| v.saturating_sub(1));
+        }
+    }
+    for (source, opcode) in procedures.iter().filter(|(source, _)| source.player == 0) {
+        if *opcode == 54 && source.location == 2 {
+            normal = normal.map(|v| v.saturating_sub(1));
+        }
+        if *opcode == 62 && source.location == 2 {
+            let rules = pack
+                .rules
+                .iter()
+                .filter(|r| {
+                    r.card_id == source.code && r.usage.scope == "name_procedure" && r.applicable
+                })
+                .collect::<Vec<_>>();
+            if rules.len() == 1 {
+                if let Some(key) = &rules[0].usage.key {
+                    *used.entry(key.clone()).or_default() += 1;
+                }
+            }
+        }
+    }
+    (normal, used)
+}
+
+#[cfg(test)]
+mod material_coordinates {
+    use super::*;
+    #[test]
+    fn host_departure_uses_the_actual_transient_overlay_source_coordinates() {
+        let data: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/tournament-2026.overlay-host-move.json"
+        ))
+        .unwrap();
+        let assets: serde_json::Value =
+            serde_json::from_str(include_str!("../../../configs/tournament-2026.assets.json"))
+                .unwrap();
+        assert_eq!(data["engine_sha256"], assets["core"]["sha256"]);
+        let host_frame = ygo_engine_adapter::decode_frame(
+            1,
+            &serde_json::from_value::<Vec<u8>>(data["host_frame"].clone()).unwrap(),
+        )
+        .unwrap();
+        let material_frame = ygo_engine_adapter::decode_frame(
+            2,
+            &serde_json::from_value::<Vec<u8>>(data["material_frame"].clone()).unwrap(),
+        )
+        .unwrap();
+        let mut host = FactCard {
+            instance: "host".into(),
+            code: 62709239,
+            player: 0,
+            location: 4,
+            sequence: 0,
+            ..Default::default()
+        };
+        let mut tracked = vec![FactCard {
+            instance: "material".into(),
+            code: 25538345,
+            player: 0,
+            location: 132,
+            sequence: 0,
+            ..Default::default()
+        }];
+        let hosts = BTreeMap::from([("material".into(), "host".into())]);
+        let before = snapshot(&host, &tracked, &hosts);
+        assert_eq!(before.materials, vec![25538345]);
+        relocate_materials(&mut tracked, &hosts, "host", &host_frame.fields["to"]);
+        let from = &material_frame.fields["from"];
+        assert_eq!(
+            tracked[0].location as u64,
+            from["location"].as_u64().unwrap()
+        );
+        assert_eq!(
+            tracked[0].sequence as u64,
+            from["sequence"].as_u64().unwrap()
+        );
+        host.location = 16;
+        assert!(snapshot(&host, &tracked, &hosts).materials.is_empty());
+        assert_eq!(before.materials, vec![25538345]);
+    }
+}

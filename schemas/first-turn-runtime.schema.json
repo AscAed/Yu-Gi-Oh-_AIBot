@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "First-turn native runtime v6",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "const": 6
+    },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "worker_path": {
+          "type": "string"
+        },
+        "ocgcore_path": {
+          "type": "string"
+        },
+        "catalog_path": {
+          "type": "string"
+        },
+        "scripts_path": {
+          "type": "string"
+        },
+        "script_manifest_path": {
+          "type": "string"
+        },
+        "engine_manifest_path": {
+          "type": "string"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "worker_path",
+        "ocgcore_path",
+        "catalog_path",
+        "scripts_path",
+        "script_manifest_path",
+        "engine_manifest_path",
+        "timeout_ms"
+      ],
+      "additionalProperties": false
+    },
+    "deck": {
+      "type": "object",
+      "properties": {
+        "main": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "minItems": 40,
+          "maxItems": 60
+        },
+        "extra": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "minItems": 0,
+          "maxItems": 15
+        },
+        "side": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "minItems": 0,
+          "maxItems": 15
+        }
+      },
+      "required": [
+        "main",
+        "extra",
+        "side"
+      ],
+      "additionalProperties": false
+    },
+    "opening_hand": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4294967295
+      },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "seed": {
+      "const": 1
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "$ref": "plan-result-v2.schema.json#/$defs/decision"
+      }
+    },
+    "versions": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "const": "ocg-mr5"
+        },
+        "catalog": {
+          "type": "string"
+        },
+        "banlist": {
+          "type": "string"
+        },
+        "engine_sha256": {
+          "type": "string"
+        },
+        "cdb_sha256": {
+          "type": "string"
+        },
+        "scripts_sha256": {
+          "type": "string"
+        },
+        "core_commit": {
+          "type": "string"
+        },
+        "initializer": {
+          "const": "fixed-ash-first-turn-v1"
+        }
+      },
+      "required": [
+        "rules",
+        "catalog",
+        "banlist",
+        "engine_sha256",
+        "cdb_sha256",
+        "scripts_sha256",
+        "core_commit",
+        "initializer"
+      ],
+      "additionalProperties": false
+    },
+    "probe_only": {
+      "const": false
+    },
+    "scenario": {
+      "type": "null"
+    },
+    "interruption": {
+      "type": "object",
+      "properties": {
+        "opponent_deck": {
+          "type": "object",
+          "properties": {
+            "main": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "minItems": 40,
+              "maxItems": 40
+            },
+            "extra": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "maxItems": 0
+            },
+            "side": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "maxItems": 0
+            }
+          },
+          "required": [
+            "main",
+            "extra",
+            "side"
+          ],
+          "additionalProperties": false
+        },
+        "opponent_hand": {
+          "const": [
+            14558127
+          ]
+        },
+        "policy": {
+          "enum": [
+            "pass",
+            "ash_effect_once"
+          ]
+        },
+        "effect_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "occurrence": {
+          "const": 1
+        }
+      },
+      "required": [
+        "opponent_deck",
+        "opponent_hand",
+        "policy",
+        "effect_id",
+        "occurrence"
+      ],
+      "additionalProperties": false
+    },
+    "first_turn": {
+      "type": "object",
+      "properties": {
+        "asset_group_id": {
+          "type": "string",
+          "pattern": "^asset-group-[0-9a-f]{64}$"
+        },
+        "source_id": {
+          "type": "string",
+          "pattern": "^tournament-source-[0-9a-f]{64}$"
+        },
+        "coverage_id": {
+          "type": "string",
+          "pattern": "^coverage-[0-9a-f]{64}$"
+        },
+        "knowledge_id": {
+          "type": "string",
+          "pattern": "^first-turn-knowledge-[0-9a-f]{64}$"
+        },
+        "ash_effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "effect_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "card_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "description": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source_locations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 62
+              }
+            },
+            "required": [
+              "effect_id",
+              "card_id",
+              "description",
+              "source_locations"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "asset_group_id",
+        "source_id",
+        "coverage_id",
+        "knowledge_id",
+        "ash_effects"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocol_version",
+    "engine",
+    "deck",
+    "opening_hand",
+    "seed",
+    "decisions",
+    "versions",
+    "probe_only",
+    "interruption",
+    "first_turn"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,623 @@
+{
+  "schema_version": 1,
+  "profile_version": "phantom-v2",
+  "cdb_sha256": "c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225",
+  "scripts_sha256": "69bf6f9d3fe444fd53890c60bde877f97b753f8d3e218a6349615d09f6740d91",
+  "evidence_status": "curated_hypotheses",
+  "cards": [
+    {
+      "card_id": 25538345,
+      "name": "The Phantom Knights of Torn Scales",
+      "text_sha256": "ef953f845d332bb0d9dfdd022c8c35c76dc9ad9f818afedab281abae54cfae7c",
+      "script": "official/c25538345.lua",
+      "script_sha256": "641101b96bf8f456f77d9dfee04f81468bdd98627fedaeb731918cedc31b1aec",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "scale_mill",
+          "supported": true,
+          "conditions": [
+            "场上主阶段；本效果未使用"
+          ],
+          "costs": [
+            "弃一张可丢弃手牌作为费用"
+          ],
+          "candidate_filter": {
+            "setcodes": [
+              219
+            ],
+            "excluded": [
+              25538345
+            ]
+          },
+          "operations": [
+            "以效果从牌库送墓"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "25538345:mill",
+          "usage_key": "25538345:mill",
+          "evidence_cases": [
+            "phantom-mill-25538345"
+          ]
+        },
+        {
+          "description_index": 1,
+          "rule": "scale_revive",
+          "supported": true,
+          "conditions": [
+            "墓地；次数可用；有怪兽区域"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "特殊召唤自身"
+          ],
+          "trigger": "另一张己方幻影骑士团卡从墓地被除外",
+          "restrictions": [
+            "离场除外"
+          ],
+          "id": "25538345:revive",
+          "usage_key": "25538345:revive",
+          "evidence_cases": [
+            "phantom-revive-25538345"
+          ]
+        }
+      ]
+    },
+    {
+      "card_id": 25542642,
+      "name": "Phantom Knights' Fog Blade",
+      "text_sha256": "57ac24a14053fdf12031dc67ddf642de16929098bdefa9aea8b3db0d9ade5964",
+      "script": "official/c25542642.lua",
+      "script_sha256": "0cebfc9d0f6746acd3eb76becadc85d837279f219549786eca39f6e286c174b1",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "fog_revive",
+          "supported": true,
+          "conditions": [
+            "墓地；次数可用"
+          ],
+          "costs": [
+            "除外自身作为费用"
+          ],
+          "candidate_filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "operations": [
+            "复活墓地怪兽"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "复活对象离场除外"
+          ],
+          "id": "25542642:revive",
+          "usage_key": "25542642:revive",
+          "evidence_cases": [
+            "phantom-revive-25542642"
+          ]
+        },
+        {
+          "description_index": null,
+          "rule": "unsupported",
+          "supported": false,
+          "conditions": [
+            "表侧效果怪兽对象；合法陷阱发动时机"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "限制攻击并无效对象效果"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "首版仅验证盖放，不验证对手回合互动"
+          ],
+          "id": "25542642:negate",
+          "usage_key": null,
+          "evidence_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 26692769,
+      "name": "The Phantom Knights of Rusty Bardiche",
+      "text_sha256": "6535e4fc5b9ba5c083d340182db3bfa1037fb1e89aae961278523e8917953c48",
+      "script": "official/c26692769.lua",
+      "script_sha256": "64ad6afb8b0ce01d363e60ab4b947914605db14a7026eac65a0a8c3da5d2fe04",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "rusty_mill_set",
+          "supported": true,
+          "conditions": [
+            "场上；主阶段；次数可用；有魔陷区域"
+          ],
+          "costs": [],
+          "candidate_filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "operations": [
+            "效果送墓怪兽；成功送墓后从牌库盖放魔陷"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "不能作为连接素材"
+          ],
+          "id": "26692769:mill_set",
+          "usage_key": "26692769:mill_set",
+          "evidence_cases": [
+            "phantom-mill_set-26692769"
+          ]
+        },
+        {
+          "description_index": 1,
+          "rule": "unsupported",
+          "supported": false,
+          "conditions": [
+            "暗属性超量召唤到连接区域"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "破坏场上一张卡"
+          ],
+          "trigger": "暗属性超量召唤到连接区域",
+          "restrictions": [
+            "首版不规划"
+          ],
+          "id": "26692769:destroy",
+          "usage_key": null,
+          "evidence_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 32807846,
+      "name": "Reinforcement of the Army",
+      "text_sha256": "f8eec50bbcccbf26b39202e8407297448041c817f292e8296771d951b6b1f219",
+      "script": "official/c32807846.lua",
+      "script_sha256": "dd3e2046df766ec30dcae539b5d7af6511c66930db94577c70f6cdf1e963481c",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "rota",
+          "supported": true,
+          "conditions": [
+            "主阶段；手牌或魔陷区域"
+          ],
+          "costs": [],
+          "candidate_filter": {
+            "race": 1,
+            "max_level": 4,
+            "type_mask": 1
+          },
+          "operations": [
+            "检索四星以下战士族"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "32807846:search",
+          "usage_key": null,
+          "evidence_cases": [
+            "phantom-search-32807846"
+          ]
+        }
+      ]
+    },
+    {
+      "card_id": 36426778,
+      "name": "The Phantom Knights of Silent Boots",
+      "text_sha256": "c37904a7c59086cb7a41dbe24f11f48228eca2519e9f17ee57aa2d08b3c1d930",
+      "script": "official/c36426778.lua",
+      "script_sha256": "24ed34f97e0611ef53c8166bc358fd3a34a0ecd9c7a3914f6350d1a03e12b164",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "boots_summon",
+          "supported": true,
+          "conditions": [
+            "手牌；场上有幻影骑士团怪兽；此方式次数可用"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "特殊召唤自身"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "36426778:summon",
+          "usage_key": "36426778:summon",
+          "evidence_cases": [
+            "phantom-summon-36426778"
+          ]
+        },
+        {
+          "description_index": 1,
+          "rule": "boots_search",
+          "supported": true,
+          "conditions": [
+            "墓地；次数可用"
+          ],
+          "costs": [
+            "除外自身作为费用"
+          ],
+          "candidate_filter": {
+            "setcodes": [
+              219
+            ],
+            "type_mask": 6
+          },
+          "operations": [
+            "检索魔陷"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "36426778:search",
+          "usage_key": "36426778:search",
+          "evidence_cases": [
+            "phantom-search-36426778"
+          ]
+        }
+      ]
+    },
+    {
+      "card_id": 58699500,
+      "name": "Cherubini, Ebon Angel of the Burning Abyss",
+      "text_sha256": "075820c2b56c33946ba099f293282d3dceac8abce63d401fc2670988ed03eac9",
+      "script": "official/c58699500.lua",
+      "script_sha256": "e695eb8e22ad0c82b445c774260c8b81c8405f43c48895f0cde7d6fe0f6e8475",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "cherubini_mill",
+          "supported": true,
+          "conditions": [
+            "场上；主阶段；次数可用；有彼岸表侧对象"
+          ],
+          "costs": [
+            "从牌库把三星怪兽作为费用送墓"
+          ],
+          "candidate_filter": {
+            "level": 3,
+            "type_mask": 1
+          },
+          "operations": [
+            "提升对象攻守；费用产生墓地资源"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "费用送墓不是效果送墓"
+          ],
+          "id": "58699500:mill",
+          "usage_key": "58699500:mill",
+          "evidence_cases": [
+            "phantom-mill-58699500"
+          ]
+        },
+        {
+          "description_index": null,
+          "rule": "unsupported",
+          "supported": false,
+          "conditions": [
+            "连接区域或破坏替代条件满足"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "保护连接区域与替代破坏"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "首版不规划战斗/破坏替代"
+          ],
+          "id": "58699500:protect",
+          "usage_key": null,
+          "evidence_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 62709239,
+      "name": "The Phantom Knights of Break Sword",
+      "text_sha256": "669453e9494c63ad1cf9ef8cf8f829896b1416c4ac21ace3825fa7882ffa4890",
+      "script": "official/c62709239.lua",
+      "script_sha256": "9a23ef503423d09de700243685fc4ffecd6b6849eb5a91d3bb76e0b638367572",
+      "effects": [
+        {
+          "description_index": 1,
+          "rule": "break_revive",
+          "supported": true,
+          "conditions": [
+            "已超量召唤；同等级墓地怪兽两张"
+          ],
+          "costs": [],
+          "candidate_filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1
+          },
+          "operations": [
+            "复活两张怪兽并增加一级"
+          ],
+          "trigger": "自身被破坏",
+          "restrictions": [
+            "此后仅可特殊召唤暗属性",
+            "首版缺少超量召唤历史与破坏规划操作；该条件知识尚不进入候选方案"
+          ],
+          "id": "62709239:revive",
+          "usage_key": null,
+          "evidence_cases": [
+            "break-revive"
+          ]
+        },
+        {
+          "description_index": 0,
+          "rule": "break_destroy",
+          "supported": true,
+          "conditions": [
+            "双方场上各有对象"
+          ],
+          "costs": [
+            "移除一个素材"
+          ],
+          "candidate_filter": null,
+          "operations": [
+            "破坏双方对象"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "无对手场面不可发动；首版不规划"
+          ],
+          "id": "62709239:destroy",
+          "usage_key": null,
+          "evidence_cases": [
+            "break-destroy"
+          ]
+        }
+      ]
+    },
+    {
+      "card_id": 63821877,
+      "name": "The Phantom Knights of Ragged Gloves",
+      "text_sha256": "9d986704d3ebd856911d6f11a3659afa101779a3cfa8c675ef155d6e317bf54d",
+      "script": "official/c63821877.lua",
+      "script_sha256": "0ff30542243260f23f809e53c80464e4b6e3e0019b86845849abf7fdbdec83dc",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "gloves_mill",
+          "supported": true,
+          "conditions": [
+            "墓地；次数可用"
+          ],
+          "costs": [
+            "除外自身作为费用"
+          ],
+          "candidate_filter": {
+            "setcodes": [
+              219
+            ]
+          },
+          "operations": [
+            "以效果从牌库送墓"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "63821877:mill",
+          "usage_key": "63821877:mill",
+          "evidence_cases": [
+            "phantom-mill-63821877"
+          ]
+        },
+        {
+          "description_index": 1,
+          "rule": "unsupported",
+          "supported": false,
+          "conditions": [
+            "用于暗属性超量召唤"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "赋予攻击力增加效果"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "由引擎执行；首版不规划"
+          ],
+          "id": "63821877:material",
+          "usage_key": null,
+          "evidence_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 81439173,
+      "name": "Foolish Burial",
+      "text_sha256": "e39a64a2944ae5106a2c70f8c2fca25b96723a5509a9c4fa2e8a34349bee6418",
+      "script": "official/c81439173.lua",
+      "script_sha256": "6e65769ede8ba639875e3b36e1d041475ceb2e86ed8d3e987184db893ecd8907",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "fool",
+          "supported": true,
+          "conditions": [
+            "主阶段；手牌或魔陷区域"
+          ],
+          "costs": [],
+          "candidate_filter": {
+            "type_mask": 1
+          },
+          "operations": [
+            "以效果送墓一张怪兽"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "81439173:mill",
+          "usage_key": null,
+          "evidence_cases": [
+            "phantom-mill-81439173"
+          ]
+        }
+      ]
+    },
+    {
+      "card_id": 88544390,
+      "name": "The Phantom Knights of Stained Greaves",
+      "text_sha256": "cd95c30dbff31f570c2c1029ccf93b998bf5cd8498d2948bc74e2c97e956036b",
+      "script": "official/c88544390.lua",
+      "script_sha256": "f486fa7cfe2cc82dd164a0031a31cdf97bc67539b071888a9682c9f79c4b042f",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "greaves_summon",
+          "supported": true,
+          "conditions": [
+            "手牌；次数可用；非伤害步骤"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "特殊召唤自身；可增加一级"
+          ],
+          "trigger": "己方幻影骑士团怪兽被特殊召唤",
+          "restrictions": [],
+          "id": "88544390:summon",
+          "usage_key": "88544390:summon",
+          "evidence_cases": [
+            "phantom-summon-88544390"
+          ]
+        },
+        {
+          "description_index": 1,
+          "rule": "greaves_revive",
+          "supported": true,
+          "conditions": [
+            "墓地；次数可用"
+          ],
+          "costs": [
+            "除外自身作为费用"
+          ],
+          "candidate_filter": {
+            "setcodes": [
+              4315
+            ],
+            "type_mask": 1,
+            "excluded": [
+              88544390
+            ]
+          },
+          "operations": [
+            "从手牌特殊召唤；可增加一级"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "88544390:revive",
+          "usage_key": "88544390:revive",
+          "evidence_cases": [
+            "phantom-revive-88544390"
+          ]
+        }
+      ]
+    },
+    {
+      "card_id": 90432163,
+      "name": "The Phantom Knights of Ancient Cloak",
+      "text_sha256": "19a98ea1a1eb6571acbe438259a2176766cc7dc2ce06116a58b11c51c1af7bdf",
+      "script": "official/c90432163.lua",
+      "script_sha256": "380457723770acf48ae53ec9bf5868a52b4cee715aafb9a207ea2dc747bf9376",
+      "effects": [
+        {
+          "description_index": 1,
+          "rule": "cloak_search",
+          "supported": true,
+          "conditions": [
+            "墓地；次数可用"
+          ],
+          "costs": [
+            "除外自身作为费用"
+          ],
+          "candidate_filter": {
+            "setcodes": [
+              4315
+            ],
+            "excluded": [
+              90432163
+            ]
+          },
+          "operations": [
+            "检索The Phantom Knights卡"
+          ],
+          "trigger": null,
+          "restrictions": [],
+          "id": "90432163:search",
+          "usage_key": "90432163:search",
+          "evidence_cases": [
+            "phantom-search-90432163"
+          ]
+        },
+        {
+          "description_index": 0,
+          "rule": "unsupported",
+          "supported": false,
+          "conditions": [
+            "场上攻击表示"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "转换表示并提升攻守"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "首版不规划"
+          ],
+          "id": "90432163:boost",
+          "usage_key": null,
+          "evidence_cases": []
+        }
+      ]
+    },
+    {
+      "card_id": 98827725,
+      "name": "The Phantom Knights of Shade Brigandine",
+      "text_sha256": "0c137c768fc4869d23a38856e4696a7531bcde278ef200415250b5fd6a416b64",
+      "script": "official/c98827725.lua",
+      "script_sha256": "f8a3c34c7466723176652faef3ef884c51d7ac826d25c65bea53f39eacb093a6",
+      "effects": [
+        {
+          "description_index": 0,
+          "rule": "brigandine",
+          "supported": true,
+          "conditions": [
+            "魔陷区域；本卡本回合未发动；盖放当回合需要墓地无陷阱"
+          ],
+          "costs": [],
+          "candidate_filter": null,
+          "operations": [
+            "作为四星通常怪兽特殊召唤"
+          ],
+          "trigger": null,
+          "restrictions": [
+            "非陷阱怪兽"
+          ],
+          "id": "98827725:summon",
+          "usage_key": "98827725:summon",
+          "evidence_cases": [
+            "phantom-summon-98827725"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "banlist snapshot v2",
+  "type": "object",
+  "required": [
+    "id",
+    "schema_version",
+    "source",
+    "source_version",
+    "source_sha256",
+    "effective_date",
+    "retrieved_at",
+    "license",
+    "normalizer_version",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(catalog|banlist)-[a-f0-9]{64}$"
+    },
+    "schema_version": {
+      "const": 2
+    },
+    "source": {
+      "type": "string"
+    },
+    "source_version": {
+      "type": "string"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "effective_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "retrieved_at": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "normalizer_version": {
+      "const": "normalizer-v1"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "region",
+        "version",
+        "limits"
+      ],
+      "properties": {
+        "region": {
+          "const": "OCG"
+        },
+        "version": {
+          "type": "string"
+        },
+        "limits": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "additionalProperties": {
+            "enum": [
+              "Forbidden",
+              "Limited",
+              "SemiLimited",
+              "Unlimited"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

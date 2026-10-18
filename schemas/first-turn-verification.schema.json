@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "First-turn native verification evidence v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "knowledge_id": {
+      "type": "string",
+      "pattern": "^first-turn-knowledge-[0-9a-f]{64}$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^tournament-source-[0-9a-f]{64}$"
+    },
+    "asset_group_id": {
+      "type": "string",
+      "pattern": "^asset-group-[0-9a-f]{64}$"
+    },
+    "coverage_id": {
+      "type": "string",
+      "pattern": "^coverage-[0-9a-f]{64}$"
+    },
+    "suite_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "case_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "journal_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "rule_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "positive",
+              "negative",
+              "procedure",
+              "continuous",
+              "procedure_negative",
+              "continuous_negative",
+              "delayed",
+              "delayed_negative",
+              "ash_response"
+            ]
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime_request": {
+            "$ref": "first-turn-runtime.schema.json"
+          },
+          "before_call": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "after_call": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 512
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "replay_calls": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 512
+            },
+            "maxItems": 2
+          },
+          "resolution_events": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxItems": 4
+          },
+          "binding": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "procedure",
+                      "exact_effect_description",
+                      "generic_trigger_requires_chain_confirmation"
+                    ]
+                  },
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 4294967295
+                      },
+                      "player": {
+                        "enum": [
+                          0,
+                          1
+                        ]
+                      },
+                      "location": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 255
+                      },
+                      "sequence": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "player",
+                      "location",
+                      "sequence",
+                      "position"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expected_description": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "prompt_description": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "source",
+                  "expected_description",
+                  "prompt_description"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ledger": {
+            "type": "object",
+            "properties": {
+              "consumed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "reserved": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "completed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "unknown": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "abandoned": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "limit": {
+                "const": 512
+              }
+            },
+            "required": [
+              "consumed",
+              "reserved",
+              "completed",
+              "unknown",
+              "limit"
+            ],
+            "additionalProperties": false
+          },
+          "charged_sequence": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "case_id",
+          "case_sha256",
+          "journal_id",
+          "rule_id",
+          "kind",
+          "passed",
+          "error",
+          "runtime_request",
+          "before_call",
+          "after_call",
+          "replay_calls",
+          "resolution_events",
+          "binding",
+          "ledger",
+          "charged_sequence",
+          "branch",
+          "limitations"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "passed": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "before_call": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 512
+                },
+                "error": {
+                  "type": "null"
+                },
+                "replay_calls": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 512
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 1
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "complete_coverage": {
+      "type": "boolean"
+    },
+    "missing_rules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "worker_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "knowledge_id",
+    "source_id",
+    "asset_group_id",
+    "coverage_id",
+    "suite_sha256",
+    "cases",
+    "passed",
+    "complete_coverage",
+    "missing_rules",
+    "worker_sha256"
+  ],
+  "additionalProperties": false
+}
