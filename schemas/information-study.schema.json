@@ -1,0 +1,156 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "kind": {
+      "const": "information-study"
+    },
+    "study_id": {
+      "const": "rabbit-idle-information-v1"
+    },
+    "observation_profile": {
+      "const": "rabbit-idle-observation-v1"
+    },
+    "seed_role": {
+      "const": "reproduction_only"
+    },
+    "frozen_input": {
+      "type": "object",
+      "required": [
+        "case_sha256",
+        "request_sha256",
+        "frozen_source_sha256",
+        "rules",
+        "assets"
+      ],
+      "properties": {
+        "case_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "frozen_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "public": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rules",
+        "objective",
+        "known_deck_composition",
+        "initial_public_state"
+      ],
+      "properties": {
+        "rules": {
+          "type": "object"
+        },
+        "objective": {
+          "type": "object"
+        },
+        "known_deck_composition": {
+          "type": "object"
+        },
+        "initial_public_state": {
+          "type": "object"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "sha256",
+          "category",
+          "scope"
+        ],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "category": {
+            "enum": [
+              "historical_native",
+              "synthetic",
+              "frozen_input",
+              "static_source"
+            ]
+          },
+          "scope": {
+            "enum": [
+              "projection",
+              "inventory",
+              "source",
+              "static"
+            ]
+          }
+        }
+      }
+    },
+    "static_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "sha256",
+          "commit"
+        ],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "commit": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "study_id",
+    "observation_profile",
+    "seed_role",
+    "frozen_input",
+    "public",
+    "evidence",
+    "static_sources",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

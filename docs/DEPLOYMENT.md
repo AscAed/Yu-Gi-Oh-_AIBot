@@ -6,9 +6,11 @@
 
 当前 `deploy-local.ps1` 只打包 Phantom v1/v2 知识和普通运行资产；不会复制赛事 `tournament-2026` 知识包或其隔离 CDB/Lua/core。赛事规则验真须按 `FIRST_TURN_VERIFICATION.md` 使用独立开发配置，不可通过替换普通包中的 CDB 来混用两套资产。
 
-前次自检已于2026-10-19按冻结资产重建普通 `dist/ygo-local`，不再是初次盘点时的10月16日旧包。本轮文档交付只读核对CLI/worker与现存release构建、包内 `build-hashes.json` 一致，普通包及赛事开发配置doctor均就绪。该哈希一致性不证明构建对应最新工作区；最新源码的独立干净checkout双资产验收仍未完成，精确命令/身份见[TESTING](TESTING.md)。本轮没有重建部署或重跑smoke，doctor的smoke_ok=null。
+普通 `dist/ygo-local` 于2026-10-19按冻结资产重建。2026-10-27自检核对包内CLI/worker与 `build-hashes.json` 一致，普通包与赛事开发配置的doctor均返回就绪、`smoke_ok=null`；未重建部署；其后对普通包执行的预算受限决斗smoke和独立replay均通过，详见[TESTING](TESTING.md)。哈希一致与doctor就绪不证明该包由最新工作区构建；最新源码的独立干净checkout双资产验收仍未完成，证据见[TESTING](TESTING.md)。
 
-普通发布包、赛事开发配置和最终干净双资产包是三种不同状态：赛事当前引用独立冻结资产及debug worker，不是正式v6发布包。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
+普通发布包、赛事开发配置和最终干净双资产包是三种不同状态：赛事当前引用独立冻结资产及debug worker；固定案例及独立重放通过本轮独立账本的两次请求，不是正式v6发布包。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
+
+后续研究使用独立开发构建或冻结runner，并分别记录构建/原生时点/文档后源码身份；没有因此刷新dist。新增`engine identity`须使用包含该功能的开发CLI，旧dist不能自动获得新命令。研究期间使用独立 `CARGO_TARGET_DIR` 与匹配的 `--target-dir`，构建与实验分时；从资产冻结到后检不得并行构建或覆盖被绑定worker。相同哈希及构建记录不单独证明可复现构建。预算、证据和副作用见[研究运行规范](RESEARCH_OPERATIONS.md)与[证据合同](EVIDENCE_CONTRACTS.md)。
 
 使用已有冻结运行资产离线更新本机发布目录：
 
@@ -37,6 +39,8 @@
 
 `deploy-local.ps1` 冻结官方资产、构建 CLI/worker、固定 LFLists `1051a65ab853fd84521aa919d1859f9468816c56`、导入 `2026.10 OCG`（2026-10-01 生效），生成 `dist/ygo-local` 本机包。已有缓存时两个脚本都支持 `-Offline`。公共 utility.lua 会加载 proc_unofficial.lua，因此只复制这个公共辅助库到脚本根目录；不导入 unofficial 卡片脚本、Rush 或 Skill 数据库。
 
+部署脚本将若干文档扁平复制到包根目录；其中相对链接仍按原仓库布局编写，不能保证在包内解析。应从仓库的[文档入口](INDEX.md)阅读完整体系及本机证据；包不包含完整历史数据。脚本现会同时复制TESTING入口和历史快照，并生成指向当前仓库文档的包内README；这些指向工作区的链接不代表包构建时的冻结文档。现有2026-10-19包尚未重建，不能假定其包含这些文件。
+
 包包含 `ygo.exe`、worker、配置示例、配置、评分文件、请求 fixture、说明和二进制哈希。`ygo.cmd` 设置本机资产、快照及评分路径，可从任意工作目录启动。外部 DLL、CDB、卡片脚本、个人路径不会进入 Git，也不随可公开分享的源码包分发。本机包的路径绑定当前安装，移动资产后需重新部署。
 
 新增逐效果验真和 Break Sword v2 命令见 [BREAK_SWORD_VERIFICATION.md](BREAK_SWORD_VERIFICATION.md)。包内提供 phantom-v1/v2 两个知识 profile，以及 Break 请求、真实效果案例和固定起手夹具；wrapper分别设置两个知识路径。协议v2与v3由当前 worker 同时处理。
@@ -55,23 +59,31 @@
 
 重新导入：`catalog import --input <cards.cdb>`；`banlist import --input <OCG.lflist.conf> --commit <40位源码提交>`。指定已有快照可用 status 的 `--id`；所有数据命令支持 `--store`。显式快照 ID 可跳过 active 指针；`--store` 导入的指针保存在该 store 内，不修改其它 store。分析请求字段见 `schemas/combo-request.schema.json`。`latest-ocg` 在请求开始时解析为不晚于 `as_of` 的不可变快照 ID。
 
-JSON 完整报告写入 `--output`，未给输出路径则写 stdout；中文摘要写 stderr。程序失败返回 exit 2 和 JSON 错误。`doctor` 分开检查资产和 ABI，`smoke_ok=null` 表示尚未执行真实 smoke。`engine smoke` 执行小预算搜索与重放；完整 golden 验收还需运行以下 opt-in 测试。
+JSON 完整报告写入 `--output`，未给输出路径则写 stdout；中文摘要写 stderr。程序失败返回 exit 2 和 JSON 错误。`doctor` 分开检查资产和 ABI，`smoke_ok=null` 表示该次doctor本身没有执行真实smoke；后续独立smoke的结果须另查报告。`engine smoke` 执行小预算搜索与重放；完整 golden 验收还需运行以下 opt-in 测试。
 
 ## 验证
 
 ```powershell
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --offline -- -D warnings
-cargo test --workspace --offline
+cargo clippy --workspace --all-targets --offline --locked -- -D warnings
+cargo test --workspace --offline --locked
+cargo test -p ygo-engine-adapter --examples --offline --locked
 $env:http_proxy='http://127.0.0.1:7897'; $env:https_proxy='http://127.0.0.1:7897'; py -m pip install -e '.[test]'
 $env:PYTHONPATH='python'
-py -m unittest discover -s tests -p 'test_*.py'
+New-Item -ItemType Directory -Force -Path target/pytest-cache | Out-Null
+$testFiles = @(Get-ChildItem -LiteralPath tests -File -Filter 'test_*.py' | Sort-Object Name | ForEach-Object { $_.FullName })
+py -m pytest @testFiles
 py -m ygo_data.cli validate --input tests/fixtures/cards.sample.json
-cargo test -p ygo-engine-adapter --test live_engine --offline -- --ignored --nocapture
-$env:YGO_LIVE_ENGINE='1'
-py -m unittest discover -s tests -p 'test_runtime_build.py'
 ```
 
-CI不携带真实资产；依赖冻结资产/账本报告的Rust测试为显式opt-in，Python引擎和本机报告用例默认skipped。历史“四项”不是当前测试数量，最新完整套件计数见[TESTING](TESTING.md)。真实黄金线路fixture验证救援兔未使用怪兽的结束阶段破坏、霍普两张超量素材、LAN连接终场及提示编号不匹配；规划测试验证Phantom目标、来源与报告伪造拒绝和预算降级。
+以下是依赖本机引擎和资产的显式验收，会启动原生引擎；运行前须确认适用范围及资产，不属于常规离线自检：
+
+```powershell
+cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored --nocapture
+$env:YGO_LIVE_ENGINE='1'
+py -m pytest tests/test_runtime_build.py
+```
+
+Python套件显式枚举顶层测试文件，以免递归发现证据树及不可读临时目录。CI不携带真实资产；依赖冻结资产/账本报告的Rust测试为显式opt-in，Python引擎和本机报告用例默认skipped。历史“四项”不是当前测试数量，最新完整套件计数见[TESTING](TESTING.md)。真实黄金线路fixture验证救援兔未使用怪兽的结束阶段破坏、霍普两张超量素材、LAN连接终场及提示编号不匹配；规划测试验证Phantom目标、来源与报告伪造拒绝和预算降级。
 
 首版未知决策停止分支，未知信息帧保留原始字节、结果为 partial；只有完全解码、终场已结算且独立重放一致的线路才能标记 engine_verified。评分总为 heuristic。旧 rabbit-v1 评分只覆盖救援兔、霍普、宝石骑士珍珠及 LAN 的小型验收场景；其余卡效强度列为覆盖缺口、计零，不代表实际弱度。新规划入口使用 rusty-fog 目标和资源/决策排序，逐效果范围见 SEMANTIC_PLANNING.md。

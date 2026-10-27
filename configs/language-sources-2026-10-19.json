@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "checked_date": "2026-10-19",
+  "sources": [
+    {
+      "id": "mycard-zh-CN-217ae165",
+      "repository": "https://github.com/mycard/ygopro-database",
+      "acquisition": "pinned raw GitHub download via local proxy",
+      "language": "zh-Hans",
+      "upstream_locale": "zh-CN",
+      "version": "217ae165c1886af2fc36b823fc08f9fc3ec13185",
+      "file": "locales/zh-CN/cards.cdb",
+      "sha256": "ff52f585de24a762a4e613ac37654b1a7fb15a58990c14f5eada85f28c3be152",
+      "license": {
+        "redistribution": "unknown",
+        "evidence": "GitHub license endpoint 404; no LICENSE candidate in acquired tree; README describes test databases",
+        "readme_sha256": "f09d8fb7f8b5a2de2d8a495d114fde5f76a2e0755a7dfb5244dde7be36fc4cb5"
+      },
+      "restrictions": [
+        "local investigation only until rights are established",
+        "not an official Chinese translation certification"
+      ]
+    },
+    {
+      "id": "mycard-zh-SC-217ae165",
+      "repository": "https://github.com/mycard/ygopro-database",
+      "acquisition": "pinned raw GitHub download via local proxy",
+      "language": "und",
+      "upstream_locale": "zh-SC",
+      "version": "217ae165c1886af2fc36b823fc08f9fc3ec13185",
+      "file": "locales/zh-SC/cards.cdb",
+      "sha256": "5382e8dcdfaae6c582533d70670e34fb4390b9ef20eccbd5cae338327ae517d4",
+      "license": {
+        "redistribution": "unknown",
+        "evidence": "GitHub license endpoint 404; no LICENSE candidate in acquired tree; README describes test databases",
+        "readme_sha256": "f09d8fb7f8b5a2de2d8a495d114fde5f76a2e0755a7dfb5244dde7be36fc4cb5"
+      },
+      "restrictions": [
+        "local investigation only until rights are established",
+        "not an official Chinese translation certification"
+      ]
+    }
+  ]
+}

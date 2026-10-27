@@ -1,0 +1,11 @@
+{
+  "kind": "synthetic_prompt_fixture",
+  "request": {},
+  "prompt_audits": [
+    {"sequence": 1, "opcode": 19, "raw": [19,0,1,0,0,0,5], "actual_response_bytes": {"Ok": [[1,0,0,0]]}},
+    {"sequence": 2, "opcode": 19, "raw": [19,0,1,0,0,0,5], "actual_response_bytes": {"Ok": [[1,0,0,0],[4,0,0,0],[2,0,0,0]]}},
+    {"sequence": 3, "opcode": 200, "raw": [200,0]},
+    {"sequence": 4, "opcode": 19, "raw": [19,0,1], "actual_response_bytes": {"Ok": []}},
+    {"sequence": 5, "opcode": 19, "raw": [19,0,1,0,0,0,5], "actual_response_bytes": {"Err": "synthetic historical parser failure"}}
+  ]
+}

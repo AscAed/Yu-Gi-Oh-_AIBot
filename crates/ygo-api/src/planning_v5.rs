@@ -1107,7 +1107,7 @@ pub fn validate_report(r: &PlanReport) -> Result<(), String> {
                         .iter()
                         .find(|e| e.sequence == s.selected.prompt_id)
                         .ok_or("missing settlement frame")?;
-                    let p = parse_prompt(f.sequence, &f.raw)?.ok_or("missing settlement prompt")?;
+                    let p = recorded_prompt(f)?.ok_or("missing settlement prompt")?;
                     let mut dummy = anchor.observation.clone();
                     dummy.events = s.before.events.clone();
                     dummy.prompt = Some(p);
@@ -1283,7 +1283,7 @@ fn automatic_extension(prefix: &[Decision], all: &[Decision], events: &[CoreEven
             events
                 .iter()
                 .find(|e| e.sequence == d.prompt_id)
-                .and_then(|e| parse_prompt(e.sequence, &e.raw).ok().flatten())
+                .and_then(|e| recorded_prompt(e).ok().flatten())
                 .is_some_and(|p| p.actions.len() == 1 && p.actions[0].choice == d.choice)
         })
 }
@@ -1294,7 +1294,7 @@ fn validate_failed(
     pack: &KnowledgePack,
 ) -> Result<(), String> {
     for e in &f.observation.events {
-        if decode_frame(e.sequence, &e.raw)? != *e {
+        if !frame_matches_raw(e)? {
             return Err("forged failed raw frame".into());
         }
     }
@@ -1330,7 +1330,7 @@ fn validate_failed(
             .iter()
             .find(|e| e.sequence == s.selected.prompt_id)
             .ok_or("missing failed selection frame")?;
-        let p = parse_prompt(e.sequence, &e.raw)?.ok_or("missing failed prompt")?;
+        let p = recorded_prompt(e)?.ok_or("missing failed prompt")?;
         let mut before = f.observation.clone();
         before.events = s.before.events.clone();
         before.prompt = Some(p);

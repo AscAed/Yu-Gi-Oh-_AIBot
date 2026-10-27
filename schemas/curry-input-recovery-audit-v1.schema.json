@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/curry-input-recovery-audit-v1.schema.json",
+  "title": "Curry frozen input recovery offline audit v1",
+  "description": "Read-only verification of the frozen Curry input hash refusal. It never runs a runner, worker, FFI, writable journal, or native request.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "status", "failure_checkpoint", "anchors", "tool_identity", "checks",
+    "native_calls", "execution_ready", "process_actions", "historical", "confirmation_scope",
+    "historical_exit_observation", "hash_mismatch", "source_archives", "source_archive_differences",
+    "inputs", "qualifications", "diagnostics", "elapsed_seconds"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "curry_input_recovery_audit" },
+    "status": { "enum": ["passed", "failed", "incomplete"] },
+    "failure_checkpoint": {
+      "type": ["string", "null"],
+      "enum": [null, "acceptance_delivery_anchors", "evidence_inventory", "source_archives", "frozen_input_binding", "historical_ledgers", "old_material_protection", "input_stability"]
+    },
+    "anchors": {
+      "type": "object", "additionalProperties": false,
+      "required": ["acceptance_sha256", "delivery_sha256", "inventory_sha256"],
+      "properties": {
+        "acceptance_sha256": { "const": "23fd2d5639663bae962f35a5792407b69cc8db202ccd8faa1c5b0a822ca111c0" },
+        "delivery_sha256": { "const": "c2a2f2476732ee6503bfc047603f379d3f248098c3e67ea4ee6dc8b6c7971620" },
+        "inventory_sha256": { "const": "807a45e142d5b634ad25be5ac1562ac829fa9cffca62b21c7c9f71a499b3e1ea" }
+      }
+    },
+    "tool_identity": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["head", "identity", "file_count"],
+          "properties": {
+            "head": { "type": "string" },
+            "identity": { "$ref": "#/$defs/hash" },
+            "file_count": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "checks": {
+      "type": "object", "additionalProperties": false,
+      "required": ["acceptance_delivery_anchors", "evidence_inventory", "source_archives", "frozen_input_binding", "historical_ledgers", "old_material_protection", "input_stability"],
+      "properties": {
+        "acceptance_delivery_anchors": { "$ref": "#/$defs/check" },
+        "evidence_inventory": { "$ref": "#/$defs/check" },
+        "source_archives": { "$ref": "#/$defs/check" },
+        "frozen_input_binding": { "$ref": "#/$defs/check" },
+        "historical_ledgers": { "$ref": "#/$defs/check" },
+        "old_material_protection": { "$ref": "#/$defs/check" },
+        "input_stability": { "$ref": "#/$defs/check" }
+      }
+    },
+    "native_calls": { "const": 0 },
+    "execution_ready": { "const": false },
+    "process_actions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runner_started", "worker_started", "ffi_called", "writable_ledger_opened"],
+      "properties": {
+        "runner_started": { "const": false },
+        "worker_started": { "const": false },
+        "ffi_called": { "const": false },
+        "writable_ledger_opened": { "const": false }
+      }
+    },
+    "historical": {
+      "type": "object", "additionalProperties": false,
+      "required": ["consumed", "unknown", "ledger_count", "verified_without_writable_journal", "input_set_sha256"],
+      "properties": {
+        "consumed": { "oneOf": [{ "type": "null" }, { "const": 32 }] },
+        "unknown": { "oneOf": [{ "type": "null" }, { "const": 0 }] },
+        "ledger_count": { "oneOf": [{ "type": "null" }, { "const": 9 }] },
+        "verified_without_writable_journal": { "type": "boolean" },
+        "input_set_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }] }
+      }
+    },
+    "confirmation_scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scope", "prepared", "execution_ready", "new_consumed", "cumulative_consumed", "new_unknown", "unconsumed_slots_sealed", "native_validation_passed"],
+      "properties": {
+        "scope": { "const": "curry-option-confirmation-v1" },
+        "prepared": { "type": ["boolean", "null"] },
+        "execution_ready": { "const": false },
+        "new_consumed": { "type": "null" },
+        "cumulative_consumed": { "type": "null" },
+        "new_unknown": { "type": "null" },
+        "unconsumed_slots_sealed": { "const": 7 },
+        "native_validation_passed": { "const": false }
+      }
+    },
+    "historical_exit_observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["observation_exit_code", "archived_refusal_branch_return_code", "historical_exit_code_certified", "raw_normal_stdout_stderr_saved"],
+      "properties": {
+        "observation_exit_code": { "const": 1 },
+        "archived_refusal_branch_return_code": { "const": 2 },
+        "historical_exit_code_certified": { "const": false },
+        "raw_normal_stdout_stderr_saved": { "const": false }
+      }
+    },
+    "hash_mismatch": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["legacy_comparison", "manifest_role_hashing", "first_legacy_mismatch_role", "legacy_raw_mismatches", "semantic_sha256", "container_file_sha256", "repaired_shared_gate_passed", "old_confirmation_report_rewritten"],
+          "properties": {
+            "legacy_comparison": { "const": "raw_container_file_sha256" },
+            "manifest_role_hashing": { "const": "canonical_extracted_object_sha256" },
+            "first_legacy_mismatch_role": { "const": "base_request" },
+            "legacy_raw_mismatches": {
+              "type": "array", "items": { "$ref": "#/$defs/hashMismatch" }
+            },
+            "semantic_sha256": { "type": "object", "additionalProperties": { "$ref": "#/$defs/hash" } },
+            "container_file_sha256": { "type": "object", "additionalProperties": { "$ref": "#/$defs/hash" } },
+            "repaired_shared_gate_passed": { "const": true },
+            "old_confirmation_report_rewritten": { "const": false }
+          }
+        }
+      ]
+    },
+    "source_archives": { "type": "array", "items": { "$ref": "#/$defs/archive" } },
+    "source_archive_differences": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/relativePath" } },
+    "inputs": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+    "qualifications": {
+      "type": "object", "additionalProperties": false,
+      "required": ["proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"],
+      "properties": {
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      }
+    },
+    "diagnostics": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,90}$" } },
+    "elapsed_seconds": { "type": "number", "minimum": 0 }
+  },
+  "allOf": [
+    { "if": { "properties": { "status": { "const": "passed" } }, "required": ["status"] }, "then": { "properties": { "failure_checkpoint": { "type": "null" }, "tool_identity": { "type": "object" }, "historical": { "properties": { "consumed": { "const": 32 }, "unknown": { "const": 0 }, "ledger_count": { "const": 9 }, "verified_without_writable_journal": { "const": true }, "input_set_sha256": { "$ref": "#/$defs/hash" } } }, "checks": { "properties": { "acceptance_delivery_anchors": { "const": "passed" }, "evidence_inventory": { "const": "passed" }, "source_archives": { "const": "passed" }, "frozen_input_binding": { "const": "passed" }, "historical_ledgers": { "const": "passed" }, "old_material_protection": { "const": "passed" }, "input_stability": { "const": "passed" } } }, "confirmation_scope": { "properties": { "prepared": { "const": true }, "execution_ready": { "const": false } }, "required": ["prepared"] }, "hash_mismatch": { "type": "object" }, "source_archives": { "minItems": 2, "maxItems": 2 }, "source_archive_differences": { "const": ["TASKS.md", "docs/TESTING.md", "docs/superpowers/plans/2026-10-24-curry-option-confirmation-handoff.md"] } } } },
+    { "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] }, "then": { "properties": { "failure_checkpoint": { "enum": ["acceptance_delivery_anchors", "evidence_inventory", "source_archives", "frozen_input_binding", "historical_ledgers", "old_material_protection", "input_stability"] }, "checks": { "not": { "properties": { "acceptance_delivery_anchors": { "const": "not_run" }, "evidence_inventory": { "const": "not_run" }, "source_archives": { "const": "not_run" }, "frozen_input_binding": { "const": "not_run" }, "historical_ledgers": { "const": "not_run" }, "old_material_protection": { "const": "not_run" }, "input_stability": { "const": "not_run" } }, "required": ["acceptance_delivery_anchors", "evidence_inventory", "source_archives", "frozen_input_binding", "historical_ledgers", "old_material_protection", "input_stability"] } } } } }
+  ],
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "check": { "enum": ["not_run", "passed", "failed"] },
+    "relativePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*:)[A-Za-z0-9._/-]+$" },
+    "input": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "path", "sha256", "bytes"],
+      "properties": {
+        "role": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,100}$" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "archive": {
+      "type": "object", "additionalProperties": false,
+      "required": ["archive_sha256", "archive_bytes", "file_list_sha256", "source_identity", "file_count", "role"],
+      "properties": {
+        "archive_sha256": { "$ref": "#/$defs/hash" },
+        "archive_bytes": { "type": "integer", "minimum": 0 },
+        "file_list_sha256": { "$ref": "#/$defs/hash" },
+        "source_identity": { "$ref": "#/$defs/hash" },
+        "file_count": { "type": "integer", "minimum": 1 },
+        "role": { "enum": ["native_time", "final"] }
+      }
+    },
+    "hashMismatch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "expected_object_sha256", "container_file_sha256", "actual_object_sha256"],
+      "properties": {
+        "role": { "enum": ["base_request", "candidate_case"] },
+        "expected_object_sha256": { "$ref": "#/$defs/hash" },
+        "container_file_sha256": { "$ref": "#/$defs/hash" },
+        "actual_object_sha256": { "$ref": "#/$defs/hash" }
+      }
+    }
+  }
+}

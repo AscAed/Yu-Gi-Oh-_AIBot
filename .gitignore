@@ -13,6 +13,10 @@ __pycache__/
 /configs/engine.toml.*
 /data/tmp/
 /data/runtime/
+# Crate tests may leave local ledgers or frozen native evidence outside root data/.
+/crates/ygo-engine-adapter/data/tmp/
+/crates/ygo-engine-adapter/data/runtime/
+/crates/ygo-engine-adapter/target/
 /data/raw/
 /data/normalized/
 /data/snapshots/
@@ -20,3 +24,4 @@ __pycache__/
 # Local plans and deployment output
 /.superpowers/
 /dist/
+/tests/.tenki-*/

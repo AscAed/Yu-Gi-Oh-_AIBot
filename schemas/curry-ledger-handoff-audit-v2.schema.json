@@ -1,0 +1,3478 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "curry-ledger-handoff-audit-v2.schema.json",
+  "title": "Curry saved ledger handoff read-only audit v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "status",
+    "failure_checkpoint",
+    "anchors",
+    "tool_identity",
+    "checks",
+    "native_calls",
+    "execution_ready",
+    "baseline",
+    "accounting",
+    "historical_failure",
+    "runner",
+    "inputs",
+    "stability",
+    "diagnostic",
+    "elapsed_seconds",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified",
+    "previous_failed_attempt",
+    "dual_timepoint_sources",
+    "stability_rechecks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "curry_ledger_handoff_audit_v2"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed",
+        "incomplete"
+      ]
+    },
+    "failure_checkpoint": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "previous_failed_source",
+            "acceptance_delivery",
+            "dual_timepoint_sources",
+            "reservation_and_history",
+            "frozen_scope_inputs",
+            "stage1_parent_receipt",
+            "stage2_saved_intent",
+            "isolated_runner_build",
+            "saved_input_audit",
+            "input_stability"
+          ]
+        }
+      ]
+    },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acceptance_sha256",
+        "delivery_sha256"
+      ],
+      "properties": {
+        "acceptance_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "delivery_sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "tool_identity": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "head",
+            "identity",
+            "file_count"
+          ],
+          "properties": {
+            "head": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "identity": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/hash"
+                }
+              ]
+            },
+            "file_count": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_failed_source",
+        "acceptance_delivery",
+        "dual_timepoint_sources",
+        "reservation_and_history",
+        "frozen_scope_inputs",
+        "stage1_parent_receipt",
+        "stage2_saved_intent",
+        "isolated_runner_build",
+        "saved_input_audit",
+        "input_stability"
+      ],
+      "properties": {
+        "previous_failed_source": {
+          "$ref": "#/$defs/check"
+        },
+        "acceptance_delivery": {
+          "$ref": "#/$defs/check"
+        },
+        "dual_timepoint_sources": {
+          "$ref": "#/$defs/check"
+        },
+        "reservation_and_history": {
+          "$ref": "#/$defs/check"
+        },
+        "frozen_scope_inputs": {
+          "$ref": "#/$defs/check"
+        },
+        "stage1_parent_receipt": {
+          "$ref": "#/$defs/check"
+        },
+        "stage2_saved_intent": {
+          "$ref": "#/$defs/check"
+        },
+        "isolated_runner_build": {
+          "$ref": "#/$defs/check"
+        },
+        "saved_input_audit": {
+          "$ref": "#/$defs/check"
+        },
+        "input_stability": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_root",
+        "acceptance_sha256",
+        "delivery_sha256",
+        "scope",
+        "context",
+        "manifest_sha256",
+        "prepared_sha256",
+        "stage1_receipt_sha256",
+        "stage2_input_sha256",
+        "stage2_request_sha256"
+      ],
+      "properties": {
+        "relative_root": {
+          "const": "data/runtime/p1-curry-option-verification-native-2026-10-25"
+        },
+        "acceptance_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "delivery_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "scope": {
+          "const": "curry-option-verification-v1"
+        },
+        "context": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "manifest_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "prepared_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "stage1_receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "stage2_input_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "stage2_request_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certified_historical_consumed",
+        "policy_reserved",
+        "planning_base",
+        "new_consumed",
+        "certified_consumed_including_new",
+        "planning_total",
+        "unknown",
+        "old_confirmation_actual_consumed",
+        "actual_all_history_cumulative"
+      ],
+      "properties": {
+        "certified_historical_consumed": {
+          "const": 32
+        },
+        "policy_reserved": {
+          "const": 7
+        },
+        "planning_base": {
+          "const": 39
+        },
+        "new_consumed": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "certified_consumed_including_new": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "planning_total": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "unknown": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "old_confirmation_actual_consumed": {
+          "type": "null"
+        },
+        "actual_all_history_cumulative": {
+          "type": "null"
+        }
+      }
+    },
+    "historical_failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "stage1_passed",
+        "stage2_failed",
+        "stage2_diagnostic",
+        "historical_exit_code_certified",
+        "old_failure_rewritten",
+        "acceptance_runner_return_code_claimed",
+        "archived_static_return_code",
+        "historical_actual_exit_code"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-verification-v1"
+        },
+        "stage1_passed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stage2_failed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stage2_diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "historical_exit_code_certified": {
+          "const": false
+        },
+        "old_failure_rewritten": {
+          "const": false
+        },
+        "acceptance_runner_return_code_claimed": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 2
+            }
+          ]
+        },
+        "archived_static_return_code": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 2
+            }
+          ]
+        },
+        "historical_actual_exit_code": {
+          "type": "null"
+        }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "mode",
+        "sha256",
+        "build_record_sha256",
+        "build_record_identity",
+        "source_identity",
+        "source_file_count",
+        "return_code",
+        "process_status",
+        "diagnostic_sha256",
+        "stdout_sha256",
+        "stdout_bytes",
+        "stderr_sha256",
+        "stderr_bytes",
+        "trace",
+        "saved_input_result",
+        "process_capture"
+      ],
+      "properties": {
+        "role": {
+          "const": "curry_ledger_handoff_audit_runner"
+        },
+        "mode": {
+          "const": "audit_saved_input_only"
+        },
+        "sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "build_record_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "build_record_identity": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "source_identity": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "source_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "return_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "process_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "completed",
+            "timeout",
+            "launch_failed"
+          ]
+        },
+        "diagnostic_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "stdout_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "stdout_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "stderr_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "stderr_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "trace": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/traceEvent"
+          }
+        },
+        "saved_input_result": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/savedInputResult"
+            }
+          ]
+        },
+        "process_capture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "metadata_path",
+            "metadata_sha256",
+            "stdout_path",
+            "stderr_path"
+          ],
+          "properties": {
+            "metadata_path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "metadata_sha256": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/hash"
+                }
+              ]
+            },
+            "stdout_path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "stderr_path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_stable",
+        "baseline_stable",
+        "reservation_stable",
+        "ledger_stable",
+        "runner_build_stable",
+        "process_diagnostics_stable",
+        "stage2_receipt_absent_before",
+        "stage2_receipt_absent_after"
+      ],
+      "properties": {
+        "workspace_stable": {
+          "enum": [
+            "not_checked",
+            "passed",
+            "failed"
+          ]
+        },
+        "baseline_stable": {
+          "enum": [
+            "not_checked",
+            "passed",
+            "failed"
+          ]
+        },
+        "reservation_stable": {
+          "enum": [
+            "not_checked",
+            "passed",
+            "failed"
+          ]
+        },
+        "ledger_stable": {
+          "enum": [
+            "not_checked",
+            "passed",
+            "failed"
+          ]
+        },
+        "runner_build_stable": {
+          "enum": [
+            "not_checked",
+            "passed",
+            "failed"
+          ]
+        },
+        "process_diagnostics_stable": {
+          "enum": [
+            "not_checked",
+            "passed",
+            "failed"
+          ]
+        },
+        "stage2_receipt_absent_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stage2_receipt_absent_after": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "diagnostic": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z][a-z0-9_]{1,100}$"
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "native_probability_verified": {
+      "const": false
+    },
+    "previous_failed_attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_sha256",
+        "status",
+        "failure_checkpoint",
+        "diagnostic",
+        "runner_sha256",
+        "build_record_sha256",
+        "source_archive_sha256",
+        "source_file_list_sha256"
+      ],
+      "properties": {
+        "report_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "failed"
+          ]
+        },
+        "failure_checkpoint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "acceptance_delivery"
+          ]
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_]{1,100}$"
+        },
+        "runner_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "build_record_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "source_archive_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "source_file_list_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        }
+      }
+    },
+    "dual_timepoint_sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "native_source_identity",
+        "native_file_count",
+        "final_source_identity",
+        "final_file_count",
+        "source_delta",
+        "parent_lock_path",
+        "parent_view_retained",
+        "historical_actual_exit_code"
+      ],
+      "properties": {
+        "native_source_identity": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "native_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "final_source_identity": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "final_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "source_delta": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": {
+                "added": [
+                  "docs/superpowers/plans/2026-10-25-curry-option-verification-handoff.md"
+                ],
+                "removed": [],
+                "changed": [
+                  "TASKS.md",
+                  "docs/INDEX.md",
+                  "docs/TESTING.md"
+                ]
+              }
+            }
+          ]
+        },
+        "parent_lock_path": {
+          "const": "crates/ygo-engine-adapter/examples/curry-option-validation.rs"
+        },
+        "parent_view_retained": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "historical_actual_exit_code": {
+          "type": "null"
+        }
+      }
+    },
+    "stability_rechecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace",
+        "previous_failure_tree",
+        "baseline_tree",
+        "reservation_tree",
+        "ledger",
+        "runner_build",
+        "process_diagnostics",
+        "stage2_receipt_absent"
+      ],
+      "properties": {
+        "workspace": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "previous_failure_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "baseline_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "reservation_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "ledger": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "runner_build": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "process_diagnostics": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed"
+          ]
+        },
+        "stage2_receipt_absent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "native_calls": {
+          "const": 0
+        },
+        "execution_ready": {
+          "const": false
+        },
+        "historical_failure": {
+          "properties": {
+            "historical_exit_code_certified": {
+              "const": false
+            },
+            "old_failure_rewritten": {
+              "const": false
+            },
+            "historical_actual_exit_code": {
+              "type": "null"
+            }
+          }
+        },
+        "dual_timepoint_sources": {
+          "properties": {
+            "historical_actual_exit_code": {
+              "type": "null"
+            }
+          }
+        },
+        "accounting": {
+          "properties": {
+            "old_confirmation_actual_consumed": {
+              "type": "null"
+            },
+            "actual_all_history_cumulative": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "accounting": {
+              "properties": {
+                "new_consumed": {
+                  "type": "null"
+                },
+                "certified_consumed_including_new": {
+                  "type": "null"
+                },
+                "planning_total": {
+                  "type": "null"
+                },
+                "unknown": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "accounting": {
+              "properties": {
+                "new_consumed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "certified_consumed_including_new": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "planning_total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "unknown": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "previous_failed_source"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "failed"
+              },
+              "acceptance_delivery": {
+                "const": "not_run"
+              },
+              "dual_timepoint_sources": {
+                "const": "not_run"
+              },
+              "reservation_and_history": {
+                "const": "not_run"
+              },
+              "frozen_scope_inputs": {
+                "const": "not_run"
+              },
+              "stage1_parent_receipt": {
+                "const": "not_run"
+              },
+              "stage2_saved_intent": {
+                "const": "not_run"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "acceptance_delivery"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "failed"
+              },
+              "dual_timepoint_sources": {
+                "const": "not_run"
+              },
+              "reservation_and_history": {
+                "const": "not_run"
+              },
+              "frozen_scope_inputs": {
+                "const": "not_run"
+              },
+              "stage1_parent_receipt": {
+                "const": "not_run"
+              },
+              "stage2_saved_intent": {
+                "const": "not_run"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "dual_timepoint_sources"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "failed"
+              },
+              "reservation_and_history": {
+                "const": "not_run"
+              },
+              "frozen_scope_inputs": {
+                "const": "not_run"
+              },
+              "stage1_parent_receipt": {
+                "const": "not_run"
+              },
+              "stage2_saved_intent": {
+                "const": "not_run"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "reservation_and_history"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "failed"
+              },
+              "frozen_scope_inputs": {
+                "const": "not_run"
+              },
+              "stage1_parent_receipt": {
+                "const": "not_run"
+              },
+              "stage2_saved_intent": {
+                "const": "not_run"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "frozen_scope_inputs"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "failed"
+              },
+              "stage1_parent_receipt": {
+                "const": "not_run"
+              },
+              "stage2_saved_intent": {
+                "const": "not_run"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "stage1_parent_receipt"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "passed"
+              },
+              "stage1_parent_receipt": {
+                "const": "failed"
+              },
+              "stage2_saved_intent": {
+                "const": "not_run"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "stage2_saved_intent"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "passed"
+              },
+              "stage1_parent_receipt": {
+                "const": "passed"
+              },
+              "stage2_saved_intent": {
+                "const": "failed"
+              },
+              "isolated_runner_build": {
+                "const": "not_run"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "isolated_runner_build"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "passed"
+              },
+              "stage1_parent_receipt": {
+                "const": "passed"
+              },
+              "stage2_saved_intent": {
+                "const": "passed"
+              },
+              "isolated_runner_build": {
+                "const": "failed"
+              },
+              "saved_input_audit": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "saved_input_audit"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "passed"
+              },
+              "stage1_parent_receipt": {
+                "const": "passed"
+              },
+              "stage2_saved_intent": {
+                "const": "passed"
+              },
+              "isolated_runner_build": {
+                "const": "passed"
+              },
+              "saved_input_audit": {
+                "const": "failed"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "input_stability"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "passed"
+              },
+              "stage1_parent_receipt": {
+                "const": "passed"
+              },
+              "stage2_saved_intent": {
+                "const": "passed"
+              },
+              "isolated_runner_build": {
+                "const": "passed"
+              },
+              "saved_input_audit": {
+                "const": "passed"
+              },
+              "input_stability": {
+                "const": "failed"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "incomplete"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_checkpoint": {
+            "type": "null"
+          },
+          "checks": {
+            "oneOf": [
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "not_run"
+                  },
+                  "acceptance_delivery": {
+                    "const": "not_run"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "not_run"
+                  },
+                  "reservation_and_history": {
+                    "const": "not_run"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "not_run"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "not_run"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "not_run"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "not_run"
+                  },
+                  "reservation_and_history": {
+                    "const": "not_run"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "not_run"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "not_run"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "not_run"
+                  },
+                  "reservation_and_history": {
+                    "const": "not_run"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "not_run"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "not_run"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "not_run"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "not_run"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "not_run"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "not_run"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "not_run"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "passed"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "not_run"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "passed"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "passed"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "not_run"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "passed"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "passed"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "passed"
+                  },
+                  "isolated_runner_build": {
+                    "const": "not_run"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "passed"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "passed"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "passed"
+                  },
+                  "isolated_runner_build": {
+                    "const": "passed"
+                  },
+                  "saved_input_audit": {
+                    "const": "not_run"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "passed"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "passed"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "passed"
+                  },
+                  "isolated_runner_build": {
+                    "const": "passed"
+                  },
+                  "saved_input_audit": {
+                    "const": "passed"
+                  },
+                  "input_stability": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "previous_failed_source": {
+                    "const": "passed"
+                  },
+                  "acceptance_delivery": {
+                    "const": "passed"
+                  },
+                  "dual_timepoint_sources": {
+                    "const": "passed"
+                  },
+                  "reservation_and_history": {
+                    "const": "passed"
+                  },
+                  "frozen_scope_inputs": {
+                    "const": "passed"
+                  },
+                  "stage1_parent_receipt": {
+                    "const": "passed"
+                  },
+                  "stage2_saved_intent": {
+                    "const": "passed"
+                  },
+                  "isolated_runner_build": {
+                    "const": "passed"
+                  },
+                  "saved_input_audit": {
+                    "const": "passed"
+                  },
+                  "input_stability": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "previous_failed_source",
+                  "acceptance_delivery",
+                  "dual_timepoint_sources",
+                  "reservation_and_history",
+                  "frozen_scope_inputs",
+                  "stage1_parent_receipt",
+                  "stage2_saved_intent",
+                  "isolated_runner_build",
+                  "saved_input_audit",
+                  "input_stability"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "saved_input_audit": {
+                "enum": [
+                  "not_run",
+                  "failed"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "checks"
+        ]
+      },
+      "then": {
+        "properties": {
+          "accounting": {
+            "properties": {
+              "new_consumed": {
+                "type": "null"
+              },
+              "certified_consumed_including_new": {
+                "type": "null"
+              },
+              "planning_total": {
+                "type": "null"
+              },
+              "unknown": {
+                "type": "null"
+              }
+            }
+          },
+          "runner": {
+            "properties": {
+              "saved_input_result": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "saved_input_audit": {
+                "const": "passed"
+              }
+            }
+          }
+        },
+        "required": [
+          "checks"
+        ]
+      },
+      "then": {
+        "properties": {
+          "accounting": {
+            "properties": {
+              "new_consumed": {
+                "const": 1
+              },
+              "certified_consumed_including_new": {
+                "const": 33
+              },
+              "planning_total": {
+                "const": 40
+              },
+              "unknown": {
+                "const": 0
+              }
+            }
+          },
+          "runner": {
+            "properties": {
+              "saved_input_result": {
+                "$ref": "#/$defs/savedInputResult"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_checkpoint": {
+            "type": "null"
+          },
+          "checks": {
+            "properties": {
+              "previous_failed_source": {
+                "const": "passed"
+              },
+              "acceptance_delivery": {
+                "const": "passed"
+              },
+              "dual_timepoint_sources": {
+                "const": "passed"
+              },
+              "reservation_and_history": {
+                "const": "passed"
+              },
+              "frozen_scope_inputs": {
+                "const": "passed"
+              },
+              "stage1_parent_receipt": {
+                "const": "passed"
+              },
+              "stage2_saved_intent": {
+                "const": "passed"
+              },
+              "isolated_runner_build": {
+                "const": "passed"
+              },
+              "saved_input_audit": {
+                "const": "passed"
+              },
+              "input_stability": {
+                "const": "passed"
+              }
+            }
+          },
+          "accounting": {
+            "properties": {
+              "new_consumed": {
+                "const": 1
+              },
+              "certified_consumed_including_new": {
+                "const": 33
+              },
+              "planning_total": {
+                "const": 40
+              },
+              "unknown": {
+                "const": 0
+              }
+            }
+          },
+          "historical_failure": {
+            "properties": {
+              "stage1_passed": {
+                "const": true
+              },
+              "stage2_failed": {
+                "const": true
+              },
+              "stage2_diagnostic": {
+                "const": "runner_output_invalid_or_nonzero"
+              },
+              "historical_exit_code_certified": {
+                "const": false
+              },
+              "old_failure_rewritten": {
+                "const": false
+              },
+              "acceptance_runner_return_code_claimed": {
+                "const": 2
+              },
+              "archived_static_return_code": {
+                "const": 2
+              },
+              "historical_actual_exit_code": {
+                "type": "null"
+              }
+            }
+          },
+          "dual_timepoint_sources": {
+            "properties": {
+              "native_source_identity": {
+                "$ref": "#/$defs/hash"
+              },
+              "native_file_count": {
+                "const": 544
+              },
+              "final_source_identity": {
+                "$ref": "#/$defs/hash"
+              },
+              "final_file_count": {
+                "const": 545
+              },
+              "source_delta": {
+                "const": {
+                  "added": [
+                    "docs/superpowers/plans/2026-10-25-curry-option-verification-handoff.md"
+                  ],
+                  "removed": [],
+                  "changed": [
+                    "TASKS.md",
+                    "docs/INDEX.md",
+                    "docs/TESTING.md"
+                  ]
+                }
+              },
+              "parent_view_retained": {
+                "const": true
+              },
+              "historical_actual_exit_code": {
+                "type": "null"
+              }
+            }
+          },
+          "stability_rechecks": {
+            "properties": {
+              "workspace": {
+                "const": "consistent"
+              },
+              "previous_failure_tree": {
+                "const": "consistent"
+              },
+              "baseline_tree": {
+                "const": "consistent"
+              },
+              "reservation_tree": {
+                "const": "consistent"
+              },
+              "ledger": {
+                "const": "consistent"
+              },
+              "runner_build": {
+                "const": "consistent"
+              },
+              "process_diagnostics": {
+                "const": "consistent"
+              },
+              "stage2_receipt_absent": {
+                "const": true
+              }
+            }
+          },
+          "stability": {
+            "properties": {
+              "workspace_stable": {
+                "const": "passed"
+              },
+              "baseline_stable": {
+                "const": "passed"
+              },
+              "reservation_stable": {
+                "const": "passed"
+              },
+              "ledger_stable": {
+                "const": "passed"
+              },
+              "runner_build_stable": {
+                "const": "passed"
+              },
+              "process_diagnostics_stable": {
+                "const": "passed"
+              },
+              "stage2_receipt_absent_before": {
+                "const": true
+              },
+              "stage2_receipt_absent_after": {
+                "const": true
+              }
+            }
+          },
+          "runner": {
+            "properties": {
+              "return_code": {
+                "const": 0
+              },
+              "process_status": {
+                "const": "completed"
+              },
+              "saved_input_result": {
+                "$ref": "#/$defs/savedInputResult"
+              },
+              "sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "build_record_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "build_record_identity": {
+                "$ref": "#/$defs/hash"
+              },
+              "source_identity": {
+                "$ref": "#/$defs/hash"
+              },
+              "source_file_count": {
+                "minimum": 1
+              },
+              "diagnostic_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "stdout_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "stdout_bytes": {
+                "minimum": 1
+              },
+              "stderr_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "stderr_bytes": {
+                "minimum": 1
+              },
+              "trace": {
+                "items": {
+                  "$ref": "#/$defs/traceEvent"
+                },
+                "minItems": 8,
+                "maxItems": 8
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_runner_capture_metadata"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_tenki_validation_ledger"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_runner_stdout"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_runner_stderr"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "previous_v1_report"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "previous_v1_build_record"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "previous_v1_runner"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "previous_v1_source_archive"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "previous_v1_source_file_list"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "acceptance"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "delivery"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "native_source_archive"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "native_source_file_list"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "final_build_record"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "final_source_archive"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "final_source_file_list"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "final_cli_artifact"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "final_worker_artifact"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "final_runner_artifact"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "manifest"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "prepared"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "stage1_receipt"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "stage2_request"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "stage2_input"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "stage2_seal"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "stage2_report"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "charge_ledger"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_runner"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_build_record"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_source_archive"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "new_source_file_list"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_reservation_report"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_reservation_acceptance"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "pattern": "^v3_source_"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 100,
+                "maxContains": 100
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_01"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_02"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_03"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_04"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_tenki_validation_directory_evidence"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_06"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_07"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_08"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_historical_ledger_09"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "v3_source_tenki_validation_directory_evidence"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": true
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "check": {
+      "enum": [
+        "not_run",
+        "passed",
+        "failed"
+      ]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,80}$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*[\\\\:])(?!.*(?:^|/)[.][.](?:/|$)).+$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "traceEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "phase",
+            "event"
+          ],
+          "properties": {
+            "phase": {
+              "enum": [
+                "input_validation",
+                "parent_request_check",
+                "saved_input_asset_scan",
+                "ledger_check"
+              ]
+            },
+            "event": {
+              "const": "start"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "phase",
+            "event",
+            "elapsed_ns"
+          ],
+          "properties": {
+            "phase": {
+              "enum": [
+                "input_validation",
+                "parent_request_check",
+                "saved_input_asset_scan",
+                "ledger_check"
+              ]
+            },
+            "event": {
+              "const": "end"
+            },
+            "elapsed_ns": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "savedInputResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "saved_input_audit_passed",
+        "stage",
+        "context",
+        "identity_sha256",
+        "parent_receipt_valid",
+        "request_derivation_valid",
+        "stage_receipt_absent",
+        "ledger"
+      ],
+      "properties": {
+        "saved_input_audit_passed": {
+          "const": true
+        },
+        "stage": {
+          "const": 2
+        },
+        "context": {
+          "$ref": "#/$defs/hash"
+        },
+        "identity_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "parent_receipt_valid": {
+          "const": true
+        },
+        "request_derivation_valid": {
+          "const": true
+        },
+        "stage_receipt_absent": {
+          "const": true
+        },
+        "ledger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "consumed",
+            "completed",
+            "unknown",
+            "reserved",
+            "abandoned",
+            "limit"
+          ],
+          "properties": {
+            "consumed": {
+              "const": 1
+            },
+            "completed": {
+              "const": 1
+            },
+            "unknown": {
+              "const": 0
+            },
+            "reserved": {
+              "const": 0
+            },
+            "abandoned": {
+              "const": 0
+            },
+            "limit": {
+              "const": 7
+            }
+          }
+        }
+      }
+    },
+    "nullableHash": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/hash"
+        }
+      ]
+    }
+  },
+  "description": "Strict contract for the V2 zero-native-call Curry ledger handoff audit. The source validator enforces pinned provenance and cross-record consistency."
+}

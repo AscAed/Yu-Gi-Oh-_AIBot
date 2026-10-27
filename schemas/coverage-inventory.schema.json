@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coverage-inventory.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "cutoff",
+    "complete",
+    "denominator_status",
+    "dynamic_dependencies_verified",
+    "cards",
+    "counts",
+    "unresolved",
+    "region",
+    "scope",
+    "release_evidence_trust",
+    "source_verified",
+    "provided_evidence_bytes_checked",
+    "inputs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "cutoff": {
+      "type": "string",
+      "format": "date"
+    },
+    "complete": {
+      "const": false
+    },
+    "denominator_status": {
+      "const": "unresolved"
+    },
+    "dynamic_dependencies_verified": {
+      "const": false
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "card_id",
+          "alias",
+          "region_bits",
+          "release_status",
+          "release_date",
+          "released_by",
+          "release_evidence",
+          "script_status",
+          "script_file",
+          "unresolved"
+        ],
+        "properties": {
+          "card_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "alias": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "release_status": {
+            "enum": [
+              "released",
+              "prerelease",
+              "region_mismatch",
+              "rule_generated",
+              "identity_unconfirmed"
+            ]
+          },
+          "script_status": {
+            "enum": [
+              "not_required",
+              "covered",
+              "unknown",
+              "missing"
+            ]
+          },
+          "region_bits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "release_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "released_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "release_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "script_file": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unresolved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "counts": {
+      "type": "object"
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "region": {
+      "const": "OCG"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "release_evidence_trust": {
+      "enum": [
+        "raw_bytes_checked",
+        "declared_provenance_only"
+      ]
+    },
+    "source_verified": {
+      "const": false
+    },
+    "provided_evidence_bytes_checked": {
+      "type": "boolean"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cdb",
+        "scripts",
+        "release_evidence"
+      ],
+      "properties": {
+        "cdb": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "scripts": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "release_evidence": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provided_evidence_bytes_checked": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "release_evidence_trust": {
+            "const": "raw_bytes_checked"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "release_evidence_trust": {
+            "const": "declared_provenance_only"
+          }
+        }
+      }
+    }
+  ]
+}

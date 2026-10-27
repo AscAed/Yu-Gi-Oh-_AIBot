@@ -1,0 +1,400 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ground-collapse-preparation-v1.schema.json",
+  "title": "Ground Collapse offline preparation report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "status", "preparation_successful", "source_unchanged",
+    "native_calls", "runner_process_calls", "worker_calls", "ffi_calls", "execution_ready",
+    "candidate", "selection_rules", "protocol_vectors", "input_sha256", "input_directories",
+    "tool_bundle", "tool_identity", "sources", "checks", "diagnostics", "accounting",
+    "native_reachability_verified", "response_acceptance_verified", "proof_ready",
+    "complete_action_coverage", "global_optimality", "native_probability_verified",
+    "future_native_binding"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "ground_collapse_preparation_v1" },
+    "status": { "enum": ["passed", "failed"] },
+    "preparation_successful": { "type": "boolean" },
+    "source_unchanged": { "type": "boolean" },
+    "native_calls": { "const": 0 },
+    "runner_process_calls": { "const": 0 },
+    "worker_calls": { "const": 0 },
+    "ffi_calls": { "const": 0 },
+    "execution_ready": { "const": false },
+    "future_native_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worker_sha256", "native_request_sha256", "actual_prompt_ids", "new_scope", "new_budget"],
+      "properties": {
+        "worker_sha256": { "type": "null" },
+        "native_request_sha256": { "type": "null" },
+        "actual_prompt_ids": { "type": "null" },
+        "new_scope": { "type": "null" },
+        "new_budget": { "type": "null" }
+      }
+    },
+    "candidate": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["case_id", "card_id", "case_sha256", "base_request_sha256",
+            "main_extra_side_counts", "opening_hand_count", "seed", "opponent_resources_synced",
+            "formal_release_status", "source_legality_validated", "catalog"],
+          "additionalProperties": false,
+          "properties": {
+            "case_id": { "const": "prompt-24-collapse-v1" },
+            "card_id": { "const": 90502999 },
+            "case_sha256": { "$ref": "#/$defs/sha256" },
+            "base_request_sha256": { "$ref": "#/$defs/sha256" },
+            "main_extra_side_counts": { "const": [40, 3, 0] },
+            "opening_hand_count": { "const": 5 },
+            "seed": { "const": 1 },
+            "opponent_resources_synced": { "const": true },
+            "formal_release_status": { "const": "unknown" },
+            "source_legality_validated": { "const": true },
+            "catalog": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "selection_rules": {
+      "const": {
+        "activation": "unique player-0 idle command-5 activation for card 90502999",
+        "opcode18": { "unique_coordinate": { "player": 0, "location": 8, "sequence": 0 },
+          "response_bytes": [0, 8, 0], "menu_order_assumption": false },
+        "opcode24": { "ordered_zones": [
+          { "player": 1, "location": 4, "sequence": 0 },
+          { "player": 1, "location": 4, "sequence": 1 }],
+          "response_bytes": [1, 4, 0, 1, 4, 1],
+          "stop_on_missing_duplicate_or_unavailable": true,
+          "no_reselection": true }
+      }
+    },
+    "protocol_vectors": {
+      "oneOf": [
+        { "type": "object", "maxProperties": 0 },
+        { "const": {
+        "classification": "synthetic_only",
+        "opcode18": {
+          "actions": 5,
+          "audit": {
+            "classification": "public_fixed_choice_rule_only",
+            "matching_menu_actions": 1,
+            "native_reachability_verified": false,
+            "prompt_opcode": 18,
+            "prompt_player": 0,
+            "response_acceptance_verified": false,
+            "response_bytes": [0, 8, 0],
+            "selected_zone": {"location": 8, "player": 0, "sequence": 0}
+          },
+          "mask": 4294959359,
+          "raw_hex": "120001ffe0ffff"
+        },
+        "opcode24": {
+          "audit": {
+            "available_zones": 10,
+            "canonical_menu_pairs": 45,
+            "classification": "synthetic_or_static_only",
+            "disabled_mask": 4292935648,
+            "field_disabled_mask": 196608,
+            "fixed_public_choice_rule": {
+              "classification": "synthetic_or_static_only",
+              "response_bytes": [1, 4, 0, 1, 4, 1],
+              "zones": [
+                {"location": 4, "player": 1, "sequence": 0},
+                {"location": 4, "player": 1, "sequence": 1}
+              ]
+            },
+            "hint_zone": {"player": 0, "value": 196608},
+            "native_order_acceptance_verified": false,
+            "native_reachability_verified": false,
+            "opcode24_count": 2,
+            "opcode24_player": 0,
+            "response_acceptance_verified": false,
+            "response_bytes": [1, 4, 0, 1, 4, 1],
+            "reverse_acceptance_by_engine_verified": false,
+            "reverse_encoding_is_distinct": true,
+            "selected_mask": 196608,
+            "selected_zones": [
+              {"location": 4, "player": 1, "sequence": 0},
+              {"location": 4, "player": 1, "sequence": 1}
+            ],
+            "static_ordered_encodings": 90,
+            "synthetic_empty_field_canonical_pairs": 45,
+            "synthetic_empty_field_ordered_encodings": 90
+          },
+          "canonical_pairs": 45,
+          "disabled_mask": 4292935648,
+          "field_disabled_hex": "3800000300",
+          "field_disabled_mask": 196608,
+          "hint_value": 196608,
+          "hint_zone_hex": "020b000000030000000000",
+          "ordered_encodings": 90,
+          "raw_hex": "180002e0ffe0ff",
+          "response_bytes": [1, 4, 0, 1, 4, 1],
+          "selected_zones": [
+            {"location": 4, "player": 1, "sequence": 0},
+            {"location": 4, "player": 1, "sequence": 1}
+          ]
+        },
+        "synthetic_expected": {
+          "canonical_pairs": 45,
+          "field_disabled": [56, 0, 0, 3, 0],
+          "hint_zone": [2, 11, 0, 0, 0, 3, 0, 0, 0, 0, 0],
+          "opcode24_raw": [24, 0, 2, 224, 255, 224, 255],
+          "ordered_encodings": 90,
+          "response_bytes": [1, 4, 0, 1, 4, 1],
+          "selected_mask": 196608,
+          "synthetic_disabled_mask": 4292935648
+        },
+        "native_observation": {
+          "actual_disabled_mask": null,
+          "actual_followup_sequence": null,
+          "actual_opcode18_raw_frame": null,
+          "actual_opcode24_raw_frame": null,
+          "actual_prompt_ids": null,
+          "native_reachability_verified": false,
+          "native_response_acceptance_verified": false,
+          "reverse_order_acceptance_verified": false
+        }
+        } }
+      ]
+    },
+    "input_sha256": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/sha256" }
+    },
+    "input_directories": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256", "entry_count"],
+        "properties": { "sha256": { "$ref": "#/$defs/sha256" }, "entry_count": { "type": "integer", "minimum": 0 } }
+      }
+    },
+    "tool_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file_count", "archive_sha256", "file_list_sha256", "source_identity"],
+      "properties": {
+        "file_count": { "const": 11 },
+        "archive_sha256": { "$ref": "#/$defs/sha256" },
+        "file_list_sha256": { "$ref": "#/$defs/sha256" },
+        "source_identity": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "tool_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "workspace_identity", "workspace_file_count", "workspace_identity_status"],
+      "properties": {
+        "algorithm": { "const": "ground-collapse-preparation-tool-bundle-v1" },
+        "workspace_identity": { "type": ["string", "null"] },
+        "workspace_file_count": { "type": "integer", "minimum": 0 },
+        "workspace_identity_status": { "const": "historical_capture_metadata_not_reauthenticated" }
+      }
+    },
+    "sources": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["latest_curry", "historical_certified_consumed",
+            "historical_policy_reserved", "historical_planning_base",
+            "historical_protection", "script", "core"],
+          "properties": {
+            "latest_curry": {
+              "type": "object", "additionalProperties": false,
+              "required": ["delivery_sha256", "native_source", "final_source",
+                  "ledger_records", "scope_consumed", "scope_unknown",
+                  "certified_consumed", "policy_reserved", "planning_total"],
+              "properties": {
+                "delivery_sha256": { "$ref": "#/$defs/sha256" },
+                "native_source": { "$ref": "#/$defs/nativeSource" },
+                "final_source": { "$ref": "#/$defs/finalSource" },
+                "ledger_records": { "const": 37 },
+                "scope_consumed": { "const": 7 },
+                  "scope_unknown": { "const": 0 },
+                  "certified_consumed": { "const": 40 },
+                  "policy_reserved": { "const": 7 },
+                  "planning_total": { "const": 47 }
+              }
+            },
+            "historical_certified_consumed": { "const": 40 },
+            "historical_policy_reserved": { "const": 7 },
+            "historical_planning_base": { "const": 47 },
+            "historical_protection": {
+              "type": "object", "additionalProperties": false,
+              "required": ["entry_count", "mapping_sha256"],
+              "properties": { "entry_count": { "type": "integer", "minimum": 1 },
+                "mapping_sha256": { "$ref": "#/$defs/sha256" } }
+            },
+            "script": {
+              "type": "object", "additionalProperties": false,
+              "required": ["sha256", "static_api"],
+              "properties": {
+                "sha256": { "$ref": "#/$defs/sha256" },
+                "static_api": { "const": ["Duel.SelectDisableField", "Duel.Hint(HINT_ZONE,tp,dis)"] }
+              }
+            },
+            "core": {
+              "type": "object", "additionalProperties": false,
+              "required": ["files", "semantics"],
+              "properties": {
+                "files": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["libduel.cpp", "processor.cpp", "ocgapi_constants.h",
+                    "effect_constants.h", "playerop.cpp", "field.cpp"],
+                  "properties": {
+                    "libduel.cpp": { "$ref": "#/$defs/sha256" },
+                    "processor.cpp": { "$ref": "#/$defs/sha256" },
+                    "ocgapi_constants.h": { "$ref": "#/$defs/sha256" },
+                    "effect_constants.h": { "$ref": "#/$defs/sha256" },
+                    "playerop.cpp": { "$ref": "#/$defs/sha256" },
+                    "field.cpp": { "$ref": "#/$defs/sha256" }
+                  }
+                },
+                "semantics": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["SelectDisableField", "MSG_FIELD_DISABLED", "HINT_ZONE", "MSG_SELECT_PLACE"],
+                  "properties": { "SelectDisableField": { "const": true },
+                    "MSG_FIELD_DISABLED": { "const": true }, "HINT_ZONE": { "const": true },
+                    "MSG_SELECT_PLACE": { "const": true } }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["checkpoint", "status", "code", "role"],
+        "properties": {
+          "checkpoint": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["passed", "failed"] },
+          "code": { "type": ["string", "null"] },
+          "role": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["checkpoint", "code", "role"],
+        "properties": {
+          "checkpoint": { "type": "string", "minLength": 1 },
+          "code": { "type": "string", "minLength": 1 },
+          "role": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["certified_consumed", "policy_reserved", "planning_total",
+        "old_confirmation_actual_consumed", "actual_all_history_cumulative"],
+      "properties": {
+        "certified_consumed": { "type": ["integer", "null"] },
+        "policy_reserved": { "type": ["integer", "null"] },
+        "planning_total": { "type": ["integer", "null"] },
+        "old_confirmation_actual_consumed": { "type": "null" },
+        "actual_all_history_cumulative": { "type": "null" }
+      }
+    },
+    "native_reachability_verified": { "const": false },
+    "response_acceptance_verified": { "const": false },
+    "proof_ready": { "const": false },
+    "complete_action_coverage": { "const": false },
+    "global_optimality": { "const": false },
+    "native_probability_verified": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "passed" } } },
+      "then": {
+        "properties": {
+          "preparation_successful": { "const": true },
+          "source_unchanged": { "const": true },
+          "candidate": { "type": "object" },
+          "protocol_vectors": { "not": { "maxProperties": 0 } },
+          "sources": { "type": "object" },
+          "checks": { "const": [
+            { "checkpoint": "latest_curry_delivery", "status": "passed", "code": null, "role": "latest_curry_delivery" },
+            { "checkpoint": "historical_sources", "status": "passed", "code": null, "role": "historical_sources" },
+            { "checkpoint": "frozen_candidate", "status": "passed", "code": null, "role": "prompt_prepared_cases" },
+            { "checkpoint": "runtime_assets_and_core", "status": "passed", "code": null, "role": "core/source" },
+            { "checkpoint": "input_stability", "status": "passed", "code": null, "role": "all_inputs" },
+            { "checkpoint": "tool_source_stability", "status": "passed", "code": null, "role": "tool_source" }
+          ] },
+          "input_directories": { "required": ["latest_curry_delivery_tree", "latest_curry_ledger_blobs_tree",
+            "prompt_preparation_tree", "runtime_scripts_tree", "frozen_core_tree"] },
+          "diagnostics": { "maxItems": 0 },
+          "accounting": {
+            "properties": {
+              "certified_consumed": { "const": 40 },
+              "policy_reserved": { "const": 7 },
+              "planning_total": { "const": 47 }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "preparation_successful": { "const": false },
+          "accounting": {
+            "properties": {
+              "certified_consumed": { "type": "null" },
+              "policy_reserved": { "type": "null" },
+              "planning_total": { "type": "null" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "nativeSource": {
+      "type": "object", "additionalProperties": false,
+      "required": ["file_count", "source_identity", "archive_sha256", "file_list_sha256"],
+      "properties": { "file_count": { "const": 593 }, "source_identity": { "$ref": "#/$defs/sha256" },
+        "archive_sha256": { "$ref": "#/$defs/sha256" }, "file_list_sha256": { "$ref": "#/$defs/sha256" } }
+    },
+    "finalSource": {
+      "type": "object", "additionalProperties": false,
+      "required": ["file_count", "source_identity", "archive_sha256", "file_list_sha256"],
+      "properties": { "file_count": { "const": 594 }, "source_identity": { "$ref": "#/$defs/sha256" },
+        "archive_sha256": { "$ref": "#/$defs/sha256" }, "file_list_sha256": { "$ref": "#/$defs/sha256" } }
+    },
+    "publicationDiagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "kind", "checkpoint", "code", "role", "native_calls",
+        "runner_process_calls", "worker_calls", "ffi_calls", "execution_ready"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "kind": { "const": "ground_collapse_preparation_publication_diagnostic_v1" },
+        "checkpoint": { "enum": ["output_root_creation", "tool_bundle_capture", "tool_bundle_publication", "source_checks", "report_publication"] },
+        "code": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "role": { "type": "string", "pattern": "^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)*$" },
+        "native_calls": { "const": 0 },
+        "runner_process_calls": { "const": 0 },
+        "worker_calls": { "const": 0 },
+        "ffi_calls": { "const": 0 },
+        "execution_ready": { "const": false }
+      }
+    }
+  }
+}

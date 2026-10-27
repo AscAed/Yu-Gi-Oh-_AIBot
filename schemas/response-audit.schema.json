@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo.local/schemas/response-audit.schema.json",
+  "title": "Canonical protocol-response comparison; not full action coverage",
+  "type": "object", "additionalProperties": false,
+  "required": ["opcode", "matches", "missing", "unexpected", "duplicate_count", "global_optimality", "qualification", "complete_action_coverage", "coverage_gaps"],
+  "properties": {
+    "opcode": {"type": "integer", "enum": [11, 12, 13, 14, 15, 16, 18, 19, 24, 26]},
+    "matches": {"type": "boolean"},
+    "missing": {"type": "array", "items": {"$ref": "#/$defs/bytes"}},
+    "unexpected": {"type": "array", "items": {"$ref": "#/$defs/bytes"}},
+    "duplicate_count": {"type": "integer", "minimum": 0},
+    "global_optimality": {"const": false},
+    "qualification": {"const": "canonical_response_comparison"},
+    "complete_action_coverage": {"const": false},
+    "coverage_gaps": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}, "allOf": [{"contains": {"const": "ordering_equivalence_unproven"}}, {"contains": {"const": "protocol_oracle_is_not_engine_semantic_proof"}}]}
+  },
+  "$defs": {"bytes": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 255}}}
+}

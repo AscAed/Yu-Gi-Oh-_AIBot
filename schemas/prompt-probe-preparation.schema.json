@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Static prompt preparation report v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "preparation_successful",
+    "source_unchanged",
+    "native_calls",
+    "cumulative_consumed",
+    "unknown_consumption",
+    "candidates",
+    "command6",
+    "input_sha256",
+    "tool_identity",
+    "diagnostics",
+    "execution_ready",
+    "native_reachability_verified",
+    "response_acceptance_verified",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "prompt_probe_preparation"
+    },
+    "preparation_successful": {
+      "type": "boolean"
+    },
+    "source_unchanged": {
+      "type": "boolean"
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "cumulative_consumed": {
+      "const": 24
+    },
+    "unknown_consumption": {
+      "const": 0
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "native_reachability_verified": {
+      "const": false
+    },
+    "response_acceptance_verified": {
+      "const": false
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "native_probability_verified": {
+      "const": false
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "case_id",
+          "status",
+          "formal_release_status",
+          "execution_ready",
+          "native_reachability_verified",
+          "response_acceptance_verified",
+          "proof_ready",
+          "complete_action_coverage",
+          "global_optimality",
+          "native_probability_verified"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "status": {
+            "const": "static_prepared"
+          },
+          "formal_release_status": {
+            "const": "unknown"
+          },
+          "execution_ready": {
+            "const": false
+          },
+          "native_reachability_verified": {
+            "const": false
+          },
+          "response_acceptance_verified": {
+            "const": false
+          },
+          "proof_ready": {
+            "const": false
+          },
+          "complete_action_coverage": {
+            "const": false
+          },
+          "global_optimality": {
+            "const": false
+          },
+          "native_probability_verified": {
+            "const": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "command6": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "blocked"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "input_sha256": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "tool_identity": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "files"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "prompt-preparation-fixed-files-v1"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tenki_target": {
+      "type": "object",
+      "required": [
+        "card_id",
+        "copies",
+        "alias",
+        "ot",
+        "race",
+        "level",
+        "formal_release_status"
+      ],
+      "properties": {
+        "card_id": {
+          "const": 69247929
+        },
+        "copies": {
+          "const": 2
+        },
+        "alias": {
+          "type": "integer"
+        },
+        "ot": {
+          "type": "integer"
+        },
+        "race": {
+          "const": 32768
+        },
+        "level": {
+          "const": 4
+        },
+        "formal_release_status": {
+          "const": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "followup_dependencies": {
+      "const": [
+        {
+          "message": "RECOVER",
+          "opcode": 92,
+          "decoder_supported": false
+        },
+        {
+          "message": "FIELD_DISABLED",
+          "opcode": 56,
+          "decoder_supported": false
+        }
+      ]
+    },
+    "static_api_mapping": {
+      "const": [
+        {
+          "card_id": 57103969,
+          "api": "Duel.SelectYesNo",
+          "core_processor": "Processors::SelectYesNo",
+          "opcode": 13
+        },
+        {
+          "card_id": 58074572,
+          "api": "Duel.SelectOption",
+          "core_processor": "Processors::SelectOption",
+          "opcode": 14
+        },
+        {
+          "card_id": 90502999,
+          "api": "Duel.SelectDisableField",
+          "core_processor": "Processors::SelectDisField",
+          "opcode": 24
+        }
+      ]
+    },
+    "stringid": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "preparation_successful": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_unchanged": {
+            "const": true
+          },
+          "candidates": {
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "properties": {
+                  "case_id": {
+                    "const": "prompt-13-tenki-v1"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "case_id": {
+                    "const": "prompt-14-curry-v1"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "case_id": {
+                    "const": "prompt-24-collapse-v1"
+                  }
+                }
+              }
+            ]
+          },
+          "diagnostics": {
+            "maxItems": 0
+          },
+          "tool_identity": {
+            "required": [
+              "sha256"
+            ],
+            "properties": {
+              "files": {
+                "minProperties": 7
+              }
+            }
+          }
+        },
+        "required": [
+          "tenki_target",
+          "static_api_mapping",
+          "stringid",
+          "followup_dependencies"
+        ]
+      }
+    }
+  ]
+}

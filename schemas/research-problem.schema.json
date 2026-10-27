@@ -1,0 +1,200 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "research_problem"
+    },
+    "problem_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9-]+$"
+    },
+    "status": {
+      "const": "candidate"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frozen_case_v1": {
+          "$ref": "research-case.schema.json"
+        },
+        "case_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "frozen_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "frozen_case_v1",
+        "case_sha256",
+        "request_sha256",
+        "frozen_source_sha256"
+      ]
+    },
+    "objective": {
+      "const": {
+        "id": "rabbit-own-face-up-xyz-v1",
+        "normal_min": 0,
+        "normal_max": 7,
+        "early_win": 8,
+        "loss": -2,
+        "draw": -1
+      }
+    },
+    "termination": {
+      "const": {
+        "normal": "first-next-turn-process-return-v1",
+        "natural_end_has_successors": false
+      }
+    },
+    "seed_semantics": {
+      "const": "reproduction_only"
+    },
+    "conditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hidden_information": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolved": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "resolved",
+            "reason"
+          ]
+        },
+        "probability": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolved": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "resolved",
+            "reason"
+          ]
+        },
+        "action_ordering": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolved": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "resolved",
+            "reason"
+          ]
+        },
+        "loops": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolved": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "resolved",
+            "reason"
+          ]
+        },
+        "tree_size": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolved": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "resolved",
+            "reason"
+          ]
+        },
+        "necessary_actions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolved": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "resolved",
+            "reason"
+          ]
+        }
+      },
+      "required": [
+        "hidden_information",
+        "probability",
+        "action_ordering",
+        "loops",
+        "tree_size",
+        "necessary_actions"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "problem_id",
+    "status",
+    "input",
+    "objective",
+    "termination",
+    "seed_semantics",
+    "conditions"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo.local/schemas/research-problem.schema.json"
+}

@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo.local/schemas/snapshot-evaluation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "snapshot_evaluation"
+    },
+    "objective": {
+      "const": "rabbit-own-face-up-xyz-v1"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "origin": {
+          "enum": [
+            "synthetic_fixture",
+            "historical_report"
+          ]
+        }
+      },
+      "required": [
+        "sha256",
+        "request_sha256",
+        "origin"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "source_identity": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "runner_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "cdb_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "source_head",
+        "source_identity",
+        "runner_sha256",
+        "cdb_sha256"
+      ]
+    },
+    "evaluations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "run_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "role": {
+            "enum": [
+              "execution",
+              "replay",
+              "additional_record"
+            ]
+          },
+          "snapshot_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 7
+          },
+          "termination": {
+            "enum": [
+              "execution_failed",
+              "unknown",
+              "natural_end",
+              "next_turn_boundary_observed",
+              "not_terminated"
+            ]
+          },
+          "utility": {
+            "enum": [
+              null,
+              -2,
+              -1,
+              8
+            ]
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "run_index",
+          "role",
+          "snapshot_count",
+          "termination",
+          "utility",
+          "diagnostics"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "termination": {
+                  "not": {
+                    "const": "natural_end"
+                  }
+                }
+              },
+              "required": [
+                "termination"
+              ]
+            },
+            "then": {
+              "properties": {
+                "utility": {
+                  "const": null
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "source_authenticity_verified": {
+      "const": false
+    },
+    "native_replay_verified": {
+      "const": false
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "objective",
+    "source",
+    "provenance",
+    "evaluations",
+    "native_calls",
+    "source_authenticity_verified",
+    "native_replay_verified",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality"
+  ]
+}

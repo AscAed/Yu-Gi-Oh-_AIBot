@@ -12,6 +12,7 @@ fn request() -> RunDuelRequest {
         scenario: None,
         interruption: None,
         first_turn: None,
+        research_capture: None,
     }
 }
 fn check(mode: &str, code: &str) {

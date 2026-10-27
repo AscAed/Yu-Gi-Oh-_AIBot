@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/engine-identity.schema.json",
+  "title": "Engine identity v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "identity", "roles", "scripts", "timeout_ms", "consistent"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "engine_identity"},
+    "identity": {"$ref": "#/$defs/hash"},
+    "consistent": {"type": "boolean"},
+    "timeout_ms": {"type": "integer", "minimum": 0},
+    "roles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["worker", "dll", "cdb", "script_manifest", "engine_manifest"],
+      "properties": {
+        "worker": {"$ref": "#/$defs/asset"}, "dll": {"$ref": "#/$defs/asset"},
+        "cdb": {"$ref": "#/$defs/asset"}, "script_manifest": {"$ref": "#/$defs/asset"}, "engine_manifest": {"$ref": "#/$defs/asset"}
+      }
+    },
+    "scripts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["root_present", "actual", "missing", "extra", "mismatch"],
+      "properties": {
+        "root_present": {"type": "boolean"},
+        "actual": {"type": "object", "additionalProperties": {"$ref": "#/$defs/hash"}},
+        "missing": {"$ref": "#/$defs/names"}, "extra": {"$ref": "#/$defs/names"}, "mismatch": {"$ref": "#/$defs/names"}
+      }
+    }
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "names": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "asset": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["status", "sha256"], "properties": {"status": {"const": "present"}, "sha256": {"$ref": "#/$defs/hash"}}},
+        {"type": "object", "additionalProperties": false, "required": ["status", "sha256"], "properties": {"status": {"const": "missing"}, "sha256": {"type": "null"}}}
+      ]
+    }
+  }
+}

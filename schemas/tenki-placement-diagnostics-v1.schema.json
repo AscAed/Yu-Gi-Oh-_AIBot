@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/tenki-placement-diagnostics-v1.schema.json",
+  "title": "Tenki placement offline diagnostics v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "operation",
+    "status",
+    "native_calls",
+    "execution_ready",
+    "source_identity",
+    "historical_anchor",
+    "historical_claims",
+    "inputs",
+    "asset_scan",
+    "input_drift",
+    "checks",
+    "process_diagnostic",
+    "diagnostic",
+    "input_snapshot_sha256",
+    "input_count",
+    "evidence_bytes",
+    "elapsed_seconds",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "tenki_placement_diagnostics" },
+    "operation": { "const": "stage1_preflight_audit" },
+    "status": { "enum": ["passed", "failed"] },
+    "native_calls": { "const": 0 },
+    "execution_ready": { "const": false },
+    "source_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["historical_native", "native_build", "historical_runner_sha256", "audit_source", "audit_build", "audit_runner_sha256"],
+      "properties": {
+        "historical_native": { "$ref": "#/$defs/sha256" },
+        "native_build": { "$ref": "#/$defs/sha256" },
+        "historical_runner_sha256": { "$ref": "#/$defs/sha256" },
+        "audit_source": { "$ref": "#/$defs/sha256" },
+        "audit_build": { "$ref": "#/$defs/sha256" },
+        "audit_runner_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "historical_anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["archived_rust_literal", "actual_stage1_sha256", "python_anchor_sha256", "repaired_rust_anchor_sha256", "historical_stderr"],
+      "properties": {
+        "archived_rust_literal": { "type": "string", "pattern": "^[a-f0-9]{66}$" },
+        "actual_stage1_sha256": { "$ref": "#/$defs/sha256" },
+        "python_anchor_sha256": { "$ref": "#/$defs/sha256" },
+        "repaired_rust_anchor_sha256": { "$ref": "#/$defs/sha256" },
+        "historical_stderr": { "const": "not_saved" }
+      }
+    },
+    "historical_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["old_binary_provenance_verified", "historical_reexecution_verified", "historical_stderr_recovered"],
+      "properties": {
+        "old_binary_provenance_verified": { "const": false },
+        "historical_reexecution_verified": { "const": false },
+        "historical_stderr_recovered": { "const": false }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256", "bytes"],
+        "properties": {
+          "role": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "asset_scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time_utc", "expected_identity_sha256", "identity_match"],
+      "properties": {
+        "time_utc": { "type": ["string", "null"], "format": "date-time" },
+        "expected_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "identity_match": { "type": ["boolean", "null"] }
+      }
+    },
+    "input_drift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_source_unchanged", "baseline_tree_unchanged", "experiment_tree_unchanged", "protected_inputs_unchanged"],
+      "properties": {
+        "workspace_source_unchanged": { "type": ["boolean", "null"] },
+        "baseline_tree_unchanged": { "type": ["boolean", "null"] },
+        "experiment_tree_unchanged": { "type": ["boolean", "null"] },
+        "protected_inputs_unchanged": { "type": ["boolean", "null"] }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_acceptance", "historical_archive", "manifest", "request", "input", "seal", "ledger", "identity", "preflight_process"],
+      "properties": {
+        "baseline_acceptance": { "$ref": "#/$defs/check" },
+        "historical_archive": { "$ref": "#/$defs/check" },
+        "manifest": { "$ref": "#/$defs/check" },
+        "request": { "$ref": "#/$defs/check" },
+        "input": { "$ref": "#/$defs/check" },
+        "seal": { "$ref": "#/$defs/check" },
+        "ledger": { "$ref": "#/$defs/check" },
+        "identity": { "$ref": "#/$defs/check" },
+        "preflight_process": { "$ref": "#/$defs/check" }
+      }
+    },
+    "process_diagnostic": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "runner_role", "status", "return_code", "error_code", "stdout", "stderr", "metadata_path", "metadata_bytes"],
+          "allOf": [
+            {
+              "oneOf": [
+                { "properties": { "status": { "const": "completed" }, "return_code": { "type": "integer" }, "error_code": { "const": null } } },
+                { "properties": { "status": { "const": "timeout" }, "return_code": { "const": null }, "error_code": { "const": "runner_timeout" } } },
+                { "properties": { "status": { "const": "launch_failed" }, "return_code": { "const": null }, "error_code": { "enum": ["runner_start_failed", "runner_launch_exception"] } } }
+              ]
+            }
+          ],
+          "properties": {
+            "mode": { "const": "preflight_only" },
+            "runner_role": { "const": "tenki_placement_audit_runner" },
+            "status": { "enum": ["completed", "timeout", "launch_failed"] },
+            "return_code": { "type": ["integer", "null"] },
+            "error_code": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]{1,90}$" },
+            "stdout": { "$ref": "#/$defs/stream" },
+            "stderr": { "$ref": "#/$defs/stream" },
+            "metadata_path": { "$ref": "#/$defs/relativePath" },
+            "metadata_bytes": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "diagnostic": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]{1,90}$" },
+    "input_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+    "input_count": { "type": "integer", "minimum": 0 },
+    "evidence_bytes": { "type": "integer", "minimum": 0 },
+    "elapsed_seconds": { "type": "number", "minimum": 0 },
+    "proof_ready": { "const": false },
+    "complete_action_coverage": { "const": false },
+    "global_optimality": { "const": false },
+    "native_probability_verified": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "passed" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "diagnostic": { "type": "null" },
+          "asset_scan": { "properties": { "identity_match": { "const": true } } },
+          "process_diagnostic": {
+            "type": "object",
+            "properties": { "status": { "const": "completed" }, "return_code": { "const": 0 }, "error_code": { "const": null } }
+          },
+          "checks": {
+            "properties": {
+              "baseline_acceptance": { "const": "passed" },
+              "historical_archive": { "const": "passed" },
+              "manifest": { "const": "passed" },
+              "request": { "const": "passed" },
+              "input": { "const": "passed" },
+              "seal": { "const": "passed" },
+              "ledger": { "const": "passed" },
+              "identity": { "const": "passed" },
+              "preflight_process": { "const": "passed" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+      "then": {
+        "not": {
+          "allOf": [
+            { "properties": { "diagnostic": { "type": "null" } }, "required": ["diagnostic"] },
+            {
+              "properties": {
+                "checks": {
+                  "properties": {
+                    "baseline_acceptance": { "const": "passed" },
+                    "historical_archive": { "const": "passed" },
+                    "manifest": { "const": "passed" },
+                    "request": { "const": "passed" },
+                    "input": { "const": "passed" },
+                    "seal": { "const": "passed" },
+                    "ledger": { "const": "passed" },
+                    "identity": { "const": "passed" },
+                    "preflight_process": { "const": "passed" }
+                  },
+                  "required": [
+                    "baseline_acceptance", "historical_archive", "manifest", "request", "input", "seal", "ledger", "identity", "preflight_process"
+                  ]
+                }
+              },
+              "required": ["checks"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "preflight_process": { "const": "passed" } }, "required": ["preflight_process"] }
+        },
+        "required": ["checks"]
+      },
+      "then": {
+        "properties": {
+          "process_diagnostic": {
+            "type": "object",
+            "properties": { "status": { "const": "completed" }, "return_code": { "const": 0 }, "error_code": { "const": null } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "check": { "enum": ["passed", "failed", "not_run"] },
+    "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\:]+$" },
+    "stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

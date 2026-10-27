@@ -422,7 +422,6 @@ name = "ygo-cli"
 version = "0.1.0"
 dependencies = [
  "serde_json",
- "toml",
  "ygo-api",
  "ygo-domain",
  "ygo-engine-adapter",
@@ -498,7 +497,6 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
- "sha2",
  "toml",
  "ygo-domain",
  "ygo-engine-adapter",

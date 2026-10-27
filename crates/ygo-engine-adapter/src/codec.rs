@@ -70,30 +70,50 @@ fn add(p: &mut Prompt, choice: Choice, label: String, cards: Vec<u32>, bytes: Ve
         bytes,
     });
 }
-fn combinations(
-    n: usize,
-    k: usize,
-    offset: usize,
-    current: &mut Vec<u32>,
-    out: &mut Vec<Vec<u32>>,
-) -> Result<(), String> {
-    if out.len() > 4096 {
-        return Err("choice combinations exceed supported limit".into());
-    }
-    if current.len() == k {
+fn combinations(n: usize, k: usize, out: &mut Vec<Vec<u32>>) -> Result<(), String> {
+    // Lexicographic order matches the previous traversal without recursion
+    // proportional to the number of selected cards.
+    let mut current = (0..k as u32).collect::<Vec<_>>();
+    loop {
+        if out.len() >= 4096 {
+            return Err("choice combinations exceed supported limit".into());
+        }
         out.push(current.clone());
-        return Ok(());
-    }
-    let needed = k - current.len();
-    if n.saturating_sub(offset) < needed {
-        return Ok(());
-    }
-    for i in offset..=n - needed {
-        current.push(i as u32);
-        combinations(n, k, i + 1, current, out)?;
-        current.pop();
+        let Some(index) = (0..k).rfind(|i| current[*i] < (n - k + i) as u32) else {
+            break;
+        };
+        current[index] += 1;
+        for following in index + 1..k {
+            current[following] = current[following - 1] + 1;
+        }
     }
     Ok(())
+}
+fn selection_sets(n: usize, min: usize, max: usize) -> Result<Vec<Vec<u32>>, String> {
+    if min > max || max > n {
+        return Err("invalid selection bounds".into());
+    }
+    // Saturate before allocation. With each previous coefficient <=4096 and
+    // protocol counts <=4096, the intermediate product fits in u64.
+    let mut total = 0u64;
+    for k in min..=max {
+        let mut count = 1u64;
+        for j in 1..=k.min(n - k) {
+            count = count * (n - j + 1) as u64 / j as u64;
+            if count > 4096 {
+                return Err("choice combinations exceed supported limit".into());
+            }
+        }
+        total += count;
+        if total > 4096 {
+            return Err("choice combinations exceed supported limit".into());
+        }
+    }
+    let mut sets = Vec::new();
+    for k in min..=max {
+        combinations(n, k, &mut sets)?;
+    }
+    Ok(sets)
 }
 pub fn parse_prompt(id: u64, raw: &[u8]) -> Result<Option<Prompt>, String> {
     let mut r = Reader::new(raw);
@@ -146,9 +166,21 @@ pub fn parse_prompt(id: u64, raw: &[u8]) -> Result<Option<Prompt>, String> {
                     );
                 }
             }
-            let _battle = r.u8()?;
+            let battle = r.u8()?;
             let end = r.u8()?;
-            r.u8()?;
+            let shuffle = r.u8()?;
+            if battle != 0 {
+                add(
+                    &mut p,
+                    Choice::Command {
+                        command: 6,
+                        index: 0,
+                    },
+                    "进入战斗阶段".into(),
+                    vec![],
+                    words(&[6]),
+                );
+            }
             if end != 0 {
                 add(
                     &mut p,
@@ -159,6 +191,18 @@ pub fn parse_prompt(id: u64, raw: &[u8]) -> Result<Option<Prompt>, String> {
                     "结束回合".into(),
                     vec![],
                     words(&[7]),
+                );
+            }
+            if shuffle != 0 {
+                add(
+                    &mut p,
+                    Choice::Command {
+                        command: 8,
+                        index: 0,
+                    },
+                    "洗切手牌".into(),
+                    vec![],
+                    words(&[8]),
                 );
             }
         }
@@ -207,10 +251,7 @@ pub fn parse_prompt(id: u64, raw: &[u8]) -> Result<Option<Prompt>, String> {
                 codes.push(r.u32()?);
                 r.loc()?;
             }
-            let mut selections = vec![];
-            for k in min..=max {
-                combinations(n, k, 0, &mut vec![], &mut selections)?;
-            }
+            let selections = selection_sets(n, min, max)?;
             for indices in selections {
                 let cards = indices
                     .iter()
@@ -317,8 +358,7 @@ pub fn parse_prompt(id: u64, raw: &[u8]) -> Result<Option<Prompt>, String> {
                     }
                 }
             }
-            let mut sets = vec![];
-            combinations(zones.len(), n, 0, &mut vec![], &mut sets)?;
+            let sets = selection_sets(zones.len(), n, n)?;
             for set in sets {
                 let chosen = set
                     .iter()
@@ -448,6 +488,14 @@ pub fn decode_frame(sequence: u64, raw: &[u8]) -> Result<CoreEventFrame, String>
             }
             (true, json!({"player":player,"cards":cards}))
         }
+        92 => {
+            let player = r.u8()?;
+            if player > 1 {
+                return Err("invalid recover player".into());
+            }
+            (true, json!({"player":player,"amount":r.u32()?}))
+        }
+        56 => (true, json!({"disabled_mask":r.u32()?})),
         _ => {
             if let Some(p) = parse_prompt(sequence, raw)? {
                 return Ok(CoreEventFrame {
@@ -471,4 +519,70 @@ pub fn decode_frame(sequence: u64, raw: &[u8]) -> Result<CoreEventFrame, String>
         supported,
         fields,
     })
+}
+
+fn legacy_idle(prompt: &Prompt) -> Option<Prompt> {
+    if prompt.opcode != 11 {
+        return None;
+    }
+    let mut old = prompt.clone();
+    old.actions.retain(|a| {
+        !matches!(
+            a.choice,
+            Choice::Command {
+                command: 6 | 8,
+                index: 0
+            }
+        )
+    });
+    (!old.actions.is_empty()).then_some(old)
+}
+/// Validate an exact current prompt or the historical idle projection which
+/// omitted commands 6 and 8. This does not confer complete action coverage.
+pub fn prompt_matches_raw(prompt: &Prompt, raw: &[u8]) -> Result<bool, String> {
+    let Some(current) = parse_prompt(prompt.id, raw)? else {
+        return Ok(false);
+    };
+    Ok(current == *prompt || legacy_idle(&current).as_ref() == Some(prompt))
+}
+/// Validate every recorded field. Only the exact nonempty legacy idle action
+/// projection and legacy unparsed projection for newly supported events are
+/// accepted in addition to today's complete derived frame.
+pub fn frame_matches_raw(frame: &CoreEventFrame) -> Result<bool, String> {
+    let mut current = decode_frame(frame.sequence, &frame.raw)?;
+    // Protocol v1-v5 reports stored these event opcodes as unparsed. Preserve
+    // that exact raw-evidence form when reading saved reports after the decoder
+    // learned their semantics; it does not claim the historical report had
+    // fields that were not captured at the time.
+    if matches!(frame.opcode, 56 | 92)
+        && current.opcode == frame.opcode
+        && current.supported
+        && !frame.supported
+        && frame.fields == serde_json::json!({"unparsed":true})
+    {
+        return Ok(true);
+    }
+    if current == *frame {
+        return Ok(true);
+    }
+    if let Some(old) = parse_prompt(frame.sequence, &frame.raw)?
+        .as_ref()
+        .and_then(legacy_idle)
+    {
+        current.fields = serde_json::json!({"prompt":old});
+        return Ok(current == *frame);
+    }
+    Ok(false)
+}
+/// Read the prompt actually recorded in a fully validated historical/current
+/// frame, rather than silently expanding its old automatic-response witness.
+pub fn recorded_prompt(frame: &CoreEventFrame) -> Result<Option<Prompt>, String> {
+    if !frame_matches_raw(frame)? {
+        return Err("recorded frame differs from raw bytes".into());
+    }
+    frame
+        .fields
+        .get("prompt")
+        .map(|p| serde_json::from_value(p.clone()).map_err(|_| "invalid recorded prompt".into()))
+        .transpose()
 }

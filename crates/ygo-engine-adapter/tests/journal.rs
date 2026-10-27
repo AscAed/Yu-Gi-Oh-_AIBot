@@ -23,6 +23,24 @@ fn folder() -> PathBuf {
     std::fs::create_dir_all(&path).unwrap();
     path
 }
+
+fn readonly_folder() -> PathBuf {
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/curry-option-validation-tests/tmp");
+    let name = format!(
+        "journal-readonly-test-{}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        NEXT.fetch_add(1, Ordering::SeqCst)
+    );
+    let path = base.join(name);
+    std::fs::create_dir_all(&path).unwrap();
+    path
+}
 fn request() -> RunDuelRequest {
     serde_json::from_value(serde_json::json!({"protocol_version":2,"engine":{},
         "deck":{"main":[],"extra":[],"side":[]},"opening_hand":[],"seed":1,"decisions":[],
@@ -125,6 +143,23 @@ fn another_writer_changed_context_and_tampered_records_are_rejected() {
 }
 
 #[test]
+fn readonly_journal_view_releases_shared_lock_before_exclusive_writer_open() {
+    let dir = readonly_folder();
+    let path = dir.join("calls.jsonl");
+    drop(CallJournal::open(&path, "lock-lifetime", "fixed-context", 2).unwrap());
+
+    let view = CallJournal::inspect_existing(&path, "lock-lifetime", "fixed-context", 2)
+        .unwrap()
+        .unwrap();
+    assert!(CallJournal::open(&path, "lock-lifetime", "fixed-context", 2).is_err());
+    drop(view);
+
+    let writer = CallJournal::open(&path, "lock-lifetime", "fixed-context", 2).unwrap();
+    assert!(CallJournal::inspect_existing(&path, "lock-lifetime", "fixed-context", 2).is_err());
+    drop(writer);
+}
+
+#[test]
 fn result_tampering_and_different_resume_request_are_rejected() {
     let dir = folder();
     let path = dir.join("calls.jsonl");
@@ -183,6 +218,139 @@ fn safe_checkpoint_resume_has_the_same_charged_sequence() {
         resumed.charged_sequence_id().unwrap(),
         uninterrupted.charged_sequence_id().unwrap()
     );
+}
+
+#[test]
+fn readonly_inspection_never_repairs_or_changes_a_journal() {
+    let dir = readonly_folder();
+    let path = dir.join("readonly.jsonl");
+    let journal = CallJournal::open(&path, "readonly", "frozen", 6).unwrap();
+    journal
+        .save_checkpoint("immutable/seed", &serde_json::json!({"started_at":1}))
+        .unwrap();
+    drop(journal);
+
+    let before = std::fs::read(&path).unwrap();
+    let view = CallJournal::inspect_existing(&path, "readonly", "frozen", 6)
+        .unwrap()
+        .expect("existing journal");
+    assert_eq!(view.stats().unwrap().consumed, 0);
+    assert_eq!(
+        view.checkpoint("immutable/seed").unwrap(),
+        Some(serde_json::json!({"started_at":1}))
+    );
+    assert_eq!(view.charged_sequence_id().unwrap().len(), 64);
+    drop(view);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+
+    let mut torn = before;
+    torn.extend_from_slice(b"{\"torn\":true}");
+    std::fs::write(&path, &torn).unwrap();
+    assert!(CallJournal::inspect_existing(&path, "readonly", "frozen", 6).is_err());
+    assert_eq!(std::fs::read(&path).unwrap(), torn);
+}
+
+#[test]
+fn readonly_inspection_distinguishes_missing_from_invalid_without_creating_files() {
+    let dir = readonly_folder();
+    let missing = dir.join("missing.jsonl");
+    assert!(
+        CallJournal::inspect_existing(&missing, "readonly", "frozen", 6)
+            .unwrap()
+            .is_none()
+    );
+    assert!(!missing.exists());
+
+    let path = dir.join("invalid.jsonl");
+    std::fs::write(&path, b"not-json\n").unwrap();
+    let before = std::fs::read(&path).unwrap();
+    assert!(CallJournal::inspect_existing(&path, "readonly", "frozen", 6).is_err());
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert!(!path.with_extension("jsonl.blobs").exists());
+}
+
+#[test]
+fn readonly_inspection_rejects_blank_records_without_normalizing_them() {
+    let dir = readonly_folder();
+    let path = dir.join("blank-record.jsonl");
+    let journal = CallJournal::open(&path, "readonly", "frozen", 6).unwrap();
+    drop(journal);
+    let mut bytes = std::fs::read(&path).unwrap();
+    bytes.extend_from_slice(b"\n");
+    std::fs::write(&path, &bytes).unwrap();
+    assert!(CallJournal::inspect_existing(&path, "readonly", "frozen", 6).is_err());
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+}
+
+#[test]
+fn readonly_inspection_binds_recovery_marker_to_its_journal_prefix() {
+    let dir = readonly_folder();
+    let path = dir.join("recovery.jsonl");
+    drop(CallJournal::open(&path, "readonly", "frozen", 6).unwrap());
+    use std::io::Write;
+    std::fs::OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .unwrap()
+        .write_all(b"{\"truncated\":true")
+        .unwrap();
+    drop(CallJournal::open(&path, "readonly", "frozen", 6).unwrap());
+
+    let mut blob_root = path.as_os_str().to_owned();
+    blob_root.push(".blobs");
+    let recovery_dir = PathBuf::from(blob_root).join("recoveries");
+    let marker_path = std::fs::read_dir(&recovery_dir)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let mut marker: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&marker_path).unwrap()).unwrap();
+    marker["prefix_hash"] = serde_json::json!("a".repeat(64));
+    let marker_bytes = serde_json::to_vec(&marker).unwrap();
+    let forged_path = recovery_dir.join(format!("{}.json", digest(&marker_bytes)));
+    std::fs::write(&forged_path, marker_bytes).unwrap();
+    std::fs::remove_file(marker_path).unwrap();
+
+    assert!(CallJournal::inspect_existing(&path, "readonly", "frozen", 6).is_err());
+}
+
+#[test]
+fn immutable_checkpoint_exposes_its_charged_prefix_not_the_later_tail() {
+    let dir = folder();
+    let journal = CallJournal::open(dir.join("prefix.jsonl"), "case", "frozen", 3).unwrap();
+    let q = request();
+    JournaledAdapter::new(
+        Fake(Arc::new(AtomicUsize::new(0))),
+        journal.clone(),
+        CallPurpose::Probe,
+    )
+    .run(&q)
+    .unwrap();
+    let first = journal.charged_sequence_id().unwrap();
+    journal
+        .save_checkpoint("immutable/prefix-one", &serde_json::json!({"ok":true}))
+        .unwrap();
+    JournaledAdapter::new(
+        Fake(Arc::new(AtomicUsize::new(0))),
+        journal.clone(),
+        CallPurpose::Replay,
+    )
+    .run(&q)
+    .unwrap();
+    assert_eq!(
+        journal.checkpoint_consumed("immutable/prefix-one").unwrap(),
+        Some(1)
+    );
+    assert_eq!(
+        journal
+            .checkpoint_charged_sequence_id("immutable/prefix-one")
+            .unwrap()
+            .as_deref(),
+        Some(first.as_str())
+    );
+    assert_ne!(journal.charged_sequence_id().unwrap(), first);
 }
 
 #[test]

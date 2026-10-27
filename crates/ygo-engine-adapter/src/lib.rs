@@ -1,18 +1,38 @@
 mod codec;
+mod curry_option_batch;
+mod curry_option_probe;
 mod ffi;
 mod first_turn;
+mod identity;
 mod journal;
 mod metadata;
 mod process;
+mod prompt_corpus;
+mod prompt_probe;
+mod regression;
+mod research;
+mod tenki_placement_probe;
+mod terminal_capture;
+mod terminal_validation;
 mod worker;
 pub use codec::*;
+pub use curry_option_batch::*;
+pub use curry_option_probe::*;
 pub use first_turn::*;
+pub use identity::*;
 pub use journal::*;
 pub use metadata::*;
 pub use process::*;
+pub use prompt_corpus::*;
+pub use prompt_probe::*;
+pub use regression::*;
+pub use research::*;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::{collections::BTreeMap, path::PathBuf};
+pub use tenki_placement_probe::*;
+pub use terminal_capture::{validate_research_capture, ResearchCaptureV1};
+pub use terminal_validation::*;
 pub use worker::{probe_request, runtime_request};
 pub use worker::{run_worker, worker_main};
 use ygo_domain::{CardId, Deck};
@@ -87,6 +107,8 @@ pub struct RunDuelRequest {
     pub interruption: Option<InterruptionConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub first_turn: Option<FirstTurnConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub research_capture: Option<ResearchCaptureV1>,
 }
 /// Fixed synthetic opponent resources and one deterministic response policy.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -298,6 +320,8 @@ pub struct DuelResult {
     pub coverage_gaps: Vec<String>,
     #[serde(default)]
     pub peak_working_set_bytes: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub terminal_observation: Option<serde_json::Value>,
 }
 impl DuelResult {
     pub fn failure(error: WorkerError) -> Self {
@@ -314,6 +338,7 @@ impl DuelResult {
             resolved_decisions: vec![],
             coverage_gaps: vec![],
             peak_working_set_bytes: None,
+            terminal_observation: None,
         }
     }
 }

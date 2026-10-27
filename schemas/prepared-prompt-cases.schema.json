@@ -1,0 +1,712 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Static prepared prompt cases v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "candidates",
+    "execution_ready",
+    "native_reachability_verified",
+    "response_acceptance_verified",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "static_prompt_probe_candidates"
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "native_reachability_verified": {
+      "const": false
+    },
+    "response_acceptance_verified": {
+      "const": false
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "native_probability_verified": {
+      "const": false
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "case",
+          "target",
+          "request_derivation",
+          "selector",
+          "expected_target",
+          "execution_ready",
+          "native_reachability_verified",
+          "response_acceptance_verified",
+          "formal_release_status",
+          "status",
+          "source_legality_validated",
+          "catalog_legality",
+          "proof_ready",
+          "complete_action_coverage",
+          "global_optimality",
+          "native_probability_verified"
+        ],
+        "properties": {
+          "case": {
+            "$ref": "#/$defs/researchCase"
+          },
+          "target": {
+            "type": "object"
+          },
+          "request_derivation": {
+            "type": "object",
+            "required": [
+              "replace_card",
+              "fixed_changes",
+              "base_request_sha256",
+              "case_sha256",
+              "hash_encoding",
+              "pending_conditions"
+            ],
+            "properties": {
+              "replace_card": {
+                "type": "object"
+              },
+              "fixed_changes": {
+                "const": {
+                  "seed": 1
+                }
+              },
+              "base_request_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "case_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "hash_encoding": {
+                "const": "sorted-utf8-indent2-newline-v1"
+              },
+              "pending_conditions": {
+                "const": [
+                  "bind_future_worker",
+                  "bind_actual_native_prompt",
+                  "freeze_full_future_request_hash",
+                  "authorize_new_budget_and_window"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "selector": {
+            "type": "object"
+          },
+          "expected_target": {
+            "type": "object"
+          },
+          "execution_ready": {
+            "const": false
+          },
+          "native_reachability_verified": {
+            "const": false
+          },
+          "response_acceptance_verified": {
+            "const": false
+          },
+          "formal_release_status": {
+            "const": "unknown"
+          },
+          "status": {
+            "const": "static_prepared"
+          },
+          "source_legality_validated": {
+            "const": true
+          },
+          "catalog_legality": {
+            "type": "object",
+            "required": [
+              "alias",
+              "ot",
+              "ocg_bit_present",
+              "banlist_and_alias_limits_validated",
+              "formal_release_status"
+            ],
+            "properties": {
+              "alias": {
+                "type": "integer"
+              },
+              "ot": {
+                "type": "integer"
+              },
+              "ocg_bit_present": {
+                "const": true
+              },
+              "banlist_and_alias_limits_validated": {
+                "const": true
+              },
+              "formal_release_status": {
+                "const": "unknown"
+              }
+            },
+            "additionalProperties": false
+          },
+          "proof_ready": {
+            "const": false
+          },
+          "complete_action_coverage": {
+            "const": false
+          },
+          "global_optimality": {
+            "const": false
+          },
+          "native_probability_verified": {
+            "const": false
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "properties": {
+              "case": {
+                "properties": {
+                  "case_id": {
+                    "const": "prompt-13-tenki-v1"
+                  }
+                }
+              },
+              "target": {
+                "const": {
+                  "opcode": 13,
+                  "card_id": 57103969,
+                  "name": "tenki"
+                }
+              },
+              "selector": {
+                "const": {
+                  "player": 0,
+                  "opcode": 11,
+                  "command": 5,
+                  "card_id": 57103969,
+                  "unique": true
+                }
+              },
+              "expected_target": {
+                "const": {
+                  "opcode": 13,
+                  "player": 0,
+                  "description": 59877851398144,
+                  "responses": [
+                    {
+                      "choice": {
+                        "kind": "yes_no",
+                        "yes": false
+                      },
+                      "bytes": [
+                        0,
+                        0,
+                        0,
+                        0
+                      ]
+                    },
+                    {
+                      "choice": {
+                        "kind": "yes_no",
+                        "yes": true
+                      },
+                      "bytes": [
+                        1,
+                        0,
+                        0,
+                        0
+                      ]
+                    }
+                  ]
+                }
+              },
+              "request_derivation": {
+                "properties": {
+                  "replace_card": {
+                    "const": {
+                      "from": 85138716,
+                      "to": 57103969
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "case": {
+                "properties": {
+                  "case_id": {
+                    "const": "prompt-14-curry-v1"
+                  }
+                }
+              },
+              "target": {
+                "const": {
+                  "opcode": 14,
+                  "card_id": 58074572,
+                  "name": "curry"
+                }
+              },
+              "selector": {
+                "const": {
+                  "player": 0,
+                  "opcode": 11,
+                  "command": 5,
+                  "card_id": 58074572,
+                  "unique": true
+                }
+              },
+              "expected_target": {
+                "const": {
+                  "opcode": 14,
+                  "player": 0,
+                  "descriptions": [
+                    60895602409472,
+                    60895602409473
+                  ],
+                  "responses": [
+                    {
+                      "choice": {
+                        "kind": "option",
+                        "index": 0
+                      },
+                      "bytes": [
+                        0,
+                        0,
+                        0,
+                        0
+                      ]
+                    },
+                    {
+                      "choice": {
+                        "kind": "option",
+                        "index": 1
+                      },
+                      "bytes": [
+                        1,
+                        0,
+                        0,
+                        0
+                      ]
+                    }
+                  ]
+                }
+              },
+              "request_derivation": {
+                "properties": {
+                  "replace_card": {
+                    "const": {
+                      "from": 85138716,
+                      "to": 58074572
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "case": {
+                "properties": {
+                  "case_id": {
+                    "const": "prompt-24-collapse-v1"
+                  }
+                }
+              },
+              "target": {
+                "const": {
+                  "opcode": 24,
+                  "card_id": 90502999,
+                  "name": "collapse"
+                }
+              },
+              "selector": {
+                "const": {
+                  "player": 0,
+                  "opcode": 11,
+                  "command": 5,
+                  "card_id": 90502999,
+                  "unique": true
+                }
+              },
+              "expected_target": {
+                "const": {
+                  "opcode": 24,
+                  "player": 0,
+                  "count": 2,
+                  "mask_source": "future_raw_prompt"
+                }
+              },
+              "request_derivation": {
+                "properties": {
+                  "replace_card": {
+                    "const": {
+                      "from": 85138716,
+                      "to": 90502999
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "response_fixtures": {
+      "type": "object",
+      "required": [
+        "synthetic",
+        "native_frames",
+        "native_reachability_verified",
+        "response_acceptance_verified",
+        "formal_release_status",
+        "prompts",
+        "reverse_order_example"
+      ],
+      "properties": {
+        "synthetic": {
+          "const": true
+        },
+        "native_frames": {
+          "const": []
+        },
+        "native_reachability_verified": {
+          "const": false
+        },
+        "response_acceptance_verified": {
+          "const": false
+        },
+        "formal_release_status": {
+          "const": "unknown"
+        },
+        "prompts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "reverse_order_example": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "researchCase": {
+      "title": "Frozen research case v1; structural validation is not proof",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "case_id",
+        "purpose",
+        "rules",
+        "assets",
+        "deck",
+        "opening_hand",
+        "seed",
+        "objective",
+        "information",
+        "randomness"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "case_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]+$"
+        },
+        "purpose": {
+          "enum": [
+            "protocol_audit",
+            "proof_input"
+          ]
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "region",
+            "version",
+            "banlist_sha256"
+          ],
+          "properties": {
+            "region": {
+              "const": "OCG"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "banlist_sha256": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        },
+        "assets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "engine_sha256",
+            "cdb_sha256",
+            "scripts_sha256"
+          ],
+          "properties": {
+            "engine_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "cdb_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "scripts_sha256": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        },
+        "deck": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "main",
+            "extra",
+            "side"
+          ],
+          "properties": {
+            "main": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/cards"
+                },
+                {
+                  "minItems": 40,
+                  "maxItems": 60
+                }
+              ]
+            },
+            "extra": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/cards"
+                },
+                {
+                  "maxItems": 15
+                }
+              ]
+            },
+            "side": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/cards"
+                },
+                {
+                  "maxItems": 15
+                }
+              ]
+            }
+          }
+        },
+        "opening_hand": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/cards"
+            },
+            {
+              "minItems": 5,
+              "maxItems": 5
+            }
+          ]
+        },
+        "objective": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "priorities",
+            "terminal_utility"
+          ],
+          "properties": {
+            "priorities": {
+              "const": [
+                "terminal_utility"
+              ]
+            },
+            "terminal_utility": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "normal",
+                "early_win",
+                "loss",
+                "draw"
+              ],
+              "properties": {
+                "normal": {
+                  "type": "integer"
+                },
+                "early_win": {
+                  "type": "integer"
+                },
+                "loss": {
+                  "type": "integer"
+                },
+                "draw": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "information": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "player_visible",
+            "opponent_visible",
+            "hidden",
+            "opponent_resources"
+          ],
+          "properties": {
+            "player_visible": {
+              "$ref": "#/$defs/observations"
+            },
+            "opponent_visible": {
+              "$ref": "#/$defs/observations"
+            },
+            "hidden": {
+              "$ref": "#/$defs/observations"
+            },
+            "opponent_resources": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "main",
+                "hand"
+              ],
+              "properties": {
+                "main": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/cards"
+                    },
+                    {
+                      "minItems": 40,
+                      "maxItems": 60
+                    }
+                  ]
+                },
+                "hand": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/cards"
+                    },
+                    {
+                      "maxItems": 5
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "randomness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "outcomes",
+            "seed_role"
+          ],
+          "properties": {
+            "model": {
+              "enum": [
+                "frozen_scenario",
+                "explicit_distribution"
+              ]
+            },
+            "seed_role": {
+              "const": "reproduction_only"
+            },
+            "outcomes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "numerator",
+                  "denominator"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "numerator": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "denominator": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4294967295
+      }
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "own_hand",
+          "opponent_hand",
+          "own_deck_order",
+          "opponent_deck_order",
+          "public_board",
+          "public_history"
+        ]
+      }
+    }
+  }
+}

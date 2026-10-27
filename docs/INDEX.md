@@ -2,45 +2,40 @@
 
 ## 当前事实源
 
-遇到状态冲突时按下表处理。实现事实以代码、schema 与可复现产物为准；历史对话和旧计划只提供背景。
+实现事实以代码、schema与可复现产物为准。当前状态、验证证据、产品目标和研究定义分别按下表读取；历史计划与对话只作背景。
 
-| 问题 | 事实源 | 规则 |
+| 问题 | 事实源 | 阅读边界 |
 |---|---|---|
-| 用户最终想要什么、什么才算产品完成 | [`PRODUCT_VISION.md`](PRODUCT_VISION.md) | 目标唯一事实源；预览成果不替代全卡/最优性验收 |
-| 全局最优究竟要证明什么 | [`OPTIMALITY_RESEARCH.md`](OPTIMALITY_RESEARCH.md) | 研究定义与可行性关口，不代表现有能力或已发布接口 |
-| 现在做到哪一步、哪些工作未完成 | [`../TASKS.md`](../TASKS.md) | 只在顶部维护当前状态和开放任务；完成情况附验证来源 |
-| 最近一次验证了什么 | [`TESTING.md`](TESTING.md) | 顶部是最新证据；旧阶段记录只作历史，不代表当前源码复验 |
-| 能力范围、不可声称的能力 | [`PROJECT_ASSESSMENT.md`](PROJECT_ASSESSMENT.md) | 用“已验证/局部/未实现”区分能力，不把计划写成实现 |
-| 紧接着的开发顺序 | [`ROADMAP.md`](ROADMAP.md) | 与任务表的开放项保持一致，不复制历史待办 |
-| 各阶段具体任务、输入/产出及验收 | [`产品演进计划`](superpowers/plans/2026-10-19-product-evolution.md) | 未来任务分解；完成状态仍只维护于TASKS |
-| 模块边界和数据流 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 以 crate 与调用路径为准 |
-| 本机准备、构建、部署、诊断 | [`DEPLOYMENT.md`](DEPLOYMENT.md) 与 `scripts/` | 资产版本以 manifest 和部署配置为准 |
-| JSON/CLI/worker 合同 | `schemas/`、[`ENGINE_PROTOCOL.md`](ENGINE_PROTOCOL.md)、[`API.md`](API.md) | schema 和解析器是规范性定义 |
-| 规则分类与认证 | [`RULES_SCOPE.md`](RULES_SCOPE.md)、[`FIRST_TURN_VERIFICATION.md`](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
-| 数据来源、版本、许可边界 | [`DATA_SOURCES.md`](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
+| 产品目标与完成门槛 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 用户全卡与全局最优目标的唯一事实源；局部预览不替代验收 |
+| 全局最优的定义与证明关口 | [OPTIMALITY_RESEARCH.md](OPTIMALITY_RESEARCH.md) | 研究定义与可行性门禁，不代表现有能力或接口 |
+| 当前状态与开放任务 | [TASKS.md](../TASKS.md) | 当前状态的唯一入口；各批次历史数字不覆盖顶部 |
+| 验证结果与限制 | [TESTING.md](TESTING.md) | 按日期、源码与范围读取；旧结果不代表当前源码已复验 |
+| 能力与差距 | [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 区分已验证、局部验证、未验证、未实现 |
+| 依赖顺序与本轮任务 | [ROADMAP.md](ROADMAP.md)、[项目再规划](superpowers/plans/2026-10-27-project-realignment.md) | 研究与产品工作台双轨推进；完成状态仍只维护于TASKS |
+| 研究运行、scope、预算、窗口及停止条件 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md) | 研究操作规范；旧批次准备不构成新执行授权 |
+| 报告、来源、会计和资格绑定 | [EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 证据合同；来源身份、实际消费和资格分别核验 |
+| 基线及研究工具用法 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md) | 工具及合同说明；实跑状态和限制仍见TASKS/TESTING |
+| 模块边界与数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | 以crate依赖和调用路径为准 |
+| 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
+| 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
+| JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md) | schema和解析器为规范性定义 |
+| 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
+| 数据来源、版本与许可 | [DATA_SOURCES.md](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
+| 历史计划、交接及故障链 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[任务历史快照](../TASKS_HISTORY.md)、[验证历史快照](TESTING_HISTORY.md) | 原入口保留历史标题锚点；快照是拆分前正文，不替代原报告、源码、账本及固定窗口边界 |
+
+## 最近研究批次：Ground Collapse离线准备（已完成并暂停）
+
+[本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)、[验证记录](TESTING.md)、[准备报告](../data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json)。本批完成FIELD_DISABLED56解析、独立opcode24/HINT_ZONE oracle、固定公开选区和合成来源链准备；准备及verify通过，新增native/runner/worker/FFI均为0。`execution_ready=false`，实际opcode24提示、掩码、原生可达、响应接受及完整性/概率/最优性资格仍未获得。
+
+下一研究实验由TASKS开放项决定，须另定scope、预算和窗口；本准备报告不能直接启动原生实验。当前会计口径及未知值以TASKS顶部与对应TESTING证据为准，不在导航中复制累计数字。
 
 ## 阅读路径
 
-1. 新加入的编码代理：本文件 → 根目录 `AGENTS.md` → `TASKS.md` → `PROJECT_ASSESSMENT.md` → 相关模块文档。
-2. 运行或部署：`DEPLOYMENT.md` → 运行后查看 `TESTING.md` 和实际报告。
-3. 修改规则/规划：`FIRST_TURN_VERIFICATION.md`、`FIRST_TURN_PILOT.md`、具体 profile 文档及对应 Rust 测试。
-4. 追溯历史取舍：`IMPLEMENTATION_NOTES.md`、`docs/superpowers/plans/` 和 `TESTING.md` 中明确标注的历史条目。
-5. 产品规划：`PRODUCT_VISION.md` → `PROJECT_ASSESSMENT.md` → `ROADMAP.md` → `superpowers/plans/2026-10-19-product-evolution.md`；最优性工作另先读 `OPTIMALITY_RESEARCH.md`。
+1. 新加入的代理：本文件 → [AGENTS.md](../AGENTS.md) → [TASKS](../TASKS.md) → [PROJECT_ASSESSMENT](PROJECT_ASSESSMENT.md) → 相关模块文档。
+2. 产品与双轨任务：[PRODUCT_VISION](PRODUCT_VISION.md) → [ROADMAP](ROADMAP.md) → [项目再规划](superpowers/plans/2026-10-27-project-realignment.md)。最优性工作先读[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
+3. 研究与证据：[RESEARCH_OPERATIONS](RESEARCH_OPERATIONS.md) → [EVIDENCE_CONTRACTS](EVIDENCE_CONTRACTS.md) → 对应工具文档、当前交接与TESTING；具体运行须遵守该次授权和停止条件。
+4. 运行与来源：[DEPLOYMENT](DEPLOYMENT.md) → [ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)、[DATA_SOURCES](DATA_SOURCES.md)、[TOURNAMENT_RESELECTION](TOURNAMENT_RESELECTION.md)、[TOURNAMENT_SOURCE_GATE](TOURNAMENT_SOURCE_GATE.md) → 对应日期验证和实际报告。
+5. 实现设计：[ARCHITECTURE](ARCHITECTURE.md) → [DOMAIN_MODEL](DOMAIN_MODEL.md)、[ENGINE_ADAPTERS](ENGINE_ADAPTERS.md)、[ENGINE_PROTOCOL](ENGINE_PROTOCOL.md)、[SEARCH_AND_SCORING](SEARCH_AND_SCORING.md)、[API](API.md)。规则与规划另见[FIRST_TURN_PILOT](FIRST_TURN_PILOT.md)、[SEMANTIC_PLANNING](SEMANTIC_PLANNING.md)、[GOAL_PLANNING](GOAL_PLANNING.md)、[BREAK_SWORD_VERIFICATION](BREAK_SWORD_VERIFICATION.md)、[RECOVERY_PLANNING](RECOVERY_PLANNING.md)、[ASH_STRATEGY_PLANNING](ASH_STRATEGY_PLANNING.md)及对应Rust测试。
+6. 历史追溯：[HISTORY_INDEX](HISTORY_INDEX.md) → 指定日期交接、TESTING及[IMPLEMENTATION_NOTES](IMPLEMENTATION_NOTES.md)。历史命令和待办不能直接作为当前执行指令。
 
-## 文档地图
-
-- **现状与工作：** `TASKS.md`、`PROJECT_ASSESSMENT.md`、`ROADMAP.md`、`TESTING.md`
-- **目标与未来实施：** `PRODUCT_VISION.md`、`OPTIMALITY_RESEARCH.md`、`superpowers/plans/2026-10-19-product-evolution.md`
-- **实现设计：** `ARCHITECTURE.md`、`DOMAIN_MODEL.md`、`ENGINE_ADAPTERS.md`、`ENGINE_PROTOCOL.md`、`SEARCH_AND_SCORING.md`、`API.md`
-- **规则、目标与实验：** `RULES_SCOPE.md`、`FIRST_TURN_VERIFICATION.md`、`FIRST_TURN_PILOT.md`、`SEMANTIC_PLANNING.md`、`GOAL_PLANNING.md`、`BREAK_SWORD_VERIFICATION.md`、`RECOVERY_PLANNING.md`、`ASH_STRATEGY_PLANNING.md`
-- **运行与来源：** `DEPLOYMENT.md`、`ENVIRONMENT_AUDIT.md`、`DATA_SOURCES.md`、`TOURNAMENT_RESELECTION.md`、`TOURNAMENT_SOURCE_GATE.md`
-
-## 维护约定
-
-- 当前状态只维护一份：`TASKS.md`；`ROADMAP.md` 仅列开放工作的依赖顺序，详细任务不重复勾选。
-- 目标先改 `PRODUCT_VISION.md`，再同步研究定义和实施计划。未来接口明确标注“拟议”，不能把研究结果分类写成现有schema。
-- 每次可复验验证追加到 `TESTING.md` 顶部，写明提交、命令、计数、资产版本及限制。历史结果不覆盖、不推断为当前结果。
-- 功能说明写支持条件、失败/未知行为、CLI 和证据；不复制长测试日志或另一个文档的待办清单。
-- 实验计划完成后标为历史计划；如果实现或合同发生变化，更新规范文档并链接旧计划。
-- 日期使用 ISO `YYYY-MM-DD`；固定版本用完整 commit/hash；状态词固定为“已验证”“局部验证”“未验证”“未实现”。
-- 每份文档应能独立说明其范围；跨文档链接使用仓库相对路径。
+维护时只在TASKS更新当前状态，在TESTING追加对应范围的验证；ROADMAP保留依赖顺序。目标变化先改PRODUCT_VISION，再同步研究定义和计划。每份文档应独立说明范围，使用仓库相对链接；历史资料保留其来源、未知值与资格边界。

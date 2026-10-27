@@ -11,3 +11,16 @@ OCG LFLists 固定提交 1051a65ab853fd84521aa919d1859f9468816c56，首次导入
 ## 分发边界
 
 本地部署依赖 Project Ignis、BabelCDB、CardScripts、ocgcore/Lua 与 LFLists 的固定上游版本。各数据/代码资产有各自来源与许可；本仓库目前未维护可供发布审查的一项一行许可及再分发清单。`dist/` 是本机部署产物，不可因它成功构建就推断可公开分发。任何对外二进制/数据发布前，需逐资产记录来源 URL、精确版本、文件哈希、许可证/notice、修改方式及再分发权限；不能确认的资产不打包发布。
+
+
+## P0/P2 只读清点与语言调查工具（2026-10-19）
+
+`python -m ygo_data.coverage tournament-evidence --source configs/tournament-2026.source.json --output <release-evidence.json>` 将既有39卡来源转成独立发行证据输入。`released_by` 保留有证据的发行上界，`release_date: null` 不伪造首发日期。
+
+`python -m ygo_data.coverage inventory --cdb <cards.cdb> --scripts <scripts.json> --script-root <script目录> --evidence <release-evidence.json> --evidence-root <原始凭据根目录> --output <report.json>` 使用 SQLite `mode=ro` 并核对扫描前后CDB/manifest身份。`--script-root` 缺省时脚本只有声明，状态为unknown；提供时核对实际字节。`--evidence-root` 缺省只登记发行声明，提供时拒绝缺失、越界和哈希不符的凭据。报告的`provided_evidence_bytes_checked`仅覆盖提供的凭据，`source_verified`仍为false，不代表全卡发行或来源语义获独立认证。清单不删除alias原号，保留缺失、环及多跳；优先原卡号专用脚本，仅alias目标存在脚本时保留unknown/alias_script_reuse_unverified，不能用同名/替代图的假定授予效果覆盖；OT预发行位与发行声明冲突保持诊断。
+
+清点报告始终`complete: false`、`denominator_status: unresolved`、`dynamic_dependencies_verified: false`。脚本covered仅表示专用脚本与manifest字节匹配，不表示动态依赖或效果语义完整；不对Lua正则扫描授予资格。全卡发行分母须补充完整独立发行证据，CDB行数和上游差集仅用于发现缺口。JSON合同见`schemas/coverage-inventory.schema.json`及`schemas/release-evidence.schema.json`。
+
+`python -m ygo_data.language audit --sources configs/language-sources-2026-10-19.json --sample <release-evidence.json> [--records <local-language-records.json>] --output <report.json>`逐字段绑定name/text/alias/archetypes来源、语言和核对状态。简繁各有独立记录，同名多ID公开歧义，不猜卡号；没有输入的语言/字段保持缺失。报告始终`qualified: false`，独立语义审阅门禁尚未实现；provenance_checks_passed只说明声明结构无已知缺口。合同见`schemas/language-audit.schema.json`。
+
+来源登记见`configs/language-sources-2026-10-19.json`。本轮代理联网取得mycard固定提交的zh-CN和zh-SC数据库；39卡zh-CN均可按既有卡号找到，但中文名/正文仅为未人工核对的候选，不扩展到alias/字段可信资格。zh-SC路径含义未确认，不能据此自动当作繁体。取得的树未发现LICENSE，GitHub license端点404、README仅称测试数据库，因此再分发权限未知；这不是对不存在任何许可的法律结论。全部外部原始文字/库和本机报告仅置于忽略的`data/runtime/baseline-2026-10-19/data/`，不提交正文。

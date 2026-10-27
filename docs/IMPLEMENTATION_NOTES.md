@@ -16,3 +16,115 @@
 10. 对手策略、手坑、后攻和HTTP按批准路线延期：当前版本只提供本机先攻无干扰推演。
 
 独立评审的Minor延期：加强报告JSON Schema嵌套负例；当前Rust合同和引擎重放严格校验实际报告。
+
+## 2026-10-27：P0/P1研究与交付的实施教训
+
+下列条目根据现存交接、TESTING及合同整理，记录问题、取舍和适用范围，不代表本轮重新运行。当前状态只看[TASKS](../TASKS.md)，后续实施见[项目再规划](superpowers/plans/2026-10-27-project-realignment.md)。新的工作包依[研究运行规范](RESEARCH_OPERATIONS.md)和[证据合同](EVIDENCE_CONTRACTS.md)；历史批次的一次性、暂停、封存和禁止重试要求仍按各自scope执行，不能泛化为日常开发永久禁令。
+
+### 1. 未知消费必须保留null
+
+- **问题：**旧confirmation缺少足够收费证据，不能从预留额度、退出码或“没看到结果”认定实际消费为0；认证子集也不是全部历史总数。
+- **根因：**政策预留、规划会计和实际账本回答不同问题，历史材料可能没有覆盖调用开始/结束。
+- **决策：**独立列出认证消费子集、政策预留、规划数和未知实际消费；缺证字段保留`null`，新批次成功不回填旧unknown。
+- **代价：**汇总不能提供一个貌似完整的总消费值，恢复研究必须持续携带未知项。
+- **范围：**涉及费用、失败、审计和重放的报告；不可把某批明确认证的零调用重新写成未知。
+- **证据：**[Ground Collapse交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)区分认证40、预留7、规划47与历史实际`null`；[V3预留交接](superpowers/plans/2026-10-25-curry-consumption-reservation-v3-handoff.md)保留原confirmation未知。
+
+### 2. 时间窗起点与输入必须先冻结
+
+- **问题：**暂停、准备耗时和重开会消耗同一墙钟窗口；不能在运行失败后重设起点，或用新账本继续旧预算。
+- **根因：**调用上限、窗口、worker超时、资产身份和阶段父链共同界定实验，单独看剩余槽位会遗漏时间与来源约束。
+- **决策：**按每批合同在首次候选资产扫描前保存起点，冻结请求、worker/build/identity/seal；新研究另立scope/预算/窗口，授权不从旧准备报告继承。
+- **代价：**准备过久可能在零消费时就关闭执行机会；需要重新设计下一批而非临时延窗。
+- **范围：**具备上述窗口合同的研究批次；既有封存scope不得续用，不为普通草稿编辑或离线单测引入原生审批。
+- **证据：**[TESTING](TESTING.md)的2026-10-19研究窗历史及[Ground Collapse续接条件](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)明确扫描前起点、冻结材料和新scope。
+
+### 3. 规范化对象hash与容器文件hash分别绑定
+
+- **问题：**prepare/normal曾对`base_request`、`candidate_case`使用不同hash语义，结构相同的JSON也可能因空白/包装变化产生不同原始字节。
+- **根因：**把内容身份和承载文件身份当成同一字段，消费者不知道应验证哪一层。
+- **决策：**manifest继续绑定规范化对象；原始文件字节另存hash保护，冻结案例保留独立锚点；字段名与比较逻辑明确二者角色。
+- **代价：**需要维护两套摘要和相应正反例，不能只凭“解析后相等”跳过原始输入保护。
+- **范围：**结构化研究请求及候选材料；ZIP、stdout和二进制等字节证据仍以原始字节为准。
+- **证据：**[2026-10-24冻结输入恢复交接](superpowers/plans/2026-10-24-curry-input-recovery-handoff.md)的实施内容和[TESTING](TESTING.md)同日记录。
+
+### 4. DLL、worker、CLI和runner各有角色
+
+- **问题：**Rust CLI/worker重编译、引擎DLL复用和runner构建不是同一种来源证明；包内哈希相同也不等于从当前源码干净重建。
+- **根因：**运行链跨Rust进程、FFI、ocgcore/Lua和外部数据，单个“构建成功”不能覆盖所有资产。
+- **决策：**分别记录worker、DLL、CLI、runner与CDB/脚本的逻辑角色、实际字节和构建来源，明确哪些重建、哪些复用，保持普通/赛事配置分开。
+- **代价：**构建与部署材料更长，真实验证前要检查实际使用路径和版本。
+- **范围：**本地隔离构建、原生批次和发布；doctor、现存可执行文件哈希均不能单独签发可复现构建资格。
+- **证据：**[BASELINE_AUDIT](BASELINE_AUDIT.md)的身份/构建记录、[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)的两套配置，以及[TESTING](TESTING.md)记录的独立checkout重建Rust但复用冻结DLL。
+
+### 5. 报告版本、来源角色与stdout必须匹配
+
+- **问题：**Curry V2期待的runner路径与V1真实产物不同；V3审计又将已保存V3扩展stdout与旧三字段对象严格比较，提前拒绝真实来源。
+- **根因：**测试夹具只覆盖简化旧形状，把不同scope/版本的角色名和输出合同混用。后续恢复也出现`v3_source_workspace_identity`与期望角色名不符。
+- **决策：**按冻结版本/角色明确允许字段和值，用真实形状的合成正例和篡改反例贯通公开入口；保留旧版合同，不能通过无条件接受额外字段或重命名历史文件修复。
+- **代价：**多版本维护增加测试矩阵和来源适配工作；合成成功仍要面对真实来源检查。
+- **范围：**已有报告和进程证据的版本化读取；不是许可所有新接口继续堆积历史偶然格式。
+- **证据：**[V2路径断点](superpowers/plans/2026-10-25-curry-ledger-handoff-v2-handoff.md)、[V3 stdout断点](superpowers/plans/2026-10-26-curry-ledger-handoff-v3-handoff.md)、[恢复V3交接](superpowers/plans/2026-10-26-curry-ledger-handoff-recovery-v3-handoff.md)。
+
+### 6. 零native不自动意味着零runner
+
+- **问题：**离线审计可以包含runner预检进程，也可以完全纯Python；只写`native_calls=0`无法说明是否启动进程、worker或FFI。
+- **根因：**按最后一层调用汇总，隐藏了编排层和执行层的边界。
+- **决策：**分别记录runner进程是否尝试及次数、worker、FFI、native和可写账本；进程未启动时退出码/流字段为null，不创造虚构侧车。
+- **代价：**各工具须输出细分会计与原始进程证据；“离线”不再是足够的验收描述。
+- **范围：**进程编排和研究批次；本次Ground Collapse准备的四项均0是明确批次事实，不能外推所有离线工具。
+- **证据：**[天玑runner修复交接](superpowers/plans/2026-10-23-tenki-runner-repair-handoff.md)区分预检与normal；[Curry V2交接](superpowers/plans/2026-10-25-curry-ledger-handoff-v2-handoff.md)记录runner未启动时字段null；[Ground Collapse交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)列出四项0。
+
+### 7. Windows文件锁与TOCTOU需要真实边界测试
+
+- **问题：**Curry stage 2在收费前因Windows共享冲突失败；后续合成测试还暴露父证据/请求在检查后被替换的竞态。
+- **根因：**只读view跨越独占writer打开，以及“先检查路径、稍后再读”并不能保证消费的是同一字节。
+- **决策：**在独占打开前释放共享view，在writer锁内复验父链；对已认证请求绑定同一摘要，必要处消费冻结字节，最终稳定性检查仍保留。
+- **代价：**锁生命周期和缓存范围必须细化；缓存过宽增加内存，缓存过窄又可能重读漂移路径。
+- **范围：**journal父链与请求读取边界；不以缓存替代全部路径/hash检查，也不倒推每次历史失败均由同一锁引起。
+- **证据：**[原stage 2失败交接](superpowers/plans/2026-10-25-curry-option-verification-handoff.md)、[父账本修复审计](superpowers/plans/2026-10-25-curry-ledger-handoff-handoff.md)、[Ground交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)及[TESTING](TESTING.md)中该批仅保留七个stage request字节的竞态回归。
+
+### 8. 合成、原生、独立重放与资格逐层区分
+
+- **问题：**合成opcode24的45个无序组合/90种有序编码不说明真实菜单；Tenki/Curry冻结分支成功也不证明完整动作或最优性。
+- **根因：**协议解析、可达性、响应接受、分支完整性、信息概率和最优值依赖不同证据。
+- **决策：**每个结论附来源层级和范围；负例与未知保留，原生执行/重放只授予对应案例的可执行性，完整性/概率/最优性另过门禁。
+- **代价：**准备工具与局部成功无法直接对外称“支持该机制全部规则”，研究需继续补覆盖方法。
+- **范围：**全部研究与产品报告；中文界面展示不改变任何资格。
+- **证据：**[Ground Collapse资格边界](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)、[Curry再验真交接](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)和[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
+
+### 9. 隔离构建不等于干净发布验收
+
+- **问题：**固定输出根要求精确成员时，V4根内的`build-target/`和`build-command.json`触发拒绝；debug worker并发构建也曾影响资产一致性采集。
+- **根因：**编译工作目录、业务证据根和正式包布局混在一起，构建可能改变运行中或被扫描的可执行文件。
+- **决策：**每批使用独立Cargo target和构建记录，构建临时文件置于正式输出合同之外；运行前冻结产物，R5再做独立干净checkout双资产验收。
+- **代价：**磁盘与编译时间增加；需保存构建时源码身份和产物，而不是只刷新dist。
+- **范围：**会触及运行资产/固定布局的构建；不据此要求纯文档轮重新构建，也不宣称隔离target已经满足R5。
+- **证据：**[V4交接](superpowers/plans/2026-10-26-curry-ledger-handoff-v4-handoff.md)、[TESTING](TESTING.md)2026-10-19赛事后置身份冲突记录及[ROADMAP R5](ROADMAP.md)。
+
+### 10. 失败诊断和报告发布本身也需要合同
+
+- **问题：**Curry V5原正式报告缺失，外层退出2不能认证具体内部异常；后续恢复报告的来源错误也不能倒推为V5当时根因。
+- **根因：**执行失败、报告写入失败、写后验证失败和CLI摘要是不同阶段，缺少原始证据时不能合并归因。
+- **决策：**保留退出码、原始stdout/stderr、首失败点和`not_run`；发布状态区分未写出、已写但未认证等状态，已写报告记录实际hash且不原地重写“修正”。
+- **代价：**需要发布错误路径与schema的专门负例；失败件不能清理后重试来制造成功历史。
+- **范围：**报告生产/恢复流程；新批次按新合同继续，旧一次性失败仍保留原样。
+- **证据：**[V5断点](superpowers/plans/2026-10-26-curry-ledger-handoff-v5-handoff.md)、[V5恢复交接](superpowers/plans/2026-10-26-curry-ledger-handoff-recovery-handoff.md)、[TESTING](TESTING.md)发布诊断`written_unverified`回归记录。
+
+### 11. 文档后身份不能替换执行时身份
+
+- **问题：**验证后更新文档会改变工作区身份；源码工具冻结和最终交付归档也可能包含不同文件集合。
+- **根因：**把一个“最终hash”同时用于执行时源码、工具包和文档后完整工作区，容易误称旧结果已在新源码重跑。
+- **决策：**分别保留执行/工具冻结身份与文档后交付身份，记录明确允许的文档变化和最终清单；跨版本重新认证来源时使用专门合同，不覆盖旧锚点。
+- **代价：**需要双时点归档/清单和差异解释，收尾不能只改一个摘要字段。
+- **范围：**引用冻结源码的研究交付；纯文档检查应写自己的检查范围，不能继承过去业务verify为本轮验证。
+- **证据：**[Ground Collapse交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)明确文档前工具身份与最终delivery；[恢复V3交接](superpowers/plans/2026-10-26-curry-ledger-handoff-recovery-v3-handoff.md)区分发布重建与verify允许的文档变化。
+
+### 12. 测试清单、证据体积与ACL失败需一起交付
+
+- **问题：**默认pytest发现曾因旧ACL受限目录产生56个PermissionError；目录体积清点也可能不完整。全套测试通过仍包含明确skipped/ignored项。
+- **根因：**把目录发现等同测试边界，把可访问文件之和当完整证据大小，或只报passed总数而忽略本机资产/原生opt-in。
+- **决策：**显式枚举顶层测试文件并记录清单、`-ra`/ignored原因；统计文件数/字节时同步保存访问失败和范围，不能删除受限目录或修改ACL来获得“完整”数字。
+- **代价：**清单、日志和多轮归档占用空间，统计可能只有可访问下界；成本复盘须计入这些开销。
+- **范围：**本地测试/证据交付；收集失败与业务测试失败分别报告，不声称跳过项已通过，也不擅自清理历史证据。
+- **证据：**[2026-10-24恢复交接](superpowers/plans/2026-10-24-curry-input-recovery-handoff.md)、[V2体积/ACL交接](superpowers/plans/2026-10-25-curry-ledger-handoff-v2-handoff.md)、[TESTING](TESTING.md)中Ground批次88文件、734 passed/9 skipped及逐项排除清单。

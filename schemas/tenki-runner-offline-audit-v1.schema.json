@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tenki-runner-offline-audit-v1.schema.json",
+  "title": "Tenki confirmation runner offline audit v1",
+  "description": "Read-only validation of the frozen confirmation evidence and an isolated runner preflight. It never grants experiment or proof qualification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "status", "baseline_anchor_sha256", "native_calls",
+    "execution_ready", "original_native_diagnostic", "checks", "inputs", "source", "source_archives", "process",
+    "diagnostic", "elapsed_seconds", "input_set_sha256", "proof_ready",
+    "complete_action_coverage", "global_optimality", "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "tenki_runner_offline_audit" },
+    "status": { "enum": ["passed", "failed", "incomplete"] },
+    "baseline_anchor_sha256": { "const": "19ba6de5b0f7ca3bfc395d72410927e3e9137408a03e6a29f80376bcb19cee0a" },
+    "native_calls": { "const": 0 },
+    "execution_ready": { "const": false },
+    "original_native_diagnostic": { "const": "runner_timeout" },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["delivery_and_history", "source_archives", "frozen_request_and_seal", "eight_ledgers", "isolated_runner_build", "read_only_preflight", "input_stability", "trace"],
+      "properties": {
+        "delivery_and_history": { "$ref": "#/$defs/check" },
+        "source_archives": { "$ref": "#/$defs/check" },
+        "frozen_request_and_seal": { "$ref": "#/$defs/check" },
+        "eight_ledgers": { "$ref": "#/$defs/check" },
+        "isolated_runner_build": { "$ref": "#/$defs/check" },
+        "read_only_preflight": { "$ref": "#/$defs/check" },
+        "input_stability": { "$ref": "#/$defs/check" },
+        "trace": { "$ref": "#/$defs/check" }
+      }
+    },
+    "inputs": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+    "source_archives": { "type": "array", "items": { "$ref": "#/$defs/archive" } },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runner_role"],
+      "properties": {
+        "runner_role": { "const": "tenki_placement_confirmation_runner" },
+        "workspace_identity": { "$ref": "#/$defs/hash" },
+        "workspace_file_count": { "type": "integer", "minimum": 0 },
+        "baseline_source_identity": { "$ref": "#/$defs/hash" },
+        "historical_consumed": { "const": 26 },
+        "historical_unknown": { "const": 0 },
+        "ledger_count": { "const": 8 },
+        "confirmation_consumed": { "const": 0 },
+        "runner_sha256": { "$ref": "#/$defs/hash" },
+        "runner_bytes": { "type": "integer", "minimum": 0 },
+        "build_record_sha256": { "$ref": "#/$defs/hash" },
+        "build_record_identity": { "$ref": "#/$defs/hash" },
+        "source_identity": { "$ref": "#/$defs/hash" },
+        "source_file_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "process": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "runner_role", "status", "return_code", "error_code", "metadata_path", "metadata_sha256", "metadata_bytes", "stdout", "stderr", "timeout_seconds", "trace"],
+          "properties": {
+            "mode": { "const": "preflight_only" },
+            "runner_role": { "const": "tenki_placement_confirmation_runner" },
+            "status": { "enum": ["completed", "timeout", "launch_failed"] },
+            "return_code": { "type": ["integer", "null"] },
+            "error_code": { "type": ["string", "null"] },
+            "metadata_path": { "$ref": "#/$defs/relativePath" },
+            "metadata_sha256": { "$ref": "#/$defs/hash" },
+            "metadata_bytes": { "type": "integer", "minimum": 0 },
+            "stdout": { "$ref": "#/$defs/output" },
+            "stderr": { "$ref": "#/$defs/output" },
+            "timeout_seconds": { "const": 900 },
+            "trace": { "type": "array", "items": { "$ref": "#/$defs/trace" } },
+            "parsed_result": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["preflight_passed", "native_calls", "stage", "context", "identity_sha256", "matches_expected"],
+              "properties": {
+                "preflight_passed": { "type": "boolean" },
+                "native_calls": { "type": ["integer", "null"], "minimum": 0 },
+                "stage": { "type": ["integer", "null"], "minimum": 0 },
+                "context": { "type": ["string", "null"] },
+                "identity_sha256": { "type": ["string", "null"] },
+                "matches_expected": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "diagnostic": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]{1,90}$" },
+    "elapsed_seconds": { "type": "number", "minimum": 0 },
+    "input_set_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "proof_ready": { "const": false },
+    "complete_action_coverage": { "const": false },
+    "global_optimality": { "const": false },
+    "native_probability_verified": { "const": false }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "check": { "enum": ["not_run", "passed", "failed"] },
+    "relativePath": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|^[A-Za-z]:|(^|/)[.][.](?:/|$))" } },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "path", "sha256", "bytes"],
+      "properties": {
+        "role": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,80}$" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "sha256", "file_list_sha256", "file_count"],
+      "properties": {
+        "role": { "enum": ["native_time", "final"] },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "file_list_sha256": { "$ref": "#/$defs/hash" },
+        "file_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "trace": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["phase", "event"],
+          "properties": {
+            "phase": { "enum": ["input_validation", "shared_preflight"] },
+            "event": { "const": "start" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["phase", "event", "elapsed_ns"],
+          "properties": {
+            "phase": { "enum": ["input_validation", "shared_preflight"] },
+            "event": { "const": "end" },
+            "elapsed_ns": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "passed" } } },
+      "then": {
+        "properties": {
+          "diagnostic": { "const": null },
+          "checks": { "additionalProperties": { "const": "passed" } },
+          "inputs": { "minItems": 1 },
+          "source_archives": {
+            "minItems": 2,
+            "maxItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role": { "const": "native_time" } }, "required": ["role"] } },
+              { "contains": { "properties": { "role": { "const": "final" } }, "required": ["role"] } }
+            ]
+          },
+          "source": {
+            "required": [
+              "workspace_identity", "workspace_file_count", "baseline_source_identity",
+              "historical_consumed", "historical_unknown", "ledger_count", "confirmation_consumed",
+              "runner_sha256", "runner_bytes", "build_record_sha256", "build_record_identity",
+              "source_identity", "source_file_count"
+            ]
+          },
+          "process": {
+            "type": "object",
+            "properties": {
+              "mode": { "const": "preflight_only" },
+              "runner_role": { "const": "tenki_placement_confirmation_runner" },
+              "status": { "const": "completed" },
+              "return_code": { "const": 0 },
+              "trace": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "prefixItems": [
+                  { "type": "object", "additionalProperties": false, "properties": { "phase": { "const": "input_validation" }, "event": { "const": "start" } }, "required": ["phase", "event"] },
+                  { "type": "object", "additionalProperties": false, "properties": { "phase": { "const": "input_validation" }, "event": { "const": "end" }, "elapsed_ns": { "type": "integer", "minimum": 0 } }, "required": ["phase", "event", "elapsed_ns"] },
+                  { "type": "object", "additionalProperties": false, "properties": { "phase": { "const": "shared_preflight" }, "event": { "const": "start" } }, "required": ["phase", "event"] },
+                  { "type": "object", "additionalProperties": false, "properties": { "phase": { "const": "shared_preflight" }, "event": { "const": "end" }, "elapsed_ns": { "type": "integer", "minimum": 0 } }, "required": ["phase", "event", "elapsed_ns"] }
+                ],
+                "items": false
+              },
+              "parsed_result": { "properties": { "matches_expected": { "const": true } }, "required": ["matches_expected"] }
+            },
+            "required": ["parsed_result"]
+          }
+        }
+      }
+    }
+  ]
+}

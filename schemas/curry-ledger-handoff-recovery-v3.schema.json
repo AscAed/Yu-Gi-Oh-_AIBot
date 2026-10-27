@@ -1,0 +1,4141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Curry Ledger Handoff Recovery v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "status",
+    "valid",
+    "failure_checkpoint",
+    "diagnostic",
+    "native_calls",
+    "runner_process_calls",
+    "execution_ready",
+    "qualifications",
+    "tool",
+    "v5_source",
+    "checks",
+    "source_groups",
+    "baseline",
+    "saved_process_evidence",
+    "accounting",
+    "inputs",
+    "stability",
+    "publication",
+    "elapsed_seconds",
+    "previous_recovery_source",
+    "previous_recovery_v2_source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 3
+    },
+    "kind": {
+      "const": "curry_ledger_handoff_recovery_v3"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed",
+        "incomplete"
+      ]
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "failure_checkpoint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "previous_recovery_v2_failed_source",
+        "previous_recovery_failed_source",
+        "v5_delivery_and_archives",
+        "historical_sources",
+        "frozen_input_and_parent",
+        "saved_process_evidence",
+        "scope_ledger_semantics",
+        "input_stability",
+        "report_publication",
+        null
+      ]
+    },
+    "diagnostic": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z][a-z0-9_]{1,100}$"
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "runner_process_calls": {
+      "const": 0
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "qualifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ],
+      "properties": {
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      }
+    },
+    "tool": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "workspace_identity",
+        "archive_scope",
+        "verification_implementation",
+        "archive_path",
+        "archive_sha256",
+        "file_list_path",
+        "file_list_sha256",
+        "file_count",
+        "member_sha256"
+      ],
+      "properties": {
+        "identity": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "workspace_identity": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "archive_scope": {
+          "const": "recovery-entrypoints-and-primary-contracts-integrity-only"
+        },
+        "verification_implementation": {
+          "const": "current_workspace_code_revalidates_saved_evidence"
+        },
+        "archive_path": {
+          "const": "tool-source.zip"
+        },
+        "archive_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "file_list_path": {
+          "const": "tool-source-file-list.json"
+        },
+        "file_list_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "file_count": {
+          "const": 8
+        },
+        "member_sha256": {
+          "type": "object",
+          "minProperties": 8,
+          "maxProperties": 8,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "v5_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "delivery_sha256",
+        "native_source_identity",
+        "native_file_count",
+        "final_source_identity",
+        "final_file_count",
+        "source_delta",
+        "formal_report_absent",
+        "outer_cli_exit_code_claimed",
+        "outer_cli_exit_code_authenticated",
+        "outer_failure_reason_authenticated"
+      ],
+      "properties": {
+        "delivery_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "native_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "native_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "final_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "final_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "source_delta": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "formal_report_absent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "outer_cli_exit_code_claimed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "outer_cli_exit_code_authenticated": {
+          "const": false
+        },
+        "outer_failure_reason_authenticated": {
+          "const": false
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_recovery_v2_failed_source",
+        "previous_recovery_failed_source",
+        "v5_delivery_and_archives",
+        "historical_sources",
+        "frozen_input_and_parent",
+        "saved_process_evidence",
+        "scope_ledger_semantics",
+        "input_stability",
+        "report_publication"
+      ],
+      "properties": {
+        "previous_recovery_failed_source": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "v5_delivery_and_archives": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "historical_sources": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "frozen_input_and_parent": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "saved_process_evidence": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "scope_ledger_semantics": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "input_stability": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "report_publication": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "previous_recovery_v2_failed_source": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        }
+      }
+    },
+    "source_groups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v5_original_audit_roles",
+        "v5_recovery_anchors",
+        "curry_scope_blob_roles",
+        "v3_reservation_roles",
+        "previous_recovery_v1_roles",
+        "previous_recovery_v2_roles"
+      ],
+      "properties": {
+        "v5_original_audit_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "v5_recovery_anchors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "curry_scope_blob_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "v3_reservation_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "previous_recovery_v1_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "previous_recovery_v2_roles": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "context",
+        "manifest_sha256",
+        "prepared_sha256",
+        "stage1_receipt_sha256",
+        "stage2_input_sha256",
+        "stage2_receipt_absent"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-verification-v1"
+        },
+        "context": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "manifest_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "prepared_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage1_receipt_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage2_input_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage2_receipt_absent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "saved_process_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "mode",
+        "status",
+        "return_code",
+        "metadata_sha256",
+        "stdout_sha256",
+        "stdout_bytes",
+        "stderr_sha256",
+        "stderr_bytes",
+        "trace_event_count",
+        "asset_scan_elapsed_ns",
+        "historical_scan_time_certified"
+      ],
+      "properties": {
+        "role": {
+          "const": "curry_ledger_handoff_audit_runner"
+        },
+        "mode": {
+          "const": "audit_saved_input_only"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "return_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "metadata_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stdout_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stdout_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "stderr_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stderr_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "trace_event_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "asset_scan_elapsed_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "historical_scan_time_certified": {
+          "const": false
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "original_scope_consumed",
+        "original_scope_completed",
+        "original_scope_unknown",
+        "original_scope_limit",
+        "certified_historical_consumed_before_scope",
+        "certified_historical_consumed_including_scope",
+        "policy_reserved",
+        "planning_total",
+        "reservation_id",
+        "reservation_policy_id",
+        "old_confirmation_actual_consumed",
+        "actual_all_history_cumulative"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-verification-v1"
+        },
+        "original_scope_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "original_scope_completed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "original_scope_unknown": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "original_scope_limit": {
+          "const": 7
+        },
+        "certified_historical_consumed_before_scope": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "certified_historical_consumed_including_scope": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "policy_reserved": {
+          "const": 7
+        },
+        "planning_total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reservation_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reservation_policy_id": {
+          "const": "curry-unknown-reserve-seven-v1"
+        },
+        "old_confirmation_actual_consumed": {
+          "type": "null"
+        },
+        "actual_all_history_cumulative": {
+          "type": "null"
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "acceptance",
+              "charge_ledger",
+              "curry_scope_blob_checkpoints_01",
+              "curry_scope_blob_checkpoints_02",
+              "curry_scope_blob_checkpoints_03",
+              "curry_scope_blob_checkpoints_04",
+              "curry_scope_blob_events_01",
+              "curry_scope_blob_results_01",
+              "delivery",
+              "final_build_record",
+              "final_cli_artifact",
+              "final_runner_artifact",
+              "final_source_archive",
+              "final_source_file_list",
+              "final_worker_artifact",
+              "manifest",
+              "native_build_record",
+              "native_cli_artifact",
+              "native_runner_artifact",
+              "native_source_archive",
+              "native_source_file_list",
+              "native_worker_artifact",
+              "new_build_record",
+              "new_runner",
+              "new_runner_capture_metadata",
+              "new_runner_stderr",
+              "new_runner_stdout",
+              "new_source_archive",
+              "new_source_file_list",
+              "prepared",
+              "previous_recovery_failed_report",
+              "previous_recovery_final_delivery",
+              "previous_recovery_final_source_archive",
+              "previous_recovery_final_source_file_list",
+              "previous_recovery_tool_archive",
+              "previous_recovery_tool_file_list",
+              "previous_recovery_v2_failed_report",
+              "previous_recovery_v2_final_delivery",
+              "previous_recovery_v2_final_source_archive",
+              "previous_recovery_v2_final_source_file_list",
+              "previous_recovery_v2_tool_archive",
+              "previous_recovery_v2_tool_file_list",
+              "previous_v1_build_record",
+              "previous_v1_report",
+              "previous_v1_runner",
+              "previous_v1_source_archive",
+              "previous_v1_source_file_list",
+              "previous_v2_build_record",
+              "previous_v2_report",
+              "previous_v2_runner",
+              "previous_v2_source_archive",
+              "previous_v2_source_file_list",
+              "previous_v3_build_record",
+              "previous_v3_final_delivery",
+              "previous_v3_final_source_archive",
+              "previous_v3_final_source_file_list",
+              "previous_v3_report",
+              "previous_v3_runner",
+              "previous_v3_source_archive",
+              "previous_v3_source_file_list",
+              "previous_v4_build_record",
+              "previous_v4_final_delivery",
+              "previous_v4_final_source_archive",
+              "previous_v4_final_source_file_list",
+              "previous_v4_report",
+              "previous_v4_runner",
+              "previous_v4_source_archive",
+              "previous_v4_source_file_list",
+              "stage1_process_metadata",
+              "stage1_process_sidecar",
+              "stage1_process_stderr",
+              "stage1_process_stdout",
+              "stage1_receipt",
+              "stage2_input",
+              "stage2_report",
+              "stage2_request",
+              "stage2_seal",
+              "v2_final_release_record",
+              "v2_final_source_archive",
+              "v2_final_source_file_list",
+              "v3_reservation_acceptance",
+              "v3_reservation_report",
+              "v3_source_acceptance",
+              "v3_source_authenticated_prior_v2_acceptance",
+              "v3_source_authenticated_v2_report",
+              "v3_source_confirmation_acceptance",
+              "v3_source_confirmation_delivery",
+              "v3_source_confirmation_evidence_file_001",
+              "v3_source_confirmation_evidence_file_002",
+              "v3_source_confirmation_evidence_file_003",
+              "v3_source_confirmation_evidence_file_004",
+              "v3_source_confirmation_evidence_file_005",
+              "v3_source_confirmation_evidence_file_006",
+              "v3_source_confirmation_evidence_file_007",
+              "v3_source_confirmation_evidence_file_008",
+              "v3_source_confirmation_evidence_file_009",
+              "v3_source_confirmation_evidence_file_010",
+              "v3_source_confirmation_evidence_file_011",
+              "v3_source_confirmation_evidence_file_012",
+              "v3_source_confirmation_evidence_file_013",
+              "v3_source_confirmation_evidence_file_014",
+              "v3_source_confirmation_evidence_file_015",
+              "v3_source_confirmation_evidence_file_016",
+              "v3_source_confirmation_evidence_file_017",
+              "v3_source_confirmation_evidence_file_018",
+              "v3_source_confirmation_evidence_file_019",
+              "v3_source_confirmation_evidence_file_020",
+              "v3_source_confirmation_evidence_file_021",
+              "v3_source_confirmation_evidence_file_022",
+              "v3_source_confirmation_evidence_file_023",
+              "v3_source_confirmation_evidence_file_024",
+              "v3_source_confirmation_evidence_file_025",
+              "v3_source_confirmation_evidence_file_026",
+              "v3_source_confirmation_evidence_file_027",
+              "v3_source_confirmation_evidence_file_028",
+              "v3_source_confirmation_evidence_file_029",
+              "v3_source_confirmation_evidence_file_030",
+              "v3_source_confirmation_evidence_file_031",
+              "v3_source_confirmation_evidence_file_032",
+              "v3_source_confirmation_evidence_file_033",
+              "v3_source_confirmation_evidence_file_034",
+              "v3_source_confirmation_evidence_file_035",
+              "v3_source_confirmation_evidence_file_036",
+              "v3_source_confirmation_evidence_file_037",
+              "v3_source_confirmation_evidence_file_038",
+              "v3_source_confirmation_evidence_file_039",
+              "v3_source_confirmation_evidence_file_040",
+              "v3_source_confirmation_evidence_inventory",
+              "v3_source_confirmation_manifest",
+              "v3_source_corrected_534_source_archive",
+              "v3_source_corrected_534_source_file_list",
+              "v3_source_final_source_archive",
+              "v3_source_final_source_file_list",
+              "v3_source_historical_ledger_01",
+              "v3_source_historical_ledger_02",
+              "v3_source_historical_ledger_03",
+              "v3_source_historical_ledger_04",
+              "v3_source_historical_ledger_06",
+              "v3_source_historical_ledger_07",
+              "v3_source_historical_ledger_08",
+              "v3_source_historical_ledger_09",
+              "v3_source_independent_review",
+              "v3_source_latest_delivery",
+              "v3_source_manifest_role_build_record",
+              "v3_source_manifest_role_cli",
+              "v3_source_manifest_role_identity",
+              "v3_source_manifest_role_ordinary_config",
+              "v3_source_manifest_role_runner",
+              "v3_source_manifest_role_source_archive",
+              "v3_source_manifest_role_source_file_list",
+              "v3_source_manifest_role_tournament_config",
+              "v3_source_manifest_role_window_start",
+              "v3_source_manifest_role_worker",
+              "v3_source_native_source_archive",
+              "v3_source_native_source_file_list",
+              "v3_source_normal_attempt_observation",
+              "v3_source_prepared",
+              "v3_source_previous_v1_failed_reservation_report",
+              "v3_source_previous_v1_failed_tool_archive",
+              "v3_source_previous_v1_failed_tool_file_list",
+              "v3_source_previous_v2_failed_reservation_report",
+              "v3_source_previous_v2_failed_tool_archive",
+              "v3_source_previous_v2_failed_tool_file_list",
+              "v3_source_protected_material_check",
+              "v3_source_source_archive",
+              "v3_source_source_file_list",
+              "v3_source_stage1_input",
+              "v3_source_stage1_input_seal",
+              "v3_source_stage1_request",
+              "v3_source_synthetic_public_report",
+              "v3_source_tenki_validation_acceptance",
+              "v3_source_tenki_validation_directory_evidence",
+              "v3_source_tenki_validation_ledger",
+              "v3_source_test_log_pytest-files_txt",
+              "v3_source_test_log_pytest-full-rerun_log",
+              "v3_source_test_log_pytest-full_log",
+              "v3_source_v2_audit_535_source_archive",
+              "v3_source_v2_audit_535_source_file_list",
+              "v3_source_v2_failure_acceptance",
+              "v3_source_v2_final_536_source_archive",
+              "v3_source_v2_final_536_source_file_list",
+              "v3_source_workspace_identity",
+              "v5_command_log",
+              "v5_delivery",
+              "v5_final_source_archive",
+              "v5_final_source_file_list",
+              "v5_observation"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\\\:]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first_check",
+        "recheck",
+        "input_rows_revalidation",
+        "workspace",
+        "v5_tree",
+        "baseline_tree",
+        "reservation_tree",
+        "historical_trees",
+        "ledger_and_blobs",
+        "stage2_receipt_absent_before",
+        "stage2_receipt_absent_after",
+        "previous_recovery_tree",
+        "previous_recovery_v2_tree"
+      ],
+      "properties": {
+        "first_check": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "recheck": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "input_rows_revalidation": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "workspace": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "v5_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "baseline_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "reservation_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "historical_trees": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "ledger_and_blobs": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "stage2_receipt_absent_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stage2_receipt_absent_after": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "previous_recovery_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "previous_recovery_v2_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "failure_phase",
+        "diagnostic_id"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "failure_phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "report_validation",
+            "source_reconstruction",
+            "exclusive_report_write",
+            "post_write_revalidation",
+            null
+          ]
+        },
+        "diagnostic_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      }
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "previous_recovery_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_sha256",
+        "delivery_sha256",
+        "status",
+        "failure_checkpoint",
+        "diagnostic",
+        "source_delta",
+        "final_source_identity",
+        "final_file_count"
+      ],
+      "properties": {
+        "report_sha256": {
+          "const": "bf85a81f7d6a204e4a960b2ffb8449e2f1a17d857ca5fcf7e5e2303f5285270d"
+        },
+        "delivery_sha256": {
+          "const": "154d77cb4c8790cd971e19dbd17dcc8a4417df1e0f460747948e306706328e2e"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "failed",
+            null
+          ]
+        },
+        "failure_checkpoint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "v5_delivery_and_archives",
+            null
+          ]
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "recovery_v5_source_delta_invalid",
+            null
+          ]
+        },
+        "source_delta": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "added",
+            "removed",
+            "changed"
+          ],
+          "properties": {
+            "added": {
+              "const": [
+                "docs/superpowers/plans/2026-10-26-curry-ledger-handoff-v5-handoff.md"
+              ]
+            },
+            "removed": {
+              "const": []
+            },
+            "changed": {
+              "const": [
+                "TASKS.md",
+                "docs/INDEX.md",
+                "docs/TESTING.md"
+              ]
+            }
+          }
+        },
+        "final_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "final_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": [
+            null,
+            583
+          ]
+        }
+      }
+    },
+    "previous_recovery_v2_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_sha256",
+        "delivery_sha256",
+        "status",
+        "failure_checkpoint",
+        "diagnostic",
+        "final_source_identity",
+        "final_file_count",
+        "v3_role_count",
+        "workspace_identity_present",
+        "confirmation_summary_present",
+        "v3_role_difference"
+      ],
+      "properties": {
+        "report_sha256": {
+          "const": "7496f981438bdca15f768eb38c6402cf15cc8ff88401d661fae7ee554dc476d6"
+        },
+        "delivery_sha256": {
+          "const": "c3bf0aa851b5cd6b39045ee5b8897d3c53f934de4ab31a5ec0cf1dc93fb7ccfe"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "failed",
+            null
+          ]
+        },
+        "failure_checkpoint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "scope_ledger_semantics",
+            null
+          ]
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "recovery_success_input_set_incomplete",
+            null
+          ]
+        },
+        "final_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "final_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": [
+            null,
+            586
+          ]
+        },
+        "v3_role_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": [
+            null,
+            100
+          ]
+        },
+        "workspace_identity_present": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "confirmation_summary_present": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "v3_role_difference": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "missing_from_report",
+            "unexpected_in_report"
+          ],
+          "properties": {
+            "missing_from_report": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "unexpected_in_report": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": true
+          },
+          "diagnostic": {
+            "type": "null"
+          },
+          "tool": {
+            "type": "object"
+          },
+          "publication": {
+            "properties": {
+              "state": {
+                "const": "passed"
+              },
+              "failure_phase": {
+                "type": "null"
+              },
+              "diagnostic_id": {
+                "type": "null"
+              }
+            }
+          },
+          "accounting": {
+            "properties": {
+              "certified_historical_consumed_before_scope": {
+                "const": 32
+              },
+              "reservation_id": {
+                "const": "09de07440402fcd12996dcbe0ed67741973b2cd095cd60b43e77b764331d3b63"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "minItems": 187,
+            "maxItems": 187
+          },
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "const": 164
+              },
+              "v5_recovery_anchors": {
+                "const": 5
+              },
+              "curry_scope_blob_roles": {
+                "const": 6
+              },
+              "v3_reservation_roles": {
+                "const": 100
+              },
+              "previous_recovery_v1_roles": {
+                "const": 6
+              },
+              "previous_recovery_v2_roles": {
+                "const": 6
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": false
+          },
+          "accounting": {
+            "properties": {
+              "original_scope_consumed": {
+                "type": "null"
+              },
+              "original_scope_completed": {
+                "type": "null"
+              },
+              "original_scope_unknown": {
+                "type": "null"
+              },
+              "certified_historical_consumed_before_scope": {
+                "type": "null"
+              },
+              "certified_historical_consumed_including_scope": {
+                "type": "null"
+              },
+              "planning_total": {
+                "type": "null"
+              },
+              "reservation_id": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "incomplete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": false
+          },
+          "failure_checkpoint": {
+            "type": "null"
+          },
+          "diagnostic": {
+            "type": "null"
+          },
+          "tool": {
+            "type": "null"
+          },
+          "checks": {
+            "additionalProperties": {
+              "const": "not_run"
+            }
+          },
+          "source_groups": {
+            "additionalProperties": {
+              "const": 0
+            }
+          },
+          "inputs": {
+            "maxItems": 0
+          },
+          "accounting": {
+            "properties": {
+              "original_scope_consumed": {
+                "type": "null"
+              },
+              "original_scope_completed": {
+                "type": "null"
+              },
+              "original_scope_unknown": {
+                "type": "null"
+              },
+              "certified_historical_consumed_before_scope": {
+                "type": "null"
+              },
+              "certified_historical_consumed_including_scope": {
+                "type": "null"
+              },
+              "reservation_id": {
+                "type": "null"
+              },
+              "planning_total": {
+                "type": "null"
+              }
+            }
+          },
+          "publication": {
+            "properties": {
+              "state": {
+                "const": "not_run"
+              },
+              "failure_phase": {
+                "type": "null"
+              },
+              "diagnostic_id": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "failed",
+              "incomplete"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "maxItems": 187
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_recovery_failed_source": {
+                "const": "passed"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "previous_recovery_v1_roles": {
+                "const": 6
+              }
+            }
+          },
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "previous_recovery_failed_report",
+                        "previous_recovery_tool_archive",
+                        "previous_recovery_tool_file_list",
+                        "previous_recovery_final_delivery",
+                        "previous_recovery_final_source_archive",
+                        "previous_recovery_final_source_file_list"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 6,
+                "maxContains": 6
+              }
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "previous_recovery_v1_roles": {
+                "const": 0
+              }
+            }
+          },
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "previous_recovery_failed_report",
+                      "previous_recovery_tool_archive",
+                      "previous_recovery_tool_file_list",
+                      "previous_recovery_final_delivery",
+                      "previous_recovery_final_source_archive",
+                      "previous_recovery_final_source_file_list"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "previous_recovery_v2_failed_source": {
+                "const": "passed"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "previous_recovery_v2_roles": {
+                "const": 6
+              }
+            }
+          },
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "previous_recovery_v2_failed_report",
+                        "previous_recovery_v2_tool_archive",
+                        "previous_recovery_v2_tool_file_list",
+                        "previous_recovery_v2_final_delivery",
+                        "previous_recovery_v2_final_source_archive",
+                        "previous_recovery_v2_final_source_file_list"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 6,
+                "maxContains": 6
+              }
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "previous_recovery_v2_roles": {
+                "const": 0
+              }
+            }
+          },
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "previous_recovery_v2_failed_report",
+                      "previous_recovery_v2_tool_archive",
+                      "previous_recovery_v2_tool_file_list",
+                      "previous_recovery_v2_final_delivery",
+                      "previous_recovery_v2_final_source_archive",
+                      "previous_recovery_v2_final_source_file_list"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "v5_delivery_and_archives": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "v5_delivery_and_archives"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "v5_command_log",
+                        "v5_delivery",
+                        "v5_final_source_archive",
+                        "v5_final_source_file_list",
+                        "v5_observation"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 5,
+                "maxContains": 5
+              }
+            ]
+          },
+          "source_groups": {
+            "properties": {
+              "v5_recovery_anchors": {
+                "const": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "v5_delivery_and_archives": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "v5_delivery_and_archives"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "v5_command_log",
+                      "v5_delivery",
+                      "v5_final_source_archive",
+                      "v5_final_source_file_list",
+                      "v5_observation"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          },
+          "source_groups": {
+            "properties": {
+              "v5_recovery_anchors": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "previous_v1_build_record",
+                        "previous_v1_report",
+                        "previous_v1_runner",
+                        "previous_v1_source_archive",
+                        "previous_v1_source_file_list",
+                        "previous_v2_build_record",
+                        "previous_v2_report",
+                        "previous_v2_runner",
+                        "previous_v2_source_archive",
+                        "previous_v2_source_file_list",
+                        "previous_v3_build_record",
+                        "previous_v3_final_delivery",
+                        "previous_v3_final_source_archive",
+                        "previous_v3_final_source_file_list",
+                        "previous_v3_report",
+                        "previous_v3_runner",
+                        "previous_v3_source_archive",
+                        "previous_v3_source_file_list",
+                        "previous_v4_build_record",
+                        "previous_v4_final_delivery",
+                        "previous_v4_final_source_archive",
+                        "previous_v4_final_source_file_list",
+                        "previous_v4_report",
+                        "previous_v4_runner",
+                        "previous_v4_source_archive",
+                        "previous_v4_source_file_list",
+                        "v2_final_release_record",
+                        "v2_final_source_archive",
+                        "v2_final_source_file_list"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 29,
+                "maxContains": 29
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "previous_v1_build_record",
+                      "previous_v1_report",
+                      "previous_v1_runner",
+                      "previous_v1_source_archive",
+                      "previous_v1_source_file_list",
+                      "previous_v2_build_record",
+                      "previous_v2_report",
+                      "previous_v2_runner",
+                      "previous_v2_source_archive",
+                      "previous_v2_source_file_list",
+                      "previous_v3_build_record",
+                      "previous_v3_final_delivery",
+                      "previous_v3_final_source_archive",
+                      "previous_v3_final_source_file_list",
+                      "previous_v3_report",
+                      "previous_v3_runner",
+                      "previous_v3_source_archive",
+                      "previous_v3_source_file_list",
+                      "previous_v4_build_record",
+                      "previous_v4_final_delivery",
+                      "previous_v4_final_source_archive",
+                      "previous_v4_final_source_file_list",
+                      "previous_v4_report",
+                      "previous_v4_runner",
+                      "previous_v4_source_archive",
+                      "previous_v4_source_file_list",
+                      "v2_final_release_record",
+                      "v2_final_source_archive",
+                      "v2_final_source_file_list",
+                      "v3_source_acceptance",
+                      "v3_source_authenticated_prior_v2_acceptance",
+                      "v3_source_authenticated_v2_report",
+                      "v3_source_confirmation_acceptance",
+                      "v3_source_confirmation_delivery",
+                      "v3_source_confirmation_evidence_file_001",
+                      "v3_source_confirmation_evidence_file_002",
+                      "v3_source_confirmation_evidence_file_003",
+                      "v3_source_confirmation_evidence_file_004",
+                      "v3_source_confirmation_evidence_file_005",
+                      "v3_source_confirmation_evidence_file_006",
+                      "v3_source_confirmation_evidence_file_007",
+                      "v3_source_confirmation_evidence_file_008",
+                      "v3_source_confirmation_evidence_file_009",
+                      "v3_source_confirmation_evidence_file_010",
+                      "v3_source_confirmation_evidence_file_011",
+                      "v3_source_confirmation_evidence_file_012",
+                      "v3_source_confirmation_evidence_file_013",
+                      "v3_source_confirmation_evidence_file_014",
+                      "v3_source_confirmation_evidence_file_015",
+                      "v3_source_confirmation_evidence_file_016",
+                      "v3_source_confirmation_evidence_file_017",
+                      "v3_source_confirmation_evidence_file_018",
+                      "v3_source_confirmation_evidence_file_019",
+                      "v3_source_confirmation_evidence_file_020",
+                      "v3_source_confirmation_evidence_file_021",
+                      "v3_source_confirmation_evidence_file_022",
+                      "v3_source_confirmation_evidence_file_023",
+                      "v3_source_confirmation_evidence_file_024",
+                      "v3_source_confirmation_evidence_file_025",
+                      "v3_source_confirmation_evidence_file_026",
+                      "v3_source_confirmation_evidence_file_027",
+                      "v3_source_confirmation_evidence_file_028",
+                      "v3_source_confirmation_evidence_file_029",
+                      "v3_source_confirmation_evidence_file_030",
+                      "v3_source_confirmation_evidence_file_031",
+                      "v3_source_confirmation_evidence_file_032",
+                      "v3_source_confirmation_evidence_file_033",
+                      "v3_source_confirmation_evidence_file_034",
+                      "v3_source_confirmation_evidence_file_035",
+                      "v3_source_confirmation_evidence_file_036",
+                      "v3_source_confirmation_evidence_file_037",
+                      "v3_source_confirmation_evidence_file_038",
+                      "v3_source_confirmation_evidence_file_039",
+                      "v3_source_confirmation_evidence_file_040",
+                      "v3_source_confirmation_evidence_inventory",
+                      "v3_source_confirmation_manifest",
+                      "v3_source_corrected_534_source_archive",
+                      "v3_source_corrected_534_source_file_list",
+                      "v3_source_final_source_archive",
+                      "v3_source_final_source_file_list",
+                      "v3_source_historical_ledger_01",
+                      "v3_source_historical_ledger_02",
+                      "v3_source_historical_ledger_03",
+                      "v3_source_historical_ledger_04",
+                      "v3_source_historical_ledger_06",
+                      "v3_source_historical_ledger_07",
+                      "v3_source_historical_ledger_08",
+                      "v3_source_historical_ledger_09",
+                      "v3_source_independent_review",
+                      "v3_source_latest_delivery",
+                      "v3_source_manifest_role_build_record",
+                      "v3_source_manifest_role_cli",
+                      "v3_source_manifest_role_identity",
+                      "v3_source_manifest_role_ordinary_config",
+                      "v3_source_manifest_role_runner",
+                      "v3_source_manifest_role_source_archive",
+                      "v3_source_manifest_role_source_file_list",
+                      "v3_source_manifest_role_tournament_config",
+                      "v3_source_manifest_role_window_start",
+                      "v3_source_manifest_role_worker",
+                      "v3_source_native_source_archive",
+                      "v3_source_native_source_file_list",
+                      "v3_source_normal_attempt_observation",
+                      "v3_source_prepared",
+                      "v3_source_previous_v1_failed_reservation_report",
+                      "v3_source_previous_v1_failed_tool_archive",
+                      "v3_source_previous_v1_failed_tool_file_list",
+                      "v3_source_previous_v2_failed_reservation_report",
+                      "v3_source_previous_v2_failed_tool_archive",
+                      "v3_source_previous_v2_failed_tool_file_list",
+                      "v3_source_protected_material_check",
+                      "v3_source_source_archive",
+                      "v3_source_source_file_list",
+                      "v3_source_stage1_input",
+                      "v3_source_stage1_input_seal",
+                      "v3_source_stage1_request",
+                      "v3_source_synthetic_public_report",
+                      "v3_source_tenki_validation_acceptance",
+                      "v3_source_tenki_validation_directory_evidence",
+                      "v3_source_tenki_validation_ledger",
+                      "v3_source_test_log_pytest-files_txt",
+                      "v3_source_test_log_pytest-full-rerun_log",
+                      "v3_source_test_log_pytest-full_log",
+                      "v3_source_v2_audit_535_source_archive",
+                      "v3_source_v2_audit_535_source_file_list",
+                      "v3_source_v2_failure_acceptance",
+                      "v3_source_v2_final_536_source_archive",
+                      "v3_source_v2_final_536_source_file_list",
+                      "v3_source_workspace_identity"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "acceptance",
+                        "charge_ledger",
+                        "delivery",
+                        "final_build_record",
+                        "final_cli_artifact",
+                        "final_runner_artifact",
+                        "final_source_archive",
+                        "final_source_file_list",
+                        "final_worker_artifact",
+                        "manifest",
+                        "native_build_record",
+                        "native_cli_artifact",
+                        "native_runner_artifact",
+                        "native_source_archive",
+                        "native_source_file_list",
+                        "native_worker_artifact",
+                        "prepared",
+                        "stage1_process_metadata",
+                        "stage1_process_sidecar",
+                        "stage1_process_stderr",
+                        "stage1_process_stdout",
+                        "stage1_receipt",
+                        "stage2_input",
+                        "stage2_report",
+                        "stage2_request",
+                        "stage2_seal",
+                        "v3_reservation_acceptance",
+                        "v3_reservation_report",
+                        "v3_source_acceptance",
+                        "v3_source_authenticated_prior_v2_acceptance",
+                        "v3_source_authenticated_v2_report",
+                        "v3_source_confirmation_acceptance",
+                        "v3_source_confirmation_delivery",
+                        "v3_source_confirmation_evidence_file_001",
+                        "v3_source_confirmation_evidence_file_002",
+                        "v3_source_confirmation_evidence_file_003",
+                        "v3_source_confirmation_evidence_file_004",
+                        "v3_source_confirmation_evidence_file_005",
+                        "v3_source_confirmation_evidence_file_006",
+                        "v3_source_confirmation_evidence_file_007",
+                        "v3_source_confirmation_evidence_file_008",
+                        "v3_source_confirmation_evidence_file_009",
+                        "v3_source_confirmation_evidence_file_010",
+                        "v3_source_confirmation_evidence_file_011",
+                        "v3_source_confirmation_evidence_file_012",
+                        "v3_source_confirmation_evidence_file_013",
+                        "v3_source_confirmation_evidence_file_014",
+                        "v3_source_confirmation_evidence_file_015",
+                        "v3_source_confirmation_evidence_file_016",
+                        "v3_source_confirmation_evidence_file_017",
+                        "v3_source_confirmation_evidence_file_018",
+                        "v3_source_confirmation_evidence_file_019",
+                        "v3_source_confirmation_evidence_file_020",
+                        "v3_source_confirmation_evidence_file_021",
+                        "v3_source_confirmation_evidence_file_022",
+                        "v3_source_confirmation_evidence_file_023",
+                        "v3_source_confirmation_evidence_file_024",
+                        "v3_source_confirmation_evidence_file_025",
+                        "v3_source_confirmation_evidence_file_026",
+                        "v3_source_confirmation_evidence_file_027",
+                        "v3_source_confirmation_evidence_file_028",
+                        "v3_source_confirmation_evidence_file_029",
+                        "v3_source_confirmation_evidence_file_030",
+                        "v3_source_confirmation_evidence_file_031",
+                        "v3_source_confirmation_evidence_file_032",
+                        "v3_source_confirmation_evidence_file_033",
+                        "v3_source_confirmation_evidence_file_034",
+                        "v3_source_confirmation_evidence_file_035",
+                        "v3_source_confirmation_evidence_file_036",
+                        "v3_source_confirmation_evidence_file_037",
+                        "v3_source_confirmation_evidence_file_038",
+                        "v3_source_confirmation_evidence_file_039",
+                        "v3_source_confirmation_evidence_file_040",
+                        "v3_source_confirmation_evidence_inventory",
+                        "v3_source_confirmation_manifest",
+                        "v3_source_corrected_534_source_archive",
+                        "v3_source_corrected_534_source_file_list",
+                        "v3_source_final_source_archive",
+                        "v3_source_final_source_file_list",
+                        "v3_source_historical_ledger_01",
+                        "v3_source_historical_ledger_02",
+                        "v3_source_historical_ledger_03",
+                        "v3_source_historical_ledger_04",
+                        "v3_source_historical_ledger_06",
+                        "v3_source_historical_ledger_07",
+                        "v3_source_historical_ledger_08",
+                        "v3_source_historical_ledger_09",
+                        "v3_source_independent_review",
+                        "v3_source_latest_delivery",
+                        "v3_source_manifest_role_build_record",
+                        "v3_source_manifest_role_cli",
+                        "v3_source_manifest_role_identity",
+                        "v3_source_manifest_role_ordinary_config",
+                        "v3_source_manifest_role_runner",
+                        "v3_source_manifest_role_source_archive",
+                        "v3_source_manifest_role_source_file_list",
+                        "v3_source_manifest_role_tournament_config",
+                        "v3_source_manifest_role_window_start",
+                        "v3_source_manifest_role_worker",
+                        "v3_source_native_source_archive",
+                        "v3_source_native_source_file_list",
+                        "v3_source_normal_attempt_observation",
+                        "v3_source_prepared",
+                        "v3_source_previous_v1_failed_reservation_report",
+                        "v3_source_previous_v1_failed_tool_archive",
+                        "v3_source_previous_v1_failed_tool_file_list",
+                        "v3_source_previous_v2_failed_reservation_report",
+                        "v3_source_previous_v2_failed_tool_archive",
+                        "v3_source_previous_v2_failed_tool_file_list",
+                        "v3_source_protected_material_check",
+                        "v3_source_source_archive",
+                        "v3_source_source_file_list",
+                        "v3_source_stage1_input",
+                        "v3_source_stage1_input_seal",
+                        "v3_source_stage1_request",
+                        "v3_source_synthetic_public_report",
+                        "v3_source_tenki_validation_acceptance",
+                        "v3_source_tenki_validation_directory_evidence",
+                        "v3_source_tenki_validation_ledger",
+                        "v3_source_test_log_pytest-files_txt",
+                        "v3_source_test_log_pytest-full-rerun_log",
+                        "v3_source_test_log_pytest-full_log",
+                        "v3_source_v2_audit_535_source_archive",
+                        "v3_source_v2_audit_535_source_file_list",
+                        "v3_source_v2_failure_acceptance",
+                        "v3_source_v2_final_536_source_archive",
+                        "v3_source_v2_final_536_source_file_list",
+                        "v3_source_workspace_identity"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 128,
+                "maxContains": 128
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "acceptance",
+                      "charge_ledger",
+                      "delivery",
+                      "final_build_record",
+                      "final_cli_artifact",
+                      "final_runner_artifact",
+                      "final_source_archive",
+                      "final_source_file_list",
+                      "final_worker_artifact",
+                      "manifest",
+                      "native_build_record",
+                      "native_cli_artifact",
+                      "native_runner_artifact",
+                      "native_source_archive",
+                      "native_source_file_list",
+                      "native_worker_artifact",
+                      "prepared",
+                      "stage1_process_metadata",
+                      "stage1_process_sidecar",
+                      "stage1_process_stderr",
+                      "stage1_process_stdout",
+                      "stage1_receipt",
+                      "stage2_input",
+                      "stage2_report",
+                      "stage2_request",
+                      "stage2_seal",
+                      "v3_reservation_acceptance",
+                      "v3_reservation_report",
+                      "v3_source_acceptance",
+                      "v3_source_authenticated_prior_v2_acceptance",
+                      "v3_source_authenticated_v2_report",
+                      "v3_source_confirmation_acceptance",
+                      "v3_source_confirmation_delivery",
+                      "v3_source_confirmation_evidence_file_001",
+                      "v3_source_confirmation_evidence_file_002",
+                      "v3_source_confirmation_evidence_file_003",
+                      "v3_source_confirmation_evidence_file_004",
+                      "v3_source_confirmation_evidence_file_005",
+                      "v3_source_confirmation_evidence_file_006",
+                      "v3_source_confirmation_evidence_file_007",
+                      "v3_source_confirmation_evidence_file_008",
+                      "v3_source_confirmation_evidence_file_009",
+                      "v3_source_confirmation_evidence_file_010",
+                      "v3_source_confirmation_evidence_file_011",
+                      "v3_source_confirmation_evidence_file_012",
+                      "v3_source_confirmation_evidence_file_013",
+                      "v3_source_confirmation_evidence_file_014",
+                      "v3_source_confirmation_evidence_file_015",
+                      "v3_source_confirmation_evidence_file_016",
+                      "v3_source_confirmation_evidence_file_017",
+                      "v3_source_confirmation_evidence_file_018",
+                      "v3_source_confirmation_evidence_file_019",
+                      "v3_source_confirmation_evidence_file_020",
+                      "v3_source_confirmation_evidence_file_021",
+                      "v3_source_confirmation_evidence_file_022",
+                      "v3_source_confirmation_evidence_file_023",
+                      "v3_source_confirmation_evidence_file_024",
+                      "v3_source_confirmation_evidence_file_025",
+                      "v3_source_confirmation_evidence_file_026",
+                      "v3_source_confirmation_evidence_file_027",
+                      "v3_source_confirmation_evidence_file_028",
+                      "v3_source_confirmation_evidence_file_029",
+                      "v3_source_confirmation_evidence_file_030",
+                      "v3_source_confirmation_evidence_file_031",
+                      "v3_source_confirmation_evidence_file_032",
+                      "v3_source_confirmation_evidence_file_033",
+                      "v3_source_confirmation_evidence_file_034",
+                      "v3_source_confirmation_evidence_file_035",
+                      "v3_source_confirmation_evidence_file_036",
+                      "v3_source_confirmation_evidence_file_037",
+                      "v3_source_confirmation_evidence_file_038",
+                      "v3_source_confirmation_evidence_file_039",
+                      "v3_source_confirmation_evidence_file_040",
+                      "v3_source_confirmation_evidence_inventory",
+                      "v3_source_confirmation_manifest",
+                      "v3_source_corrected_534_source_archive",
+                      "v3_source_corrected_534_source_file_list",
+                      "v3_source_final_source_archive",
+                      "v3_source_final_source_file_list",
+                      "v3_source_historical_ledger_01",
+                      "v3_source_historical_ledger_02",
+                      "v3_source_historical_ledger_03",
+                      "v3_source_historical_ledger_04",
+                      "v3_source_historical_ledger_06",
+                      "v3_source_historical_ledger_07",
+                      "v3_source_historical_ledger_08",
+                      "v3_source_historical_ledger_09",
+                      "v3_source_independent_review",
+                      "v3_source_latest_delivery",
+                      "v3_source_manifest_role_build_record",
+                      "v3_source_manifest_role_cli",
+                      "v3_source_manifest_role_identity",
+                      "v3_source_manifest_role_ordinary_config",
+                      "v3_source_manifest_role_runner",
+                      "v3_source_manifest_role_source_archive",
+                      "v3_source_manifest_role_source_file_list",
+                      "v3_source_manifest_role_tournament_config",
+                      "v3_source_manifest_role_window_start",
+                      "v3_source_manifest_role_worker",
+                      "v3_source_native_source_archive",
+                      "v3_source_native_source_file_list",
+                      "v3_source_normal_attempt_observation",
+                      "v3_source_prepared",
+                      "v3_source_previous_v1_failed_reservation_report",
+                      "v3_source_previous_v1_failed_tool_archive",
+                      "v3_source_previous_v1_failed_tool_file_list",
+                      "v3_source_previous_v2_failed_reservation_report",
+                      "v3_source_previous_v2_failed_tool_archive",
+                      "v3_source_previous_v2_failed_tool_file_list",
+                      "v3_source_protected_material_check",
+                      "v3_source_source_archive",
+                      "v3_source_source_file_list",
+                      "v3_source_stage1_input",
+                      "v3_source_stage1_input_seal",
+                      "v3_source_stage1_request",
+                      "v3_source_synthetic_public_report",
+                      "v3_source_tenki_validation_acceptance",
+                      "v3_source_tenki_validation_directory_evidence",
+                      "v3_source_tenki_validation_ledger",
+                      "v3_source_test_log_pytest-files_txt",
+                      "v3_source_test_log_pytest-full-rerun_log",
+                      "v3_source_test_log_pytest-full_log",
+                      "v3_source_v2_audit_535_source_archive",
+                      "v3_source_v2_audit_535_source_file_list",
+                      "v3_source_v2_failure_acceptance",
+                      "v3_source_v2_final_536_source_archive",
+                      "v3_source_v2_final_536_source_file_list",
+                      "v3_source_workspace_identity"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "failure_checkpoint": {
+                "enum": [
+                  "previous_recovery_v2_failed_source",
+                  "previous_recovery_failed_source",
+                  "v5_delivery_and_archives",
+                  "historical_sources",
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "failure_checkpoint"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "new_build_record",
+                      "new_runner",
+                      "new_source_archive",
+                      "new_source_file_list"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "new_runner_capture_metadata",
+                        "new_runner_stderr",
+                        "new_runner_stdout"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 3,
+                "maxContains": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "new_runner_capture_metadata",
+                      "new_runner_stderr",
+                      "new_runner_stdout"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "scope_ledger_semantics": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "scope_ledger_semantics"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "curry_scope_blob_checkpoints_01",
+                        "curry_scope_blob_checkpoints_02",
+                        "curry_scope_blob_checkpoints_03",
+                        "curry_scope_blob_checkpoints_04",
+                        "curry_scope_blob_events_01",
+                        "curry_scope_blob_results_01"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 6,
+                "maxContains": 6
+              }
+            ]
+          },
+          "source_groups": {
+            "properties": {
+              "curry_scope_blob_roles": {
+                "const": 6
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "scope_ledger_semantics": {
+                    "const": "failed"
+                  }
+                },
+                "required": [
+                  "scope_ledger_semantics"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "curry_scope_blob_checkpoints_01",
+                        "curry_scope_blob_checkpoints_02",
+                        "curry_scope_blob_checkpoints_03",
+                        "curry_scope_blob_checkpoints_04",
+                        "curry_scope_blob_events_01",
+                        "curry_scope_blob_results_01"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 6
+              }
+            ]
+          },
+          "source_groups": {
+            "properties": {
+              "curry_scope_blob_roles": {
+                "minimum": 0,
+                "maximum": 6
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "scope_ledger_semantics": {
+                    "enum": [
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "scope_ledger_semantics"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "curry_scope_blob_checkpoints_01",
+                      "curry_scope_blob_checkpoints_02",
+                      "curry_scope_blob_checkpoints_03",
+                      "curry_scope_blob_checkpoints_04",
+                      "curry_scope_blob_events_01",
+                      "curry_scope_blob_results_01"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          },
+          "source_groups": {
+            "properties": {
+              "curry_scope_blob_roles": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v3_reservation_roles": {
+                "const": 100
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v3_reservation_roles": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "new_build_record",
+                        "new_runner",
+                        "new_source_archive",
+                        "new_source_file_list"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 4,
+                "maxContains": 4,
+                "allOf": [
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_build_record"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_runner"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_source_archive"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_source_file_list"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "failure_checkpoint": {
+                "const": "saved_process_evidence"
+              }
+            },
+            "required": [
+              "failure_checkpoint"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "const": "failed"
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "oneOf": [
+              {
+                "not": {
+                  "contains": {
+                    "properties": {
+                      "role": {
+                        "enum": [
+                          "new_build_record",
+                          "new_runner",
+                          "new_source_archive",
+                          "new_source_file_list"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "role"
+                    ]
+                  }
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "enum": [
+                        "new_build_record",
+                        "new_runner",
+                        "new_source_archive",
+                        "new_source_file_list"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                },
+                "minContains": 4,
+                "maxContains": 4,
+                "allOf": [
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_build_record"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_runner"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_source_archive"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "role": {
+                          "const": "new_source_file_list"
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "failure_checkpoint": {
+                "enum": [
+                  "previous_recovery_v2_failed_source",
+                  "previous_recovery_failed_source",
+                  "v5_delivery_and_archives",
+                  "historical_sources",
+                  "frozen_input_and_parent",
+                  "scope_ledger_semantics",
+                  "input_stability",
+                  "report_publication"
+                ]
+              }
+            },
+            "required": [
+              "failure_checkpoint"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "enum": [
+                      "failed",
+                      "not_run"
+                    ]
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "new_build_record",
+                      "new_runner",
+                      "new_source_archive",
+                      "new_source_file_list"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "failed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "const": "failed"
+                  }
+                },
+                "required": [
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "const": 29
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "const": "not_run"
+                  }
+                },
+                "required": [
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "const": 29
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "const": "failed"
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "minimum": 157,
+                "maximum": 161
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "historical_sources": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "historical_sources"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "frozen_input_and_parent": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "frozen_input_and_parent"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "saved_process_evidence": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "saved_process_evidence"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_groups": {
+            "properties": {
+              "v5_original_audit_roles": {
+                "const": 164
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "scope_ledger_semantics": {
+                "const": "passed"
+              }
+            },
+            "required": [
+              "scope_ledger_semantics"
+            ]
+          }
+        },
+        "required": [
+          "checks"
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "minItems": 187,
+            "maxItems": 187,
+            "prefixItems": [
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_01"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_02"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_03"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_04"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_results_01"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_events_01"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "properties": {
+              "failure_checkpoint": {
+                "const": "scope_ledger_semantics"
+              }
+            },
+            "required": [
+              "failure_checkpoint"
+            ]
+          },
+          {
+            "properties": {
+              "checks": {
+                "properties": {
+                  "scope_ledger_semantics": {
+                    "const": "failed"
+                  }
+                },
+                "required": [
+                  "scope_ledger_semantics"
+                ]
+              }
+            },
+            "required": [
+              "checks"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "minItems": 181,
+            "maxItems": 187,
+            "prefixItems": [
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              true,
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_01"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_02"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_03"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_checkpoints_04"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_results_01"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "const": "curry_scope_blob_events_01"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

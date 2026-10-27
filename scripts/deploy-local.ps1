@@ -6,6 +6,17 @@ $env:http_proxy='http://127.0.0.1:7897'
 $env:https_proxy='http://127.0.0.1:7897'
 $env:all_proxy='socks5://127.0.0.1:7897'
 function Check-Exit {if($LASTEXITCODE -ne 0){throw "Command failed: $LASTEXITCODE"}}
+$packageReadme=[IO.File]::ReadAllText((Join-Path $root 'docs/LOCAL_PACKAGE_README.md'))
+$packageReadmeLinks=@{
+    '(INDEX.md)'='(../../docs/INDEX.md)'
+    '(../TASKS.md)'='(../../TASKS.md)'
+    '(DEPLOYMENT.md)'='(../../docs/DEPLOYMENT.md)'
+    '(TESTING.md)'='(../../docs/TESTING.md)'
+}
+foreach($link in $packageReadmeLinks.Keys){
+    if(([regex]::Matches($packageReadme,[regex]::Escape($link))).Count -ne 1){throw "Package README link missing or duplicated: $link"}
+    $packageReadme=$packageReadme.Replace($link,$packageReadmeLinks[$link])
+}
 if($BuildEngine){& "$PSScriptRoot/build-engine.ps1" -Offline:$Offline; Check-Exit}
 if(!(Test-Path data/runtime/engine/manifest.json)){throw 'Run scripts/build-engine.ps1 first'}
 if($FrozenRuntime){
@@ -33,9 +44,11 @@ Copy-Item knowledge/phantom-v2.json "$dest/knowledge/phantom-v2.json"
 Copy-Item tests/fixtures/break-sword.request.json "$dest/fixtures/break-sword.request.json"
 Copy-Item tests/fixtures/phantom.engine-cases.json "$dest/fixtures/phantom.engine-cases.json"
 Copy-Item tests/fixtures/phantom.fixed-hands.json "$dest/fixtures/phantom.fixed-hands.json"
+[IO.File]::WriteAllText("$dest/README.md",$packageReadme,[Text.UTF8Encoding]::new($false))
 Copy-Item docs/DEPLOYMENT.md "$dest/DEPLOYMENT.md"
 Copy-Item docs/SEMANTIC_PLANNING.md "$dest/SEMANTIC_PLANNING.md"
 Copy-Item docs/TESTING.md "$dest/TESTING.md"
+Copy-Item docs/TESTING_HISTORY.md "$dest/TESTING_HISTORY.md"
 Copy-Item docs/BREAK_SWORD_VERIFICATION.md "$dest/BREAK_SWORD_VERIFICATION.md"
 Copy-Item docs/GOAL_PLANNING.md "$dest/GOAL_PLANNING.md"
 Copy-Item tests/fixtures/goal-*.request.json "$dest/fixtures/"

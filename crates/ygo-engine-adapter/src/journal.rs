@@ -2,7 +2,7 @@
 use crate::*;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
@@ -123,6 +123,13 @@ struct State {
 pub struct CallJournal {
     state: Mutex<State>,
     blobs: PathBuf,
+}
+
+/// Read-only authenticated view of an existing journal. This type deliberately
+/// exposes no accounting or recovery mutation methods.
+pub struct ReadOnlyJournal {
+    journal: CallJournal,
+    recovery_markers: BTreeMap<String, (String, u64)>,
 }
 
 fn fail(code: &str, message: impl ToString) -> WorkerError {
@@ -403,6 +410,148 @@ enum StoredResult {
 }
 
 impl CallJournal {
+    /// Inspect an existing journal without creating directories, appending a
+    /// header, recovering a torn tail, or otherwise changing evidence.
+    pub fn inspect_existing(
+        path: impl AsRef<Path>,
+        scope: &str,
+        context: &str,
+        limit: usize,
+    ) -> Result<Option<ReadOnlyJournal>, WorkerError> {
+        if scope.is_empty() || context.is_empty() || limit == 0 {
+            return Err(fail(
+                "journal_contract",
+                "scope, context and positive limit required",
+            ));
+        }
+        let path = path.as_ref();
+        let mut options = OpenOptions::new();
+        options.read(true);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            // Allow concurrent readers, while denying a writer or deletion for
+            // the lifetime of the returned view.
+            options.share_mode(1);
+        }
+        let mut file = match options.open(path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(io_fail(error)),
+        };
+        #[cfg(unix)]
+        {
+            use std::os::fd::AsRawFd;
+            extern "C" {
+                fn flock(fd: i32, operation: i32) -> i32;
+            }
+            // LOCK_SH | LOCK_NB: inspectors may coexist, writers may not.
+            if unsafe { flock(file.as_raw_fd(), 1 | 4) } != 0 {
+                return Err(io_fail(std::io::Error::last_os_error()));
+            }
+        }
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).map_err(io_fail)?;
+        if bytes.is_empty() || bytes.last() != Some(&b'\n') {
+            return Err(fail(
+                "journal_readonly_incomplete",
+                "empty or truncated journal cannot be inspected",
+            ));
+        }
+        let mut state = State {
+            file,
+            sequence: 0,
+            last_hash: String::new(),
+            calls: BTreeMap::new(),
+            reserved: BTreeMap::new(),
+            limit,
+            faulted: false,
+            recoveries: Vec::new(),
+            checkpoints: BTreeMap::new(),
+            checkpoint_budgets: BTreeMap::new(),
+            checkpoint_reservations: BTreeMap::new(),
+        };
+        let lines = bytes[..bytes.len() - 1]
+            .split(|byte| *byte == b'\n')
+            .collect::<Vec<_>>();
+        if lines.iter().any(|line| line.is_empty()) {
+            return Err(fail(
+                "journal_readonly_incomplete",
+                "blank journal record cannot be inspected",
+            ));
+        }
+        let mut recovery_markers = BTreeMap::new();
+        let mut byte_offset = 0usize;
+        for line in lines {
+            let record: Record = serde_json::from_slice(line).map_err(io_fail)?;
+            if record.sequence != state.sequence
+                || record.previous != state.last_hash
+                || record.hash != record_hash(record.sequence, &record.previous, &record.entry)?
+            {
+                return Err(fail(
+                    "journal_hash",
+                    "journal sequence or hash chain mismatch",
+                ));
+            }
+            if state.sequence == 0 {
+                match &record.entry {
+                    Entry::Header {
+                        version: 1,
+                        scope: found_scope,
+                        context: found_context,
+                        limit: found_limit,
+                    } if found_scope == scope
+                        && found_context == context
+                        && *found_limit == limit => {}
+                    _ => {
+                        return Err(fail(
+                            "journal_context",
+                            "scope, context, version or budget changed",
+                        ))
+                    }
+                }
+            }
+            if let Entry::Recovery { evidence } = &record.entry {
+                if recovery_markers
+                    .insert(
+                        evidence.tail_hash.clone(),
+                        (record.previous.clone(), byte_offset as u64),
+                    )
+                    .is_some()
+                {
+                    return Err(fail(
+                        "journal_contract",
+                        "duplicate recovery marker binding",
+                    ));
+                }
+            }
+            state.check(&record.entry)?;
+            state.apply(record.entry);
+            state.sequence += 1;
+            state.last_hash = record.hash;
+            byte_offset += line.len() + 1;
+        }
+        if state.sequence == 0 {
+            return Err(fail(
+                "journal_readonly_incomplete",
+                "journal header missing",
+            ));
+        }
+
+        let mut name = path.as_os_str().to_owned();
+        name.push(".blobs");
+        let journal = CallJournal {
+            state: Mutex::new(state),
+            blobs: PathBuf::from(name),
+        };
+        journal.verify()?;
+        journal.verify_recovery_markers(&recovery_markers)?;
+        Ok(Some(ReadOnlyJournal {
+            journal,
+            recovery_markers,
+        }))
+    }
+
     pub fn open(
         path: impl AsRef<Path>,
         scope: &str,
@@ -664,6 +813,21 @@ impl CallJournal {
         }
         Ok(self.lock()?.checkpoint_budgets.get(name).cloned())
     }
+    /// Charged request-purpose-result identity at an immutable checkpoint.
+    /// This stays stable when later calls extend the same journal.
+    pub fn checkpoint_charged_sequence_id(
+        &self,
+        name: &str,
+    ) -> Result<Option<String>, WorkerError> {
+        if self.checkpoint(name)?.is_none() {
+            return Ok(None);
+        }
+        Ok(self
+            .lock()?
+            .checkpoints
+            .get(name)
+            .map(|(_, _, sequence)| sequence.clone()))
+    }
     /// A safe resume must preserve reservation ownership as well as totals.
     /// Both are reconstructed from journal entries, not the checkpoint payload.
     pub fn matches_checkpoint_state(&self, name: &str) -> Result<bool, WorkerError> {
@@ -862,10 +1026,112 @@ impl CallJournal {
         }
         Ok(())
     }
+
+    fn verify_recovery_markers(
+        &self,
+        expected_markers: &BTreeMap<String, (String, u64)>,
+    ) -> Result<(), WorkerError> {
+        let recovery_dir = self.blobs.join("recoveries");
+        let mut recorded = self
+            .lock()?
+            .recoveries
+            .iter()
+            .map(|recovery| recovery.tail_hash.clone())
+            .collect::<BTreeSet<_>>();
+        if !recovery_dir.exists() {
+            if recorded.is_empty() {
+                return Ok(());
+            }
+            return Err(fail("journal_blob_hash", "recovery evidence is missing"));
+        }
+        for item in fs::read_dir(&recovery_dir).map_err(io_fail)? {
+            let item = item.map_err(io_fail)?;
+            let file_type = item.file_type().map_err(io_fail)?;
+            if !file_type.is_file() {
+                return Err(fail(
+                    "journal_contract",
+                    "unexpected recovery evidence entry",
+                ));
+            }
+            let filename = item.file_name().to_string_lossy().into_owned();
+            let marker_hash = filename
+                .strip_suffix(".json")
+                .ok_or_else(|| fail("journal_contract", "unexpected recovery evidence name"))?;
+            let bytes = fs::read(item.path()).map_err(io_fail)?;
+            if digest(&bytes) != marker_hash {
+                return Err(fail(
+                    "journal_blob_hash",
+                    "recovery marker content address mismatch",
+                ));
+            }
+            let marker: RecoveryMarker = serde_json::from_slice(&bytes).map_err(io_fail)?;
+            if expected_markers.get(&marker.tail_hash)
+                != Some(&(marker.prefix_hash.clone(), marker.valid_length))
+            {
+                return Err(fail(
+                    "journal_recovery_binding",
+                    "recovery marker prefix or length differs from its journal record",
+                ));
+            }
+            self.blob("events", &marker.tail_hash)?;
+            if !recorded.remove(&marker.tail_hash) {
+                return Err(fail(
+                    "journal_pending_recovery",
+                    "pending recovery marker requires writable recovery",
+                ));
+            }
+        }
+        if !recorded.is_empty() {
+            return Err(fail("journal_blob_hash", "recovery marker is missing"));
+        }
+        Ok(())
+    }
     /// Stable charged-call sequence; excludes machine diagnostics and storage layout.
     pub fn charged_sequence_id(&self) -> Result<String, WorkerError> {
         let state = self.lock()?;
         state.sequence_id(state.calls.len())
+    }
+}
+
+impl ReadOnlyJournal {
+    pub fn stats(&self) -> Result<LedgerStats, WorkerError> {
+        self.journal.stats()
+    }
+
+    pub fn checkpoint(&self, name: &str) -> Result<Option<serde_json::Value>, WorkerError> {
+        self.journal.checkpoint(name)
+    }
+
+    pub fn checkpoint_consumed(&self, name: &str) -> Result<Option<usize>, WorkerError> {
+        self.journal.checkpoint_consumed(name)
+    }
+
+    pub fn checkpoint_budget(&self, name: &str) -> Result<Option<LedgerStats>, WorkerError> {
+        self.journal.checkpoint_budget(name)
+    }
+
+    pub fn checkpoint_charged_sequence_id(
+        &self,
+        name: &str,
+    ) -> Result<Option<String>, WorkerError> {
+        self.journal.checkpoint_charged_sequence_id(name)
+    }
+
+    pub fn charged_sequence_id(&self) -> Result<String, WorkerError> {
+        self.journal.charged_sequence_id()
+    }
+
+    pub fn load_outcome(
+        &self,
+        call_id: u64,
+        request: &RunDuelRequest,
+    ) -> Result<Option<Result<DuelResult, WorkerError>>, WorkerError> {
+        self.journal.load_outcome(call_id, request)
+    }
+
+    pub fn verify(&self) -> Result<(), WorkerError> {
+        self.journal.verify()?;
+        self.journal.verify_recovery_markers(&self.recovery_markers)
     }
 }
 

@@ -27,6 +27,45 @@ fn json(v: &serde_json::Value) -> Result<(), String> {
     );
     Ok(())
 }
+fn identity_destination(path: &Path) -> Result<PathBuf, String> {
+    let mut ancestor = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|_| "identity cwd unavailable")?
+            .join(path)
+    };
+    let mut tail = Vec::new();
+    while !ancestor.exists() {
+        tail.push(
+            ancestor
+                .file_name()
+                .ok_or("invalid identity asset path")?
+                .to_os_string(),
+        );
+        if !ancestor.pop() {
+            return Err("identity asset parent unavailable".into());
+        }
+    }
+    let mut resolved = ancestor
+        .canonicalize()
+        .map_err(|_| "identity path unavailable")?;
+    for part in tail.into_iter().rev() {
+        resolved.push(part);
+    }
+    Ok(resolved)
+}
+fn identity_path_key(path: PathBuf) -> PathBuf {
+    // Protect missing assets on the default case-insensitive Windows filesystem.
+    #[cfg(windows)]
+    {
+        PathBuf::from(path.to_string_lossy().to_lowercase())
+    }
+    #[cfg(not(windows))]
+    {
+        path
+    }
+}
 fn scoring(opts: &BTreeMap<String, String>) -> Result<ScoringConfig, String> {
     let path = opts
         .get("--scoring")
@@ -163,6 +202,7 @@ fn execute(args: &[String]) -> Result<(), String> {
         }
         Command::ComboReplay => vec!["--input", "--store"],
         Command::EngineDoctor => vec![],
+        Command::EngineIdentity => vec!["--config", "--output"],
         _ => return Err("command not supported in Combo MVP".into()),
     };
     for flag in opts.keys() {
@@ -475,6 +515,54 @@ fn execute(args: &[String]) -> Result<(), String> {
             )
             .map_err(|e| e.to_string())?;
             json(&ygo_api::planning::replay(&r, engine()?, &store)?)?;
+        }
+        Command::EngineIdentity => {
+            let text = fs::read_to_string(need(&opts, "--config")?)
+                .map_err(|_| "identity config unreadable")?;
+            let config =
+                ProcessEngineConfig::from_toml(&text).map_err(|_| "invalid identity config")?;
+            if let Some(path) = opts.get("--output") {
+                let path = Path::new(path);
+                if path.exists() || path.symlink_metadata().is_ok() {
+                    return Err("identity output already exists".into());
+                }
+                let parent = path
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .unwrap_or_else(|| Path::new("."));
+                let resolved = parent
+                    .canonicalize()
+                    .map_err(|_| "identity output parent unavailable")?
+                    .join(path.file_name().ok_or("invalid identity output")?);
+                let resolved = identity_path_key(resolved);
+                for asset in [
+                    &config.worker_path,
+                    &config.ocgcore_path,
+                    &config.catalog_path,
+                    &config.script_manifest_path,
+                    &config.engine_manifest_path,
+                ] {
+                    if resolved == identity_path_key(identity_destination(asset)?) {
+                        return Err("identity output must not populate runtime assets".into());
+                    }
+                }
+                if resolved.starts_with(identity_path_key(identity_destination(
+                    &config.scripts_path,
+                )?)) {
+                    return Err("identity output must not modify script assets".into());
+                }
+                let bytes = serde_json::to_vec_pretty(&capture_engine_identity(&config)?)
+                    .map_err(|_| "identity serialization failed")?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(path)
+                    .map_err(|_| "identity output cannot be created exclusively")?;
+                std::io::Write::write_all(&mut file, &bytes)
+                    .map_err(|_| "identity output write failed")?;
+            } else {
+                json(&capture_engine_identity(&config)?)?;
+            }
         }
         Command::EngineDoctor => {
             let r = ProcessEngineAdapter::new(engine()?).doctor();

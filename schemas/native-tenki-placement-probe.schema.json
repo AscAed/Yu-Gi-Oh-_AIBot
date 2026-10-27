@@ -1,0 +1,425 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/native-tenki-placement-probe.schema.json",
+  "title": "Tenki placement and opcode 13 native probe v1",
+  "oneOf": [
+    { "$ref": "#/$defs/manifest" },
+    { "$ref": "#/$defs/stage" },
+    { "$ref": "#/$defs/summary" },
+    { "$ref": "#/$defs/prepared" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "qualificationFlags": {
+      "type": "object",
+      "properties": {
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": ["proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"],
+      "additionalProperties": false
+    },
+    "ledger": {
+      "type": "object",
+      "properties": {
+        "consumed": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "completed": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "unknown": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "reserved": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "abandoned": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "limit": { "const": 6 }
+      },
+      "required": ["consumed", "completed", "unknown", "reserved", "abandoned", "limit"],
+      "additionalProperties": false
+    },
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": 1 },
+        "kind": { "const": "native_tenki_placement_manifest" },
+        "scope": { "const": "tenki-placement-probe-v1" },
+        "context": { "$ref": "#/$defs/sha256" },
+        "limit": { "const": 6 },
+        "planned_calls": { "const": 6 },
+        "wall_seconds": { "const": 7200 },
+        "started_at": { "type": "integer", "minimum": 0 },
+        "old_consumed": { "const": 26 },
+        "baseline_acceptance_sha256": { "$ref": "#/$defs/sha256" },
+        "source_identity": { "$ref": "#/$defs/sha256" },
+        "build_identity": { "$ref": "#/$defs/sha256" },
+        "identity_sha256": { "$ref": "#/$defs/sha256" },
+        "runner_sha256": { "$ref": "#/$defs/sha256" },
+        "worker_sha256": { "$ref": "#/$defs/sha256" },
+        "old_stage1_sha256": { "$ref": "#/$defs/sha256" },
+        "old_stage2_request_sha256": { "$ref": "#/$defs/sha256" },
+        "old_stage2_sha256": { "$ref": "#/$defs/sha256" },
+        "old_runner_sha256": { "$ref": "#/$defs/sha256" },
+        "historical_ledgers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "minLength": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "consumed": { "type": "integer", "minimum": 0 },
+              "unknown": { "const": 0 }
+            },
+            "required": ["role", "sha256", "consumed", "unknown"],
+            "additionalProperties": false
+          },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "baseline_audit_sha256": { "$ref": "#/$defs/sha256" },
+        "preparation_sha256": { "$ref": "#/$defs/sha256" },
+        "frozen_cases_sha256": { "$ref": "#/$defs/sha256" },
+        "input_sha256": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/sha256" },
+          "minProperties": 6
+        },
+        "static_source_sha256": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/sha256" },
+          "minProperties": 4
+        },
+        "source_archive": {
+          "type": "object",
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "file_list_sha256": { "$ref": "#/$defs/sha256" },
+            "file_count": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["sha256", "file_list_sha256", "file_count"],
+          "additionalProperties": false
+        },
+        "stage1_request_sha256": { "$ref": "#/$defs/sha256" },
+        "assets": {
+          "type": "object",
+          "properties": {
+            "ordinary": { "$ref": "#/$defs/sha256" },
+            "tournament": { "$ref": "#/$defs/sha256" },
+            "execution_role": { "const": "ordinary" }
+          },
+          "required": ["ordinary", "tournament", "execution_role"],
+          "additionalProperties": false
+        },
+        "request_derivation": {
+          "const": {
+            "1": "verified-old-stage1-activation-request-only-worker-path-replaced",
+            "2": "stage1-coordinate-player0-location8-sequence0",
+            "3": "stage2-opcode13-false",
+            "4": "exact-stage3-request-replay",
+            "5": "stage2-opcode13-true-stop-at-opcode15",
+            "6": "exact-stage5-request-replay"
+          }
+        },
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": ["schema_version", "kind", "scope", "context", "limit", "planned_calls", "wall_seconds", "started_at", "old_consumed", "baseline_acceptance_sha256", "source_identity", "build_identity", "identity_sha256", "runner_sha256", "worker_sha256", "old_stage1_sha256", "old_stage2_request_sha256", "old_stage2_sha256", "old_runner_sha256", "historical_ledgers", "baseline_audit_sha256", "preparation_sha256", "frozen_cases_sha256", "input_sha256", "static_source_sha256", "source_archive", "stage1_request_sha256", "assets", "request_derivation", "proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"],
+      "additionalProperties": false
+    },
+    "stage": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": 1 },
+        "kind": { "const": "native_tenki_placement_stage" },
+        "scope": { "const": "tenki-placement-probe-v1" },
+        "context": { "$ref": "#/$defs/sha256" },
+        "stage": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "request": { "type": "object", "properties": { "decisions": { "type": "array" } }, "required": ["decisions"] },
+        "result": {
+          "type": "object",
+      "properties": {
+            "Ok": {
+              "type": "object",
+              "properties": {
+                "protocol_version": { "type": "integer" },
+                "status": { "enum": ["engine_verified", "decision_required", "partial", "failed", "probe_passed"] },
+                "events": { "type": "array", "items": { "type": "object" } },
+                "prompt": { "type": ["object", "null"] },
+                "checkpoint": { "type": "object" },
+                "error": { "type": ["object", "null"] },
+                "versions": { "type": "object" },
+                "loaded_scripts": { "type": "object" },
+                "steps": { "type": "array" },
+                "resolved_decisions": { "type": "array" },
+                "coverage_gaps": { "type": "array" }
+              },
+              "required": ["protocol_version", "status", "events", "prompt", "checkpoint", "error", "versions", "loaded_scripts", "steps", "resolved_decisions", "coverage_gaps"]
+            },
+            "Err": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string", "minLength": 1 },
+                "stage": { "type": "string", "minLength": 1 },
+                "message": { "type": "string", "minLength": 1 }
+              },
+              "required": ["code", "stage", "message"],
+              "additionalProperties": false
+            }
+          },
+          "oneOf": [
+            { "required": ["Ok"] },
+            { "required": ["Err"] }
+          ],
+          "additionalProperties": false
+        },
+        "validation": {
+          "type": "object",
+          "properties": {
+            "Ok": {
+              "type": "object",
+              "properties": {
+                "pending_opcode": { "type": "integer", "minimum": 0, "maximum": 255 },
+                "raw_prompt_count": { "type": "integer", "minimum": 1 },
+                "response_oracle_matches": { "const": true },
+                "expected_target_matches": { "const": true },
+                "automatic_decisions_single_legal": { "const": true },
+                "stage": { "type": "integer", "minimum": 1, "maximum": 6 },
+                "complete_action_coverage": { "const": false },
+                "global_optimality": { "const": false }
+              },
+              "required": ["pending_opcode", "raw_prompt_count", "response_oracle_matches", "expected_target_matches", "automatic_decisions_single_legal", "stage", "complete_action_coverage", "global_optimality"]
+            },
+            "Err": { "type": "string", "minLength": 1 }
+          },
+          "oneOf": [
+            { "required": ["Ok"] },
+            { "required": ["Err"] }
+          ],
+          "additionalProperties": false
+        },
+        "assets_before": { "type": "object", "properties": { "identity": { "$ref": "#/$defs/sha256" } }, "required": ["identity"] },
+        "assets_after": { "oneOf": [{ "type": "object", "properties": { "identity": { "$ref": "#/$defs/sha256" } }, "required": ["identity"] }, { "type": "null" }] },
+        "assets_unchanged": { "type": "boolean" },
+        "independent_replay_matches": { "type": ["boolean", "null"] },
+        "ledger": { "$ref": "#/$defs/ledger" },
+        "charged_sequence_id": { "$ref": "#/$defs/sha256" },
+        "started_at": { "type": "integer", "minimum": 0 },
+        "window_valid_at_result": { "type": "boolean" },
+        "successful": { "type": "boolean" },
+        "diagnostic": { "type": ["string", "null"] },
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": ["schema_version", "kind", "scope", "context", "stage", "request", "result", "validation", "assets_before", "assets_after", "assets_unchanged", "independent_replay_matches", "ledger", "charged_sequence_id", "started_at", "window_valid_at_result", "successful", "diagnostic", "proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 1
+              }
+            },
+            "required": [
+              "stage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 18
+                      },
+                      "stage": {
+                        "const": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 2
+              }
+            },
+            "required": [
+              "stage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 13
+                      },
+                      "stage": {
+                        "const": 2
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "enum": [
+                  3,
+                  4
+                ]
+              }
+            },
+            "required": [
+              "stage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 11
+                      },
+                      "stage": {
+                        "enum": [
+                          3,
+                          4
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "enum": [
+                  5,
+                  6
+                ]
+              }
+            },
+            "required": [
+              "stage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 15
+                      },
+                      "stage": {
+                        "enum": [
+                          5,
+                          6
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        { "if": { "properties": { "stage": { "enum": [1, 2] } }, "required": ["stage"] }, "then": { "properties": { "independent_replay_matches": { "const": null } } } },
+        { "if": { "properties": { "stage": { "enum": [4, 6] } }, "required": ["stage"] }, "then": { "properties": { "independent_replay_matches": { "type": "boolean" } } } },
+        { "if": { "properties": { "stage": { "enum": [3, 5] } }, "required": ["stage"] }, "then": { "properties": { "independent_replay_matches": { "const": null } } } },
+        { "if": { "properties": { "stage": { "const": 1 } }, "required": ["stage"] }, "then": { "properties": { "ledger": { "properties": { "consumed": { "const": 1 }, "completed": { "const": 1 } } } } } },
+        { "if": { "properties": { "stage": { "const": 2 } }, "required": ["stage"] }, "then": { "properties": { "ledger": { "properties": { "consumed": { "const": 2 }, "completed": { "const": 2 } } } } } },
+        { "if": { "properties": { "stage": { "const": 3 } }, "required": ["stage"] }, "then": { "properties": { "ledger": { "properties": { "consumed": { "const": 3 }, "completed": { "const": 3 } } } } } },
+        { "if": { "properties": { "stage": { "const": 4 } }, "required": ["stage"] }, "then": { "properties": { "ledger": { "properties": { "consumed": { "const": 4 }, "completed": { "const": 4 } } } } } },
+        { "if": { "properties": { "stage": { "const": 5 } }, "required": ["stage"] }, "then": { "properties": { "ledger": { "properties": { "consumed": { "const": 5 }, "completed": { "const": 5 } } } } } },
+        { "if": { "properties": { "stage": { "const": 6 } }, "required": ["stage"] }, "then": { "properties": { "ledger": { "properties": { "consumed": { "const": 6 }, "completed": { "const": 6 } } } } } },
+        { "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] }, "then": { "properties": { "result": { "required": ["Ok"], "properties": { "Ok": { "properties": { "status": { "const": "decision_required" }, "error": { "type": "null" }, "coverage_gaps": { "maxItems": 0 } }, "required": ["status", "error", "coverage_gaps", "prompt"] } } }, "validation": { "required": ["Ok"] }, "assets_unchanged": { "const": true }, "assets_after": { "type": "object" }, "window_valid_at_result": { "const": true }, "diagnostic": { "const": null }, "ledger": { "properties": { "unknown": { "const": 0 }, "reserved": { "const": 0 }, "abandoned": { "const": 0 } } } } } },
+        { "if": { "properties": { "stage": { "enum": [4, 6] }, "successful": { "const": true } }, "required": ["stage", "successful"] }, "then": { "properties": { "independent_replay_matches": { "const": true } } } },
+        { "if": { "properties": { "successful": { "const": false } }, "required": ["successful"] }, "then": { "properties": { "diagnostic": { "type": "string", "minLength": 1 } } } }
+      ],
+      "additionalProperties": false
+    },
+    "stageSummary": {
+      "type": "object",
+      "properties": {
+        "stage": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "successful": { "type": "boolean" },
+        "receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "independent_replay_matches": { "type": ["boolean", "null"] }
+      },
+      "required": ["stage", "successful", "receipt_sha256", "independent_replay_matches"],
+      "allOf": [
+        { "if": { "properties": { "stage": { "enum": [1, 2, 3, 5] } }, "required": ["stage"] }, "then": { "properties": { "independent_replay_matches": { "const": null } } } },
+        { "if": { "properties": { "stage": { "enum": [4, 6] }, "successful": { "const": true } }, "required": ["stage", "successful"] }, "then": { "properties": { "independent_replay_matches": { "const": true } } } },
+        { "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] }, "then": { "properties": { "receipt_sha256": { "$ref": "#/$defs/sha256" } } } }
+      ],
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": 1 },
+        "kind": { "const": "native_tenki_placement_summary" },
+        "scope": { "const": "tenki-placement-probe-v1" },
+        "context": { "$ref": "#/$defs/sha256" },
+        "successful": { "type": "boolean" },
+        "diagnostic": { "type": ["string", "null"] },
+        "old_consumed": { "const": 26 },
+        "new_consumed": { "type": ["integer", "null"], "minimum": 0, "maximum": 6 },
+        "cumulative_consumed": { "type": ["integer", "null"], "minimum": 26, "maximum": 32 },
+        "ledger": { "oneOf": [{ "$ref": "#/$defs/ledger" }, { "type": "null" }] },
+        "stages": { "type": "array", "items": { "$ref": "#/$defs/stageSummary" }, "maxItems": 6 },
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": ["schema_version", "kind", "scope", "context", "successful", "diagnostic", "old_consumed", "new_consumed", "cumulative_consumed", "ledger", "stages", "proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"],
+      "allOf": [
+        { "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] }, "then": { "properties": { "diagnostic": { "const": null }, "new_consumed": { "const": 6 }, "cumulative_consumed": { "const": 32 }, "ledger": { "properties": { "limit": { "const": 6 }, "consumed": { "const": 6 }, "completed": { "const": 6 }, "unknown": { "const": 0 }, "reserved": { "const": 0 }, "abandoned": { "const": 0 } } }, "stages": { "minItems": 6, "maxItems": 6, "prefixItems": [ { "properties": { "stage": { "const": 1 }, "successful": { "const": true }, "independent_replay_matches": { "const": null } } }, { "properties": { "stage": { "const": 2 }, "successful": { "const": true }, "independent_replay_matches": { "const": null } } }, { "properties": { "stage": { "const": 3 }, "successful": { "const": true }, "independent_replay_matches": { "const": null } } }, { "properties": { "stage": { "const": 4 }, "successful": { "const": true }, "independent_replay_matches": { "const": true } } }, { "properties": { "stage": { "const": 5 }, "successful": { "const": true }, "independent_replay_matches": { "const": null } } }, { "properties": { "stage": { "const": 6 }, "successful": { "const": true }, "independent_replay_matches": { "const": true } } } ] } } } },
+        { "if": { "properties": { "ledger": { "type": "null" } }, "required": ["ledger"] }, "then": { "properties": { "new_consumed": { "const": null }, "cumulative_consumed": { "const": null } } } }
+      ],
+      "additionalProperties": false
+    },
+    "prepared": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": 1 },
+        "kind": { "const": "native_tenki_placement_prepared" },
+        "scope": { "const": "tenki-placement-probe-v1" },
+        "context": { "$ref": "#/$defs/sha256" },
+        "prepared": { "const": true },
+        "native_calls": { "const": 0 },
+        "planned_calls": { "const": 6 },
+        "first_stage_request_sha256": { "$ref": "#/$defs/sha256" },
+        "old_receipts_verified_zero_call": { "const": true },
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": ["schema_version", "kind", "scope", "context", "prepared", "native_calls", "planned_calls", "first_stage_request_sha256", "old_receipts_verified_zero_call", "proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,614 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "native-curry-option-validation.schema.json",
+  "title": "Mooyan Curry option validation evidence v1",
+  "description": "Independent fixed-scope evidence for the seven-stage Mooyan Curry option validation experiment.",
+  "oneOf": [
+    { "$ref": "#/$defs/manifest" },
+    { "$ref": "#/$defs/prepared" },
+    { "$ref": "#/$defs/stage" },
+    { "$ref": "#/$defs/stage_report" },
+    { "$ref": "#/$defs/summary" },
+    { "$ref": "#/$defs/verification" }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "flags": {
+      "type": "object",
+      "properties": {
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": [
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ]
+    },
+    "common": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": { "type": "integer", "const": 1 },
+            "scope": { "const": "curry-option-validation-v1" },
+            "context": { "$ref": "#/$defs/hash" }
+          },
+          "required": ["schema_version", "scope", "context"]
+        },
+        { "$ref": "#/$defs/flags" }
+      ]
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "consumed": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "completed": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "unknown": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "reserved": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "abandoned": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "limit": { "const": 7 }
+      },
+      "required": ["consumed", "completed", "unknown", "reserved", "abandoned", "limit"],
+      "additionalProperties": false
+    },
+    "stage_summary": {
+      "type": "object",
+      "properties": {
+        "stage": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "successful": { "type": "boolean" },
+        "native_calls": { "type": ["integer", "null"], "minimum": 0, "maximum": 1 },
+        "diagnostic": { "type": ["string", "null"] },
+        "receipt_sha256": {
+          "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }]
+        },
+        "diagnostic_sha256": { "$ref": "#/$defs/hash" },
+        "independent_replay_matches": { "type": ["boolean", "null"] },
+        "ledger": {
+          "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }]
+        }
+      },
+      "required": [
+        "stage", "successful", "native_calls", "diagnostic", "receipt_sha256",
+        "diagnostic_sha256", "independent_replay_matches", "ledger"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "stage": { "enum": [5, 7] } }, "required": ["stage"] },
+          "then": {
+            "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+            "then": { "properties": { "independent_replay_matches": { "const": true } } }
+          },
+          "else": { "properties": { "independent_replay_matches": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+          "then": {
+            "properties": {
+              "native_calls": { "const": 1 },
+              "diagnostic": { "type": "null" },
+              "receipt_sha256": { "$ref": "#/$defs/hash" }
+            }
+          }
+        }
+      ]
+    },
+    "stage_summary_1": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 1 } } }] },
+    "stage_summary_2": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 2 } } }] },
+    "stage_summary_3": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 3 } } }] },
+    "stage_summary_4": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 4 } } }] },
+    "stage_summary_5": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 5 } } }] },
+    "stage_summary_6": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 6 } } }] },
+    "stage_summary_7": { "allOf": [{ "$ref": "#/$defs/stage_summary" }, { "properties": { "stage": { "const": 7 } } }] },
+    "success_stage_base": {
+      "allOf": [
+        { "$ref": "#/$defs/stage_summary" },
+        {
+          "properties": {
+            "successful": { "const": true },
+            "native_calls": { "const": 1 },
+            "diagnostic": { "type": "null" },
+            "receipt_sha256": { "$ref": "#/$defs/hash" }
+          }
+        }
+      ]
+    },
+    "success_stage_1": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 1 }, "independent_replay_matches": { "type": "null" }, "ledger": { "const": { "consumed": 1, "completed": 1, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stage_2": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 2 }, "independent_replay_matches": { "type": "null" }, "ledger": { "const": { "consumed": 2, "completed": 2, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stage_3": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 3 }, "independent_replay_matches": { "type": "null" }, "ledger": { "const": { "consumed": 3, "completed": 3, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stage_4": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 4 }, "independent_replay_matches": { "type": "null" }, "ledger": { "const": { "consumed": 4, "completed": 4, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stage_5": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 5 }, "independent_replay_matches": { "const": true }, "ledger": { "const": { "consumed": 5, "completed": 5, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stage_6": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 6 }, "independent_replay_matches": { "type": "null" }, "ledger": { "const": { "consumed": 6, "completed": 6, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stage_7": { "allOf": [{ "$ref": "#/$defs/success_stage_base" }, { "properties": { "stage": { "const": 7 }, "independent_replay_matches": { "const": true }, "ledger": { "const": { "consumed": 7, "completed": 7, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } } } }] },
+    "success_stages": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        { "$ref": "#/$defs/success_stage_1" },
+        { "$ref": "#/$defs/success_stage_2" },
+        { "$ref": "#/$defs/success_stage_3" },
+        { "$ref": "#/$defs/success_stage_4" },
+        { "$ref": "#/$defs/success_stage_5" },
+        { "$ref": "#/$defs/success_stage_6" },
+        { "$ref": "#/$defs/success_stage_7" },
+        false
+      ],
+      "items": false
+    },
+    "stage_prefix": {
+      "type": "array",
+      "maxItems": 7,
+      "prefixItems": [
+        { "$ref": "#/$defs/stage_summary_1" },
+        { "$ref": "#/$defs/stage_summary_2" },
+        { "$ref": "#/$defs/stage_summary_3" },
+        { "$ref": "#/$defs/stage_summary_4" },
+        { "$ref": "#/$defs/stage_summary_5" },
+        { "$ref": "#/$defs/stage_summary_6" },
+        { "$ref": "#/$defs/stage_summary_7" },
+        false
+      ],
+      "items": false
+    },
+    "manifest": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "native_curry_option_validation_manifest" },
+            "batch_kind": { "const": "curry-option-validation-v1" },
+            "started_at": { "type": "integer", "minimum": 0 },
+            "limit": { "const": 7 },
+            "planned_calls": { "const": 7 },
+            "wall_seconds": { "const": 7200 },
+            "old_consumed": { "const": 32 },
+            "baseline_acceptance_sha256": { "const": "242e0f5e1839f132d5b091963ba9917691536ae0913e7beeca6fc62635d7f4f9" },
+            "baseline_delivery_sha256": { "const": "7c46a4a790c56dea2daf77478c5a33654ee20bb3bd3179bdfb57ebf74cc21061" },
+            "input_sha256": {
+              "type": "object",
+              "properties": {
+                "preparation": { "const": "235d218426e9a14fdc000ca2e81a64b00cac394f247d0c53029dc1c2e4c2b022" },
+                "preparation_report": { "const": "22536f6031adc88eae4bb7e2ada4f9ff374a2d227e66927e084180552e12b073" },
+                "preparation_acceptance": { "const": "0e88c82501c4bbc229d6326b6b789411a93426f9474a02cd0e83e2c6cacbfcf7" },
+                "candidate_case": { "const": "71aa1e51edf74b3b4b572d61cbdaf7b25414ebc6fba745c72b1e82fe18e5a23c" },
+                "base_request": { "const": "d25d2e79a58728221111d9007f5890b3e99be2bdcf4a8aee1a17554d59da91bb" },
+                "operations_source": { "const": "b46cf0d53825cb662af319a7382015b555422aa11903067445c994c4b0c8a990" },
+                "adapter_codec": { "const": "68cf8de986c331060f72d95a56acc68ecec34d916230f5302d33210b254ca42d" },
+                "runner": { "$ref": "#/$defs/hash" },
+                "worker": { "$ref": "#/$defs/hash" },
+                "cli": { "$ref": "#/$defs/hash" },
+                "build_record": { "$ref": "#/$defs/hash" },
+                "identity": { "$ref": "#/$defs/hash" },
+                "window_start": { "$ref": "#/$defs/hash" },
+                "source_archive": { "$ref": "#/$defs/hash" },
+                "source_file_list": { "$ref": "#/$defs/hash" },
+                "ordinary_config": { "$ref": "#/$defs/hash" },
+                "tournament_config": { "$ref": "#/$defs/hash" },
+                "banlist": { "$ref": "#/$defs/hash" },
+                "core_source": { "$ref": "#/$defs/hash" },
+                "baseline_delivery": { "$ref": "#/$defs/hash" }
+              },
+              "required": [
+                "preparation", "preparation_report", "preparation_acceptance", "candidate_case",
+                "base_request", "operations_source", "adapter_codec", "runner", "worker", "cli", "build_record",
+                "identity", "window_start", "source_archive", "source_file_list", "ordinary_config",
+                "tournament_config", "banlist", "core_source", "baseline_delivery"
+              ],
+              "additionalProperties": false
+            },
+            "source": { "type": "object" },
+            "historical_source_transition": {
+              "const": {
+                "scope": "curry-option-validation-v1",
+                "path": "crates/ygo-engine-adapter/src/codec.rs",
+                "historical_sha256": "224cb3fa6a7700e871d79f202e0e3def4c3b394229bb57c462191f1da470a36e",
+                "current_sha256": "68cf8de986c331060f72d95a56acc68ecec34d916230f5302d33210b254ca42d",
+                "reason": "RECOVER-92-decoder-added-for-this-fixed-scope",
+                "historical_bytes_verified_from_archive": true
+              }
+            },
+            "build": { "type": "object" },
+            "assets": { "type": "object" },
+            "stage1_request_sha256": { "$ref": "#/$defs/hash" },
+            "request_derivation": { "const": "frozen-prompt-14-curry-v1-worker-path-replaced" },
+            "request": { "type": "object" }
+          },
+          "required": [
+            "kind", "batch_kind", "started_at", "limit", "planned_calls", "wall_seconds", "old_consumed",
+            "baseline_acceptance_sha256", "baseline_delivery_sha256", "input_sha256", "source",
+            "historical_source_transition", "build",
+            "assets", "stage1_request_sha256", "request_derivation", "request"
+          ]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "prepared": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "native_curry_option_validation_prepared" },
+            "prepared": { "type": "boolean" },
+            "execution_ready": { "type": "boolean" },
+            "native_calls": { "const": 0 },
+            "planned_calls": { "const": 7 },
+            "stage1_request_sha256": { "$ref": "#/$defs/hash" },
+            "preflight_diagnostic_sha256": { "$ref": "#/$defs/hash" },
+            "manifest_sha256": { "$ref": "#/$defs/hash" },
+            "stage1_input_sha256": { "$ref": "#/$defs/hash" },
+            "diagnostics": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": [
+            "kind", "prepared", "execution_ready", "native_calls", "planned_calls",
+            "stage1_request_sha256", "preflight_diagnostic_sha256", "manifest_sha256", "stage1_input_sha256"
+          ],
+          "allOf": [
+            {
+              "if": { "properties": { "prepared": { "const": false } }, "required": ["prepared"] },
+              "then": { "properties": { "execution_ready": { "const": false } } }
+            },
+            {
+              "if": { "properties": { "execution_ready": { "const": true } }, "required": ["execution_ready"] },
+              "then": { "properties": { "prepared": { "const": true } } }
+            }
+          ]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "stage": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "native_curry_option_validation_stage" },
+            "stage": { "type": "integer", "minimum": 1, "maximum": 7 },
+            "request": { "type": "object" },
+            "successful": { "type": "boolean" },
+            "diagnostic": { "type": ["string", "null"] },
+            "assets_unchanged": { "type": "boolean" },
+            "assets_before": { "type": "object" },
+            "assets_after": { "type": ["object", "null"] },
+            "window_valid_at_result": { "type": "boolean" },
+            "validation": { "type": "object" },
+            "result": { "type": "object" },
+            "independent_replay_matches": { "type": ["boolean", "null"] },
+            "ledger": { "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }] }
+          },
+          "required": [
+            "kind", "stage", "request", "successful", "diagnostic", "assets_unchanged",
+            "assets_before", "assets_after", "window_valid_at_result", "validation", "result",
+            "independent_replay_matches", "ledger"
+          ],
+          "allOf": [
+            {
+              "if": { "properties": { "stage": { "enum": [5, 7] } }, "required": ["stage"] },
+              "then": {
+                "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+                "then": { "properties": { "independent_replay_matches": { "const": true } } }
+              },
+              "else": { "properties": { "independent_replay_matches": { "type": "null" } } }
+            },
+            {
+              "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+              "then": {
+                "properties": {
+                  "diagnostic": { "type": "null" },
+                  "assets_unchanged": { "const": true },
+                  "assets_after": { "type": "object" },
+                  "window_valid_at_result": { "const": true },
+                  "ledger": { "$ref": "#/$defs/stats" }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "unevaluatedProperties": true
+    },
+    "stage_report": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "native_curry_option_validation_stage_report" },
+            "stage": { "type": "integer", "minimum": 1, "maximum": 7 },
+            "successful": { "type": "boolean" },
+            "native_calls": { "type": ["integer", "null"], "minimum": 0, "maximum": 1 },
+            "diagnostic": { "type": ["string", "null"] },
+            "receipt_sha256": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+            "diagnostic_sha256": { "$ref": "#/$defs/hash" },
+            "independent_replay_matches": { "type": ["boolean", "null"] },
+            "ledger": { "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }] }
+          },
+          "required": [
+            "kind", "stage", "successful", "native_calls", "diagnostic", "receipt_sha256",
+            "diagnostic_sha256", "independent_replay_matches", "ledger"
+          ],
+          "allOf": [
+            {
+              "if": { "properties": { "stage": { "enum": [5, 7] } }, "required": ["stage"] },
+              "then": {
+                "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+                "then": { "properties": { "independent_replay_matches": { "const": true } } }
+              },
+              "else": { "properties": { "independent_replay_matches": { "type": "null" } } }
+            },
+            {
+              "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+              "then": {
+                "properties": {
+                  "native_calls": { "const": 1 },
+                  "diagnostic": { "type": "null" },
+                  "receipt_sha256": { "$ref": "#/$defs/hash" },
+                  "ledger": { "$ref": "#/$defs/stats" }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "kind": { "const": "native_curry_option_validation_summary" },
+        "scope": { "const": "curry-option-validation-v1" },
+        "context": { "$ref": "#/$defs/hash" },
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false },
+        "successful": { "type": "boolean" },
+        "old_consumed": { "const": 32 },
+        "new_consumed": { "type": ["integer", "null"], "minimum": 0, "maximum": 7 },
+        "cumulative_consumed": { "type": ["integer", "null"], "minimum": 32, "maximum": 39 },
+        "unknown": { "type": ["integer", "null"], "minimum": 0, "maximum": 7 },
+        "ledger": { "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }] },
+        "stages": { "$ref": "#/$defs/stage_prefix" },
+        "diagnostic": { "type": ["string", "null"] }
+      },
+      "required": [
+        "schema_version", "kind", "scope", "context", "proof_ready", "complete_action_coverage",
+        "global_optimality", "native_probability_verified", "successful", "old_consumed", "new_consumed",
+        "cumulative_consumed", "unknown", "ledger", "stages", "diagnostic"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "ledger": { "type": "null" } }, "required": ["ledger"] },
+          "then": {
+            "properties": {
+              "new_consumed": { "type": "null" },
+              "cumulative_consumed": { "type": "null" },
+              "unknown": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 0 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 0 }, "cumulative_consumed": { "const": 32 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 1 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 1 }, "cumulative_consumed": { "const": 33 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 2 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 2 }, "cumulative_consumed": { "const": 34 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 3 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 3 }, "cumulative_consumed": { "const": 35 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 4 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 4 }, "cumulative_consumed": { "const": 36 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 5 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 5 }, "cumulative_consumed": { "const": 37 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 6 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 6 }, "cumulative_consumed": { "const": 38 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 7 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+          "then": { "properties": { "new_consumed": { "const": 7 }, "cumulative_consumed": { "const": 39 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 0 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 1 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 1 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 2 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 2 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 3 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 3 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 4 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 4 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 5 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 5 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 6 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 6 } } }
+        },
+        {
+          "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 7 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+          "then": { "properties": { "unknown": { "const": 7 } } }
+        },
+        {
+          "if": { "properties": { "successful": { "const": true } }, "required": ["successful"] },
+          "then": {
+            "properties": {
+              "new_consumed": { "const": 7 },
+              "cumulative_consumed": { "const": 39 },
+              "unknown": { "const": 0 },
+              "diagnostic": { "type": "null" },
+              "ledger": { "const": { "consumed": 7, "completed": 7, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } },
+              "stages": { "$ref": "#/$defs/success_stages" }
+            }
+          }
+        }
+      ]
+    },
+    "verification": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "native_curry_option_validation_verification" },
+            "valid": { "type": "boolean" },
+            "native_calls": { "const": 0 },
+            "old_consumed": { "const": 32 },
+            "new_consumed": { "type": ["integer", "null"], "minimum": 0, "maximum": 7 },
+            "cumulative_consumed": { "type": ["integer", "null"], "minimum": 32, "maximum": 39 },
+            "unknown": { "type": ["integer", "null"], "minimum": 0, "maximum": 7 },
+            "ledger": { "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }] },
+            "stages": { "$ref": "#/$defs/stage_prefix" },
+            "prepared_sha256": { "$ref": "#/$defs/hash" },
+            "verification_diagnostic_sha256": { "type": "array", "maxItems": 7, "items": { "$ref": "#/$defs/hash" } },
+            "diagnostic": { "type": ["string", "null"] }
+          },
+          "required": [
+            "kind", "valid", "native_calls", "old_consumed", "new_consumed", "cumulative_consumed",
+            "unknown", "ledger", "stages", "prepared_sha256", "verification_diagnostic_sha256", "diagnostic"
+          ],
+          "allOf": [
+            {
+              "if": { "properties": { "valid": { "const": true } }, "required": ["valid"] },
+              "then": {
+                "properties": {
+                  "new_consumed": { "const": 7 },
+                  "cumulative_consumed": { "const": 39 },
+                  "unknown": { "const": 0 },
+                  "ledger": { "const": { "consumed": 7, "completed": 7, "unknown": 0, "reserved": 0, "abandoned": 0, "limit": 7 } },
+                  "stages": { "$ref": "#/$defs/success_stages" },
+                  "verification_diagnostic_sha256": { "minItems": 7, "maxItems": 7 },
+                  "diagnostic": { "type": "null" }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "null" } }, "required": ["ledger"] },
+              "then": {
+                "properties": {
+                  "new_consumed": { "type": "null" },
+                  "cumulative_consumed": { "type": "null" },
+                  "unknown": { "type": "null" }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 0 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 0 }, "cumulative_consumed": { "const": 32 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 1 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 1 }, "cumulative_consumed": { "const": 33 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 2 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 2 }, "cumulative_consumed": { "const": 34 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 3 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 3 }, "cumulative_consumed": { "const": 35 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 4 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 4 }, "cumulative_consumed": { "const": 36 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 5 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 5 }, "cumulative_consumed": { "const": 37 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 6 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 6 }, "cumulative_consumed": { "const": 38 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "consumed": { "const": 7 } }, "required": ["consumed"] } }, "required": ["ledger"] },
+              "then": { "properties": { "new_consumed": { "const": 7 }, "cumulative_consumed": { "const": 39 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 0 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 0 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 1 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 1 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 2 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 2 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 3 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 3 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 4 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 4 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 5 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 5 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 6 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 6 } } }
+            },
+            {
+              "if": { "properties": { "ledger": { "type": "object", "properties": { "unknown": { "const": 7 } }, "required": ["unknown"] } }, "required": ["ledger"] },
+              "then": { "properties": { "unknown": { "const": 7 } } }
+            },
+            {
+              "if": { "properties": { "valid": { "const": false } }, "required": ["valid"] },
+              "then": { "properties": { "diagnostic": { "type": "string", "minLength": 1 } } }
+            }
+          ]
+        }
+      ],
+      "oneOf": [
+        { "properties": { "stages": { "minItems": 0, "maxItems": 0 }, "verification_diagnostic_sha256": { "minItems": 0, "maxItems": 0 } } },
+        { "properties": { "stages": { "minItems": 1, "maxItems": 1 }, "verification_diagnostic_sha256": { "minItems": 1, "maxItems": 1 } } },
+        { "properties": { "stages": { "minItems": 2, "maxItems": 2 }, "verification_diagnostic_sha256": { "minItems": 2, "maxItems": 2 } } },
+        { "properties": { "stages": { "minItems": 3, "maxItems": 3 }, "verification_diagnostic_sha256": { "minItems": 3, "maxItems": 3 } } },
+        { "properties": { "stages": { "minItems": 4, "maxItems": 4 }, "verification_diagnostic_sha256": { "minItems": 4, "maxItems": 4 } } },
+        { "properties": { "stages": { "minItems": 5, "maxItems": 5 }, "verification_diagnostic_sha256": { "minItems": 5, "maxItems": 5 } } },
+        { "properties": { "stages": { "minItems": 6, "maxItems": 6 }, "verification_diagnostic_sha256": { "minItems": 6, "maxItems": 6 } } },
+        { "properties": { "stages": { "minItems": 7, "maxItems": 7 }, "verification_diagnostic_sha256": { "minItems": 7, "maxItems": 7 } } }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

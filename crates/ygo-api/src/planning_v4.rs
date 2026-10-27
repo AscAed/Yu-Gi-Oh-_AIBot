@@ -758,7 +758,7 @@ pub fn validate_report(r: &PlanReport) -> Result<(), String> {
     if let Some(i) = &r.interrupted {
         let rebuilt = reconstruct(&i.observation, &base.knowledge)?;
         for e in &i.observation.events {
-            if decode_frame(e.sequence, &e.raw)? != *e {
+            if !frame_matches_raw(e)? {
                 return Err("raw interruption evidence mismatch".into());
             }
         }
@@ -923,7 +923,7 @@ pub fn validate_report(r: &PlanReport) -> Result<(), String> {
                 return Err("failed interruption protocol mismatch".into());
             }
             for e in &o.events {
-                if decode_frame(e.sequence, &e.raw)? != *e {
+                if !frame_matches_raw(e)? {
                     return Err("failed interruption raw mismatch".into());
                 }
             }

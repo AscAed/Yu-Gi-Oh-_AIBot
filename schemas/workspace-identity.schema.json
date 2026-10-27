@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/workspace-identity.schema.json",
+  "title": "Workspace identity v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "kind", "identity", "source", "toolchain", "cli_sha256", "runtimes", "consistent", "build_provenance", "reproducible_build_proven"],
+  "properties": {
+    "schema_version": {"const": 1}, "kind": {"const": "workspace_identity"},
+    "identity": {"$ref": "#/$defs/hash"}, "cli_sha256": {"$ref": "#/$defs/hash"},
+    "consistent": {"type": "boolean"},
+    "source": {"$ref": "#/$defs/source"}, "toolchain": {"$ref": "#/$defs/toolchain"},
+    "runtimes": {"type": "object", "additionalProperties": false, "required": ["ordinary", "tournament"], "properties": {"ordinary": {"$ref": "engine-identity.schema.json"}, "tournament": {"$ref": "engine-identity.schema.json"}}},
+    "build_provenance": {"const": "unverified"}, "reproducible_build_proven": {"const": false}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["head", "files", "identity"],
+      "properties": {"head": {"type": ["string", "null"]}, "identity": {"$ref": "#/$defs/hash"}, "files": {"type": "object", "additionalProperties": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}}}
+    },
+    "toolchain": {"type": "object", "additionalProperties": false, "required": ["python", "rustc", "cargo", "git"], "properties": {"python": {"type": "string"}, "rustc": {"type": "string"}, "cargo": {"type": "string"}, "git": {"type": "string"}}}
+  }
+}

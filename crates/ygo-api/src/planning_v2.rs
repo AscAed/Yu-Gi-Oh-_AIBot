@@ -216,7 +216,7 @@ pub fn validate_plan_contract(report: &PlanReport) -> Result<(), String> {
             .as_ref()
             .ok_or("missing observation evidence")?;
         for frame in &observed.events {
-            if decode_frame(frame.sequence, &frame.raw)? != *frame {
+            if !frame_matches_raw(frame)? {
                 return Err("raw frame/evidence mismatch".into());
             }
         }

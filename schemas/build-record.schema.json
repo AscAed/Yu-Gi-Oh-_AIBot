@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/build-record.schema.json",
+  "title": "Observed build record v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "kind", "identity", "source_before", "source_after", "command", "command_sha256", "toolchain", "exit_code", "artifacts", "status", "provenance", "reproducible_build_proven"],
+  "properties": {
+    "schema_version": {"const": 1}, "kind": {"const": "build_record"}, "identity": {"$ref": "workspace-identity.schema.json#/$defs/hash"},
+    "source_before": {"$ref": "workspace-identity.schema.json#/$defs/source"}, "source_after": {"$ref": "workspace-identity.schema.json#/$defs/source"},
+    "command": {"type": "array", "minItems": 1, "items": {"type": "string"}}, "toolchain": {"$ref": "workspace-identity.schema.json#/$defs/toolchain"},
+    "command_sha256": {"$ref": "workspace-identity.schema.json#/$defs/hash"},
+    "exit_code": {"type": "integer"}, "artifacts": {"type": "object", "additionalProperties": {"oneOf": [{"$ref": "workspace-identity.schema.json#/$defs/hash"}, {"type": "null"}]}},
+    "status": {"enum": ["recorded", "source_changed", "failed"]}, "provenance": {"const": "observed_command_only"}, "reproducible_build_proven": {"const": false}
+  }
+}

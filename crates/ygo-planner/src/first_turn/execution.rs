@@ -48,14 +48,75 @@ fn evidence_checkpoint(plan: &str, evidence: &PartialDecisionEvidence) -> String
 }
 fn validate_raw_choice(result: &DuelResult, choice: &Choice) -> Result<u64, String> {
     let frame = result.events.last().ok_or("missing actual raw prompt")?;
-    let parsed = parse_prompt(frame.sequence, &frame.raw)?.ok_or("unsupported actual prompt")?;
-    if !parsed.actions.iter().any(|a| &a.choice == choice)
+    let parsed = result.prompt.as_ref().ok_or("missing actual prompt")?;
+    if !frame_matches_raw(frame)?
+        || parsed.id != frame.sequence
+        || !prompt_matches_raw(parsed, &frame.raw)?
+        || !parsed.actions.iter().any(|a| &a.choice == choice)
         || parsed.player != 0
-        || serde_json::to_value(&parsed).unwrap() != serde_json::to_value(&result.prompt).unwrap()
     {
         return Err("choice does not match actual legal raw prompt".into());
     }
     Ok(parsed.id)
+}
+#[cfg(test)]
+#[test]
+fn compact_new_frame_with_legacy_menu_never_grants_new_choices() {
+    let mut raw = vec![11, 0];
+    raw.extend([0; 24]);
+    raw.extend([1, 1, 1]);
+    let frame = decode_frame(1, &raw).unwrap();
+    let mut prompt = parse_prompt(1, &raw).unwrap().unwrap();
+    prompt
+        .actions
+        .retain(|a| !matches!(a.choice, Choice::Command { command: 6 | 8, .. }));
+    let mut result = DuelResult::failure(WorkerError::new("synthetic", "test", "unused"));
+    result.events = vec![frame];
+    result.prompt = Some(prompt);
+    assert_eq!(
+        validate_raw_choice(
+            &result,
+            &Choice::Command {
+                command: 7,
+                index: 0
+            }
+        )
+        .unwrap(),
+        1
+    );
+    for command in [6, 8] {
+        assert!(validate_raw_choice(&result, &Choice::Command { command, index: 0 }).is_err());
+    }
+    let mut changed = result.clone();
+    changed.prompt.as_mut().unwrap().player = 1;
+    assert!(validate_raw_choice(
+        &changed,
+        &Choice::Command {
+            command: 7,
+            index: 0
+        }
+    )
+    .is_err());
+    let mut changed = result.clone();
+    changed.prompt.as_mut().unwrap().id = 2;
+    assert!(validate_raw_choice(
+        &changed,
+        &Choice::Command {
+            command: 7,
+            index: 0
+        }
+    )
+    .is_err());
+    let mut changed = result;
+    changed.events[0].fields["injected"] = serde_json::json!(true);
+    assert!(validate_raw_choice(
+        &changed,
+        &Choice::Command {
+            command: 7,
+            index: 0
+        }
+    )
+    .is_err());
 }
 fn persist_choice(
     journal: &CallJournal,

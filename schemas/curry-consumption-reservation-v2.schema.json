@@ -1,0 +1,947 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/curry-consumption-reservation-v2.schema.json",
+  "title": "Curry consumption risk reservation v2",
+  "description": "Zero-native-call recovery record bound to the prior failed v1 attempt; the reserve remains policy, not actual spend.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "status",
+    "failure_checkpoint",
+    "created_at_utc",
+    "anchors",
+    "checks",
+    "historical_ledgers",
+    "old_scope",
+    "historical_exit_observation",
+    "reservation",
+    "planning_basis",
+    "inputs",
+    "stability",
+    "tool",
+    "native_calls",
+    "execution_ready",
+    "qualifications",
+    "diagnostics",
+    "elapsed_seconds",
+    "previous_failed_attempt"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "curry_consumption_reservation_v2"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed",
+        "incomplete"
+      ]
+    },
+    "failure_checkpoint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "previous_failed_attempt",
+        null,
+        "latest_delivery_chain",
+        "real_v2_report",
+        "old_confirmation_scope",
+        "historical_ledgers",
+        "input_stability"
+      ]
+    },
+    "created_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latest_delivery_sha256",
+        "real_v2_report_sha256",
+        "v2_acceptance_sha256",
+        "source_identity",
+        "source_file_count"
+      ],
+      "properties": {
+        "latest_delivery_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "real_v2_report_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "v2_acceptance_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "source_identity": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "source_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_failed_attempt",
+        "latest_delivery_chain",
+        "real_v2_report",
+        "old_confirmation_scope",
+        "historical_ledgers",
+        "input_stability"
+      ],
+      "properties": {
+        "previous_failed_attempt": {
+          "$ref": "#/$defs/checkStatus"
+        },
+        "latest_delivery_chain": {
+          "$ref": "#/$defs/checkStatus"
+        },
+        "real_v2_report": {
+          "$ref": "#/$defs/checkStatus"
+        },
+        "old_confirmation_scope": {
+          "$ref": "#/$defs/checkStatus"
+        },
+        "historical_ledgers": {
+          "$ref": "#/$defs/checkStatus"
+        },
+        "input_stability": {
+          "$ref": "#/$defs/checkStatus"
+        }
+      }
+    },
+    "historical_ledgers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_count",
+        "consumed",
+        "unknown",
+        "verified_by_anchored_read_only_protection"
+      ],
+      "properties": {
+        "ledger_count": {
+          "anyOf": [
+            {
+              "const": 9
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "consumed": {
+          "anyOf": [
+            {
+              "const": 32
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unknown": {
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verified_by_anchored_read_only_protection": {
+          "type": "boolean"
+        }
+      }
+    },
+    "old_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "manifest_sha256",
+        "context",
+        "request_limit",
+        "window_seconds",
+        "prepared",
+        "sealed_unconsumed_slots",
+        "actual_new_consumed",
+        "actual_cumulative_consumed",
+        "actual_unknown",
+        "charge_ledger_state"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-confirmation-v1"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "context": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "request_limit": {
+          "const": 7
+        },
+        "window_seconds": {
+          "const": 7200
+        },
+        "prepared": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sealed_unconsumed_slots": {
+          "const": 7
+        },
+        "actual_new_consumed": {
+          "type": "null"
+        },
+        "actual_cumulative_consumed": {
+          "type": "null"
+        },
+        "actual_unknown": {
+          "type": "null"
+        },
+        "charge_ledger_state": {
+          "enum": [
+            "unknown",
+            "absent",
+            "unknown_after_failed_check"
+          ]
+        }
+      }
+    },
+    "historical_exit_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_exit_code_claimed",
+        "archived_static_return_code",
+        "historical_actual_exit_code",
+        "historical_actual_exit_code_certified"
+      ],
+      "properties": {
+        "observation_exit_code_claimed": {
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived_static_return_code": {
+          "anyOf": [
+            {
+              "const": 2
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "historical_actual_exit_code": {
+          "type": "null"
+        },
+        "historical_actual_exit_code_certified": {
+          "const": false
+        }
+      }
+    },
+    "reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "requested_calls",
+        "recorded",
+        "reservation_id",
+        "duplicate_count"
+      ],
+      "properties": {
+        "policy_id": {
+          "const": "curry-unknown-reserve-seven-v1"
+        },
+        "requested_calls": {
+          "const": 7
+        },
+        "recorded": {
+          "type": "boolean"
+        },
+        "reservation_id": {
+          "$ref": "#/$defs/nullableHash"
+        },
+        "duplicate_count": {
+          "enum": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    "planning_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certified_historical_consumed",
+        "risk_reserve_calls",
+        "planned_total",
+        "actual_all_history_cumulative"
+      ],
+      "properties": {
+        "certified_historical_consumed": {
+          "anyOf": [
+            {
+              "const": 32
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "risk_reserve_calls": {
+          "const": 7
+        },
+        "planned_total": {
+          "anyOf": [
+            {
+              "const": 39
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actual_all_history_cumulative": {
+          "type": "null"
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "$ref": "#/$defs/relativePath"
+          },
+          "sha256": {
+            "$ref": "#/$defs/hash"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_tree",
+        "v2_report_tree",
+        "confirmation_tree",
+        "historical_ledgers",
+        "historical_ledger_count",
+        "confirmation_charge_ledger_absent_before",
+        "confirmation_charge_ledger_absent_after",
+        "status",
+        "previous_failed_attempt_tree"
+      ],
+      "properties": {
+        "baseline_tree": {
+          "$ref": "#/$defs/stabilityStatus"
+        },
+        "v2_report_tree": {
+          "$ref": "#/$defs/stabilityStatus"
+        },
+        "confirmation_tree": {
+          "$ref": "#/$defs/stabilityStatus"
+        },
+        "historical_ledgers": {
+          "$ref": "#/$defs/stabilityStatus"
+        },
+        "historical_ledger_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 9
+        },
+        "confirmation_charge_ledger_absent_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "confirmation_charge_ledger_absent_after": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/stabilityStatus"
+        },
+        "previous_failed_attempt_tree": {
+          "$ref": "#/$defs/stabilityStatus"
+        }
+      }
+    },
+    "tool": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identity",
+            "archive_path",
+            "archive_sha256",
+            "file_list_path",
+            "file_list_sha256",
+            "file_count",
+            "member_sha256",
+            "workspace_identity"
+          ],
+          "properties": {
+            "identity": {
+              "$ref": "#/$defs/hash"
+            },
+            "archive_path": {
+              "const": "tool-source.zip"
+            },
+            "archive_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "file_list_path": {
+              "const": "tool-source-file-list.json"
+            },
+            "file_list_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "file_count": {
+              "const": 7
+            },
+            "member_sha256": {
+              "type": "object",
+              "minProperties": 7,
+              "maxProperties": 7,
+              "additionalProperties": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "workspace_identity": {
+              "$ref": "#/$defs/nullableHash"
+            }
+          }
+        }
+      ]
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "qualifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ],
+      "properties": {
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{1,95}$"
+      }
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "previous_failed_attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_path",
+        "report_sha256",
+        "status",
+        "failure_checkpoint",
+        "diagnostic",
+        "reservation_recorded",
+        "reservation_id",
+        "planned_total",
+        "tool_archive_sha256",
+        "tool_file_list_sha256",
+        "archived_bad_acceptance_constant",
+        "historical_actual_exit_code"
+      ],
+      "properties": {
+        "report_path": {
+          "const": "data/runtime/p1-curry-consumption-reservation-offline-2026-10-24/reservation.json"
+        },
+        "report_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "failed",
+            null
+          ]
+        },
+        "failure_checkpoint": {
+          "enum": [
+            "latest_delivery_chain",
+            null
+          ]
+        },
+        "diagnostic": {
+          "enum": [
+            "delivery_anchor_mismatch",
+            null
+          ]
+        },
+        "reservation_recorded": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reservation_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "planned_total": {
+          "anyOf": [
+            {
+              "const": 39
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_archive_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_file_list_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived_bad_acceptance_constant": {
+          "anyOf": [
+            {
+              "const": "f6f5a88664252f9fbf7d94c7251dba2e8859fbf1d19e9a45396070efce84835"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "historical_actual_exit_code": {
+          "type": "null"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_checkpoint": {
+            "type": "null"
+          },
+          "checks": {
+            "additionalProperties": {
+              "const": "passed"
+            }
+          },
+          "inputs": {
+            "minItems": 1
+          },
+          "historical_ledgers": {
+            "properties": {
+              "ledger_count": {
+                "const": 9
+              },
+              "consumed": {
+                "const": 32
+              },
+              "unknown": {
+                "const": 0
+              },
+              "verified_by_anchored_read_only_protection": {
+                "const": true
+              }
+            }
+          },
+          "stability": {
+            "properties": {
+              "baseline_tree": {
+                "const": "passed"
+              },
+              "v2_report_tree": {
+                "const": "passed"
+              },
+              "confirmation_tree": {
+                "const": "passed"
+              },
+              "historical_ledgers": {
+                "const": "passed"
+              },
+              "historical_ledger_count": {
+                "const": 9
+              },
+              "confirmation_charge_ledger_absent_before": {
+                "const": true
+              },
+              "confirmation_charge_ledger_absent_after": {
+                "const": true
+              },
+              "status": {
+                "const": "passed"
+              },
+              "previous_failed_attempt_tree": {
+                "const": "passed"
+              }
+            }
+          },
+          "old_scope": {
+            "properties": {
+              "manifest_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "context": {
+                "$ref": "#/$defs/hash"
+              },
+              "prepared": {
+                "const": true
+              },
+              "charge_ledger_state": {
+                "const": "absent"
+              },
+              "actual_new_consumed": {
+                "type": "null"
+              },
+              "actual_cumulative_consumed": {
+                "type": "null"
+              },
+              "actual_unknown": {
+                "type": "null"
+              }
+            }
+          },
+          "reservation": {
+            "properties": {
+              "policy_id": {
+                "const": "curry-unknown-reserve-seven-v1"
+              },
+              "requested_calls": {
+                "const": 7
+              },
+              "recorded": {
+                "const": true
+              },
+              "duplicate_count": {
+                "const": 1
+              },
+              "reservation_id": {
+                "$ref": "#/$defs/hash"
+              }
+            }
+          },
+          "tool": {
+            "type": "object",
+            "properties": {
+              "member_sha256": {
+                "propertyNames": {
+                  "enum": [
+                    "python/ygo_data/identity.py",
+                    "python/ygo_eval/curry_consumption_reservation.py",
+                    "python/ygo_eval/curry_input_recovery_audit.py",
+                    "python/ygo_eval/prompt_probe_prepare.py",
+                    "python/ygo_eval/research.py",
+                    "schemas/curry-consumption-reservation-v1.schema.json",
+                    "schemas/curry-consumption-reservation-v2.schema.json"
+                  ]
+                }
+              }
+            }
+          },
+          "planning_basis": {
+            "properties": {
+              "certified_historical_consumed": {
+                "const": 32
+              },
+              "risk_reserve_calls": {
+                "const": 7
+              },
+              "planned_total": {
+                "const": 39
+              },
+              "actual_all_history_cumulative": {
+                "type": "null"
+              }
+            }
+          },
+          "native_calls": {
+            "const": 0
+          },
+          "execution_ready": {
+            "const": false
+          },
+          "qualifications": {
+            "properties": {
+              "proof_ready": {
+                "const": false
+              },
+              "complete_action_coverage": {
+                "const": false
+              },
+              "global_optimality": {
+                "const": false
+              },
+              "native_probability_verified": {
+                "const": false
+              }
+            }
+          },
+          "previous_failed_attempt": {
+            "properties": {
+              "report_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "status": {
+                "const": "failed"
+              },
+              "failure_checkpoint": {
+                "const": "latest_delivery_chain"
+              },
+              "diagnostic": {
+                "const": "delivery_anchor_mismatch"
+              },
+              "reservation_recorded": {
+                "const": false
+              },
+              "reservation_id": {
+                "type": "null"
+              },
+              "planned_total": {
+                "type": "null"
+              },
+              "tool_archive_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "tool_file_list_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "archived_bad_acceptance_constant": {
+                "const": "f6f5a88664252f9fbf7d94c7251dba2e8859fbf1d19e9a45396070efce84835"
+              },
+              "historical_actual_exit_code": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "failed",
+              "incomplete"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "historical_ledgers": {
+            "properties": {
+              "ledger_count": {
+                "type": "null"
+              },
+              "consumed": {
+                "type": "null"
+              },
+              "unknown": {
+                "type": "null"
+              },
+              "verified_by_anchored_read_only_protection": {
+                "const": false
+              }
+            }
+          },
+          "planning_basis": {
+            "properties": {
+              "certified_historical_consumed": {
+                "type": "null"
+              },
+              "risk_reserve_calls": {
+                "const": 7
+              },
+              "planned_total": {
+                "type": "null"
+              },
+              "actual_all_history_cumulative": {
+                "type": "null"
+              }
+            }
+          },
+          "reservation": {
+            "properties": {
+              "recorded": {
+                "const": false
+              },
+              "reservation_id": {
+                "type": "null"
+              },
+              "duplicate_count": {
+                "const": 0
+              }
+            }
+          },
+          "native_calls": {
+            "const": 0
+          },
+          "execution_ready": {
+            "const": false
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableHash": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "checkStatus": {
+      "enum": [
+        "not_run",
+        "passed",
+        "failed"
+      ]
+    },
+    "stabilityStatus": {
+      "enum": [
+        "not_collected",
+        "pending",
+        "passed",
+        "failed",
+        "recheck_failed"
+      ]
+    }
+  }
+}

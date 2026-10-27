@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/curry-asset-binding-audit-v1.schema.json",
+  "title": "Curry asset binding offline audit v1",
+  "description": "Read-only validation of the frozen Curry runner failure, its source bindings, historical evidence, and an isolated preflight. This contract never grants native execution or proof qualification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "status", "anchors", "native_calls", "execution_ready",
+    "original_native_diagnostic", "checks", "inputs", "source_archives", "history",
+    "old_scope", "static_root_cause", "source", "protection", "process", "diagnostic",
+    "elapsed_seconds", "input_set_sha256", "proof_ready", "complete_action_coverage",
+    "global_optimality", "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "curry_asset_binding_audit" },
+    "status": { "enum": ["passed", "failed", "incomplete"] },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["final_build_record", "native_build_record", "manifest", "prepared", "summary"],
+      "properties": {
+        "final_build_record": { "const": "0101d9a46855189b50878e4fef6d4fecf5e0b279a6ad88f6171230fcfbd4ab41" },
+        "native_build_record": { "const": "9bef7b74baac4a502ad94b1296ade61a081c233f027963329dc22b102ad17626" },
+        "manifest": { "const": "b170c35ff48fb4c22892ecffd15324cc7ecc5dfe318a7f1668b0f448756641c3" },
+        "prepared": { "const": "3ba3e920a0721c462e0ec3401a509b8e037a7c65a48b0a67c1dd8fc6aeb5a2b8" },
+        "summary": { "const": "37a1bf1dab01305bed38d35d398594f112e67290c97c92379673002c06b8361a" }
+      }
+    },
+    "native_calls": { "const": 0 },
+    "execution_ready": { "const": false },
+    "original_native_diagnostic": { "const": "curry_asset_identity_mismatch" },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["static_root_cause", "historical_sources", "old_curry_material", "historical_ledgers", "isolated_runner_build", "read_only_preflight", "trace", "input_stability", "old_material_protection"],
+      "properties": {
+        "static_root_cause": { "$ref": "#/$defs/check" },
+        "historical_sources": { "$ref": "#/$defs/check" },
+        "old_curry_material": { "$ref": "#/$defs/check" },
+        "historical_ledgers": { "$ref": "#/$defs/check" },
+        "isolated_runner_build": { "$ref": "#/$defs/check" },
+        "read_only_preflight": { "$ref": "#/$defs/check" },
+        "trace": { "$ref": "#/$defs/check" },
+        "input_stability": { "$ref": "#/$defs/check" },
+        "old_material_protection": { "$ref": "#/$defs/check" }
+      }
+    },
+    "inputs": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+    "source_archives": { "type": "array", "items": { "$ref": "#/$defs/archive" } },
+    "history": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["consumed", "unknown", "ledger_count", "verified_without_writable_journal", "input_set_sha256"],
+          "properties": {
+            "consumed": { "const": 32 },
+            "unknown": { "const": 0 },
+            "ledger_count": { "const": 9 },
+            "verified_without_writable_journal": { "const": true },
+            "input_set_sha256": { "$ref": "#/$defs/hash" }
+          }
+        }
+      ]
+    },
+    "old_scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scope", "prepared", "ledger_exists", "consumed", "unknown", "stored_summary_diagnostic", "observed_process_diagnostic"],
+      "properties": {
+        "scope": { "const": "curry-option-validation-v1" },
+        "prepared": { "const": false },
+        "ledger_exists": { "const": false },
+        "consumed": { "type": ["integer", "null"], "minimum": 0 },
+        "unknown": { "type": ["integer", "null"], "minimum": 0 },
+        "stored_summary_diagnostic": { "const": "curry_preflight_output_mismatch" },
+        "observed_process_diagnostic": { "const": "curry_asset_identity_mismatch" },
+        "original_process_return_code": { "const": 2 },
+        "original_stdout_sha256": { "$ref": "#/$defs/hash" },
+        "original_stderr_sha256": { "$ref": "#/$defs/hash" },
+        "original_process_metadata_sha256": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "static_root_cause": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["historical_source_path", "historical_source_sha256", "historical_comparison_role", "engine_version_role", "repair_target_role", "root_cause", "repair", "current_source_sha256", "historical_scan_identity_persisted"],
+          "properties": {
+            "historical_source_path": { "const": "crates/ygo-engine-adapter/examples/curry-option-validation.rs" },
+            "historical_source_sha256": { "$ref": "#/$defs/hash" },
+            "historical_comparison_role": { "const": "worker" },
+            "engine_version_role": { "const": "dll" },
+            "repair_target_role": { "const": "dll" },
+            "root_cause": { "const": "engine_sha256_was_compared_to_worker_sha256" },
+            "repair": { "const": "compare_engine_sha256_to_dll_and_bind_manifest_worker" },
+            "current_source_sha256": { "$ref": "#/$defs/hash" },
+            "historical_scan_identity_persisted": { "const": false }
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runner_role"],
+      "properties": {
+        "runner_role": { "const": "curry_asset_binding_audit_runner" },
+        "workspace_identity": { "$ref": "#/$defs/hash" },
+        "workspace_file_count": { "type": "integer", "minimum": 0 },
+        "historical_consumed": { "const": 32 },
+        "historical_unknown": { "const": 0 },
+        "ledger_count": { "const": 9 },
+        "source_archive_differences": { "type": "array", "items": { "$ref": "#/$defs/relativePath" } },
+        "old_builds": { "type": "array", "items": { "$ref": "#/$defs/oldBuild" } },
+        "runner_sha256": { "$ref": "#/$defs/hash" },
+        "runner_bytes": { "type": "integer", "minimum": 0 },
+        "build_record_sha256": { "$ref": "#/$defs/hash" },
+        "build_record_identity": { "$ref": "#/$defs/hash" },
+        "source_identity": { "$ref": "#/$defs/hash" },
+        "source_file_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "protection": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["file_count", "tree_sha256"],
+          "properties": {
+            "file_count": { "type": "integer", "minimum": 0 },
+            "tree_sha256": { "$ref": "#/$defs/hash" }
+          }
+        }
+      ]
+    },
+    "process": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["mode", "runner_role", "status", "return_code", "error_code", "metadata_path", "metadata_sha256", "metadata_bytes", "stdout", "stderr", "timeout_seconds", "trace"],
+          "properties": {
+            "mode": { "const": "preflight_only" },
+            "runner_role": { "const": "curry_asset_binding_audit_runner" },
+            "status": { "enum": ["completed", "timeout", "launch_failed"] },
+            "return_code": { "type": ["integer", "null"] },
+            "error_code": { "type": ["string", "null"] },
+            "metadata_path": { "$ref": "#/$defs/relativePath" },
+            "metadata_sha256": { "$ref": "#/$defs/hash" },
+            "metadata_bytes": { "type": "integer", "minimum": 0 },
+            "stdout": { "$ref": "#/$defs/output" },
+            "stderr": { "$ref": "#/$defs/output" },
+            "timeout_seconds": { "const": 900 },
+            "trace": { "type": "array", "items": { "$ref": "#/$defs/trace" } },
+            "parsed_result": { "$ref": "#/$defs/parsedResult" }
+          }
+        }
+      ]
+    },
+    "diagnostic": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]{1,90}$" },
+    "elapsed_seconds": { "type": "number", "minimum": 0 },
+    "input_set_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "proof_ready": { "const": false },
+    "complete_action_coverage": { "const": false },
+    "global_optimality": { "const": false },
+    "native_probability_verified": { "const": false }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "check": { "enum": ["not_run", "passed", "failed"] },
+    "relativePath": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|^[A-Za-z]:|(^|/)\\.\\.(?:/|$))" } },
+    "input": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "path", "sha256", "bytes"],
+      "properties": {
+        "role": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{1,80}$" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "archive": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "sha256", "file_list_sha256", "source_identity", "file_count", "bytes"],
+      "properties": {
+        "role": { "enum": ["native_time", "final"] },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "file_list_sha256": { "$ref": "#/$defs/hash" },
+        "source_identity": { "$ref": "#/$defs/hash" },
+        "file_count": { "type": "integer", "minimum": 1 },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "oldBuild": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "source_identity", "build_record_sha256", "build_record_identity", "artifact_sha256"],
+      "properties": {
+        "role": { "enum": ["native_time", "final"] },
+        "source_identity": { "$ref": "#/$defs/hash" },
+        "build_record_sha256": { "$ref": "#/$defs/hash" },
+        "build_record_identity": { "$ref": "#/$defs/hash" },
+        "artifact_sha256": {
+          "type": "object", "additionalProperties": false,
+          "required": ["cli", "runner", "worker"],
+          "properties": {
+            "cli": { "$ref": "#/$defs/hash" },
+            "runner": { "$ref": "#/$defs/hash" },
+            "worker": { "$ref": "#/$defs/hash" }
+          }
+        }
+      }
+    },
+    "output": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "trace": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["phase", "event"],
+          "properties": { "phase": { "enum": ["input_validation", "shared_preflight"] }, "event": { "const": "start" } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["phase", "event", "elapsed_ns"],
+          "properties": { "phase": { "enum": ["input_validation", "shared_preflight"] }, "event": { "const": "end" }, "elapsed_ns": { "type": "integer", "minimum": 0 } }
+        }
+      ]
+    },
+    "parsedResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["preflight_passed", "native_calls", "stage", "context", "identity_sha256", "matches_expected"],
+      "properties": {
+        "preflight_passed": { "type": "boolean" },
+        "native_calls": { "type": ["integer", "null"], "minimum": 0 },
+        "stage": { "type": ["integer", "null"], "minimum": 0 },
+        "context": { "type": ["string", "null"] },
+        "identity_sha256": { "type": ["string", "null"] },
+        "matches_expected": { "type": "boolean" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "passed" } } },
+      "then": {
+        "properties": {
+          "diagnostic": { "const": null },
+          "checks": { "additionalProperties": { "const": "passed" } },
+          "inputs": { "minItems": 1 },
+          "source_archives": {
+            "minItems": 2, "maxItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role": { "const": "native_time" } }, "required": ["role"] } },
+              { "contains": { "properties": { "role": { "const": "final" } }, "required": ["role"] } }
+            ]
+          },
+          "history": { "type": "object", "properties": { "consumed": { "const": 32 }, "unknown": { "const": 0 }, "ledger_count": { "const": 9 } }, "required": ["consumed", "unknown", "ledger_count"] },
+          "old_scope": { "properties": { "prepared": { "const": false }, "ledger_exists": { "const": false }, "consumed": { "const": null }, "unknown": { "const": null } }, "required": ["prepared", "ledger_exists", "consumed", "unknown"] },
+          "static_root_cause": { "type": "object", "properties": { "historical_scan_identity_persisted": { "const": false } }, "required": ["historical_scan_identity_persisted"] },
+          "process": {
+            "type": "object",
+            "properties": {
+              "status": { "const": "completed" }, "return_code": { "const": 0 },
+              "trace": { "minItems": 4, "maxItems": 4, "prefixItems": [
+                { "properties": { "phase": { "const": "input_validation" }, "event": { "const": "start" } }, "required": ["phase", "event"] },
+                { "properties": { "phase": { "const": "input_validation" }, "event": { "const": "end" } }, "required": ["phase", "event"] },
+                { "properties": { "phase": { "const": "shared_preflight" }, "event": { "const": "start" } }, "required": ["phase", "event"] },
+                { "properties": { "phase": { "const": "shared_preflight" }, "event": { "const": "end" } }, "required": ["phase", "event"] }
+              ], "items": false },
+              "parsed_result": { "properties": { "matches_expected": { "const": true } }, "required": ["matches_expected"] }
+            },
+            "required": ["parsed_result"]
+          }
+        }
+      }
+    }
+  ]
+}

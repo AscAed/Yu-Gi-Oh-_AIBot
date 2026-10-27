@@ -161,6 +161,7 @@ pub fn probe_request(engine: ProcessEngineConfig) -> Result<RunDuelRequest, Work
         scenario: None,
         interruption: None,
         first_turn: None,
+        research_capture: None,
     })
 }
 pub fn runtime_request(
@@ -528,6 +529,8 @@ fn shuffle_initial_deck(cards: &mut [CardId], mut seed: u64) {
     }
 }
 fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
+    validate_research_capture(&request)
+        .map_err(|e| WorkerError::new("research_capture_policy", "input", e))?;
     verify(&request)?;
     let api = Api::load(&request.engine.ocgcore_path)?;
     let mut result = DuelResult::failure(WorkerError::new("not_started", "create", ""));
@@ -683,6 +686,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
         }
         let (mut turn, mut player, mut phase, mut used) = (0, 0, 0, 0usize);
         let start = std::time::Instant::now();
+        let mut capture = crate::terminal_capture::Capture::default();
         loop {
             if start.elapsed().as_millis() >= request.engine.timeout_ms as u128 {
                 return Err(WorkerError::new("timeout", "duel", "worker deadline"));
@@ -694,9 +698,28 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 .map_err(|e| WorkerError::new("native_buffer", "messages", e))?;
             let mut prompt = None;
             let mut finished = false;
-            for raw in split_frames(&bytes)
-                .map_err(|e| WorkerError::new("malformed_frame", "messages", e))?
-            {
+            let frames = match split_frames(&bytes) {
+                Ok(frames) => frames,
+                Err(error) => {
+                    if request.research_capture.is_some() {
+                        capture.batch(&bytes, status, result.events.len() as u64 + 1, &[]);
+                        let mut observation = capture.observation(&request, &result.events);
+                        observation["diagnostics"] = serde_json::json!(["malformed_message_batch"]);
+                        result.terminal_observation = Some(observation);
+                    }
+                    return Err(WorkerError::new("malformed_frame", "messages", error));
+                }
+            };
+            if request.research_capture.is_some() {
+                capture.batch(
+                    &bytes,
+                    status as i32,
+                    result.events.len() as u64 + 1,
+                    &frames,
+                );
+                result.terminal_observation = Some(capture.observation(&request, &result.events));
+            }
+            for raw in frames {
                 let seq = result.events.len() as u64 + 1;
                 let frame = decode_frame(seq, raw).map_err(|e| {
                     WorkerError::new("malformed_message", "decode", format!("{e}; raw={raw:?}"))
@@ -739,12 +762,59 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 }
                 result.events.push(frame);
             }
+            if request.research_capture.is_some() {
+                result.terminal_observation = Some(capture.observation(&request, &result.events));
+            }
             if !ctx.errors.is_empty() {
                 return Err(WorkerError::new(
                     "callback_failed",
                     "callbacks",
                     ctx.errors.join("; "),
                 ));
+            }
+            if request.research_capture.is_some() && (finished || status == 0) {
+                let mut observation = capture.observation(&request, &result.events);
+                if !capture.valid_boundary(prompt.is_some()) {
+                    observation["status"] = "unbound".into();
+                    observation["diagnostics"] =
+                        serde_json::json!(["terminal_boundary_not_established"]);
+                    result.terminal_observation = Some(observation);
+                    return Err(WorkerError::new(
+                        "terminal_boundary",
+                        "capture",
+                        "terminal boundary not established",
+                    ));
+                }
+                let (queries, cards, query_error) =
+                    crate::terminal_capture::capture_queries(|controller, sequence| {
+                        let query = Query {
+                            flags: 11,
+                            controller,
+                            location: 4,
+                            sequence,
+                            overlay_sequence: 0,
+                        };
+                        let mut len = 0;
+                        let ptr = unsafe { (api.query)(duel, &mut len, &query) };
+                        unsafe { buffer(ptr, len) }
+                    });
+                observation["capture_query_count"] = queries.len().into();
+                observation["queries_sha256"] =
+                    crate::terminal_capture::hash_value(&queries).into();
+                observation["snapshot_sha256"] = crate::terminal_capture::hash_value(&cards).into();
+                observation["queries"] = queries.into();
+                observation["snapshot"] = cards.into();
+                if query_error.is_some() {
+                    observation["diagnostics"] = serde_json::json!(["capture_query_failed"]);
+                    result.terminal_observation = Some(observation);
+                    return Err(WorkerError::new(
+                        "query_failed",
+                        "capture",
+                        "capture query failed",
+                    ));
+                }
+                observation["status"] = "bound".into();
+                result.terminal_observation = Some(observation);
             }
             if finished || status == 0 {
                 if used != request.decisions.len() {
@@ -794,11 +864,12 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                     }
                     used += 1;
                     decision.choice.clone()
-                } else if p.actions.len() == 1
-                    && result.resolved_decisions.len() < 1024
-                    && !(request.protocol_version >= 5 && p.opcode == 11)
-                {
-                    p.actions[0].choice.clone()
+                } else if let Some(choice) = automatic_choice(
+                    &p,
+                    request.protocol_version,
+                    result.resolved_decisions.len(),
+                ) {
+                    choice
                 } else {
                     result.checkpoint =
                         checkpoint(&api, duel, turn, player, phase, request.protocol_version)
@@ -882,4 +953,34 @@ pub fn run_worker<R: BufRead, W: Write>(mut input: R, mut output: W) -> std::io:
 }
 pub fn worker_main() -> std::io::Result<()> {
     run_worker(std::io::stdin().lock(), std::io::stdout().lock())
+}
+fn automatic_choice(prompt: &Prompt, protocol: u16, resolved: usize) -> Option<Choice> {
+    if prompt.actions.len() == 1 && resolved < 1024 && !(protocol >= 5 && prompt.opcode == 11) {
+        Some(prompt.actions[0].choice.clone())
+    } else {
+        None
+    }
+}
+#[cfg(test)]
+mod automatic_choice_tests {
+    use super::*;
+    #[test]
+    fn additional_idle_choice_prevents_single_choice_auto_response() {
+        let mut raw = vec![11, 0];
+        raw.extend([0; 24]);
+        raw.extend([0, 1, 0]);
+        let end = parse_prompt(1, &raw).unwrap().unwrap();
+        assert_eq!(
+            automatic_choice(&end, 2, 0),
+            Some(Choice::Command {
+                command: 7,
+                index: 0
+            })
+        );
+        assert!(automatic_choice(&end, 5, 0).is_none());
+        assert!(automatic_choice(&end, 2, 1024).is_none());
+        *raw.last_mut().unwrap() = 1;
+        let both = parse_prompt(1, &raw).unwrap().unwrap();
+        assert!(automatic_choice(&both, 2, 0).is_none());
+    }
 }
