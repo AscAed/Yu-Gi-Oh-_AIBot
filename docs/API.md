@@ -1,12 +1,14 @@
 # CLI 与库接口
 
-当前交付面是本机 CLI 和 Rust 库，没有 HTTP/网页服务。解析器与 JSON schema 是规范性合同，本页只索引入口和版本边界。
+当前交付面包括本机 CLI/Rust库，以及仅绑定`127.0.0.1`的本机草稿工作台。解析器与JSON schema是规范性合同；工作台接口只用于本机草稿，不是通用远程API。
 
 ## CLI
 
 - `engine doctor`, `engine smoke`：运行时资产/ABI 诊断与真实引擎 smoke。
 - `engine identity --config <toml> [--output <json>]`：只读资产身份及脚本清单差异；不运行决斗，不授予构建或规则资格。
 - `catalog`、`banlist`、`deck validate`：本地快照导入/查询和牌组合法性校验。
+- `deck draft create|show|edit|import|export`：独立可保存草稿工具；允许残缺草稿，YDK/JSON仅承诺卡号、分区及数量往返，不替代`deck validate`。
+- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
 - `combo analyze`、`combo replay`：通用引擎前缀搜索和独立重放。
 - `combo plan`、`combo plan-replay`：读取并分派规划合同 v1–v5；旧报告按各自版本验证。
 - `knowledge validate`、`knowledge verify`：知识来源/合同检查、独立原生规则案例验真。
@@ -30,7 +32,11 @@
 
 已存在的研究schema只规定各自请求/报告形状，不授予可达性、响应接受、完整性或最优性资格。报告、源码归档、构建、runner和实际执行身份分开绑定，详见[证据合同](EVIDENCE_CONTRACTS.md)。具体CLI命令和输入仍以[RESEARCH_AUDIT](RESEARCH_AUDIT.md)、对应历史交接和解析器为准；历史示例不是自动执行授权。
 
-## 拟议能力接口（未发布）
+## 工作台边界
+
+当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出和可选本地catalog检索。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。没有catalog时只保留卡号并标记未核验；有catalog时也只显示其原始名称和来源，中文译文仍未核验。
+
+## 其他拟议能力接口
 
 以下仅定义[产品愿景](PRODUCT_VISION.md)所需能力，尚无HTTP地址、wire shape或新增schema；具体小任务设计须先读现有类型，避免复制不兼容结构。
 

@@ -1,5 +1,36 @@
 # 本机验证记录
 
+## 2026-10-28 B2本机中文牌组工作台
+
+- 工作台实现复用B1 `DeckDocumentV1`与安全草稿存储。草稿存储集成测试4 passed，覆盖三分区顺序/重复卡、随机标识独占创建、同revision并发更新仅一方成功、过期revision拒绝及文件不变；共享发布器故障注入确认替换失败后原稿可恢复。CLI草稿集成测试3 passed，现有命令回归5 passed；HTTP集成3 passed，覆盖loopback Host、mutation Origin、Bearer令牌、1MiB请求体限制、草稿读写/409冲突、YDK导入导出及经过`SnapshotStore`验证的本地catalog名称来源。`ygo-domain`三分区草稿相关测试5 passed。
+- 真实本机浏览器连接隔离服务，完成空草稿创建、添加重复主卡及额外/Side卡、保存、刷新后重开；截图显示卡号顺序/数量、重复实例和“名称未核验”。浏览器自动下载事件未在工具期限内返回；文件选择器上传受当前Chrome扩展的本地文件访问限制，未更改浏览器权限。故浏览器中人工执行了编辑/保存/重开，导入和导出由HTTP集成测试验证；没有写入用户下载目录。合成草稿位于忽略的`target/b2-workbench-browser-final/`。
+- 接续自审发现上述三组集成测试的临时根目录未自动删除；现为`deck_draft`、`workbench_http`和`deck_draft_store`测试夹具添加RAII清理。格式检查与全目标Clippy重跑通过；相关测试重跑分别为3、3、4 passed，日志为[`temp-guard-tests.log`](../target/workspace-audit-current-2026-10-28/temp-guard-tests.log)。随后审查并移除此前测试遗留的102个专用临时目录、290个JSON/YDK/锁文件；路径清单均位于系统临时目录，内容无reparse点且只有测试生成类型，未发现运行中的相关测试进程。核验前内容哈希及删除后计数见[`temp-test-cleanup-before.json`](../target/workspace-audit-current-2026-10-28/temp-test-cleanup-before.json)和[`temp-test-cleanup-result.json`](../target/workspace-audit-current-2026-10-28/temp-test-cleanup-result.json)；重跑后没有产生新的匹配目录。
+- `PYTHONPATH=python py -m pytest tests/test_schemas.py -ra`：**4 passed、2 skipped、0 failed**。两个既有跳过项为本机snapshot/report opt-in与真实v2 report opt-in。
+- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/b2-workbench-cargo -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/b2-workbench-cargo -- --test-threads=1`：**352 passed、36 ignored、0 failed**，91条test-result记录。36项是需要本机冻结引擎/资产、原生收费研究/报告、人工基准/评估或明确写案例opt-in的既有测试，逐项原因保留在[`workspace-serial.log`](../target/b2-workbench-tests/workspace-serial.log)。格式、Clippy及完整测试日志分别见[`fmt.log`](../target/b2-workbench-tests/fmt.log)、[`clippy.log`](../target/b2-workbench-tests/clippy.log)和该workspace日志。
+- 新增HTTP库的代理获取尝试因本机TLS客户端凭据错误`SEC_E_NO_CREDENTIALS`失败；没有引入未缓存的外部依赖。服务因此使用Rust标准库的固定HTTP/1.1 loopback实现并实施请求/连接限制。该代码需要持续审阅；本次不宣称其等同于成熟HTTP库的协议覆盖。
+- 本批新增原生研究、runner、worker及FFI调用为**0**。未运行doctor、真实资产opt-in、48手评估或正式部署；认证消费子集40、政策预留7、规划47，以及旧confirmation和全部历史实际累计未知均保持原口径。未提交或推送Git，A1/B1原未提交工作继续保留。
+
+本批交接：[B2工作台交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)；使用方式及边界：[WORKBENCH](WORKBENCH.md)。
+
+## 2026-10-28 工作区续接自审
+
+- 自审基线为PR #2合并后的`main`（`6e5fade`）；该PR的两个`contracts`检查现已成功。开始自审时工作台与A1/B1源改动尚未提交；本批未构建或部署新的运行包。
+- 当前源码全目标格式检查与Clippy通过；完整串行workspace测试为**352 passed、36 ignored、0 failed**。随后测试夹具增加自动清理，仅重跑受影响的草稿CLI、工作台HTTP和草稿存储三组集成测试，分别3、3、4 passed；格式检查与Clippy也在该修改后复验。完整套件日志为[`workspace-tests.log`](../target/workspace-audit-current-2026-10-28/workspace-tests.log)，修改后日志为[`fmt-after-temp-cleanup.log`](../target/workspace-audit-current-2026-10-28/fmt-after-temp-cleanup.log)、[`clippy-after-temp-cleanup.log`](../target/workspace-audit-current-2026-10-28/clippy-after-temp-cleanup.log)和[`temp-guard-tests.log`](../target/workspace-audit-current-2026-10-28/temp-guard-tests.log)。
+- 当前Python schema文件测试为**4 passed、2 skipped、0 failed**，跳过项继续是本机snapshot/report与真实v2 report opt-in，日志见[`python-schema.log`](../target/workspace-audit-current-2026-10-28/python-schema.log)。Markdown检查覆盖107篇文档、112个片段引用；最终相对链接数和检查结果见[`doc-link-check-current-20261028-verified-final.json`](../target/workspace-audit-current-2026-10-28/doc-link-check-current-20261028-verified-final.json)。
+- 目录和秘密特征扫描没有发现可提交二进制、敏感密钥或非测试用的真实绝对路径；`D:\private\...`等只出现在故障信息的负例测试中。`.gitignore`已验证忽略工作台默认草稿目录、`target/`、`dist/`、本机引擎配置和`.tenki-*`临时目录。
+- 本批没有新增原生研究、runner、worker、FFI调用；未运行`doctor`、真实资产opt-in、手工基准或最新源码部署。B2浏览器下载事件和文件选择上传仍有上一节记录的工具环境限制，HTTP导入/导出由集成测试覆盖。
+
+## 2026-10-28 A1首次失败诊断与B1牌组草稿基础
+
+- A1先添加两个合成账本回归并观察到修复前失败：v2验证器将已扣费的结果级失败误归为已完成初始状态。修复后`cargo test -p ygo-planner --lib --offline --locked --target-dir target/a1-b1-implementation -- --test-threads=1`为**17 passed、0 failed、0 ignored**；包括`DuelResult.error`和`QueryWitness::capture`失败两例及篡改拒绝。两例均认证已扣费结果，但没有可信查询、成功资格、receipt或可恢复前缀。日志见[`planner-tests.log`](../target/a1-b1-implementation/planner-tests.log)。
+- B1聚焦Rust：`ygo-domain`为**12 passed**；`ygo-cli`为**17 passed**，覆盖合同、三分区编辑、YDK/JSON、独占创建/显式替换、CLI命令及写失败时保留原文件。两个新集成入口通过真实CLI执行。Cargo全量覆盖日志见[`workspace-test.log`](../target/a1-b1-implementation/workspace-test.log)。
+- 新schema测试`PYTHONPATH=python py -m pytest tests/test_schemas.py -ra`为**4 passed、2 skipped、0 failed**。跳过的是本机snapshot/report和真实v2 report opt-in；明细及原始输出见[`python-schema-tests.log`](../target/a1-b1-implementation/python-schema-tests.log)。
+- 复验`cargo fmt --all -- --check`与`cargo clippy --workspace --all-targets --offline --locked --target-dir target/a1-b1-implementation -- -D warnings`均通过。默认串行workspace命令`cargo test --workspace --offline --locked --target-dir target/a1-b1-implementation -- --test-threads=1`为**344 passed、36 ignored、0 failed**（89个测试目标/文档测试结果行）。36项均为显式opt-in：需要冻结引擎/CDB/脚本、收费原生研究或查询、人工基准/16+32手、已保存本机报告/历史账本，或`YGO_WRITE_DEPENDENCY_CASES=1`的案例写入；逐项原始原因在workspace日志中。没有运行doctor、真实资产opt-in或48手评估。
+- CLI合同增加了`schemas/deck-document-v1.schema.json`正反例；JSON重复键、非u32/零卡号及错误版本被拒绝。草稿没指定本地catalog时明确返回未核验；指定时只报告未知卡号。分析和旧`Deck`请求合同未改变。
+- 本批新增原生研究、runner、worker及FFI调用均为**0**；不创建scope/窗口/账本，不切换部署，不提交或推送Git。认证历史子集40、政策预留7、规划47仍按原口径；旧confirmation及全部历史实际累计消费仍未知。
+
+本批交接：[A1/B1交接](superpowers/plans/2026-10-28-first-failure-and-deck-draft-handoff.md)；草稿用户入口：[DECK_DRAFTS](DECK_DRAFTS.md)。
+
 ## 2026-10-28 接续验证
 
 - 在目录标识为`codex-ci-current-review312-20261027`的隔离干净源码副本执行Python 3.12.13顶层测试：**729 passed、24 skipped、0 failed**，1644.81秒，进程退出0；随后`python -m ygo_data.cli validate --input tests/fixtures/cards.sample.json`验证2张卡并退出0。测试输出副本为[`ci-current-review-python312.log`](../target/workspace-audit-2026-10-27-codex/ci-current-review-python312.log)，源码清单SHA-256 `9e67e38ce79935bd8c7ff8d6a773b6bcffa253264034f14be277672fdb2196eb`，共551个Git可见源文件。测试使用`PYTHONPATH=python`。与当前Git可见文件逐项比对时，成员数和路径均一致，快照后内容变化限于`docs/TESTING.md`、`docs/WORKSPACE_REVIEW.md`和`docs/superpowers/plans/2026-10-22-tenki-placement-native-recovery-handoff.md`；代码、测试、配置和schema与通过测试的快照相同。24项跳过涉及Windows目录符号链接、不可用的本机历史材料/基线，以及显式要求本机引擎、快照或赛事配置的opt-in；详情见日志。干净副本不含忽略的本机证据，因此这些跳过仍不能当作资产或历史用例验收。

@@ -18,7 +18,7 @@
 | 模块边界与数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | 以crate依赖和调用路径为准 |
 | 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
 | 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
-| JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md) | schema和解析器为规范性定义 |
+| JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md)、[WORKBENCH.md](WORKBENCH.md) | schema和解析器为规范性定义；WORKBENCH记录当前本机HTTP界面与安全边界 |
 | 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
 | 数据来源、版本与许可 | [DATA_SOURCES.md](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
 | 历史计划、交接及故障链 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[任务历史快照](../TASKS_HISTORY.md)、[验证历史快照](TESTING_HISTORY.md) | 原入口保留历史标题锚点；快照是拆分前正文，不替代原报告、源码、账本及固定窗口边界 |
@@ -28,6 +28,10 @@
 [本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)、[验证记录](TESTING.md)、[准备报告](../data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json)。本批完成FIELD_DISABLED56解析、独立opcode24/HINT_ZONE oracle、固定公开选区和合成来源链准备；准备及verify通过，新增native/runner/worker/FFI均为0。`execution_ready=false`，实际opcode24提示、掩码、原生可达、响应接受及完整性/概率/最优性资格仍未获得。
 
 下一研究实验由TASKS开放项决定，须另定scope、预算和窗口；本准备报告不能直接启动原生实验。当前会计口径及未知值以TASKS顶部与对应TESTING证据为准，不在导航中复制累计数字。
+
+## 最近产品工作台批次：首次失败诊断、草稿基础与本机界面（已完成）
+
+[B2交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)、[工作台运行说明](WORKBENCH.md)、[牌组草稿CLI与合同](DECK_DRAFTS.md)。A1首次结果级错误及查询捕获失败回归通过；B1/B2提供版本化草稿、三分区编辑、本机浏览器操作和YDK/JSON往返，不赋予完整合法性或中文资格。实测范围见[TESTING](TESTING.md)。
 
 ## 阅读路径
 

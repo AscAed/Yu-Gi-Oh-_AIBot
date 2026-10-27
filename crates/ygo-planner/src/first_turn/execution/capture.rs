@@ -365,6 +365,26 @@ pub fn start_partial_v2(
     goal: &Goal,
     journal: Arc<CallJournal>,
 ) -> Result<PartialExecutionV2, String> {
+    start_partial_v2_with_backend(
+        request,
+        plan,
+        cat,
+        pack,
+        goal,
+        journal,
+        ProcessEngineAdapter::new(request.engine.clone()),
+    )
+}
+
+fn start_partial_v2_with_backend<A: EngineAdapter>(
+    request: &RunDuelRequest,
+    plan: &ForecastPlan,
+    cat: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    journal: Arc<CallJournal>,
+    backend: A,
+) -> Result<PartialExecutionV2, String> {
     request.validate_protocol()?;
     pack.validate()?;
     goal.validate()?;
@@ -385,11 +405,7 @@ pub fn start_partial_v2(
     journal
         .save_checkpoint(&initial_attempt_checkpoint, &intent)
         .map_err(|e| e.message)?;
-    let adapter = JournaledAdapter::new(
-        ProcessEngineAdapter::new(request.engine.clone()),
-        journal.clone(),
-        CallPurpose::Execution,
-    );
+    let adapter = JournaledAdapter::new(backend, journal.clone(), CallPurpose::Execution);
     let outcome = adapter.run(request);
     let mut last_result = None;
     let (kind, stage, code, detail) = match outcome {

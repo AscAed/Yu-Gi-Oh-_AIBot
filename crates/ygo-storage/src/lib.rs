@@ -3,6 +3,10 @@ use std::{fs, io, path::PathBuf};
 use ygo_domain::Banlist;
 mod import;
 pub use import::*;
+mod deck_drafts;
+pub use deck_drafts::{
+    publish_deck_document, read_deck_document, secure_random_hex, DeckDraftStore, StoredDeckDraft,
+};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct SnapshotMetadata {

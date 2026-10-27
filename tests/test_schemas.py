@@ -74,6 +74,30 @@ class Schemas(unittest.TestCase):
         for schema, fixture in [('card.schema.json', 'cards.sample.json'), ('combo-request.schema.json', 'rabbit.request.json')]:
             validator(schema).validate(json.loads((ROOT / 'tests/fixtures' / fixture).read_text()))
 
+    def test_deck_document_v1_accepts_partial_ordered_drafts_and_rejects_bad_ids(self):
+        check = validator('deck-document-v1.schema.json')
+        draft = {
+            'schema_version': 1,
+            'kind': 'deck_draft',
+            'title': 'unfinished',
+            'main': [12, 12],
+            'extra': [],
+            'side': [12],
+        }
+        check.validate(draft)
+        check.validate({**draft, 'title': 'empty', 'main': [], 'extra': [], 'side': []})
+        for mutation in [
+            {'schema_version': 2},
+            {'kind': 'deck'},
+            {'main': [0]},
+            {'extra': [-1]},
+            {'side': [4294967296]},
+            {'unexpected': True},
+        ]:
+            invalid = dict(draft)
+            invalid.update(mutation)
+            self.assertTrue(list(check.iter_errors(invalid)), mutation)
+
     @unittest.skipUnless(os.environ.get('YGO_LIVE_ENGINE') == '1', 'opt-in: local snapshots/reports')
     def test_actual_snapshots_and_report(self):
         for path in (ROOT / 'data/snapshots').glob('*.json'):

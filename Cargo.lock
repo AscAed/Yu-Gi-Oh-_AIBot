@@ -421,6 +421,7 @@ dependencies = [
 name = "ygo-cli"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "serde_json",
  "ygo-api",
  "ygo-domain",

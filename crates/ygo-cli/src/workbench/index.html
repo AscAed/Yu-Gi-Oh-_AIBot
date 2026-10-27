@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>游戏王牌组草稿工作台</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">本机离线工具</p><h1>牌组草稿工作台</h1></div>
+    <button id="new-draft" class="primary">新建草稿</button>
+  </header>
+  <main>
+    <aside>
+      <h2>已保存草稿</h2>
+      <div id="draft-list" aria-live="polite"></div>
+      <button id="refresh-list">刷新列表</button>
+    </aside>
+    <section class="editor">
+      <div class="toolbar">
+        <label>标题 <input id="title" maxlength="160" value="未命名牌组"></label>
+        <div class="actions">
+          <button id="save" class="primary">保存</button>
+          <button id="export-json">导出 JSON</button>
+          <button id="export-ydk">导出 YDK</button>
+          <label class="file-button">导入文件<input id="import-file" type="file" accept=".json,.ydk,application/json"></label>
+        </div>
+      </div>
+      <p id="notice" role="status">草稿不代表牌组已通过完整合法性或规则验证。</p>
+      <div class="zones">
+        <section class="zone" data-zone="main"><div class="zone-title"><h2>主卡组</h2><span id="main-count">0</span></div><div class="cards" id="main-cards"></div><div class="add"><input data-add="main" inputmode="numeric" placeholder="卡号"><button data-add-button="main">添加</button></div></section>
+        <section class="zone" data-zone="extra"><div class="zone-title"><h2>额外卡组</h2><span id="extra-count">0</span></div><div class="cards" id="extra-cards"></div><div class="add"><input data-add="extra" inputmode="numeric" placeholder="卡号"><button data-add-button="extra">添加</button></div></section>
+        <section class="zone" data-zone="side"><div class="zone-title"><h2>Side</h2><span id="side-count">0</span></div><div class="cards" id="side-cards"></div><div class="add"><input data-add="side" inputmode="numeric" placeholder="卡号"><button data-add-button="side">添加</button></div></section>
+      </div>
+      <section class="catalog">
+        <h2>本地卡表检索</h2>
+        <div class="add"><input id="card-query" placeholder="卡号或卡表原始名称"><button id="search-cards">搜索</button></div>
+        <p id="catalog-note">没有配置卡表时，卡号保留但不核验。</p>
+        <div id="card-results"></div>
+      </section>
+      <section class="limits">
+        <strong>本工作台仅管理草稿</strong>
+        <span>分析、自动构筑和已核验的中文检索尚未提供；不会启动引擎。</span>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

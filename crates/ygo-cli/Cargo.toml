@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+serde.workspace = true
 ygo-engine-adapter = { path = "../ygo-engine-adapter" }
 serde_json.workspace = true
 ygo-domain = { path = "../ygo-domain" }

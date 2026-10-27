@@ -8,6 +8,7 @@ use ygo_cli::Command;
 use ygo_engine_adapter::*;
 use ygo_search::combo::ScoringConfig;
 use ygo_storage::SnapshotStore;
+mod deck_draft;
 fn engine() -> Result<ProcessEngineConfig, String> {
     let path = std::env::var_os("YGO_ENGINE_CONFIG")
         .map(PathBuf::from)
@@ -177,6 +178,12 @@ fn execute(args: &[String]) -> Result<(), String> {
     let command = Command::parse(args).ok_or(
         "usage: ygo <engine|catalog|banlist|deck|combo> <command> [--input path] [--output path]",
     )?;
+    if command == Command::DeckDraft {
+        return deck_draft::execute(&args[2..]);
+    }
+    if command == Command::WorkbenchServe {
+        return ygo_cli::workbench::execute(&args[1..]);
+    }
     if command == Command::EngineWorker {
         return worker_main().map_err(|e| e.to_string());
     }
@@ -774,9 +781,14 @@ fn execute(args: &[String]) -> Result<(), String> {
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if let Err(message) = execute(&args) {
+        let (code, detail) = message
+            .split_once(':')
+            .filter(|(code, _)| code.starts_with("deck_draft_"))
+            .map(|(code, detail)| (code.to_string(), detail.trim().to_string()))
+            .unwrap_or_else(|| ("command_failed".into(), message));
         eprintln!(
             "{}",
-            serde_json::json!({"error":{"code":"command_failed","message":message}})
+            serde_json::json!({"error":{"code":code,"message":detail}})
         );
         std::process::exit(2);
     }
