@@ -462,10 +462,13 @@ mod tests {
             fs::rename(from, to)
         })
         .unwrap_err();
+        #[cfg(windows)]
         assert!(
             error.starts_with("atomic_replace_failed_rolled_back:"),
             "{error}"
         );
+        #[cfg(not(windows))]
+        assert!(error.starts_with("atomic_replace_failed:"), "{error}");
         assert_eq!(fs::read(destination).unwrap(), b"original");
         assert!(!fs::read_dir(root).unwrap().any(|entry| {
             entry
