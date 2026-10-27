@@ -1,0 +1,5092 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "native-tenki-placement-validation.schema.json",
+  "title": "Tenki placement validation evidence v1",
+  "description": "Independent fixed-scope evidence for the six-stage Tenki placement validation experiment.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/manifest"
+    },
+    {
+      "$ref": "#/$defs/prepared"
+    },
+    {
+      "$ref": "#/$defs/preflight_failure"
+    },
+    {
+      "$ref": "#/$defs/receipt"
+    },
+    {
+      "$ref": "#/$defs/stage_report"
+    },
+    {
+      "$ref": "#/$defs/summary"
+    },
+    {
+      "$ref": "#/$defs/verification"
+    }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "flags": {
+      "type": "object",
+      "properties": {
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      },
+      "required": [
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ]
+    },
+    "common": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "type": "integer",
+              "const": 1
+            },
+            "scope": {
+              "const": "tenki-placement-validation-v1"
+            },
+            "context": {
+              "$ref": "#/$defs/hash"
+            }
+          },
+          "required": [
+            "schema_version",
+            "scope",
+            "context"
+          ]
+        },
+        {
+          "$ref": "#/$defs/flags"
+        }
+      ]
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "consumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "completed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "reserved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "abandoned": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "limit": {
+          "const": 6
+        }
+      },
+      "required": [
+        "consumed",
+        "completed",
+        "unknown",
+        "reserved",
+        "abandoned",
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "stage_summary": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "native_calls": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostic_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "independent_replay_matches": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ledger": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/stats"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "stage",
+        "successful",
+        "native_calls",
+        "diagnostic",
+        "receipt_sha256",
+        "diagnostic_sha256",
+        "independent_replay_matches",
+        "ledger"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "enum": [
+                  4,
+                  6
+                ]
+              }
+            },
+            "required": [
+              "stage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "independent_replay_matches": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "if": {
+              "properties": {
+                "successful": {
+                  "const": true
+                }
+              },
+              "required": [
+                "successful"
+              ]
+            },
+            "then": {
+              "properties": {
+                "independent_replay_matches": {
+                  "const": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  5
+                ]
+              }
+            },
+            "required": [
+              "stage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "independent_replay_matches": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "successful": {
+                "const": true
+              }
+            },
+            "required": [
+              "successful"
+            ]
+          },
+          "then": {
+            "properties": {
+              "native_calls": {
+                "const": 1
+              },
+              "diagnostic": {
+                "type": "null"
+              },
+              "receipt_sha256": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "required": [
+              "ledger"
+            ]
+          }
+        }
+      ]
+    },
+    "manifest": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "native_tenki_placement_validation_manifest"
+            },
+            "started_at": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "const": 6
+            },
+            "planned_calls": {
+              "const": 6
+            },
+            "wall_seconds": {
+              "const": 7200
+            },
+            "old_consumed": {
+              "const": 26
+            },
+            "baseline_delivery_sha256": {
+              "const": "84a3fc887e967f45c2c807d104450b41fbb31c038e93132b30b6bebadc669e22"
+            },
+            "input_sha256": {
+              "type": "object",
+              "properties": {
+                "runner": { "$ref": "#/$defs/hash" },
+                "worker": { "$ref": "#/$defs/hash" },
+                "cli": { "$ref": "#/$defs/hash" },
+                "build_record": { "$ref": "#/$defs/hash" },
+                "identity": { "$ref": "#/$defs/hash" },
+                "window_start": { "$ref": "#/$defs/hash" },
+                "source_archive": { "$ref": "#/$defs/hash" },
+                "source_file_list": { "$ref": "#/$defs/hash" },
+                "ordinary_config": { "$ref": "#/$defs/hash" },
+                "tournament_config": { "$ref": "#/$defs/hash" },
+                "banlist": { "$ref": "#/$defs/hash" },
+                "preparation": { "$ref": "#/$defs/hash" },
+                "baseline_delivery": { "$ref": "#/$defs/hash" },
+                "baseline_audit": { "$ref": "#/$defs/hash" },
+                "prompt_source_stage1": { "$ref": "#/$defs/hash" },
+                "prompt_source_stage2_request": { "$ref": "#/$defs/hash" }
+              },
+              "required": [
+                "runner", "worker", "cli", "build_record", "identity", "window_start",
+                "source_archive", "source_file_list", "ordinary_config", "tournament_config",
+                "banlist", "preparation", "baseline_delivery", "baseline_audit",
+                "prompt_source_stage1", "prompt_source_stage2_request"
+              ],
+              "additionalProperties": false
+            },
+            "source": {
+              "type": "object"
+            },
+            "build": {
+              "type": "object"
+            },
+            "assets": {
+              "type": "object"
+            },
+            "stage1_request_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "request_derivation": {
+              "const": "frozen-tenki-activation-only-worker-path-replaced"
+            },
+            "request": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "started_at",
+            "limit",
+            "planned_calls",
+            "wall_seconds",
+            "old_consumed",
+            "baseline_delivery_sha256",
+            "input_sha256",
+            "source",
+            "build",
+            "assets",
+            "stage1_request_sha256",
+            "request_derivation",
+            "request"
+          ]
+        }
+      ]
+    },
+    "prepared": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "native_tenki_placement_validation_prepared"
+            },
+            "prepared": {
+              "const": true
+            },
+            "execution_ready": {
+              "type": "boolean"
+            },
+            "native_calls": {
+              "const": 0
+            },
+            "planned_calls": {
+              "const": 6
+            },
+            "stage1_request_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "preflight_diagnostic_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "manifest_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "stage1_input_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "prepared",
+            "execution_ready",
+            "native_calls",
+            "planned_calls",
+            "stage1_request_sha256",
+            "preflight_diagnostic_sha256",
+            "manifest_sha256",
+            "stage1_input_sha256"
+          ]
+        }
+      ]
+    },
+    "preflight_failure": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "native_tenki_placement_validation_preflight_failure"
+            },
+            "prepared": {
+              "const": false
+            },
+            "execution_ready": {
+              "const": false
+            },
+            "native_calls": {
+              "const": 0
+            },
+            "stage": {
+              "const": 1
+            },
+            "no_charged_ledger": {
+              "const": true
+            },
+            "manifest_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "stage1_request_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "stage1_input_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "process_diagnostic_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "process_diagnostic_saved": {
+              "type": "boolean"
+            },
+            "diagnostic": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind", "prepared", "execution_ready", "native_calls", "stage",
+            "no_charged_ledger", "manifest_sha256", "stage1_request_sha256",
+            "stage1_input_sha256", "process_diagnostic_sha256",
+            "process_diagnostic_saved", "diagnostic"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "receipt": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "native_tenki_placement_validation_stage"
+            },
+            "stage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "request": {
+              "type": "object"
+            },
+            "successful": {
+              "type": "boolean"
+            },
+            "diagnostic": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "assets_unchanged": {
+              "type": "boolean"
+            },
+            "assets_before": {
+              "type": "object"
+            },
+            "assets_after": {
+              "type": "object"
+            },
+            "window_valid_at_result": {
+              "type": "boolean"
+            },
+            "validation": {
+              "type": "object"
+            },
+            "result": {
+              "type": "object"
+            },
+            "independent_replay_matches": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "ledger": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/stats"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "schema_version": {
+              "type": "integer",
+              "const": 1
+            }
+          },
+          "required": [
+            "kind",
+            "stage",
+            "request",
+            "successful",
+            "diagnostic",
+            "assets_unchanged",
+            "assets_before",
+            "assets_after",
+            "window_valid_at_result",
+            "validation",
+            "result",
+            "independent_replay_matches",
+            "ledger",
+            "schema_version"
+          ],
+          "additionalProperties": true,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "stage": {
+                    "enum": [
+                      4,
+                      6
+                    ]
+                  }
+                },
+                "required": [
+                  "stage"
+                ]
+              },
+              "then": {
+                "if": {
+                  "properties": {
+                    "successful": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "successful"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "independent_replay_matches": {
+                      "const": true
+                    }
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "independent_replay_matches": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "stage_report": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "native_tenki_placement_validation_stage_report"
+            },
+            "stage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "successful": {
+              "type": "boolean"
+            },
+            "native_calls": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "diagnostic": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "receipt_sha256": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/hash"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "diagnostic_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "independent_replay_matches": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "ledger": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/stats"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "stage",
+            "successful",
+            "native_calls",
+            "diagnostic",
+            "receipt_sha256",
+            "diagnostic_sha256",
+            "independent_replay_matches",
+            "ledger"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "stage": {
+                    "enum": [
+                      4,
+                      6
+                    ]
+                  }
+                },
+                "required": [
+                  "stage"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "independent_replay_matches": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "if": {
+                  "properties": {
+                    "successful": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "successful"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "independent_replay_matches": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "stage": {
+                    "enum": [
+                      1,
+                      2,
+                      3,
+                      5
+                    ]
+                  }
+                },
+                "required": [
+                  "stage"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "independent_replay_matches": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "successful": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "successful"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "successful": {
+                    "const": true
+                  },
+                  "native_calls": {
+                    "const": 1
+                  },
+                  "diagnostic": {
+                    "type": "null"
+                  },
+                  "receipt_sha256": {
+                    "$ref": "#/$defs/hash"
+                  }
+                },
+                "required": [
+                  "ledger"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "success_stage_base": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stage_summary"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "successful": {
+              "const": true
+            },
+            "native_calls": {
+              "const": 1
+            },
+            "diagnostic": {
+              "type": "null"
+            },
+            "receipt_sha256": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        }
+      ]
+    },
+    "success_stage_1": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/success_stage_base"
+        },
+        {
+          "properties": {
+            "stage": {
+              "const": 1
+            },
+            "independent_replay_matches": {
+              "type": "null"
+            },
+            "ledger": {
+              "const": {
+                "consumed": 1,
+                "completed": 1,
+                "unknown": 0,
+                "reserved": 0,
+                "abandoned": 0,
+                "limit": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "success_stage_2": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/success_stage_base"
+        },
+        {
+          "properties": {
+            "stage": {
+              "const": 2
+            },
+            "independent_replay_matches": {
+              "type": "null"
+            },
+            "ledger": {
+              "const": {
+                "consumed": 2,
+                "completed": 2,
+                "unknown": 0,
+                "reserved": 0,
+                "abandoned": 0,
+                "limit": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "success_stage_3": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/success_stage_base"
+        },
+        {
+          "properties": {
+            "stage": {
+              "const": 3
+            },
+            "independent_replay_matches": {
+              "type": "null"
+            },
+            "ledger": {
+              "const": {
+                "consumed": 3,
+                "completed": 3,
+                "unknown": 0,
+                "reserved": 0,
+                "abandoned": 0,
+                "limit": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "success_stage_4": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/success_stage_base"
+        },
+        {
+          "properties": {
+            "stage": {
+              "const": 4
+            },
+            "independent_replay_matches": {
+              "const": true
+            },
+            "ledger": {
+              "const": {
+                "consumed": 4,
+                "completed": 4,
+                "unknown": 0,
+                "reserved": 0,
+                "abandoned": 0,
+                "limit": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "success_stage_5": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/success_stage_base"
+        },
+        {
+          "properties": {
+            "stage": {
+              "const": 5
+            },
+            "independent_replay_matches": {
+              "type": "null"
+            },
+            "ledger": {
+              "const": {
+                "consumed": 5,
+                "completed": 5,
+                "unknown": 0,
+                "reserved": 0,
+                "abandoned": 0,
+                "limit": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "success_stage_6": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/success_stage_base"
+        },
+        {
+          "properties": {
+            "stage": {
+              "const": 6
+            },
+            "independent_replay_matches": {
+              "const": true
+            },
+            "ledger": {
+              "const": {
+                "consumed": 6,
+                "completed": 6,
+                "unknown": 0,
+                "reserved": 0,
+                "abandoned": 0,
+                "limit": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "kind": {
+          "const": "native_tenki_placement_validation_summary"
+        },
+        "scope": {
+          "const": "tenki-placement-validation-v1"
+        },
+        "context": {
+          "$ref": "#/$defs/hash"
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "old_consumed": {
+          "type": "integer",
+          "const": 26
+        },
+        "new_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 6
+        },
+        "cumulative_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 26
+        },
+        "unknown": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 6
+        },
+        "ledger": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/stats"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stages": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/stage_summary"
+          }
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "scope",
+        "context",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified",
+        "successful",
+        "old_consumed",
+        "new_consumed",
+        "cumulative_consumed",
+        "unknown",
+        "ledger",
+        "stages",
+        "diagnostic"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "successful": {
+                "const": true
+              }
+            },
+            "required": [
+              "successful"
+            ]
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 6
+              },
+              "cumulative_consumed": {
+                "const": 32
+              },
+              "unknown": {
+                "const": 0
+              },
+              "diagnostic": {
+                "type": "null"
+              },
+              "ledger": {
+                "const": {
+                  "consumed": 6,
+                  "completed": 6,
+                  "unknown": 0,
+                  "reserved": 0,
+                  "abandoned": 0,
+                  "limit": 6
+                }
+              },
+              "stages": {
+                "minItems": 6,
+                "maxItems": 6,
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/success_stage_1"
+                  },
+                  {
+                    "$ref": "#/$defs/success_stage_2"
+                  },
+                  {
+                    "$ref": "#/$defs/success_stage_3"
+                  },
+                  {
+                    "$ref": "#/$defs/success_stage_4"
+                  },
+                  {
+                    "$ref": "#/$defs/success_stage_5"
+                  },
+                  {
+                    "$ref": "#/$defs/success_stage_6"
+                  }
+                ],
+                "items": false
+              }
+            }
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "ledger": {
+                  "type": "null"
+                },
+                "new_consumed": {
+                  "type": "null"
+                },
+                "cumulative_consumed": {
+                  "type": "null"
+                },
+                "unknown": {
+                  "type": "null"
+                }
+              },
+              "required": [
+                "ledger",
+                "new_consumed",
+                "cumulative_consumed",
+                "unknown"
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 0
+                        },
+                        "cumulative_consumed": {
+                          "const": 26
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 0
+                            },
+                            "reserved": {
+                              "maximum": 6
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 1
+                        },
+                        "cumulative_consumed": {
+                          "const": 27
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 1
+                            },
+                            "reserved": {
+                              "maximum": 5
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 1
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 1
+                        },
+                        "cumulative_consumed": {
+                          "const": 27
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 1
+                            },
+                            "reserved": {
+                              "maximum": 5
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 1
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 1
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 2
+                        },
+                        "cumulative_consumed": {
+                          "const": 28
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 2
+                            },
+                            "reserved": {
+                              "maximum": 4
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 2
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 2
+                        },
+                        "cumulative_consumed": {
+                          "const": 28
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 2
+                            },
+                            "reserved": {
+                              "maximum": 4
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 1
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 1
+                            },
+                            "completed": {
+                              "const": 1
+                            },
+                            "abandoned": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 2
+                        },
+                        "cumulative_consumed": {
+                          "const": 28
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 2
+                            },
+                            "reserved": {
+                              "maximum": 4
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 2
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 2
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 3
+                        },
+                        "cumulative_consumed": {
+                          "const": 29
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 3
+                            },
+                            "reserved": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 3
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 3
+                        },
+                        "cumulative_consumed": {
+                          "const": 29
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 3
+                            },
+                            "reserved": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 1
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 1
+                            },
+                            "completed": {
+                              "const": 2
+                            },
+                            "abandoned": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 3
+                        },
+                        "cumulative_consumed": {
+                          "const": 29
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 3
+                            },
+                            "reserved": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 2
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 2
+                            },
+                            "completed": {
+                              "const": 1
+                            },
+                            "abandoned": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 3
+                        },
+                        "cumulative_consumed": {
+                          "const": 29
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 3
+                            },
+                            "reserved": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 3
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 3
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 4
+                        },
+                        "cumulative_consumed": {
+                          "const": 30
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 4
+                            },
+                            "reserved": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 4
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 4
+                        },
+                        "cumulative_consumed": {
+                          "const": 30
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 4
+                            },
+                            "reserved": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 1
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 1
+                            },
+                            "completed": {
+                              "const": 3
+                            },
+                            "abandoned": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 4
+                        },
+                        "cumulative_consumed": {
+                          "const": 30
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 4
+                            },
+                            "reserved": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 2
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 2
+                            },
+                            "completed": {
+                              "const": 2
+                            },
+                            "abandoned": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 4
+                        },
+                        "cumulative_consumed": {
+                          "const": 30
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 4
+                            },
+                            "reserved": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 3
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 3
+                            },
+                            "completed": {
+                              "const": 1
+                            },
+                            "abandoned": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 4
+                        },
+                        "cumulative_consumed": {
+                          "const": 30
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 4
+                            },
+                            "reserved": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 4
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 4
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 4
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 5
+                        },
+                        "cumulative_consumed": {
+                          "const": 31
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 5
+                            },
+                            "reserved": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 5
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 5
+                        },
+                        "cumulative_consumed": {
+                          "const": 31
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 5
+                            },
+                            "reserved": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 1
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 1
+                            },
+                            "completed": {
+                              "const": 4
+                            },
+                            "abandoned": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 5
+                        },
+                        "cumulative_consumed": {
+                          "const": 31
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 5
+                            },
+                            "reserved": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 2
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 2
+                            },
+                            "completed": {
+                              "const": 3
+                            },
+                            "abandoned": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 5
+                        },
+                        "cumulative_consumed": {
+                          "const": 31
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 5
+                            },
+                            "reserved": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 3
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 3
+                            },
+                            "completed": {
+                              "const": 2
+                            },
+                            "abandoned": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 5
+                        },
+                        "cumulative_consumed": {
+                          "const": 31
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 5
+                            },
+                            "reserved": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 4
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 4
+                            },
+                            "completed": {
+                              "const": 1
+                            },
+                            "abandoned": {
+                              "maximum": 4
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 5
+                        },
+                        "cumulative_consumed": {
+                          "const": 31
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 5
+                            },
+                            "reserved": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 5
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 5
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 5
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 0
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 0
+                            },
+                            "completed": {
+                              "const": 6
+                            },
+                            "abandoned": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 1
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 1
+                            },
+                            "completed": {
+                              "const": 5
+                            },
+                            "abandoned": {
+                              "maximum": 1
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 2
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 2
+                            },
+                            "completed": {
+                              "const": 4
+                            },
+                            "abandoned": {
+                              "maximum": 2
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 3
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 3
+                            },
+                            "completed": {
+                              "const": 3
+                            },
+                            "abandoned": {
+                              "maximum": 3
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 4
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 4
+                            },
+                            "completed": {
+                              "const": 2
+                            },
+                            "abandoned": {
+                              "maximum": 4
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 5
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 5
+                            },
+                            "completed": {
+                              "const": 1
+                            },
+                            "abandoned": {
+                              "maximum": 5
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "new_consumed": {
+                          "const": 6
+                        },
+                        "cumulative_consumed": {
+                          "const": 32
+                        },
+                        "ledger": {
+                          "type": "object",
+                          "properties": {
+                            "consumed": {
+                              "const": 6
+                            },
+                            "reserved": {
+                              "maximum": 0
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "new_consumed",
+                        "cumulative_consumed",
+                        "ledger"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "unknown": {
+                          "const": 6
+                        },
+                        "ledger": {
+                          "properties": {
+                            "unknown": {
+                              "const": 6
+                            },
+                            "completed": {
+                              "const": 0
+                            },
+                            "abandoned": {
+                              "maximum": 6
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "unknown"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "type": "integer",
+              "const": 1
+            },
+            "kind": {
+              "const": "native_tenki_placement_validation_verification"
+            },
+            "scope": {
+              "const": "tenki-placement-validation-v1"
+            },
+            "context": {
+              "$ref": "#/$defs/hash"
+            },
+            "proof_ready": {
+              "const": false
+            },
+            "complete_action_coverage": {
+              "const": false
+            },
+            "global_optimality": {
+              "const": false
+            },
+            "native_probability_verified": {
+              "const": false
+            },
+            "valid": {
+              "type": "boolean"
+            },
+            "native_calls": {
+              "const": 0
+            },
+            "old_consumed": {
+              "const": 26
+            },
+            "new_consumed": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 6
+            },
+            "cumulative_consumed": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 26,
+              "maximum": 32
+            },
+            "unknown": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 6
+            },
+            "ledger": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/stats"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stages": {
+              "type": "array",
+              "maxItems": 6,
+              "items": {
+                "$ref": "#/$defs/stage_summary"
+              }
+            },
+            "prepared_sha256": {
+              "$ref": "#/$defs/hash"
+            },
+            "verification_diagnostic_sha256": {
+              "type": "array",
+              "maxItems": 6,
+              "items": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "diagnostic": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "schema_version",
+            "kind",
+            "scope",
+            "context",
+            "proof_ready",
+            "complete_action_coverage",
+            "global_optimality",
+            "native_probability_verified",
+            "valid",
+            "native_calls",
+            "old_consumed",
+            "new_consumed",
+            "cumulative_consumed",
+            "unknown",
+            "ledger",
+            "stages",
+            "prepared_sha256",
+            "verification_diagnostic_sha256",
+            "diagnostic"
+          ],
+          "unevaluatedProperties": false,
+          "allOf": [
+            {
+              "properties": {
+                "stages": {
+                  "prefixItems": [
+                    {
+                      "allOf": [
+                        {
+                          "$ref": "#/$defs/stage_summary"
+                        },
+                        {
+                          "properties": {
+                            "stage": {
+                              "const": 1
+                            }
+                          },
+                          "required": [
+                            "stage"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "allOf": [
+                        {
+                          "$ref": "#/$defs/stage_summary"
+                        },
+                        {
+                          "properties": {
+                            "stage": {
+                              "const": 2
+                            }
+                          },
+                          "required": [
+                            "stage"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "allOf": [
+                        {
+                          "$ref": "#/$defs/stage_summary"
+                        },
+                        {
+                          "properties": {
+                            "stage": {
+                              "const": 3
+                            }
+                          },
+                          "required": [
+                            "stage"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "allOf": [
+                        {
+                          "$ref": "#/$defs/stage_summary"
+                        },
+                        {
+                          "properties": {
+                            "stage": {
+                              "const": 4
+                            }
+                          },
+                          "required": [
+                            "stage"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "allOf": [
+                        {
+                          "$ref": "#/$defs/stage_summary"
+                        },
+                        {
+                          "properties": {
+                            "stage": {
+                              "const": 5
+                            }
+                          },
+                          "required": [
+                            "stage"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "allOf": [
+                        {
+                          "$ref": "#/$defs/stage_summary"
+                        },
+                        {
+                          "properties": {
+                            "stage": {
+                              "const": 6
+                            }
+                          },
+                          "required": [
+                            "stage"
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "items": false
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "valid": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "valid"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "new_consumed": {
+                    "const": 6
+                  },
+                  "cumulative_consumed": {
+                    "const": 32
+                  },
+                  "unknown": {
+                    "const": 0
+                  },
+                  "ledger": {
+                    "const": {
+                      "consumed": 6,
+                      "completed": 6,
+                      "unknown": 0,
+                      "reserved": 0,
+                      "abandoned": 0,
+                      "limit": 6
+                    }
+                  },
+                  "stages": {
+                    "minItems": 6,
+                    "maxItems": 6,
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/success_stage_1"
+                      },
+                      {
+                        "$ref": "#/$defs/success_stage_2"
+                      },
+                      {
+                        "$ref": "#/$defs/success_stage_3"
+                      },
+                      {
+                        "$ref": "#/$defs/success_stage_4"
+                      },
+                      {
+                        "$ref": "#/$defs/success_stage_5"
+                      },
+                      {
+                        "$ref": "#/$defs/success_stage_6"
+                      }
+                    ],
+                    "items": false
+                  },
+                  "verification_diagnostic_sha256": {
+                    "minItems": 6,
+                    "maxItems": 6
+                  },
+                  "diagnostic": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "valid": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "valid"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "diagnostic": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "ledger": {
+                  "type": "null"
+                },
+                "new_consumed": {
+                  "type": "null"
+                },
+                "cumulative_consumed": {
+                  "type": "null"
+                },
+                "unknown": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "oneOf": [
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 0
+                    },
+                    "cumulative_consumed": {
+                      "const": 26
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 0
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 1,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 0
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 1
+                    },
+                    "cumulative_consumed": {
+                      "const": 27
+                    },
+                    "unknown": {
+                      "const": 1
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 1
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 1
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 2,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 1
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 1
+                    },
+                    "cumulative_consumed": {
+                      "const": 27
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 1
+                        },
+                        "completed": {
+                          "const": 1
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 2,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 1
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 2
+                    },
+                    "cumulative_consumed": {
+                      "const": 28
+                    },
+                    "unknown": {
+                      "const": 2
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 2
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 2
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 3,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 2
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 2
+                    },
+                    "cumulative_consumed": {
+                      "const": 28
+                    },
+                    "unknown": {
+                      "const": 1
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 2
+                        },
+                        "completed": {
+                          "const": 1
+                        },
+                        "unknown": {
+                          "const": 1
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 3,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 2
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 2
+                    },
+                    "cumulative_consumed": {
+                      "const": 28
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 2
+                        },
+                        "completed": {
+                          "const": 2
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 3,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 2
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 3
+                    },
+                    "cumulative_consumed": {
+                      "const": 29
+                    },
+                    "unknown": {
+                      "const": 3
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 3
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 3
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 4,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 3
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 3
+                    },
+                    "cumulative_consumed": {
+                      "const": 29
+                    },
+                    "unknown": {
+                      "const": 2
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 3
+                        },
+                        "completed": {
+                          "const": 1
+                        },
+                        "unknown": {
+                          "const": 2
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 4,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 3
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 3
+                    },
+                    "cumulative_consumed": {
+                      "const": 29
+                    },
+                    "unknown": {
+                      "const": 1
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 3
+                        },
+                        "completed": {
+                          "const": 2
+                        },
+                        "unknown": {
+                          "const": 1
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 4,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 3
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 3
+                    },
+                    "cumulative_consumed": {
+                      "const": 29
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 3
+                        },
+                        "completed": {
+                          "const": 3
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 4,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 3
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 4
+                    },
+                    "cumulative_consumed": {
+                      "const": 30
+                    },
+                    "unknown": {
+                      "const": 4
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 4
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 4
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 5,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 4
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 4
+                    },
+                    "cumulative_consumed": {
+                      "const": 30
+                    },
+                    "unknown": {
+                      "const": 3
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 4
+                        },
+                        "completed": {
+                          "const": 1
+                        },
+                        "unknown": {
+                          "const": 3
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 5,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 4
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 4
+                    },
+                    "cumulative_consumed": {
+                      "const": 30
+                    },
+                    "unknown": {
+                      "const": 2
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 4
+                        },
+                        "completed": {
+                          "const": 2
+                        },
+                        "unknown": {
+                          "const": 2
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 5,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 4
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 4
+                    },
+                    "cumulative_consumed": {
+                      "const": 30
+                    },
+                    "unknown": {
+                      "const": 1
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 4
+                        },
+                        "completed": {
+                          "const": 3
+                        },
+                        "unknown": {
+                          "const": 1
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 5,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 4
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 4
+                    },
+                    "cumulative_consumed": {
+                      "const": 30
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 4
+                        },
+                        "completed": {
+                          "const": 4
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 5,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 4
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 5
+                    },
+                    "cumulative_consumed": {
+                      "const": 31
+                    },
+                    "unknown": {
+                      "const": 5
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 5
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 5
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 5
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 5
+                    },
+                    "cumulative_consumed": {
+                      "const": 31
+                    },
+                    "unknown": {
+                      "const": 4
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 5
+                        },
+                        "completed": {
+                          "const": 1
+                        },
+                        "unknown": {
+                          "const": 4
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 5
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 5
+                    },
+                    "cumulative_consumed": {
+                      "const": 31
+                    },
+                    "unknown": {
+                      "const": 3
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 5
+                        },
+                        "completed": {
+                          "const": 2
+                        },
+                        "unknown": {
+                          "const": 3
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 5
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 5
+                    },
+                    "cumulative_consumed": {
+                      "const": 31
+                    },
+                    "unknown": {
+                      "const": 2
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 5
+                        },
+                        "completed": {
+                          "const": 3
+                        },
+                        "unknown": {
+                          "const": 2
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 5
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 5
+                    },
+                    "cumulative_consumed": {
+                      "const": 31
+                    },
+                    "unknown": {
+                      "const": 1
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 5
+                        },
+                        "completed": {
+                          "const": 4
+                        },
+                        "unknown": {
+                          "const": 1
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 5
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 5
+                    },
+                    "cumulative_consumed": {
+                      "const": 31
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 5
+                        },
+                        "completed": {
+                          "const": 5
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 5
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 6
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 0
+                        },
+                        "unknown": {
+                          "const": 6
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 5
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 1
+                        },
+                        "unknown": {
+                          "const": 5
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 4
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 2
+                        },
+                        "unknown": {
+                          "const": 4
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 3
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 3
+                        },
+                        "unknown": {
+                          "const": 3
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 2
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 4
+                        },
+                        "unknown": {
+                          "const": 2
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 1
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 5
+                        },
+                        "unknown": {
+                          "const": 1
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "new_consumed": {
+                      "const": 6
+                    },
+                    "cumulative_consumed": {
+                      "const": 32
+                    },
+                    "unknown": {
+                      "const": 0
+                    },
+                    "ledger": {
+                      "type": "object",
+                      "properties": {
+                        "consumed": {
+                          "const": 6
+                        },
+                        "completed": {
+                          "const": 6
+                        },
+                        "unknown": {
+                          "const": 0
+                        },
+                        "reserved": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "abandoned": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 0
+                        },
+                        "limit": {
+                          "const": 6
+                        }
+                      },
+                      "required": [
+                        "consumed",
+                        "completed",
+                        "unknown",
+                        "reserved",
+                        "abandoned",
+                        "limit"
+                      ]
+                    },
+                    "stages": {
+                      "maxItems": 6,
+                      "items": {
+                        "properties": {
+                          "ledger": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "consumed": {
+                                    "type": "integer",
+                                    "maximum": 6
+                                  }
+                                },
+                                "required": [
+                                  "consumed"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

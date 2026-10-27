@@ -7,10 +7,10 @@ name = "ygo-aibot-tools"
 version = "0.1.0"
 description = "Data import and offline evaluation tools for Yu-Gi-Oh! OCG AI"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["jsonschema>=4.23,<5"]
 
 [project.optional-dependencies]
-test = ["jsonschema>=4.23,<5"]
+test = ["pytest>=9,<10"]
 
 [project.scripts]
 ygo-data = "ygo_data.cli:main"
@@ -20,3 +20,6 @@ package-dir = {"" = "python"}
 
 [tool.setuptools.packages.find]
 where = ["python"]
+
+[tool.pytest.ini_options]
+cache_dir = "target/pytest-cache"

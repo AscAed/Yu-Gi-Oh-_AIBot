@@ -1,0 +1,1103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Curry Ledger Handoff Recovery v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "status",
+    "valid",
+    "failure_checkpoint",
+    "diagnostic",
+    "native_calls",
+    "runner_process_calls",
+    "execution_ready",
+    "qualifications",
+    "tool",
+    "v5_source",
+    "checks",
+    "source_groups",
+    "baseline",
+    "saved_process_evidence",
+    "accounting",
+    "inputs",
+    "stability",
+    "publication",
+    "elapsed_seconds",
+    "previous_recovery_source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "curry_ledger_handoff_recovery_v2"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed",
+        "incomplete"
+      ]
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "failure_checkpoint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "previous_recovery_failed_source",
+        "v5_delivery_and_archives",
+        "historical_sources",
+        "frozen_input_and_parent",
+        "saved_process_evidence",
+        "scope_ledger_semantics",
+        "input_stability",
+        "report_publication",
+        null
+      ]
+    },
+    "diagnostic": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z][a-z0-9_]{1,100}$"
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "runner_process_calls": {
+      "const": 0
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "qualifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ],
+      "properties": {
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      }
+    },
+    "tool": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "workspace_identity",
+        "archive_scope",
+        "verification_implementation",
+        "archive_path",
+        "archive_sha256",
+        "file_list_path",
+        "file_list_sha256",
+        "file_count",
+        "member_sha256"
+      ],
+      "properties": {
+        "identity": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "workspace_identity": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "archive_scope": {
+          "const": "recovery-entrypoints-and-primary-contracts-integrity-only"
+        },
+        "verification_implementation": {
+          "const": "current_workspace_code_revalidates_saved_evidence"
+        },
+        "archive_path": {
+          "const": "tool-source.zip"
+        },
+        "archive_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "file_list_path": {
+          "const": "tool-source-file-list.json"
+        },
+        "file_list_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "file_count": {
+          "const": 7
+        },
+        "member_sha256": {
+          "type": "object",
+          "minProperties": 7,
+          "maxProperties": 7,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "v5_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "delivery_sha256",
+        "native_source_identity",
+        "native_file_count",
+        "final_source_identity",
+        "final_file_count",
+        "source_delta",
+        "formal_report_absent",
+        "outer_cli_exit_code_claimed",
+        "outer_cli_exit_code_authenticated",
+        "outer_failure_reason_authenticated"
+      ],
+      "properties": {
+        "delivery_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "native_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "native_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "final_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "final_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "source_delta": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "formal_report_absent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "outer_cli_exit_code_claimed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "outer_cli_exit_code_authenticated": {
+          "const": false
+        },
+        "outer_failure_reason_authenticated": {
+          "const": false
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_recovery_failed_source",
+        "v5_delivery_and_archives",
+        "historical_sources",
+        "frozen_input_and_parent",
+        "saved_process_evidence",
+        "scope_ledger_semantics",
+        "input_stability",
+        "report_publication"
+      ],
+      "properties": {
+        "previous_recovery_failed_source": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "v5_delivery_and_archives": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "historical_sources": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "frozen_input_and_parent": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "saved_process_evidence": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "scope_ledger_semantics": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "input_stability": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "report_publication": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        }
+      }
+    },
+    "source_groups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v5_original_audit_roles",
+        "v5_recovery_anchors",
+        "curry_scope_blob_roles",
+        "v3_reservation_roles",
+        "previous_recovery_roles"
+      ],
+      "properties": {
+        "v5_original_audit_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "v5_recovery_anchors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "curry_scope_blob_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "v3_reservation_roles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "previous_recovery_roles": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "context",
+        "manifest_sha256",
+        "prepared_sha256",
+        "stage1_receipt_sha256",
+        "stage2_input_sha256",
+        "stage2_receipt_absent"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-verification-v1"
+        },
+        "context": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "manifest_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "prepared_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage1_receipt_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage2_input_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage2_receipt_absent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "saved_process_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "mode",
+        "status",
+        "return_code",
+        "metadata_sha256",
+        "stdout_sha256",
+        "stdout_bytes",
+        "stderr_sha256",
+        "stderr_bytes",
+        "trace_event_count",
+        "asset_scan_elapsed_ns",
+        "historical_scan_time_certified"
+      ],
+      "properties": {
+        "role": {
+          "const": "curry_ledger_handoff_audit_runner"
+        },
+        "mode": {
+          "const": "audit_saved_input_only"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "return_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "metadata_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stdout_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stdout_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "stderr_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stderr_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "trace_event_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "asset_scan_elapsed_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "historical_scan_time_certified": {
+          "const": false
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "original_scope_consumed",
+        "original_scope_completed",
+        "original_scope_unknown",
+        "original_scope_limit",
+        "certified_historical_consumed_before_scope",
+        "certified_historical_consumed_including_scope",
+        "policy_reserved",
+        "planning_total",
+        "reservation_id",
+        "reservation_policy_id",
+        "old_confirmation_actual_consumed",
+        "actual_all_history_cumulative"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-verification-v1"
+        },
+        "original_scope_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "original_scope_completed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "original_scope_unknown": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "original_scope_limit": {
+          "const": 7
+        },
+        "certified_historical_consumed_before_scope": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "certified_historical_consumed_including_scope": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "policy_reserved": {
+          "const": 7
+        },
+        "planning_total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reservation_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reservation_policy_id": {
+          "const": "curry-unknown-reserve-seven-v1"
+        },
+        "old_confirmation_actual_consumed": {
+          "type": "null"
+        },
+        "actual_all_history_cumulative": {
+          "type": "null"
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\\\:]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first_check",
+        "recheck",
+        "input_rows_revalidation",
+        "workspace",
+        "v5_tree",
+        "baseline_tree",
+        "reservation_tree",
+        "historical_trees",
+        "ledger_and_blobs",
+        "stage2_receipt_absent_before",
+        "stage2_receipt_absent_after",
+        "previous_recovery_tree"
+      ],
+      "properties": {
+        "first_check": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "recheck": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "input_rows_revalidation": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "workspace": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "v5_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "baseline_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "reservation_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "historical_trees": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "ledger_and_blobs": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        },
+        "stage2_receipt_absent_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stage2_receipt_absent_after": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "previous_recovery_tree": {
+          "enum": [
+            "not_collected",
+            "consistent",
+            "changed",
+            "recheck_failed",
+            "first_check_failed"
+          ]
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "failure_phase",
+        "diagnostic_id"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed"
+          ]
+        },
+        "failure_phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "report_validation",
+            "source_reconstruction",
+            "exclusive_report_write",
+            "post_write_revalidation",
+            null
+          ]
+        },
+        "diagnostic_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      }
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "previous_recovery_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_sha256",
+        "delivery_sha256",
+        "status",
+        "failure_checkpoint",
+        "diagnostic",
+        "source_delta",
+        "final_source_identity",
+        "final_file_count"
+      ],
+      "properties": {
+        "report_sha256": {
+          "const": "bf85a81f7d6a204e4a960b2ffb8449e2f1a17d857ca5fcf7e5e2303f5285270d"
+        },
+        "delivery_sha256": {
+          "const": "154d77cb4c8790cd971e19dbd17dcc8a4417df1e0f460747948e306706328e2e"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "failed",
+            null
+          ]
+        },
+        "failure_checkpoint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "v5_delivery_and_archives",
+            null
+          ]
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "recovery_v5_source_delta_invalid",
+            null
+          ]
+        },
+        "source_delta": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "added",
+            "removed",
+            "changed"
+          ],
+          "properties": {
+            "added": {
+              "const": [
+                "docs/superpowers/plans/2026-10-26-curry-ledger-handoff-v5-handoff.md"
+              ]
+            },
+            "removed": {
+              "const": []
+            },
+            "changed": {
+              "const": [
+                "TASKS.md",
+                "docs/INDEX.md",
+                "docs/TESTING.md"
+              ]
+            }
+          }
+        },
+        "final_source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "final_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "const": 583
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": true
+          },
+          "diagnostic": {
+            "type": "null"
+          },
+          "tool": {
+            "type": "object"
+          },
+          "publication": {
+            "properties": {
+              "state": {
+                "const": "passed"
+              },
+              "failure_phase": {
+                "type": "null"
+              },
+              "diagnostic_id": {
+                "type": "null"
+              }
+            }
+          },
+          "accounting": {
+            "properties": {
+              "certified_historical_consumed_before_scope": {
+                "const": 32
+              },
+              "reservation_id": {
+                "const": "09de07440402fcd12996dcbe0ed67741973b2cd095cd60b43e77b764331d3b63"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": false
+          },
+          "accounting": {
+            "properties": {
+              "original_scope_consumed": {
+                "type": "null"
+              },
+              "original_scope_completed": {
+                "type": "null"
+              },
+              "original_scope_unknown": {
+                "type": "null"
+              },
+              "certified_historical_consumed_before_scope": {
+                "type": "null"
+              },
+              "certified_historical_consumed_including_scope": {
+                "type": "null"
+              },
+              "planning_total": {
+                "type": "null"
+              },
+              "reservation_id": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "incomplete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valid": {
+            "const": false
+          },
+          "failure_checkpoint": {
+            "type": "null"
+          },
+          "diagnostic": {
+            "type": "null"
+          },
+          "tool": {
+            "type": "null"
+          },
+          "checks": {
+            "additionalProperties": {
+              "const": "not_run"
+            }
+          },
+          "source_groups": {
+            "additionalProperties": {
+              "const": 0
+            }
+          },
+          "inputs": {
+            "maxItems": 0
+          },
+          "accounting": {
+            "properties": {
+              "original_scope_consumed": {
+                "type": "null"
+              },
+              "original_scope_completed": {
+                "type": "null"
+              },
+              "original_scope_unknown": {
+                "type": "null"
+              },
+              "certified_historical_consumed_before_scope": {
+                "type": "null"
+              },
+              "certified_historical_consumed_including_scope": {
+                "type": "null"
+              },
+              "reservation_id": {
+                "type": "null"
+              },
+              "planning_total": {
+                "type": "null"
+              }
+            }
+          },
+          "publication": {
+            "properties": {
+              "state": {
+                "const": "not_run"
+              },
+              "failure_phase": {
+                "type": "null"
+              },
+              "diagnostic_id": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "minItems": 181,
+            "maxItems": 181
+          },
+          "source_groups": {
+            "properties": {
+              "previous_recovery_roles": {
+                "const": 6
+              }
+            }
+          },
+          "previous_recovery_source": {
+            "properties": {
+              "status": {
+                "const": "failed"
+              },
+              "failure_checkpoint": {
+                "const": "v5_delivery_and_archives"
+              },
+              "diagnostic": {
+                "const": "recovery_v5_source_delta_invalid"
+              },
+              "source_delta": {
+                "type": "object"
+              },
+              "final_source_identity": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "final_file_count": {
+                "const": 583
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "failed",
+              "incomplete"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "maxItems": 181
+          }
+        }
+      }
+    }
+  ]
+}

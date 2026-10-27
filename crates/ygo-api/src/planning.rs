@@ -424,6 +424,7 @@ mod replay_regression {
             scenario: None,
             interruption: None,
             first_turn: None,
+            research_capture: None,
         };
         let budget = ygo_search::combo::SearchBudget {
             node_budget: 1,

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tenki placement scoped baseline transition v2",
+  "type": "object",
+  "properties": {
+    "schema_version": { "const": 2 },
+    "kind": { "const": "tenki_placement_baseline_transition" },
+    "scope": { "const": "tenki-placement-probe-v1" },
+    "baseline": {
+      "type": "object",
+      "properties": {
+        "before_sha256": { "$ref": "#/$defs/sha256" },
+        "pause_acceptance_sha256": { "$ref": "#/$defs/sha256" },
+        "paused_delivery_checkpoint_sha256": { "$ref": "#/$defs/sha256" },
+        "recovery_acceptance_sha256": { "$ref": "#/$defs/sha256" },
+        "recovery_checkpoint_sha256": { "$ref": "#/$defs/sha256" },
+        "source_archive_sha256": { "$ref": "#/$defs/sha256" },
+        "source_file_list_sha256": { "$ref": "#/$defs/sha256" },
+        "source_identity": { "$ref": "#/$defs/sha256" },
+        "source_file_count": { "const": 390 },
+        "historical_ledgers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "minLength": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "consumed": { "type": "integer", "minimum": 0 },
+              "unknown": { "const": 0 }
+            },
+            "required": ["role", "path", "sha256", "consumed", "unknown"],
+            "additionalProperties": false
+          },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "protected_file_count": { "const": 366 },
+        "matched_protected_count": { "const": 365 }
+      },
+      "required": ["before_sha256", "pause_acceptance_sha256", "paused_delivery_checkpoint_sha256", "recovery_acceptance_sha256", "recovery_checkpoint_sha256", "source_archive_sha256", "source_file_list_sha256", "source_identity", "source_file_count", "historical_ledgers", "protected_file_count", "matched_protected_count"],
+      "additionalProperties": false
+    },
+    "migration": {
+      "type": "object",
+      "properties": {
+        "path": { "const": "target/debug/ygo-engine-worker.exe" },
+        "old_sha256": { "const": "a384b35aff160049b3381f15bfc35e17cf373a1ada54986b8c884bde09c78c7e" },
+        "observed_sha256": { "const": "4f2b5a7c73914f07b0bce39ed01b7f74ed9c335dba329ef3a3bf1803a6db7680" },
+        "old_protection_check": { "const": "failed" },
+        "current_file_history": { "const": "unknown" },
+        "effective_protection_mapping": { "const": "migrated_for_this_scope" }
+      },
+      "required": ["path", "old_sha256", "observed_sha256", "old_protection_check", "current_file_history", "effective_protection_mapping"],
+      "additionalProperties": false
+    },
+    "audit_tool": {
+      "type": "object",
+      "properties": {
+        "source_identity": { "$ref": "#/$defs/sha256" },
+        "module_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["source_identity", "module_sha256"],
+      "additionalProperties": false
+    },
+    "claims": {
+      "type": "object",
+      "properties": {
+        "old_protection_check_passed": { "const": false },
+        "binary_provenance_verified": { "const": false },
+        "historical_reexecution_verified": { "const": false },
+        "future_protection_mapping_migrated": { "const": true }
+      },
+      "required": ["old_protection_check_passed", "binary_provenance_verified", "historical_reexecution_verified", "future_protection_mapping_migrated"],
+      "additionalProperties": false
+    },
+    "input_sha256": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/sha256" },
+      "minProperties": 16
+    },
+    "identity": { "$ref": "#/$defs/sha256" }
+  },
+  "required": ["schema_version", "kind", "scope", "baseline", "migration", "audit_tool", "claims", "input_sha256", "identity"],
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

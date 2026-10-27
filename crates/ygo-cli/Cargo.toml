@@ -8,7 +8,6 @@ license.workspace = true
 [dependencies]
 ygo-engine-adapter = { path = "../ygo-engine-adapter" }
 serde_json.workspace = true
-toml.workspace = true
 ygo-domain = { path = "../ygo-domain" }
 ygo-storage = { path = "../ygo-storage" }
 ygo-search = { path = "../ygo-search" }

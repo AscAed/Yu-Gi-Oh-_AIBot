@@ -26,7 +26,7 @@ pub fn reconstruct(
 }
 fn rebuild(r: &DuelResult, cat: &Catalog, pack: &KnowledgePack) -> Result<SymbolicState, String> {
     for frame in &r.events {
-        if decode_frame(frame.sequence, &frame.raw)? != *frame {
+        if !frame_matches_raw(frame)? {
             return Err("raw recovery event mismatch".into());
         }
     }

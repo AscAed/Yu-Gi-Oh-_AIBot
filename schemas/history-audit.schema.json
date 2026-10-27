@@ -1,0 +1,399 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/history-audit.schema.json",
+  "title": "Independent sealed history audit v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "valid",
+    "anchor_sha256",
+    "input_sha256",
+    "auditor_source_identity",
+    "auditor_source_files",
+    "stats",
+    "ledger_records",
+    "calls",
+    "checkpoints",
+    "report_bindings",
+    "unpaired_call_ids",
+    "diagnostics",
+    "native_calls",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "original_runner_available",
+    "original_binary_provenance_verified",
+    "historical_reexecution_verified",
+    "native_replay_verified"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "history_audit"
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "anchor_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "input_sha256": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "auditor_source_identity": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "auditor_source_files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "stats": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "consumed",
+            "completed",
+            "unknown",
+            "reserved",
+            "abandoned",
+            "limit"
+          ],
+          "properties": {
+            "consumed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "completed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unknown": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reserved": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "abandoned": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "ledger_records": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "call_id",
+          "request",
+          "purpose",
+          "case_id",
+          "completed",
+          "result_sha256",
+          "raw_hash",
+          "normalized_hash",
+          "event_count"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "call_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "request": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "purpose": {
+            "enum": [
+              "execution",
+              "replay"
+            ]
+          },
+          "case_id": {
+            "enum": [
+              "rabbit",
+              "phantom",
+              "tournament"
+            ]
+          },
+          "completed": {
+            "const": true
+          },
+          "result_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "raw_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "normalized_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "event_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "consumed",
+          "charged_sequence",
+          "blob_sha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "consumed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9
+          },
+          "charged_sequence": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "blob_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "report_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "case_id",
+          "call_ids",
+          "source_sha256",
+          "provenance",
+          "metadata_origin_verified",
+          "observed_uncharged_followup_error_sha256",
+          "observed_asset_capture_diagnostic_sha256",
+          "observed_independent_replay_matches"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "case_id": {
+            "enum": [
+              "rabbit",
+              "phantom",
+              "tournament"
+            ]
+          },
+          "call_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9
+            }
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "provenance": {
+            "enum": [
+              "anchored_report",
+              "ledger_fields_recomputed"
+            ]
+          },
+          "metadata_origin_verified": {
+            "const": false
+          },
+          "observed_uncharged_followup_error_sha256": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed_asset_capture_diagnostic_sha256": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed_independent_replay_matches": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "unpaired_call_ids": {
+      "const": [
+        7
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+$"
+      }
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "charged_sequence": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "original_runner_available": {
+      "const": false
+    },
+    "original_binary_provenance_verified": {
+      "const": false
+    },
+    "historical_reexecution_verified": {
+      "const": false
+    },
+    "native_replay_verified": {
+      "const": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "valid": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "charged_sequence"
+        ],
+        "properties": {
+          "stats": {
+            "type": "object",
+            "properties": {
+              "consumed": {
+                "const": 9
+              },
+              "completed": {
+                "const": 9
+              },
+              "unknown": {
+                "const": 0
+              },
+              "reserved": {
+                "const": 0
+              },
+              "abandoned": {
+                "const": 0
+              },
+              "limit": {
+                "const": 4096
+              }
+            }
+          },
+          "ledger_records": {
+            "const": 37
+          },
+          "calls": {
+            "minItems": 9,
+            "maxItems": 9
+          },
+          "diagnostics": {
+            "maxItems": 0
+          },
+          "auditor_source_identity": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "auditor_source_files": {
+            "minProperties": 2,
+            "maxProperties": 2
+          },
+          "input_sha256": {
+            "minProperties": 1
+          },
+          "report_bindings": {
+            "minItems": 5,
+            "maxItems": 5
+          },
+          "checkpoints": {
+            "minItems": 18,
+            "maxItems": 18
+          }
+        }
+      }
+    }
+  ]
+}

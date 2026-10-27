@@ -1,0 +1,495 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/terminal-followup.schema.json",
+  "title": "Terminal followup v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "kind",
+        "case_ids",
+        "input_sha256",
+        "old_consumed",
+        "limit",
+        "planned_calls",
+        "started_at",
+        "runtimes",
+        "context",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "output_relative",
+        "source_identity",
+        "baseline_acceptance_sha256",
+        "window_seconds",
+        "bindings",
+        "parent"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "terminal_followup_manifest"
+        },
+        "case_ids": {
+          "const": [
+            "terminal-tournament",
+            "terminal-shuffle-end"
+          ]
+        },
+        "old_consumed": {
+          "const": 20
+        },
+        "limit": {
+          "const": 4
+        },
+        "planned_calls": {
+          "const": 4
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "baseline_acceptance_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_identity": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "input_sha256": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtimes": {
+          "type": "object"
+        },
+        "output_relative": {
+          "type": "string"
+        },
+        "window_seconds": {
+          "const": 7200
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "terminal-tournament",
+            "terminal-shuffle-end"
+          ],
+          "properties": {
+            "terminal-tournament": {
+              "type": "object",
+              "required": [
+                "request_sha256",
+                "cdb_sha256",
+                "catalog_types_sha256"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "request_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "cdb_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "catalog_types_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            },
+            "terminal-shuffle-end": {
+              "type": "object",
+              "required": [
+                "request_sha256",
+                "cdb_sha256",
+                "catalog_types_sha256"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "request_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "cdb_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "catalog_types_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "parent": {
+          "type": "object",
+          "required": [
+            "evidence_sha256",
+            "public_prompt_sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "evidence_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "public_prompt_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "kind",
+        "case_id",
+        "request",
+        "runs",
+        "terminal_audits",
+        "ledger",
+        "diagnostic",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "context",
+        "prompt_audits_by_run",
+        "assets_before",
+        "assets_after",
+        "assets_unchanged",
+        "independent_replay_matches",
+        "started_at",
+        "ledger_sequence"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "terminal_followup_pair"
+        },
+        "case_id": {
+          "enum": [
+            "terminal-tournament",
+            "terminal-shuffle-end"
+          ]
+        },
+        "runs": {
+          "type": "array",
+          "maxItems": 2
+        },
+        "terminal_audits": {
+          "type": "array",
+          "maxItems": 2
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "ledger": {
+          "$ref": "#/$defs/ledger"
+        },
+        "request": {
+          "type": "object"
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "prompt_audits_by_run": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "array"
+          }
+        },
+        "assets_before": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "assets_after": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "assets_unchanged": {
+          "type": "boolean"
+        },
+        "independent_replay_matches": {
+          "type": "boolean"
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ledger_sequence": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "context",
+        "ledger",
+        "successful",
+        "diagnostic",
+        "old_consumed",
+        "new_consumed",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "pairs"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "terminal_followup_summary"
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "ledger": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/ledger"
+            }
+          ]
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "old_consumed": {
+          "const": 20
+        },
+        "new_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 4
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "pairs": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "case_id",
+              "successful",
+              "diagnostic",
+              "evidence_sha256"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "case_id": {
+                "enum": [
+                  "terminal-tournament",
+                  "terminal-shuffle-end"
+                ]
+              },
+              "successful": {
+                "type": "boolean"
+              },
+              "diagnostic": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence_sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "diagnostic": {
+                "const": null
+              },
+              "new_consumed": {
+                "const": 4
+              },
+              "ledger": {
+                "type": "object",
+                "required": [
+                  "consumed",
+                  "completed",
+                  "unknown",
+                  "reserved",
+                  "abandoned",
+                  "limit"
+                ],
+                "properties": {
+                  "consumed": {
+                    "const": 4
+                  },
+                  "completed": {
+                    "const": 4
+                  },
+                  "unknown": {
+                    "const": 0
+                  },
+                  "reserved": {
+                    "const": 0
+                  },
+                  "abandoned": {
+                    "const": 0
+                  },
+                  "limit": {
+                    "const": 4
+                  }
+                }
+              },
+              "pairs": {
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "properties": {
+                    "successful": {
+                      "const": true
+                    },
+                    "diagnostic": {
+                      "const": null
+                    },
+                    "evidence_sha256": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consumed",
+        "completed",
+        "abandoned",
+        "unknown",
+        "reserved",
+        "limit"
+      ],
+      "properties": {
+        "consumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "completed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "abandoned": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "reserved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "limit": {
+          "const": 4
+        }
+      }
+    }
+  }
+}

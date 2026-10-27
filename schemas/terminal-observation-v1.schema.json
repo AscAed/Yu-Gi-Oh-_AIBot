@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo.local/schemas/terminal-observation-v1.schema.json",
+  "title": "Process-return-bound raw terminal observation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_sha256",
+    "batches",
+    "boundary_sequence",
+    "boundary_batch_index",
+    "event_prefix_sha256",
+    "phase",
+    "turn_index",
+    "turn_player",
+    "turn_source",
+    "queries",
+    "snapshot",
+    "capture_query_count",
+    "legacy_query_count",
+    "status",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "request_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "batches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "status",
+          "raw",
+          "sha256",
+          "start_sequence",
+          "end_sequence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "integer"
+          },
+          "raw": {
+            "$ref": "#/$defs/bytes"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "start_sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "end_sequence": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "boundary_sequence": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "boundary_batch_index": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "event_prefix_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "phase": {
+      "type": "null"
+    },
+    "turn_index": {
+      "enum": [
+        null,
+        1,
+        2
+      ]
+    },
+    "turn_player": {
+      "enum": [
+        null,
+        0,
+        1
+      ]
+    },
+    "turn_source": {
+      "const": "raw_new_turn_events"
+    },
+    "queries": {
+      "type": "array",
+      "maxItems": 14,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "controller",
+          "location",
+          "sequence",
+          "flags",
+          "raw",
+          "sha256",
+          "error"
+        ],
+        "properties": {
+          "controller": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "location": {
+            "const": 4
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "flags": {
+            "const": 11
+          },
+          "raw": {
+            "$ref": "#/$defs/bytes"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "type": "array",
+      "maxItems": 14,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "player",
+          "location",
+          "sequence",
+          "position",
+          "type_flags"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "player": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "location": {
+            "const": 4
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "type_flags": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "capture_query_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 14
+    },
+    "legacy_query_count": {
+      "type": "null"
+    },
+    "status": {
+      "enum": [
+        "bound",
+        "unbound",
+        "failed"
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "queries_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "bound"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "queries_sha256",
+          "snapshot_sha256"
+        ],
+        "properties": {
+          "queries": {
+            "minItems": 14
+          },
+          "capture_query_count": {
+            "const": 14
+          },
+          "turn_index": {
+            "const": 2
+          },
+          "boundary_sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "boundary_batch_index": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "bytes": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      }
+    }
+  }
+}

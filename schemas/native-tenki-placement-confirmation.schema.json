@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "native-tenki-placement-confirmation.schema.json",
+  "title": "Tenki placement confirmation evidence v1",
+  "description": "Independent fixed-scope evidence for the six-call Tenki placement confirmation experiment.",
+  "oneOf": [
+    { "$ref": "#/$defs/manifest" },
+    { "$ref": "#/$defs/prepared" },
+    { "$ref": "#/$defs/stage" },
+    { "$ref": "#/$defs/summary" },
+    { "$ref": "#/$defs/verification" }
+  ],
+  "$defs": {
+    "flags": {
+      "type": "object",
+      "properties": {
+        "proof_ready": { "const": false },
+        "complete_action_coverage": { "const": false },
+        "global_optimality": { "const": false },
+        "native_probability_verified": { "const": false }
+      },
+      "required": ["proof_ready", "complete_action_coverage", "global_optimality", "native_probability_verified"]
+    },
+    "common": {
+      "allOf": [
+        { "type": "object", "properties": {
+          "schema_version": { "const": 1 },
+          "scope": { "const": "tenki-placement-confirmation-v1" }
+        }, "required": ["schema_version", "scope"] },
+        { "$ref": "#/$defs/flags" }
+      ]
+    },
+    "manifest": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        { "type": "object", "properties": {
+          "kind": { "const": "native_tenki_placement_confirmation_manifest" },
+          "context": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "started_at": { "type": "integer", "minimum": 0 },
+          "limit": { "const": 6 },
+          "wall_seconds": { "const": 7200 },
+          "old_consumed": { "const": 26 },
+          "input_sha256": {
+            "type": "object",
+            "properties": {
+              "prompt_source_stage1": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "prompt_source_stage2_request": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            },
+            "required": ["prompt_source_stage1", "prompt_source_stage2_request"],
+            "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          },
+          "source": { "type": "object" },
+          "build": { "type": "object" },
+          "assets": { "type": "object" },
+          "stage1_request_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }, "required": ["kind", "context", "started_at", "limit", "wall_seconds", "old_consumed", "input_sha256", "source", "build", "assets", "stage1_request_sha256"] }
+      ]
+    },
+    "prepared": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        { "type": "object", "properties": {
+          "kind": { "const": "native_tenki_placement_confirmation_prepared" },
+          "context": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "prepared": { "const": true },
+          "execution_ready": { "const": true },
+          "native_calls": { "const": 0 },
+          "planned_calls": { "const": 6 },
+          "first_stage_request_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "preflight_diagnostic_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "stage1_input_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "diagnostics": { "type": "array", "items": { "type": "string" } }
+        }, "required": ["kind", "context", "prepared", "execution_ready", "native_calls", "planned_calls", "first_stage_request_sha256", "preflight_diagnostic_sha256", "manifest_sha256", "stage1_input_sha256"] }
+      ]
+    },
+    "stage": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        { "type": "object", "properties": {
+          "kind": { "const": "native_tenki_placement_confirmation_stage" },
+          "context": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "stage": { "type": "integer", "minimum": 1, "maximum": 6 },
+          "successful": { "type": "boolean" },
+          "native_calls": { "type": ["integer", "null"], "minimum": 0, "maximum": 1 },
+          "diagnostic": { "type": ["string", "null"] },
+          "receipt_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "diagnostic_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "independent_replay_matches": { "type": ["boolean", "null"] },
+          "ledger": { "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }] }
+        }, "required": ["kind", "context", "stage", "successful", "native_calls", "diagnostic", "receipt_sha256", "diagnostic_sha256", "independent_replay_matches", "ledger"] }
+      ]
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "consumed": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "completed": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "unknown": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "reserved": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "abandoned": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "limit": { "const": 6 }
+      },
+      "required": ["consumed", "completed", "unknown", "reserved", "abandoned", "limit"],
+      "additionalProperties": false
+    },
+    "stageSummary": {
+      "type": "object",
+      "properties": {
+        "stage": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "successful": { "type": "boolean" },
+        "receipt_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "diagnostic_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "independent_replay_matches": { "type": ["boolean", "null"] }
+      },
+      "required": ["stage", "successful", "receipt_sha256", "diagnostic_sha256", "independent_replay_matches"],
+      "additionalProperties": false
+    },
+    "summary": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        { "type": "object", "properties": {
+          "kind": { "const": "native_tenki_placement_confirmation_summary" },
+          "context": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "successful": { "type": "boolean" },
+          "old_consumed": { "const": 26 },
+          "new_consumed": { "type": ["integer", "null"], "minimum": 0, "maximum": 6 },
+          "cumulative_consumed": { "type": ["integer", "null"], "minimum": 26 },
+          "unknown": { "type": ["integer", "null"], "minimum": 0 },
+          "ledger": { "anyOf": [{ "$ref": "#/$defs/stats" }, { "type": "null" }] },
+          "stages": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/stageSummary" } },
+          "diagnostic": { "type": ["string", "null"] }
+        }, "required": ["kind", "context", "successful", "old_consumed", "new_consumed", "cumulative_consumed", "unknown", "ledger", "stages", "diagnostic"] }
+      ]
+    },
+    "verification": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        { "type": "object", "properties": {
+          "kind": { "const": "native_tenki_placement_confirmation_verification" },
+          "valid": { "type": "boolean" },
+          "native_calls": { "const": 0 },
+          "old_consumed": { "const": 26 },
+          "new_consumed": { "type": ["integer", "null"], "minimum": 0, "maximum": 6 },
+          "cumulative_consumed": { "type": ["integer", "null"], "minimum": 26 },
+          "unknown": { "type": ["integer", "null"], "minimum": 0 },
+          "stages": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/stage" } },
+          "diagnostic": { "type": ["string", "null"] }
+        }, "required": ["kind", "valid", "native_calls", "old_consumed", "new_consumed", "cumulative_consumed", "unknown", "stages", "diagnostic"] }
+      ]
+    }
+  }
+}

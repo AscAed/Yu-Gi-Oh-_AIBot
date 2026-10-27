@@ -1,0 +1,44 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://ygo.local/schemas/native-regression.schema.json",
+  "title":"Isolated native regression evidence v1",
+  "oneOf":[{"$ref":"#/$defs/manifest"},{"$ref":"#/$defs/pair"},{"$ref":"#/$defs/summary"}],
+  "$defs":{
+    "hash":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "case":{"enum":["rabbit-full","tournament-full","rabbit-empty","rabbit-shuffle","rabbit-end"]},
+    "ledger":{"type":"object","additionalProperties":false,"required":["consumed","completed","unknown","reserved","abandoned","limit"],"properties":{"consumed":{"type":"integer","minimum":0,"maximum":16},"completed":{"type":"integer","minimum":0,"maximum":16},"unknown":{"type":"integer","minimum":0,"maximum":16},"reserved":{"type":"integer","minimum":0,"maximum":16},"abandoned":{"type":"integer","minimum":0,"maximum":16},"limit":{"const":16}}},
+    "manifest":{
+      "type":"object","additionalProperties":false,
+      "required":["schema_version","kind","source_identity","output_relative","input_sha256","old_consumed","limit","planned_calls","window_seconds","started_at","case_ids","templates","runtimes","allowed_derivations","context","proof_ready","complete_action_coverage","global_optimality"],
+      "properties":{
+        "schema_version":{"const":1},"kind":{"const":"native_regression_manifest"},"source_identity":{"$ref":"#/$defs/hash"},"context":{"$ref":"#/$defs/hash"},
+        "output_relative":{"type":"string","pattern":"^data/runtime/.+/research(?:/.*)?$"},
+        "input_sha256":{"type":"object","minProperties":7,"additionalProperties":{"$ref":"#/$defs/hash"}},"old_consumed":{"const":9},"limit":{"const":16},"planned_calls":{"const":10},"window_seconds":{"const":7200},"started_at":{"type":"integer","minimum":0},
+        "case_ids":{"const":["rabbit-full","tournament-full","rabbit-empty","rabbit-shuffle","rabbit-end"]},
+        "templates":{"type":"object","additionalProperties":false,"required":["rabbit","tournament"],"properties":{"rabbit":{"type":"object"},"tournament":{"type":"object"}}},
+        "runtimes":{"type":"object","additionalProperties":false,"required":["ordinary","tournament"],"properties":{"ordinary":{"$ref":"engine-identity.schema.json"},"tournament":{"$ref":"engine-identity.schema.json"}}},
+        "allowed_derivations":{"const":["rabbit-empty:remove_all_decisions","rabbit-shuffle:parent_public_command8","rabbit-end:parent_public_command7"]},
+        "proof_ready":{"const":false},"complete_action_coverage":{"const":false},"global_optimality":{"const":false}
+      }
+    },
+    "pair":{
+      "type":"object","additionalProperties":false,
+      "required":["schema_version","kind","case_id","context","request","runs","prompt_audits_by_run","assets_before","assets_after","assets_unchanged","independent_replay_matches","diagnostic","ledger","ledger_sequence","started_at","proof_ready","complete_action_coverage","global_optimality"],
+      "properties":{
+        "schema_version":{"const":1},"kind":{"const":"native_regression_pair"},"case_id":{"$ref":"#/$defs/case"},"context":{"$ref":"#/$defs/hash"},"request":{"type":"object"},
+        "runs":{"type":"array","maxItems":2,"items":{"type":"object","minProperties":1,"maxProperties":1,"properties":{"Ok":{"type":"object"},"Err":{"type":"object"}},"additionalProperties":false}},
+        "prompt_audits_by_run":{"type":"array","maxItems":2,"items":{"type":"array","items":{"type":"object"}}},
+        "assets_before":{"anyOf":[{"$ref":"engine-identity.schema.json"},{"type":"null"}]},"assets_after":{"anyOf":[{"$ref":"engine-identity.schema.json"},{"type":"null"}]},
+        "assets_unchanged":{"type":"boolean"},"independent_replay_matches":{"type":"boolean"},"diagnostic":{"type":["string","null"]},"ledger":{"$ref":"#/$defs/ledger"},"ledger_sequence":{"type":"string","minLength":1},"started_at":{"type":"integer","minimum":0},
+        "proof_ready":{"const":false},"complete_action_coverage":{"const":false},"global_optimality":{"const":false}
+      }
+    },
+    "summary":{
+      "type":"object","additionalProperties":false,"required":["schema_version","kind","context","cases","successful","diagnostic","old_consumed","new_consumed","proof_ready","complete_action_coverage","global_optimality"],
+      "properties":{
+        "schema_version":{"const":1},"kind":{"const":"native_regression_summary"},"context":{"$ref":"#/$defs/hash"},"cases":{"type":"array","maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["case_id","evidence_sha256","diagnostic","ledger"],"properties":{"case_id":{"$ref":"#/$defs/case"},"evidence_sha256":{"$ref":"#/$defs/hash"},"diagnostic":{"type":["string","null"]},"ledger":{"$ref":"#/$defs/ledger"}}}},
+        "successful":{"type":"boolean"},"diagnostic":{"type":["string","null"]},"old_consumed":{"const":9},"new_consumed":{"type":["integer","null"],"minimum":0,"maximum":16},"proof_ready":{"const":false},"complete_action_coverage":{"const":false},"global_optimality":{"const":false}
+      }
+    }
+  }
+}

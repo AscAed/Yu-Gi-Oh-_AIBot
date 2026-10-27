@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "terminal-regression.schema.json",
+  "title": "Isolated six-request terminal regression evidence",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "kind",
+        "case_ids",
+        "input_sha256",
+        "old_consumed",
+        "limit",
+        "planned_calls",
+        "started_at",
+        "runtimes",
+        "parent",
+        "context",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "terminal_regression_manifest"
+        },
+        "case_ids": {
+          "const": [
+            "terminal-rabbit",
+            "terminal-tournament",
+            "terminal-shuffle-end"
+          ]
+        },
+        "old_consumed": {
+          "const": 17
+        },
+        "limit": {
+          "const": 6
+        },
+        "planned_calls": {
+          "const": 6
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "kind",
+        "case_id",
+        "request",
+        "runs",
+        "terminal_audits",
+        "ledger",
+        "diagnostic",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "terminal_regression_pair"
+        },
+        "case_id": {
+          "enum": [
+            "terminal-rabbit",
+            "terminal-tournament",
+            "terminal-shuffle-end"
+          ]
+        },
+        "runs": {
+          "type": "array",
+          "maxItems": 2
+        },
+        "terminal_audits": {
+          "type": "array",
+          "maxItems": 2
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "context",
+        "cases",
+        "successful",
+        "diagnostic",
+        "old_consumed",
+        "new_consumed",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "terminal_regression_summary"
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "cases": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "case_id",
+              "evidence_sha256",
+              "diagnostic",
+              "ledger"
+            ],
+            "properties": {
+              "case_id": {
+                "enum": [
+                  "terminal-rabbit",
+                  "terminal-tournament",
+                  "terminal-shuffle-end"
+                ]
+              },
+              "evidence_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "diagnostic": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "ledger": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "consumed",
+                  "reserved",
+                  "completed",
+                  "unknown",
+                  "abandoned",
+                  "limit"
+                ],
+                "properties": {
+                  "consumed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "reserved": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "completed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "unknown": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "abandoned": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "limit": {
+                    "const": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "old_consumed": {
+          "const": 17
+        },
+        "new_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 6
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 6
+              },
+              "diagnostic": {
+                "type": "null"
+              },
+              "cases": {
+                "minItems": 3
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

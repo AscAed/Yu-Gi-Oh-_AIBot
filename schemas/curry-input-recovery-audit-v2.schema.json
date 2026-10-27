@@ -1,0 +1,1242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/curry-input-recovery-audit-v2.schema.json",
+  "title": "Curry frozen input recovery offline audit v2",
+  "description": "Versioned read-only audit with authenticated source members, separated object and container hashes, and best-effort stability results.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "status",
+    "failure_checkpoint",
+    "anchors",
+    "tool_identity",
+    "checks",
+    "native_calls",
+    "execution_ready",
+    "process_actions",
+    "historical",
+    "confirmation_scope",
+    "historical_exit_observation",
+    "hash_mismatch",
+    "source_archives",
+    "source_archive_differences",
+    "inputs",
+    "qualifications",
+    "diagnostics",
+    "elapsed_seconds",
+    "archived_source_members",
+    "stability"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "curry_input_recovery_audit_v2"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed",
+        "incomplete"
+      ]
+    },
+    "failure_checkpoint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "acceptance_delivery_anchors",
+        "evidence_inventory",
+        "source_archives",
+        "frozen_input_binding",
+        "historical_ledgers",
+        "old_material_protection",
+        "input_stability"
+      ]
+    },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acceptance_sha256",
+        "delivery_sha256",
+        "inventory_sha256"
+      ],
+      "properties": {
+        "acceptance_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "delivery_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "inventory_sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "tool_identity": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "head",
+            "identity",
+            "file_count"
+          ],
+          "properties": {
+            "head": {
+              "type": "string"
+            },
+            "identity": {
+              "$ref": "#/$defs/hash"
+            },
+            "file_count": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acceptance_delivery_anchors",
+        "evidence_inventory",
+        "source_archives",
+        "frozen_input_binding",
+        "historical_ledgers",
+        "old_material_protection",
+        "input_stability"
+      ],
+      "properties": {
+        "acceptance_delivery_anchors": {
+          "$ref": "#/$defs/check"
+        },
+        "evidence_inventory": {
+          "$ref": "#/$defs/check"
+        },
+        "source_archives": {
+          "$ref": "#/$defs/check"
+        },
+        "frozen_input_binding": {
+          "$ref": "#/$defs/check"
+        },
+        "historical_ledgers": {
+          "$ref": "#/$defs/check"
+        },
+        "old_material_protection": {
+          "$ref": "#/$defs/check"
+        },
+        "input_stability": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "execution_ready": {
+      "const": false
+    },
+    "process_actions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runner_started",
+        "worker_started",
+        "ffi_called",
+        "writable_ledger_opened"
+      ],
+      "properties": {
+        "runner_started": {
+          "const": false
+        },
+        "worker_started": {
+          "const": false
+        },
+        "ffi_called": {
+          "const": false
+        },
+        "writable_ledger_opened": {
+          "const": false
+        }
+      }
+    },
+    "historical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consumed",
+        "unknown",
+        "ledger_count",
+        "verified_without_writable_journal",
+        "input_set_sha256"
+      ],
+      "properties": {
+        "consumed": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 32
+            }
+          ]
+        },
+        "unknown": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 0
+            }
+          ]
+        },
+        "ledger_count": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 9
+            }
+          ]
+        },
+        "verified_without_writable_journal": {
+          "type": "boolean"
+        },
+        "input_set_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        }
+      }
+    },
+    "confirmation_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "prepared",
+        "execution_ready",
+        "new_consumed",
+        "cumulative_consumed",
+        "new_unknown",
+        "unconsumed_slots_sealed",
+        "native_validation_passed"
+      ],
+      "properties": {
+        "scope": {
+          "const": "curry-option-confirmation-v1"
+        },
+        "prepared": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "execution_ready": {
+          "const": false
+        },
+        "new_consumed": {
+          "type": "null"
+        },
+        "cumulative_consumed": {
+          "type": "null"
+        },
+        "new_unknown": {
+          "type": "null"
+        },
+        "unconsumed_slots_sealed": {
+          "const": 7
+        },
+        "native_validation_passed": {
+          "const": false
+        }
+      }
+    },
+    "historical_exit_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_exit_code",
+        "archived_refusal_branch_return_code",
+        "historical_exit_code_certified",
+        "raw_normal_stdout_stderr_saved"
+      ],
+      "properties": {
+        "observation_exit_code": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 1
+            }
+          ]
+        },
+        "archived_refusal_branch_return_code": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "const": 2
+            }
+          ]
+        },
+        "historical_exit_code_certified": {
+          "const": false
+        },
+        "raw_normal_stdout_stderr_saved": {
+          "const": false
+        }
+      }
+    },
+    "hash_mismatch": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "legacy_comparison",
+            "manifest_role_hashing",
+            "first_legacy_mismatch_role",
+            "legacy_raw_mismatches",
+            "semantic_sha256",
+            "container_file_sha256",
+            "repaired_shared_gate_passed",
+            "old_confirmation_report_rewritten"
+          ],
+          "properties": {
+            "legacy_comparison": {
+              "const": "raw_container_file_sha256"
+            },
+            "manifest_role_hashing": {
+              "const": "canonical_extracted_object_sha256"
+            },
+            "first_legacy_mismatch_role": {
+              "const": "base_request"
+            },
+            "legacy_raw_mismatches": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/hashMismatch"
+              }
+            },
+            "semantic_sha256": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "container_file_sha256": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "repaired_shared_gate_passed": {
+              "const": true
+            },
+            "old_confirmation_report_rewritten": {
+              "const": false
+            }
+          }
+        }
+      ]
+    },
+    "source_archives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/archive"
+      }
+    },
+    "source_archive_differences": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/relativePath"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "qualifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ],
+      "properties": {
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{1,90}$"
+      }
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "archived_source_members": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/archivedSourceMember"
+      }
+    },
+    "stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_identity",
+        "confirmation_tree",
+        "protected_material",
+        "confirmation_ledger_absence",
+        "ledger_absent_before",
+        "ledger_absent_after"
+      ],
+      "properties": {
+        "source_identity": {
+          "enum": [
+            "not_collected",
+            "passed",
+            "failed",
+            "verification_failed"
+          ]
+        },
+        "confirmation_tree": {
+          "enum": [
+            "not_collected",
+            "passed",
+            "failed",
+            "verification_failed"
+          ]
+        },
+        "protected_material": {
+          "enum": [
+            "not_collected",
+            "passed",
+            "failed",
+            "verification_failed"
+          ]
+        },
+        "confirmation_ledger_absence": {
+          "enum": [
+            "not_collected",
+            "passed",
+            "failed",
+            "verification_failed"
+          ]
+        },
+        "ledger_absent_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ledger_absent_after": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_checkpoint": {
+            "type": "null"
+          },
+          "tool_identity": {
+            "type": "object"
+          },
+          "historical": {
+            "properties": {
+              "consumed": {
+                "const": 32
+              },
+              "unknown": {
+                "const": 0
+              },
+              "ledger_count": {
+                "const": 9
+              },
+              "verified_without_writable_journal": {
+                "const": true
+              },
+              "input_set_sha256": {
+                "$ref": "#/$defs/hash"
+              }
+            }
+          },
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "passed"
+              },
+              "source_archives": {
+                "const": "passed"
+              },
+              "frozen_input_binding": {
+                "const": "passed"
+              },
+              "historical_ledgers": {
+                "const": "passed"
+              },
+              "old_material_protection": {
+                "const": "passed"
+              },
+              "input_stability": {
+                "const": "passed"
+              }
+            }
+          },
+          "confirmation_scope": {
+            "properties": {
+              "prepared": {
+                "const": true
+              },
+              "execution_ready": {
+                "const": false
+              }
+            },
+            "required": [
+              "prepared"
+            ]
+          },
+          "hash_mismatch": {
+            "type": "object"
+          },
+          "source_archives": {
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "source_archive_differences": {
+            "const": [
+              "TASKS.md",
+              "docs/TESTING.md",
+              "docs/superpowers/plans/2026-10-24-curry-option-confirmation-handoff.md"
+            ]
+          },
+          "historical_exit_observation": {
+            "properties": {
+              "observation_exit_code": {
+                "const": 1
+              },
+              "archived_refusal_branch_return_code": {
+                "const": 2
+              },
+              "historical_exit_code_certified": {
+                "const": false
+              },
+              "raw_normal_stdout_stderr_saved": {
+                "const": false
+              }
+            }
+          },
+          "archived_source_members": {
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "stability": {
+            "properties": {
+              "source_identity": {
+                "const": "passed"
+              },
+              "confirmation_tree": {
+                "const": "passed"
+              },
+              "protected_material": {
+                "const": "passed"
+              },
+              "confirmation_ledger_absence": {
+                "const": "passed"
+              },
+              "ledger_absent_before": {
+                "const": true
+              },
+              "ledger_absent_after": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "acceptance_delivery_anchors"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "failed"
+              },
+              "evidence_inventory": {
+                "const": "not_run"
+              },
+              "source_archives": {
+                "const": "not_run"
+              },
+              "frozen_input_binding": {
+                "const": "not_run"
+              },
+              "historical_ledgers": {
+                "const": "not_run"
+              },
+              "old_material_protection": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "evidence_inventory"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "failed"
+              },
+              "source_archives": {
+                "const": "not_run"
+              },
+              "frozen_input_binding": {
+                "const": "not_run"
+              },
+              "historical_ledgers": {
+                "const": "not_run"
+              },
+              "old_material_protection": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "source_archives"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "passed"
+              },
+              "source_archives": {
+                "const": "failed"
+              },
+              "frozen_input_binding": {
+                "const": "not_run"
+              },
+              "historical_ledgers": {
+                "const": "not_run"
+              },
+              "old_material_protection": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "frozen_input_binding"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "passed"
+              },
+              "source_archives": {
+                "const": "passed"
+              },
+              "frozen_input_binding": {
+                "const": "failed"
+              },
+              "historical_ledgers": {
+                "const": "not_run"
+              },
+              "old_material_protection": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "historical_ledgers"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "passed"
+              },
+              "source_archives": {
+                "const": "passed"
+              },
+              "frozen_input_binding": {
+                "const": "passed"
+              },
+              "historical_ledgers": {
+                "const": "failed"
+              },
+              "old_material_protection": {
+                "const": "not_run"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "old_material_protection"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "passed"
+              },
+              "source_archives": {
+                "const": "passed"
+              },
+              "frozen_input_binding": {
+                "const": "passed"
+              },
+              "historical_ledgers": {
+                "const": "passed"
+              },
+              "old_material_protection": {
+                "const": "failed"
+              },
+              "input_stability": {
+                "const": "not_run"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          },
+          "failure_checkpoint": {
+            "const": "input_stability"
+          }
+        },
+        "required": [
+          "status",
+          "failure_checkpoint"
+        ]
+      },
+      "then": {
+        "properties": {
+          "checks": {
+            "properties": {
+              "acceptance_delivery_anchors": {
+                "const": "passed"
+              },
+              "evidence_inventory": {
+                "const": "passed"
+              },
+              "source_archives": {
+                "const": "passed"
+              },
+              "frozen_input_binding": {
+                "const": "passed"
+              },
+              "historical_ledgers": {
+                "const": "passed"
+              },
+              "old_material_protection": {
+                "const": "passed"
+              },
+              "input_stability": {
+                "const": "failed"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "checks"
+        ],
+        "properties": {
+          "checks": {
+            "required": [
+              "evidence_inventory"
+            ],
+            "properties": {
+              "evidence_inventory": {
+                "const": "passed"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "historical_exit_observation": {
+            "properties": {
+              "observation_exit_code": {
+                "const": 1
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "historical_exit_observation": {
+            "properties": {
+              "observation_exit_code": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "checks"
+        ],
+        "properties": {
+          "checks": {
+            "required": [
+              "source_archives"
+            ],
+            "properties": {
+              "source_archives": {
+                "const": "passed"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "historical_exit_observation": {
+            "properties": {
+              "archived_refusal_branch_return_code": {
+                "const": 2
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "historical_exit_observation": {
+            "properties": {
+              "archived_refusal_branch_return_code": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "check": {
+      "enum": [
+        "not_run",
+        "passed",
+        "failed"
+      ]
+    },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*:)[A-Za-z0-9._/-]+$"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,100}$"
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "archive_sha256",
+        "archive_bytes",
+        "file_list_sha256",
+        "source_identity",
+        "file_count",
+        "role"
+      ],
+      "properties": {
+        "archive_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "archive_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "file_list_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "source_identity": {
+          "$ref": "#/$defs/hash"
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "role": {
+          "enum": [
+            "native_time",
+            "final"
+          ]
+        }
+      }
+    },
+    "hashMismatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "expected_object_sha256",
+        "container_file_sha256",
+        "actual_object_sha256"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "base_request",
+            "candidate_case"
+          ]
+        },
+        "expected_object_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "container_file_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "actual_object_sha256": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "archivedSourceMember": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "path",
+        "expected_sha256",
+        "actual_sha256",
+        "status"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "native_module",
+            "research_module"
+          ]
+        },
+        "path": {
+          "enum": [
+            "python/ygo_eval/native_curry_option_validation.py",
+            "python/ygo_eval/research.py"
+          ]
+        },
+        "expected_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "actual_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/hash"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "native_module"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "path": {
+                "const": "python/ygo_eval/native_curry_option_validation.py"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "research_module"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "path": {
+                "const": "python/ygo_eval/research.py"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "passed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "actual_sha256": {
+                "$ref": "#/$defs/hash"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

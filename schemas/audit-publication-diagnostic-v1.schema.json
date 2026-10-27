@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Audit Publication Diagnostic v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "diagnostic_id", "phase", "error_code",
+    "audit_status", "failure_checkpoint", "candidate_sha256",
+    "output_state", "output_sha256", "raw_exception_sha256", "raw_exception_bytes", "native_calls",
+    "runner_process_calls"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "audit_publication_diagnostic"},
+    "diagnostic_id": {"type": "string", "pattern": "^[a-f0-9]{32}$"},
+    "phase": {"enum": ["report_validation", "source_reconstruction", "exclusive_report_write", "post_write_revalidation"]},
+    "error_code": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,100}$"},
+    "audit_status": {"enum": ["passed", "failed", "incomplete"]},
+    "failure_checkpoint": {"type": ["string", "null"]},
+    "candidate_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "output_state": {"enum": ["not_written", "existing_preserved", "write_attempted_unverified", "written_unverified"]},
+    "output_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "raw_exception_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "raw_exception_bytes": {"type": "integer", "minimum": 0},
+    "native_calls": {"const": 0},
+    "runner_process_calls": {"const": 0}
+  }
+}

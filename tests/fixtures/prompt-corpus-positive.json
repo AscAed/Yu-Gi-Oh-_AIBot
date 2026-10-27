@@ -1,0 +1,7 @@
+{
+  "kind": "synthetic_prompt_fixture",
+  "request": {},
+  "prompt_audits": [
+    {"sequence": 1, "opcode": 19, "raw": [19,0,1,0,0,0,5], "actual_response_bytes": {"Ok": [[1,0,0,0],[4,0,0,0]]}}
+  ]
+}

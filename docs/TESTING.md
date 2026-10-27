@@ -1,499 +1,412 @@
 # 本机验证记录
 
+## 2026-10-28 接续验证
+
+- 在目录标识为`codex-ci-current-review312-20261027`的隔离干净源码副本执行Python 3.12.13顶层测试：**729 passed、24 skipped、0 failed**，1644.81秒，进程退出0；随后`python -m ygo_data.cli validate --input tests/fixtures/cards.sample.json`验证2张卡并退出0。测试输出副本为[`ci-current-review-python312.log`](../target/workspace-audit-2026-10-27-codex/ci-current-review-python312.log)，源码清单SHA-256 `9e67e38ce79935bd8c7ff8d6a773b6bcffa253264034f14be277672fdb2196eb`，共551个Git可见源文件。测试使用`PYTHONPATH=python`。与当前Git可见文件逐项比对时，成员数和路径均一致，快照后内容变化限于`docs/TESTING.md`、`docs/WORKSPACE_REVIEW.md`和`docs/superpowers/plans/2026-10-22-tenki-placement-native-recovery-handoff.md`；代码、测试、配置和schema与通过测试的快照相同。24项跳过涉及Windows目录符号链接、不可用的本机历史材料/基线，以及显式要求本机引擎、快照或赛事配置的opt-in；详情见日志。干净副本不含忽略的本机证据，因此这些跳过仍不能当作资产或历史用例验收。
+- 最新工作区Rust验证：`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`通过；串行`cargo test --workspace --offline --locked -- --test-threads=1`为**331 passed、36 ignored、0 failed**；`cargo test -p ygo-engine-adapter --examples --offline --locked`为**52 passed、1 ignored、0 failed**。日志为[`final-review-rust-workspace.log`](../target/workspace-audit-2026-10-27-codex/final-review-rust-workspace.log)、[`final-review-rust-examples.log`](../target/workspace-audit-2026-10-27-codex/final-review-rust-examples.log)、`fmt.log`和`clippy.log`。
+- 本次没有重建或部署最新源码包，也没有新增真实引擎实验。部署现状和旧包检查的限制仍以[工作区审计](WORKSPACE_REVIEW.md)及[部署文档](DEPLOYMENT.md)为准。
+
+## 2026-10-27 项目环境自检与清理
+
+在现有未提交工作区上复核，HEAD为`8a6b2f6762131aebea6d8c0f5f61363d573f1b36`，未提交或切换部署。清理前，Ground最近交付的603个归档成员和15个带路径/大小/哈希引用均匹配，509个非Markdown成员与当时工作区一致；截至接续检查时，其中`Cargo.lock`、两个crate的`Cargo.toml`、`pyproject.toml`、`.github/workflows/ci.yml`、`scripts/deploy-local.ps1`、`python/ygo_data/identity.py`、`python/ygo_eval/native_tenki_placement.py`（仅注释）以及九个相关Python测试文件共十七项变化。归档和原报告没有改写。
+
+- 普通发布包和赛事开发配置各运行一次`engine doctor`：均退出0，`ready`、`abi_ok`、`assets_ok`为true，`issues=[]`、`smoke_ok=null`。这是两次worker ABI探针，单独属于本次环境自检，不是决斗smoke、规则认证或既有研究scope消费。普通CLI/worker哈希与其包内清单一致；包仍为2026-10-19构建。
+- `cargo fmt --all -- --check`、workspace全目标offline/locked Clippy `-D warnings`通过。隔离target的`cargo test --workspace --offline --locked -- --test-threads=1`为330 passed、36 ignored；另执行adapter examples为52 passed、1 ignored。日志在`target/workspace-audit-2026-10-27-codex/`。测试运行与本机发布worker隔离；忽略项未因此获得真实资产验收。
+- 本次最初针对pytest缓存配置运行`tests/test_ground_collapse_protocol.py`，8项通过；预建`target/pytest-cache`后无缓存警告。接续的聚焦检查另见下方；恢复后完整Python套件结果见本节下方；下方734 passed/9 skipped属于旧Ground批次。
+- 经提升权限逐个检查路径与内容后，非递归移除222个空pytest缓存目录、四个空`.v5-package-test-*`及三个空`tests/tmp*`目录；清单和首次空值判断导致零删除的记录也保存在上述target目录。未修改ACL，清理后`git status --porcelain=v1 --untracked-files=all`退出0且无访问警告。Ground归档中61个非空合成测试文件保留原位。
+- 删除两个未被各自crate直接使用的`toml`/`sha2`依赖声明，offline更新的锁文件只移除相应直接依赖；其他crate仍使用它们。`.gitignore`是Ground固定工具包成员，本次未改。
+- 保存的Ground准备报告执行`--verify-only`通过，报告SHA-256前后均为`5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`，本次复核的native/runner/worker/FFI调用均为0；日志见上述target目录。
+- 文档拆分前快照`TASKS_HISTORY.md` SHA-256为`b7e6ec057cf03221a33c430ab343bb3dcdb790f4e5f91b84fece7869ec17d281`，`docs/TESTING_HISTORY.md`为`0798aa8ea1c333f9de0850752b512be74c57096cf99ddd1bc1226ff592d93eef`；拆分清单位于上述target目录的`doc-split-manifest.json`。独立检查保留全部原标题顺序、锚点和历史跳转。
+- 隔离执行部署脚本的文档复制与包入口改写块：TESTING及其历史快照副本哈希匹配，79个历史跳转按本地Unicode标题slug算法匹配；包入口四个源链接和改写链接指向同一存在目标。生产包未改写；扁平副本的其余相对链接仍有缺口，不等于完整部署或GitHub渲染验证。结果位于上述target目录的`package-docs-copy-check-7908f831acd74cab9cd1da108f6031fc/`与`package-entry-transform-check-3d1a25e941374a37875d8da44792a520/`。
+- 包入口模板现于构建、资产准备及发布覆盖前在内存中校验和改写。隔离验证成功路径及四条链接各自缺失/重复共8个负例，失败均发生在模拟发布前；记录在上述target目录的`package-preflight-check-e778dc9378394063867913bdb690984d/result.json`。脚本其余步骤不是事务，I/O错误仍可能造成部分更新。
+- Python 3.12干净副本发现固定清单检查直接读取忽略的本机证据；已拆分为始终执行的固定pins检查与缺失时单独跳过的本机比对。隔离Python 3.12结果：无历史baseline目录时20 passed/1 skipped/2 subtests，有真实清单时21 passed/2 subtests；baseline存在但清单缺失、baseline为普通文件、清单篡改和清单为目录均按预期失败，详细矩阵见`curry-pin-isolated-check/python312-matrix-summary.json`。该聚焦检查的旧快照全套结果见下方。
+- 接续阶段在文档拆分、CI与部署脚本修改后再次执行Ground `--verify-only`：`valid=true`、`preparation_successful=true`，native/runner/worker/FFI调用均为0；正式报告前后SHA-256仍为`5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`。输出及元数据分别为上述target目录的`ground-verify-final.log`和`ground-verify-final-meta.json`；它核验保存的工具和报告，不使当前工作区等同旧归档。
+- 独立Python 3.12.14 venv中执行CI的`pip install -e '.[test]'`，`pip check`通过，pytest 9.1.1、jsonschema 4.26.0可导入，`ygo_data.cli validate`样本输出验证2张卡。安装及检查日志分别为上述target目录的`ci-editable-install.log`和`ci-editable-check.log`；完整Python套件另行记录。
+- `checked_output` 曾将Git忽略检查异常误报为未忽略，并将跟踪检查异常误当未跟踪；现在仅对Git退出0/1执行原有判断，其余状态失败关闭。先观察两个检查各自注入2/128的4个子测试失败，再修复；Python 3.12聚焦完整`tests/test_identity.py`为11 passed、4 subtests passed，覆盖真实Git正常与异常仓库，日志为上述target目录`identity-git-exit-check/red.log`和`green.log`。未调用原生研究执行。
+- `jsonschema` 原先只列在test extra，而研究入口无条件加载其依赖，基础环境执行`ygo_eval.research --help`会失败。现将其列为基础运行依赖，pytest仍为test extra。独立Python 3.12环境中无extras普通安装及editable安装、元数据和`pip check`通过；卡片样本验证2张、研究入口`--help`退出0；模拟缺少jsonschema时报告校验按预期拒绝。日志为上述target目录的`base312-*.log`；未调用原生研究。
+- 在`checked_output`修复后重新执行保存的Ground报告`--verify-only`，退出0，报告哈希前后均为`5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`，日志和元数据分别为`ground-verify-post-identity.log`、`ground-verify-post-identity-meta.json`；这是保存报告及工具的离线验证，非当前工作区与旧归档逐字一致的证明。
+- 基础依赖调整后再次执行保存的Ground报告`--verify-only`，`valid=true`且native/runner/worker/FFI均0，报告前后哈希仍为`5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`；日志与元数据为`ground-verify-post-package.log`和`ground-verify-post-package-meta.json`。
+- 干净副本第二项生产来源测试同样直接读取历史清单，导致其后的嵌套静态断言无法执行。已拆分为始终执行的固定哈希/嵌套pins检查和单独本机清单比较；Python 3.12隔离矩阵无baseline时8 passed/1 skipped，有真实清单时9 passed，空baseline、baseline为文件、篡改清单和清单为目录均按预期失败；日志见`curry-source-isolated-check/`。
+- Python 3.12短路径干净源码快照`ci-final-snapshot-manifest.json`（清单SHA-256 `bf6c7c73bc06b57bb84b794caedc12372efd2e78827c4d94a0ab3fc27b504614`）全套为717 passed、18 skipped、13 failed，耗时1820.42秒；日志`ci-final-python312.log`。失败按回溯分为真实历史清单/账本缺席、测试临时目录和合成banlist/预检准备缺口，不能标为通过。修复后：信息路线文件11 passed/13 subtests；Curry两个文件18 passed/2 skipped；Tenki三个文件71 passed/3 skipped/18 subtests；相关本机历史基线缺失、部分缺失和篡改负例单独记录在`route-empty-runtime-*.log`、`ci-curry-tests-fixed.log`、`tenki-*.log`。完整账本正例仍需本机完整证据。后续完整套件结果另记。
+- Curry两处历史baseline跳过条件现仅捕获`FileNotFoundError`；Python 3.12隔离6项检查验证缺失、权限错误和其他OSError，日志为`ci-curry-skip-boundary.log`。无历史baseline时revalidation公共七阶段E2E被跳过，其他合成测试不能完全替代此覆盖。
+- 从暂停恢复后，Python 3.12在本机完整历史材料上执行三个Tenki历史检查，3 passed；测试明确禁止原生runner，日志为`ci-resume-local-evidence.log`。另执行Curry revalidation公共七阶段集成测试，1 passed；该测试读取真实V3历史基线并检查前后状态，runner及新增执行输出均为合成替身，不是新原生实验或规则资格，日志为`ci-resume-v3-e2e.log`。干净checkout仍会跳过需要这批历史材料的路径。
+- 恢复后对2026-10-19普通部署包执行一次预算受限`engine smoke`及单独`combo replay`：smoke退出0，326节点、329次引擎调用、`time_budget`终止，3条线路标记`engine_verified`且`replay_verified=true`；独立replay退出0、3/3线路通过。smoke报告SHA-256 `e813a3d7a66eac1d07df72165fbdb5901c11f6bcad81779d5425f7cb26f3698f`，replay输出SHA-256 `dfa31271c7cc3f371950661e243b2d3f7e3a50f6f5c4449c3bf1bee56fa200e0`，报告、输出及退出码在上述target目录`deployed-smoke-20261027-resume.*`和`deployed-smoke-replay-20261027-resume.*`。这是普通包本地诊断产生的实际引擎调用，独立于已封存研究scope/账本；单独replay的具体引擎调用数未计量。时间预算截断不证明全搜索、规则覆盖或全局最优，也不代表当前工作区已部署。
+- 修复后在短路径干净隔离快照运行Python 3.12完整顶层pytest：**727 passed、24 skipped、0 failed**，1628.95秒、退出0；清单612项，SHA-256 `f9034abfdaa55af8c8cab518691bdc9c77382d40062fb9940fac629ba7155f38`，日志与退出码为`ci-resume-python312.log`、`ci-resume-python312-exit.txt`。该结果是当前复核补丁之前的完整套件基线；此前快照后源码、测试和配置一致，差异见`ci-resume-snapshot-comparison.json`。本轮审查又改动语言审计和兼容帧验证，完整套件尚待重跑。后续为准备复验，快照脚本误覆盖了本机`ci-resume-snapshot-manifest.json`与`ci-resume-snapshot-git.log`；原manifest字节未能恢复，原Git添加日志也未能逐字恢复（其他快照日志仍在）。旧612文件隔离源码副本仍完整且工作树清洁，七个记录差异pin匹配，重建清单见`target/workspace-audit-2026-10-27-codex/ci-resume-snapshot-manifest-reconstructed.json`（SHA-256 `df3ac48da93d666db256bc9517d779b030b890823f227fb8351aad9cb2c81a29`）；旧测试输出日志仍保留。细节见本机`ci-resume-manifest-overwrite-incident.json`。24项跳过包括2项Windows符号链接不可用、8项需本机历史材料、7项需历史baseline、7项显式真实资产/报告opt-in。
+- 对其中历史材料相关跳过项，额外在本机执行：3项Curry本地pins/frozen cases、3项Tenki历史检查、1项使用真实V3基线但模拟runner的Curry七阶段集成，均通过；另以不写旧目录的方式执行历史审计文件16 passed/1 deselected，覆盖其中7项本机历史检查。余下旧目录独占写入测试未在本机执行；真实资产opt-in和符号链接不可用项不由上述结果覆盖，另见后续独立检查。日志分别为`ci-resume-local-pins.log`、`ci-resume-local-evidence.log`、`ci-resume-v3-e2e.log`和`ci-resume-local-history.log`。
+- 对干净快照跳过的7项真实资产/报告opt-in，在本机补充执行：6项只读历史报告、快照与引擎清单验证均通过（`ci-resume-local-reports.log`）；赛事开发配置固定案例及独立重放1项通过，使用隔离配置副本及独立账本，2次实际worker请求分别记为debited，结果一致（`tournament-deployment-audit-resume/test.log`及`asset-probe-audit.jsonl`，账本SHA-256 `13a841e8d2495ef6496e1b8326cc629b9282d6c3965034f1c051e6552c323cb8`）。这是独立部署兼容诊断，不复用或累加研究scope账本；底层FFI次数未独立计量，不等于最新源码正式双资产发布验收。
+- 接续只读容量扫描：`target/`约106.64 GiB、`data/`约112.86 GiB可读取文件逻辑大小；85处访问错误、无硬链接去重且并发写入，不等同实际占用。清单见上述target目录的`capacity-inventory.json`。`.venv`的Python可启动但缺少pip和pytest；详细限制见[环境审计](ENVIRONMENT_AUDIT.md)。
+- 经检查准确路径、内容、reparse及编译进程后，仅删除本轮隔离Cargo编译目录`target/workspace-audit-2026-10-27-codex/cargo`；约5.76 GiB分配量为清理前估算，测试日志保留在父目录。证据为`cargo-cache-cleanup.json`；日志中二进制路径现已不可用，重新执行须重新编译。
+- 恢复后对容量清点的85个原访问错误路径进行提升权限只读复核：85个均能枚举直接子项，58个当前为空、27个非空且属于隔离Python依赖目录；没有递归复测，原容量数仍不能当作精确占用。随后仅非递归移除本轮pip产生的5个空目录，其余路径保留；记录为`capacity-errors-recheck.json`和`pip-empty-cleanup.json`。
+- 文档检查验证本机相对文件目标存在；指向忽略的`target/`和`data/runtime/`的证据在干净checkout中仍需单独提供。历史原生预算、规则资格及未知累计消费没有由本次检查增加。
+- 交付前复核发现两项可修复问题：语言审计会保留schema禁止的未知record/field属性，且缺失或不支持的language会产出不符合schema的记录；现改为在写报告前拒绝不合约输入，Python 3.12聚焦文件`tests/test_coverage_language.py`为13 passed、4个拒绝子测试通过。修复前新增反例的4种输入均未拒绝；测试日志在`target/pytest-cache`之外的本机命令输出，不重写上述历史完整套件日志。
+- 同次复核确认v1–v5历史事件opcode 56/92旧格式会被新增解析器拒绝；`frame_matches_raw`现接受精确的旧`unparsed`投影，同时验证新格式。离线locked Rust定向测试`cargo test --offline --locked -p ygo-engine-adapter --test historical_prompt`为2 passed。worker内部失败通过`DuelResult`保存部分terminal observation；独立复核的早期疑点不成立。
+- 本次`.gitignore`审阅合并为crate内`data/tmp/`与`data/runtime/`两条本机证据规则，并排除可中断的`tests/.tenki-*`合成临时目录。清理候选复核后发现五个`.tenki-*`目录属于603项冻结归档，已从原归档按逐文件SHA-256恢复；报告为`target/workspace-audit-2026-10-27-codex/stale-tenki-restoration.json`。未把报告、runner占位文件或本机研究输出加入提交。两个crate内零收费测试ledger目录和一个188文件的confirmation测试输出仍保留，因其本机历史保留用途未完全确认；逐项清单见同目录`nested-synthetic-cleanup.json`。独立审阅中关于worker失败诊断的疑点已通过控制流核对排除；研究续窗说明现明确新ID须有单独用户批准，ID自身不是授权证明。
+
+本次未运行新的收费研究实验、正式v6、16+32手评估或最新源码干净双资产部署；环境路径与保留范围见[环境审计](ENVIRONMENT_AUDIT.md)。
+
+## 2026-10-27 项目再规划：仅文档静态交叉核对
+
+本记录是后续文档重整的只读核对，不是下面Ground Collapse批次的实跑复验。开始编辑时，最新最终源码清单的603项与工作区逐项一致；完成文档修订后，完整工作区已变化，旧清单的完整源码身份不再描述现在的工作区。HEAD为 `8a6b2f6762131aebea6d8c0f5f61363d573f1b36`，既有未提交/未跟踪改动保留；HEAD不等于完整工作区身份。
+
+以下是当时运行的历史命令和结果，**当前工作区已有后续修改，原命令中的工作区一致性断言不再适用于当前状态**；不要将其直接作为当前验收命令。检查当时从仓库根目录运行，结果为 `archive=603, nonmarkdown=509, delivery_references=15: OK`，退出0。它复核旧归档成员及其清单、当前工作区范围内509个非Markdown文件，以及交付记录中15个带路径、大小和SHA256的引用；**不证明清单之外所有忽略文件或不可读路径均未改变**。
+
+```powershell
+@'
+import hashlib,json,pathlib,zipfile
+h=lambda b: hashlib.sha256(b).hexdigest()
+d=json.loads(pathlib.Path('target/ground-collapse-preparation-tests/final-release/delivery.json').read_text(encoding='utf-8'))
+s=d['final_documentation_source']; files=json.loads(pathlib.Path(s['file_list']['path']).read_text(encoding='utf-8'))['files']
+nonmd={p:v for p,v in files.items() if not p.lower().endswith('.md')}
+assert all(pathlib.Path(p).is_file() and h(pathlib.Path(p).read_bytes())==v for p,v in nonmd.items())
+with zipfile.ZipFile(s['archive']['path']) as z:
+ assert len(z.namelist())==len(files)==603 and set(z.namelist())==set(files)
+ assert all(h(z.read(p))==v for p,v in files.items())
+refs=[]
+def walk(x):
+ if isinstance(x,dict):
+  if {'path','sha256','bytes'} <= x.keys(): refs.append(x)
+  for v in x.values(): walk(v)
+ elif isinstance(x,list):
+  for v in x: walk(v)
+walk(d)
+assert len(refs)==15 and all(pathlib.Path(r['path']).is_file() and pathlib.Path(r['path']).stat().st_size==r['bytes'] and h(pathlib.Path(r['path']).read_bytes())==r['sha256'] for r in refs)
+print(f'archive={len(files)}, nonmarkdown={len(nonmd)}, delivery_references={len(refs)}: OK')
+'@ | py -
+```
+
+其他核对：普通dist的CLI及worker与其发布哈希清单一致，普通/赛事配置引用路径存在；未由此推定可执行或已更新。以本轮受修改文档的相对Markdown路径作静态存在性检查、比较旧归档INDEX与新INDEX/HISTORY目标，并将愿景16个需求编号与差距评估和原产品演进计划比对：未发现缺失链接、旧导航目标遗漏或编号遗漏。检查只覆盖文件路径与编号存在性，语义另经独立只读审阅。`git diff --check`退出0，Git提示既有CRLF转换警告；`git status --porcelain=v1`的229行权限警告来自既有不可读路径，未调整ACL或删除证据。新增/修改限于Markdown，旧的工作区改动保留。
+
+独立只读审阅重点核对40/7/47与未知消费、历史来源及合同、Ground资格、P4开放门禁、双轨依赖、16项需求和旧导航；发现的doctor权限泛化、旧runner来源泛化、递归测试发现和历史记录顶部链接问题已修正。未执行doctor、原生runner/worker/FFI、历史业务prepare或verify、构建、全套测试、部署、资产切换或Git提交；旧测试数量与耗时仍只属于其原记录。
+
+## 2026-10-27 Ground Collapse opcode24离线协议与公开选区准备：离线准备及verify通过
+
+本批仅完成离线协议支持与候选准备，新增原生/runner/worker/FFI调用均为0。生产decoder的FIELD_DISABLED56帧严格为5字节`[56,u32 LE]`，不写入Ground Collapse特定值。独立oracle解析opcode24、HINT_ZONE和FIELD_DISABLED原始字节，验证字段、区域位、菜单坐标、Choice和响应编码之间的绑定。静态/合成菜单为45个无序区域对、90种有序编码；这些不是原生提示或引擎响应接受证据。固定公开规则为唯一激活90502999；若出现opcode18，唯一选择`player0/location8/sequence0`；opcode24按`player1/location4/sequence0`再`sequence1`选择，响应`[1,4,0,1,4,1]`。任何缺失、重复或不可用位置均停止，实际mask、prompt ID、可达性、响应接受、反序等价和后续消息保持未知。
+
+缓存竞态修复先由测试复现：账本二次核验在输入检查后短暂替换再恢复请求文件时，旧裸路径读取会拒绝/失配；修复后只保留七个stage request的原始字节供账本校验，其他输入仍全量路径/哈希检查但不留在内存。聚焦组44 passed、19个子测试通过；独立复审确认哈希与最终稳定性检查保持有效。
+
+Python全套显式枚举88个顶层文件，`734 passed, 9 skipped, 200 subtests passed`，0失败，用时1,695.86秒。日志及清单为[`pytest-full-after-cache-tightening.log`](../target/ground-collapse-preparation-tests/pytest-full-after-cache-tightening.log)和[`python-test-files-review-final.txt`](../target/ground-collapse-preparation-tests/python-test-files-review-final.txt)。9项跳过逐项为：`test_curry_consumption_reservation.py:555`、`test_curry_optional_source_path.py:39`（Windows目录符号链接能力不足）；`test_goal_schemas.py:41`（opt-in v3 reports）；`test_recovery_schemas.py:24`（opt-in v4 report）；`test_runtime_build.py:9`（未提供本机引擎资产）；`test_schemas.py:77`（opt-in本机快照/报告）；`test_schemas.py:52`（opt-in实际v2报告）；`test_strategy_schemas.py:22`（opt-in完整策略报告）；`test_tournament_gate.py:95`（未提供独立2026赛事配置）。完整结构化排除清单见[`test-exclusion-inventory.json`](../target/ground-collapse-preparation-tests/test-exclusion-inventory.json)。
+
+本批Rust修改的隔离验证：`cargo fmt --all -- --check`通过；workspace all-targets offline/locked Clippy以`-D warnings`通过；串行workspace 382 passed、37 ignored；examples 52 passed、1 ignored。唯一examples忽略项要求固定历史genesis证据；workspace 37项及逐项忽略原因列在同一[排除清单](../target/ground-collapse-preparation-tests/test-exclusion-inventory.json)，原始日志分别为[`workspace-tests-serial.log`](../target/ground-collapse-preparation-tests/workspace-tests-serial.log)和[`adapter-examples-tests.log`](../target/ground-collapse-preparation-tests/adapter-examples-tests.log)。此后仅改Python缓存与文档，Rust源码未变。
+
+真实固定来源准备命令退出0，耗时357.287秒，保存[`preparation.json`](../data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json)（SHA256 `5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`，25,131字节）。六项检查通过：最新Curry delivery与双时点源码/账本来源、历史保护材料、冻结候选、CDB/禁限/脚本/核心来源及输入稳定性。认证历史消费40、政策预留7、规划47；旧confirmation和全部历史实际总消费仍`null`。report `execution_ready=false`，所有资格标记为false。原始stdout 180字节SHA256 `acfebec454437161277b74741ef5f192f651817f5bfa70f387a73b4339f86920`；stderr 0字节，退出0。文档前verify-only耗时313.189秒，退出0、`valid=true`、native/runner/worker/FFI=0，stdout 130字节SHA256 `25574f811e30c8b3e295e4b0834eee463e3d1551a55b675dd6325c4b12e9edc1`；报告哈希前后均不变。进程原始字节及状态在`target/ground-collapse-preparation-tests/real-prepare-attempt-final/`和`verify-before-docs-final/`。
+
+文档前源码身份为`c96a9e5ec6e6aef5a24cf218b11cc18140be01cdbd4fd4e95d59ab12deee8862`（602项），归档ZIP SHA256 `70cda05d86ac361172afdc209dc14d785e526d121dc3874c23039e3590a303fe`，list SHA256 `fc23e6fba0205eda569147ba8e91979508dc044b6f0899033d835cd9b90a99fe`。这是代码冻结，不是本批文档定稿后的最终身份；最终身份、源码归档、访问失败清单和交付记录见本批handoff及外部delivery材料。ACL受限临时目录保留，未调整权限或删除。下一批须另建scope/预算；本准备报告不得直接启动原生实验。
+
+
+以下保留历史标题及原锚点；完整记录见同目录历史快照。
+
+## 历史状态（2026-10-27）：绑定V3恢复证据的Curry七阶段再验真：七阶段与双分支重放通过
+
+[历史原文](TESTING_HISTORY.md#历史状态2026-10-27绑定v3恢复证据的curry七阶段再验真七阶段与双分支重放通过)
+
+## 2026-10-26 Curry V3真实来源角色适配与零runner恢复：恢复和只读verify通过
+
+[历史原文](TESTING_HISTORY.md#2026-10-26-curry-v3真实来源角色适配与零runner恢复恢复和只读verify通过)
+
+## 2026-10-26 Curry V2精确来源恢复与零runner验收：离线通过，真实恢复在输入角色门禁失败
+
+[历史原文](TESTING_HISTORY.md#2026-10-26-curry-v2精确来源恢复与零runner验收离线通过真实恢复在输入角色门禁失败)
+
+## 历史验证（2026-10-26）：Curry V5已存证据恢复与报告发布诊断
+
+[历史原文](TESTING_HISTORY.md#历史验证2026-10-26curry-v5已存证据恢复与报告发布诊断)
+
+## 2026-10-26 Curry V5干净交付与单次零调用验收：runner只读检查通过，正式报告未发布
+
+[历史原文](TESTING_HISTORY.md#2026-10-26-curry-v5干净交付与单次零调用验收runner只读检查通过正式报告未发布)
+
+## 2026-10-26 Curry V4精确stdout合同与单次零调用验收：真实只读审计在来源根门禁失败
+
+[历史原文](TESTING_HISTORY.md#2026-10-26-curry-v4精确stdout合同与单次零调用验收真实只读审计在来源根门禁失败)
+
+## 2026-10-26 Curry V3来源角色修复与单次零调用验收：真实只读审计在stage 1父收据检查失败
+
+[历史原文](TESTING_HISTORY.md#2026-10-26-curry-v3来源角色修复与单次零调用验收真实只读审计在stage-1父收据检查失败)
+
+## 2026-10-25 Curry V2账本交接恢复审计：离线验收通过，真实只读审计首门禁失败，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-25-curry-v2账本交接恢复审计离线验收通过真实只读审计首门禁失败新增原生0)
+
+## 2026-10-25 Curry V3预留绑定的Curry七阶段验证：stage 2停止，新增消费1/7
+
+[历史原文](TESTING_HISTORY.md#2026-10-25-curry-v3预留绑定的curry七阶段验证stage-2停止新增消费17)
+
+## 原生前记录：Curry V3预留绑定的七阶段验证离线总检
+
+[历史原文](TESTING_HISTORY.md#原生前记录curry-v3预留绑定的七阶段验证离线总检)
+
+## 2026-10-25 Curry V3风险预留：真实只读审计及verify通过，新增原生调用0
+
+[历史原文](TESTING_HISTORY.md#2026-10-25-curry-v3风险预留真实只读审计及verify通过新增原生调用0)
+
+## 2026-10-25 Curry v2风险预留恢复：合成验收通过，真实来源门禁失败，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-25-curry-v2风险预留恢复合成验收通过真实来源门禁失败新增原生0)
+
+## 2026-10-25 Curry预算风险预留准入准备：真实来源门禁失败，新增原生调用0
+
+[历史原文](TESTING_HISTORY.md#2026-10-25-curry预算风险预留准入准备真实来源门禁失败新增原生调用0)
+
+## 2026-10-24 Curry公共审计完整合成验收：通过，新增原生调用0
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-curry公共审计完整合成验收通过新增原生调用0)
+
+## 2026-10-24 Curry v2清单驱动审计：真实只读核验通过，合成总流程仍有缺口
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-curry-v2清单驱动审计真实只读核验通过合成总流程仍有缺口)
+
+## 2026-10-24 Curry 公共审计合成验收：额度不足时暂停，未完成
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-curry-公共审计合成验收额度不足时暂停未完成)
+
+# 本机验证记录
+
+[历史原文](TESTING_HISTORY.md#本机验证记录-1)
+
+## 2026-10-24 Curry新scope七阶段确认：收费前normal编排拒绝，按门禁暂停
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-curry新scope七阶段确认收费前normal编排拒绝按门禁暂停)
+
+## 2026-10-24 Curry哈希角色修复与只读验收：通过，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-curry哈希角色修复与只读验收通过新增原生0)
+
+## 2026-10-24 Mooyan Curry opcode14七阶段批：离线检查通过，收费前预检阻断，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-mooyan-curry-opcode14七阶段批离线检查通过收费前预检阻断新增原生0)
+
+## 2026-10-23 天玑完整路径定向验真：六阶段通过，累计32次
+
+[历史原文](TESTING_HISTORY.md#2026-10-23-天玑完整路径定向验真六阶段通过累计32次)
+
+## 2026-10-23 天玑runner输出/期限修复与只读审计：通过，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-23-天玑runner输出期限修复与只读审计通过新增原生0)
+
+## 2026-10-23 天玑placement confirmation：离线验收通过，stage 1 runner超时后停止
+
+[历史原文](TESTING_HISTORY.md#2026-10-23-天玑placement-confirmation离线验收通过stage-1-runner超时后停止)
+
+## 2026-10-22 天玑历史锚点修复与只读预检：离线通过，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-22-天玑历史锚点修复与只读预检离线通过新增原生0)
+
+## 2026-10-22 天玑v2基线迁移与六阶段验真：离线准备通过，原生阶段零消费失败
+
+[历史原文](TESTING_HISTORY.md#2026-10-22-天玑v2基线迁移与六阶段验真离线准备通过原生阶段零消费失败)
+
+## 2026-10-22 天玑区域18与opcode13恢复：计数兼容修复，迁移门禁拒绝
+
+[历史原文](TESTING_HISTORY.md#2026-10-22-天玑区域18与opcode13恢复计数兼容修复迁移门禁拒绝)
+
+## 2026-10-22 天玑区域18与opcode13两分支：离线交付完成，原生前置阻断
+
+[历史原文](TESTING_HISTORY.md#2026-10-22-天玑区域18与opcode13两分支离线交付完成原生前置阻断)
+
+## 2026-10-22 天玑合同兼容修复与离线收尾
+
+[历史原文](TESTING_HISTORY.md#2026-10-22-天玑合同兼容修复与离线收尾)
+
+## 2026-10-22 天玑六槽位批：2次后区域18停门，额度暂停待合同修复
+
+[历史原文](TESTING_HISTORY.md#2026-10-22-天玑六槽位批2次后区域18停门额度暂停待合同修复)
+
+## 2026-10-21 剩余提示静态准备：三个候选及命令6阻断，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-21-剩余提示静态准备三个候选及命令6阻断新增原生0)
+
+## 2026-10-21 洗手牌后结束线路：可见历史闭合与终场衔接，新增原生0
+
+[历史原文](TESTING_HISTORY.md#2026-10-21-洗手牌后结束线路可见历史闭合与终场衔接新增原生0)
+
+## 2026-10-21 P1可见信息、洗手牌理想概率及动作顺序：零原生交付
+
+[历史原文](TESTING_HISTORY.md#2026-10-21-p1可见信息洗手牌理想概率及动作顺序零原生交付)
+
+## 2026-10-21 独立历史核验与四次终场续办：两组通过，预算封存
+
+[历史原文](TESTING_HISTORY.md#2026-10-21-独立历史核验与四次终场续办两组通过预算封存)
+
+## 2026-10-20 赛事/洗手牌四次入口：离线交付，来源门禁阻断原生
+
+[历史原文](TESTING_HISTORY.md#2026-10-20-赛事洗手牌四次入口离线交付来源门禁阻断原生)
+
+## 2026-10-20 Rabbit终场单例两次验真交付
+
+[历史原文](TESTING_HISTORY.md#2026-10-20-rabbit终场单例两次验真交付)
+
+## 2026-10-20 T1/T2工具与T3查询失败停止断点
+
+[历史原文](TESTING_HISTORY.md#2026-10-20-t1t2工具与t3查询失败停止断点)
+
+## 2026-10-20 S1/S2交付与S3停止断点
+
+[历史原文](TESTING_HISTORY.md#2026-10-20-s1s2交付与s3停止断点)
+
+## 2026-10-20 S1/S2离线工具及原生前置验证
+
+[历史原文](TESTING_HISTORY.md#2026-10-20-s1s2离线工具及原生前置验证)
+
+## 2026-10-19 P1动作修复与离线研究准备
+
+[历史原文](TESTING_HISTORY.md#2026-10-19-p1动作修复与离线研究准备)
+
+## 2026-10-19 断点恢复及首批A–E验收
+
+[历史原文](TESTING_HISTORY.md#2026-10-19-断点恢复及首批ae验收)
+
+## 2026-10-19 首批基线审计实现与用户要求暂停
+
+[历史原文](TESTING_HISTORY.md#2026-10-19-首批基线审计实现与用户要求暂停)
+
+### 已运行的最终默认验证
+
+[历史原文](TESTING_HISTORY.md#已运行的最终默认验证)
+
+### 已运行的数据调查
+
+[历史原文](TESTING_HISTORY.md#已运行的数据调查)
+
+### 原生批：累计7次，无未知消费
+
+[历史原文](TESTING_HISTORY.md#原生批累计7次无未知消费)
+
+### 暂停时尚缺
+
+[历史原文](TESTING_HISTORY.md#暂停时尚缺)
+
 ## 2026-10-19 工作树整理与文档/环境复核
 
-源码基线（本次提交的父版本）为 `54e8e10dab05a7d94196ceebc4febf18978117e0`；验证在提交前完成，记录随本次交付固化。复核覆盖文档重构、`.gitignore` 去重和 `ApiService::placeholder_combo` 删除。该方法仓库内无调用方；正式Combo与规划版本路由未改。
-
-- `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`、`git diff --check`：通过。
-- `cargo test --workspace --offline --locked`：225 passed，0 failed，36 ignored；忽略项需显式冻结资产、账本报告或人工基准。
-- `$env:PYTHONPATH='python'; py -m unittest discover -s tests -p 'test_*.py'`：37 discovered，30 passed，7 skipped。
-- `cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored --nocapture`：1项本机Rabbit真实引擎golden测试通过。
-- 普通发布包和赛事开发配置 `engine doctor` 均为 `ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通目录为13,665张卡；禁限表203项、生效日2026-10-01。该目录计数不证明全正式OCG覆盖。
-- 普通包CLI与现存 `target/release/ygo-cli.exe` SHA256相同（`54804730…1432a89f`）；worker与 `target/release/ygo-engine-worker.exe` SHA256相同（`ad4a5929…f37fd11c`）。哈希相同仅确认现存构建产物，不证明由当前源码干净重建。
-- 全仓Markdown扫描65份、143条相对文件链接，0断链；PRODUCT_VISION中16项需求均有计划映射，P0–P8共35项未来任务。独立只读审查未发现最终全卡/全局最优门槛降级；COMBO-01阶段现统一为P5/P6，并映射至P2.2、P5.3–P5.4和P6.1。
-- `.gitignore` 已移除被整目录规则覆盖的逐JSON重复项，并按构建环境、本机资产、部署产物分组；`git check-ignore -v`确认本机配置、运行/数据目录、`target/`、`dist/`和`.venv/`仍被忽略，源码和文档未被忽略。无已跟踪文件被忽略。
-- `cargo machete` 未安装；未联网安装工具。此次源码清理仅删除确认无调用方的占位API。`data/runtime/`、`data/tmp/`、`dist/`和`target/`含本机资产、持久账本、部署或构建证据，未作递归清理。
-
-本次复核没有重建部署包、重新进行规则认证、正式v6、16+32手评估或独立干净checkout验收。上述跳过项与缺口仍按TASKS跟踪。
+[历史原文](TESTING_HISTORY.md#2026-10-19-工作树整理与文档环境复核)
 
 ## 2026-10-19 产品目标与路线文档交付：只读运行复核
 
-本条对应PRODUCT_VISION、OPTIMALITY_RESEARCH和2026-10-19产品演进计划的文档交付，晚于下方“完整自检”。HEAD为 `54e8e10dab05a7d94196ceebc4febf18978117e0`；开始时已有未提交源码/文档修改，本轮仅写Markdown，不提交、不构建、不部署、不清理资产。
-
-实际运行以下本机命令，均退出0：
-
-```powershell
-./dist/ygo-local/ygo.cmd engine doctor
-./dist/ygo-local/ygo.cmd catalog status
-./dist/ygo-local/ygo.cmd banlist status
-Get-FileHash dist/ygo-local/ygo.exe,dist/ygo-local/ygo-engine-worker.exe,target/release/ygo-cli.exe,target/release/ygo-engine-worker.exe -Algorithm SHA256
-Get-Content dist/ygo-local/build-hashes.json
-$env:YGO_ENGINE_CONFIG='data/runtime/tournament-2026/engine-development.toml'
-./target/debug/ygo-cli.exe engine doctor
-./target/debug/ygo-cli.exe knowledge validate --knowledge knowledge/tournament-2026.knowledge.json
-```
-
-上述最后三行是独立终端调用内的赛事配置；普通包wrapper固定其自己的配置。哈希逐项核对：
-
-| 观察 | 结果及限制 |
-|---|---|
-| 普通包doctor | ready/abi_ok/assets_ok=true，issues=[]，smoke_ok=null |
-| 赛事开发doctor | 同样就绪，smoke_ok=null；使用独立冻结资产和debug worker，不是统一发布包 |
-| 普通CLI与现存release/包内清单 | SHA256 `54804730b3a507c0143c627d5e5c61b2acc03964c9a7cda7c803b6101432a89f` 一致 |
-| 普通worker与现存release/包内清单 | SHA256 `ad4a592981535144190ec44e0dd8c4aca951ec21c0206a1346961484f37fd11c` 一致 |
-| 普通catalog | 13,665张，ID `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`；不是全正式OCG完整性证明 |
-| 普通banlist | 203项，生效2026-10-01，ID `banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`；本轮不重新核对官方逐项名单 |
-| 赛事知识来源 | sources_verified=true，39卡/102规则，14潜在灰点，静态verified_ash_effects=0，complete_semantic_coverage=false |
-
-知识身份为 `first-turn-knowledge-419cdd70cb1e3a913d80d7beabc05a153b339659f14f52578c04e4fdcf429658`。静态包声明不等于独立原生认证；下方历史记录的运行时12项指定分支/1灰点没有在本轮重认证，也没有因来源检查而提升。doctor产生ABI探针请求，不是决斗smoke，不计入未来赛事矩阵或规则认证；本轮没有进行新的规则/策略实验。
-
-文档验收使用Python标准库内联检查：文件集合为Git跟踪Markdown与docs递归Markdown的并集（排除忽略的dist/运行目录），去除代码块后检查相对文件链接存在；将PRODUCT_VISION表格的需求编号逐项核对PROJECT_ASSESSMENT与实施计划，并核对阶段及任务状态。最终实跑：38份Markdown、95条相对文件链接均存在；16项需求无遗漏/重复，P0–P8齐全，35项未来工程任务均未勾选。该检查验证链接目标和编号映射，不代替内容审阅或证明研究可行性。`git diff --check`退出0，Git提示的既有LF/CRLF转换警告不是空白检查失败。
-
-独立只读文档审查发现两项重要缺口，已一次修正：研究终止定义补充首回合合法提前胜/负/平及其目标评价、终止后无后继动作；新增P5.4输入牌组识别任务，明确主题/字段/玩法/互动输出、setcode事实与推断分层、混合/未知牌组验收并修正COMBO-01映射。修正后重新运行链接、16项需求/阶段/任务检查，并定向核对两项修正文字与映射，全部通过；未声称又运行了一轮独立审查。
-
-范围检查以本轮开始时266个Git跟踪文件的内容SHA256为基线，比对收尾内容及新增路径：非Markdown变化0，删除0，HEAD未改变，新增文件仅三份目标文档。已有 `crates/ygo-api/src/lib.rs` 修改属于前次工作，其本轮前后SHA256均为 `c74dee19f8fb794a7b6bf0193272a09458f437ec74bac8734697010a11e4cd48`，不能算本轮源码改动。普通二进制的一致哈希不证明它由最新工作区干净构建；本轮未运行Rust/Python全套、真实决斗重放、v6、48手或干净checkout验收。下方225项Rust、30项Python等为前次自检证据，不能移作本轮新结果。
+[历史原文](TESTING_HISTORY.md#2026-10-19-产品目标与路线文档交付只读运行复核)
 
 ## 2026-10-19 完整自检、当前部署与文档重构
 
-基线代码提交 `54e8e10`。当前工作区移除了仓库内唯一引用点的旧 `ApiService::placeholder_combo` 占位方法（未触及正式 Combo/规划版本路由）；下列 Rust 检查是在该修改之后运行。工作区保持未提交状态，报告中的历史 commit 不包含本次修改。
-
-- `cargo fmt --all -- --check`：通过。
-- `cargo clippy --workspace --all-targets --offline --locked -- -D warnings`：通过，0 warning。
-- `cargo test --workspace --offline --locked`：225 passed，0 failed，36 ignored。忽略项是需显式选择冻结资产、账本报告或人工基准的 opt-in 案例。
-- `$env:PYTHONPATH='python'; py -m unittest discover -s tests -p 'test_*.py'`：37 discovered，30 passed，7 skipped。
-- `cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored --nocapture`：1 个真实本机引擎 golden 测试通过。
-- `scripts/deploy-local.ps1 -Offline -FrozenRuntime`：成功重建并更新本机 `dist/ygo-local`；catalog 13,665 张，禁限表 203 项（2026-10-01 生效）。`engine doctor` 返回 `ready=true`、ABI/资产均通过、`issues=[]`。
-- 用当前部署二进制运行 `combo analyze`：Rabbit 固定五张起手得到 5 条候选、735 个前缀节点、54.398 秒墙钟预算，终止原因 `time_budget`；5 条均由当前部署包 `combo replay` 独立重放通过。评分为 heuristic，不将排名解释为全局最优。
-- `target/debug/ygo-cli.exe knowledge validate --knowledge knowledge/tournament-2026.knowledge.json`（赛事隔离配置）：来源校验通过，39 张、102 条分类；`complete_semantic_coverage=false`。这不是规则验真或 v6 完成证明。
-- Markdown 相对链接检查 33 个源码文档通过；`git diff --check` 通过。环境清理只做审计，没有删除本机数据、报告、账本或构建缓存。
-
-自检分析报告保存在忽略目录 `data/runtime/self-audit-current.json`；最新本机执行文件哈希见 `dist/ygo-local/build-hashes.json`。普通发布包不包含 `knowledge/tournament-2026.knowledge.json` 与独立赛事资产，因此验证该包不等于部署了新本家规划功能。
-
-本轮没有运行正式 v6规划或 16+32 手评估；完整语义覆盖、端到端执行续跑、第三方逐资产许可清单和独立干净 checkout 双资产验收仍未完成。
+[历史原文](TESTING_HISTORY.md#2026-10-19-完整自检当前部署与文档重构)
 
 ## 2026-10-18 费用支付后的运行中故障
 
-实跑原生前缀，在Scythe已经取除1张素材、仍等待牌库对象选择的提示处注入已标记的worker退出。实际查询中宿主只剩1张素材，原始MOVE从132到16且费用位0x80成立；这些断言依据原始事件／查询和人工预期，不使用符号预测当作实际变化。已有前缀独立重放通过，但仍不是终场或恢复锚点，不能取得成功推荐或规则资格。
-
-先复现：执行故障后审计成功的报告误入旧完整执行校验路径，读取已收费错误调用时直接失败。现在分别验证实际成功前缀、错误调用、预测、费用及完整审计。伪造素材恢复或把基础设施失败改为规则受阻均被拒绝。接口中的可注入backend只用于内部故障测试；独立查询／根重放仍固定使用ProcessEngineAdapter，正式CLI没有backend选择入口。
-
-失败和修正两次混合试验各收费34次，每次33次Process适配器请求＋1次明确模拟的错误扣费；后者不能冒充原生规则验真。证据paid-cost-fault-1792258592406533900及paid-cost-fault-1792258871450973900保留在原pilot目录。异常开发总收费804次，其中802次Process适配器请求、2次上述模拟扣费；默认单元故障模拟不计入此账本，亦不混入矩阵比例。
-
-新增缓存查询版本负例先复现公开字段相同即可被接受，现核对初态、查询和完整根结果的协议／运行版本。另补回归确认错误的完整结果协议原已在收费前拒绝，没有据此虚报新增修复。
-
-最新默认Rust225通过、0失败、36忽略；格式及workspace Clippy通过（v6-paid-cost-default.log、v6-paid-cost-clippy-final.log）。当前保存的旧v1合同复核通过，不产生新引擎消费。Python未改动，最近一次默认记录仍为30通过／7跳过。完整执行续跑、其余失败分支、剩余74项资格、正式v6、48手和干净部署仍未完成。
+[历史原文](TESTING_HISTORY.md#2026-10-18-费用支付后的运行中故障)
 
 ## 2026-10-18 初始预算拒绝与计数负例
 
-增加初始调用前的不可覆盖意图，绑定请求、方案、调用序号和历史预算。对已耗尽的同一账本再次启动，保存无实际局面／无已审计前缀的预算拒绝；新增消费为0，既有消费不变。移除意图或伪造已启动调用引用均被拒绝。该证明不借用上次失败或其他运行的局面。
-
-计数篡改专项先复现局部v1验证器的usize加法溢出，再增加边界拒绝；v1／v2的超大起始调用和消费计数不会触发panic。新执行入口限制单组预算1..512；原有合法报告身份与读取保持不变。
-
-最新实跑：Rust默认223通过、0失败、35忽略，格式和workspace Clippy通过（v6-startup-default.log、v6-startup-clippy.log）。保存的旧v1报告防篡改及新v2启动失败／预算拒绝／独立前缀重放通过，日志v6-counter-overflow-green.log、v6-root-budget-final.log。新原生开发、失败及重复审计18次，本轮异常账本累计736次，仍与矩阵比例分开；0消费拒绝不算实际发动或成功线路。其他执行失败分支、完整执行续跑、74项资格、正式v6、48手和干净部署仍未完成。
+[历史原文](TESTING_HISTORY.md#2026-10-18-初始预算拒绝与计数负例)
 
 ## 2026-10-18 独立符号前沿续跑
 
-默认Rust223通过、0失败、35忽略，格式及workspace Clippy通过，日志data/tmp/v6-search-resume-default.log及v6-search-resume-clippy.log。Python源码与合同未改变，上一异常基础检查点的30通过／7跳过仍作为本轮Python记录。
-
-新增三项回归：分别在1／7／33次展开后序列化恢复，与保留的旧连续算法逐项比较候选、排序、完整历史和方案ID；篡改context、游标、展开数、前沿或待排序节点时拒绝；持久账本关闭重开后恢复，收费序列及预留令牌保持一致。更换同数量的预留所有者仍会拒绝；模拟扣费后结果未保存的中断，1次未知消费保留，旧检查点不能抹去它。该扣费属于单元故障模拟，不计作原生引擎试验。
-
-恢复校验会重算既有符号前缀，不冒充零CPU成本。完整执行的提示进度、安全续跑、调用中崩溃恢复及矩阵编排尚未接通；未重新运行原生或干净部署。本轮原生异常开发账本仍为下节718次，规则资格仍为12项／1灰点。
+[历史原文](TESTING_HISTORY.md#2026-10-18-独立符号前沿续跑)
 
 ## 2026-10-18 异常证据基础专项（非整轮验收）
 
-当前源码实跑：`cargo test --offline --locked --workspace` 为220通过、0失败、35忽略；Rust格式及workspace Clippy通过。Python 3.14默认37项中30通过、7项本机opt-in跳过。日志为data/tmp/v6-exception-default-final.log、v6-exception-clippy-final.log及v6-exception-python.log。未在本次重跑历史17项真实引擎全套、完整规则认证或干净部署。
-
-新局部v2真实预算边界通过，保留最后实际提示及事前证据：
-
-| 调用上限 | 实际收费 | 结果 |
-|---:|---:|---|
-| 1 | 1 | 初始局面可见，但独立见证预留不足；无已审计前缀 |
-| 12 | 11 | 第2语义步骤的操作中截断，实际提示18 |
-| 30 | 29 | 第5语义步骤前截断，实际提示11 |
-| 70 | 69 | 第9语义步骤盖放处理中截断，实际提示18 |
-| 71 | 71 | 结束处理前截断；已观察到目标，但不是终场成功 |
-| 72 | 71 | 仍受新查询保守预留限制，不能提前标成功 |
-| 73 | 72 | 完成结束阶段、目标验收和独立重放 |
-
-该组324次，证据在pilot-autonomous/1792230018011645100/budget-boundaries-1792254943717317300。此前110次探索、252次失败期望的边界试验保留；后者错误地预期72上限必能完成，账本证明预留仍可能阻止最后调用，遂修正测试，不退款也不改规则。
-
-真实worker启动失败、故障报告篡改及正常部署重放失败前缀通过：worker-failure-1792255577629251900中，原组初态1＋失败执行1＋失败审计1＝3，独立前缀重放另2，初始worker失败另1，共6次。原失败与费用不因后续前缀重放而消失。退出／超时／损坏输出错误类型及不一致查询的故障注入是默认单测，不作为原生规则资格。
-
-旧局部v1保存报告防篡改检查通过，真实4次上限旧入口仍以3次保留已审计前缀（budget-1792255730842048500）。本轮异常开发、失败、重跑与审计共718次，依据相应新持久日志逐条汇总；全部单列，不混入未来矩阵比例。原规则1000、人工及自主试验等历史账本不清零。
-
-新增不可覆盖的选择／预测检查点和审计意图；重算查询审计进度、收费调用、原始错误、故障阶段及已审计前缀。JSON不能取得原生凭据，修改运行时报告会失效。未支持错误证明与未知结果继续保持未认证。完整搜索续跑、全部异常分支、剩余74项规则、正式v6、48手及最终双资产干净部署仍未完成。
+[历史原文](TESTING_HISTORY.md#2026-10-18-异常证据基础专项非整轮验收)
 
 ## 2026-10-17 调用前预算截断
 
-真实4次预算测试通过：初始查询消耗1次；首个选择在引擎调用扣费前因必须预留独立见证而停止；已有查询和根前缀独立重放再消耗2次，总计3／4。未启动的选择单独记录为pending_choice，不伪装成已执行决策。检查点预算由持久日志在该时点的状态重建，验证器不采用报告自填余额。证据位于pilot-autonomous/1792230018011645100/budget-1792232273812117000，该3次作为预算专项单列。
-
-尚未宣称覆盖全部处理中截断、引擎失败及完整矩阵续跑；这类缺少完整证明的局部报告仍不能取得验证资格。
+[历史原文](TESTING_HISTORY.md#2026-10-17-调用前预算截断)
 
 ## 2026-10-17 自主线路新增依赖资格
 
-新增13个独立规则案例：Soleret通常召唤／盖放及剩余同名卡受通常召唤次数约束，Decay展示特召及无展示对象，Boots特召，Rusty连接、送墓盖放与再次发动反例，以及I:P实际素材筛选中Rusty被排除、普通暗属性怪兽仍可选的持续规则正反例。人工准备和重放28次单列；案例不读取规划器路线，不计入赛事样本。
-
-当前26案例原生执行及首次重放共93次，独立认证审计93次通过，运行时取得12项成对规则／1项Scythe实际灰点资格；完整覆盖仍缺74项。复用此前85次已持久化结果后，本次素材规则只新增8次执行和93次审计，复用不重复扣费。
-
-失败材料全部保留：展示对象序号断言写错、负例中的Fuwalos先打开主阶段前窗口，导致81次案例运行未通过；修复后85次案例通过，但审阅清单同名条目被覆盖，认证再次拒绝。恢复原条目后从收费检查点续跑，仅新增85次独立审计。规则开发／审计累计1000次，人工pilot153、新独立准备28、模型64、查询95、自主探索518分别列账。
-
-当前默认Rust214通过、33忽略，格式及workspace Clippy通过；Python37项中30通过、7跳过。首批依赖有了指定分支资格，不表示其他74项规则、正式v6、48手或最终部署完成。
+[历史原文](TESTING_HISTORY.md#2026-10-17-自主线路新增依赖资格)
 
 ## 2026-10-17 实际灰响应的分支资格
 
-新增独立 `ash_response` 原生案例类型，不将无效后的目标效果误算为正向结算。案例沿用已审阅人工Scythe准备及其原始灰响应记录，未读取规划器路线；须证明指定发动后的对方法定选择、费用前手牌坐标、弃牌费用、实际灰结算、目标无效及闭链。缺少无效事件或费用坐标不符先复现失败，修复后通过。
-
-原12项案例用新公开查询重新执行，合并1项Scythe灰响应案例，共46次；独立原生认证审计再46次，全部通过（rule-audits/resource-ash-1792230515806355200）。运行时仍为6项成对规则资格，新增1项实际Scythe灰点资格，完整覆盖仍缺80项。资格不来自修改知识JSON或整条自主线路成功。规则开发／审计累计514次，模型64、查询95、人工153、自主518均另列；尚未获得自主线路其他新依赖的分支资格。
+[历史原文](TESTING_HISTORY.md#2026-10-17-实际灰响应的分支资格)
 
 ## 2026-10-17 局部自主灰后恢复与报告重算
 
-两次三组原生实验均通过，分组调用72／43／55，总计每次170。冻结自主Scythe方案、实际灰后Boots恢复方案及调用账本身份一致。第二次包含逐选择事前落盘及完整本地合同重算；保存证据目录分别为pilot-autonomous/1792229220179168800和1792230018011645100。后续纯合同篡改专项先复现错误失败类别被接受，再修复并通过6种篡改检查，不新增引擎消费。
-
-新增回归覆盖失效实例别名、新同名卡不能替代旧未知实例、必要依赖与无关未知的区别，以及冻结方案起点／限制／步骤／目标身份篡改。当前开发树默认Rust212通过、30忽略；格式、workspace Clippy通过；Python全量35项中28通过、7跳过（本机opt-in）。当前真实运行覆盖三组局部实验及逐效果定向案例，未宣称历史真实引擎整套或最终部署已重跑。
-
-自主探索累计518次（此前178＋本轮170＋170），全部保留；人工153、查询95、模型64和规则账本分别统计。这些成本不进入未来矩阵比例。完整规则、正式v6、48手与最终双资产部署仍未完成，局部合同尚需补齐通用预算／引擎失败降级。详见FIRST_TURN_PILOT.md。
+[历史原文](TESTING_HISTORY.md#2026-10-17-局部自主灰后恢复与报告重算)
 
 ## 2026-10-17 费用前发动源与公开查询修复
 
-灰流丽发动源回接专项先复现失败：费用移动已识别墓地实例，发动源仍为未知。现按连续原始坐标补充同一物理实例证明，保留费用前手牌位置与费用后墓地快照；期间手牌移动、洗切或抽牌阻断推断。缺失历史属性不再从终场查询补齐。费用源、手牌压缩及洗切负例均通过。
-
-v6新增实际QUERY_IS_PUBLIC字段；v1—v5不新增该字段。冻结原始事件及决策不变，三个查询夹具重新取得实际见证并独立审计42次，旧查询保留本地诊断。trace/state/query累计95次；旧规则认证报告需要重跑，不放宽比较。
-
-当前开发树格式、workspace Clippy和默认Rust204项通过、28项忽略；包括尚未提交的局部规划器测试，不代表本提交或正式v6已经全量验收。局部自主三组实验已运行170次（72／43／55），原方案缺素材与灰后自主Boots替代线路有独立证据；报告合同及依赖资格尚在开发，不标记完整v6或48手完成。历史人工153次、自主失败探索106次与此前自主成功72次保持单列。
+[历史原文](TESTING_HISTORY.md#2026-10-17-费用前发动源与公开查询修复)
 
 ## 2026-10-17 实际状态与请求绑定收口
 
-默认Rust194通过、25忽略；格式及workspace Clippy通过。实际灰后状态构造及查询独立复核两次各7次通过，均为手工前缀的局部集成审计，不是自主恢复验收。trace39＋state14＝53次，规则422和模型64次保持单列。
-
-新增失败复现：认证凭据缺少请求绑定、缺失素材类型被解释为明确不满足。已修复并覆盖请求／前缀篡改、未知属性、额外超量限制的作用范围及实例绑定手续。恢复状态从实际闭链主阶段查询、原始事件和独立CDB构造；未建模持续规则拒绝依赖。旧协议序列化不变。完整86规则、正式v6、48手与最终双资产部署尚未验收。
-
+[历史原文](TESTING_HISTORY.md#2026-10-17-实际状态与请求绑定收口)
 
 ## v6同名手牌与宿主离场坐标
 
-默认Rust185通过、24忽略；格式与workspace Clippy通过。实际执行Decayed展示另一同名卡的合法准备与重放6次，复现原实例身份丢失；修复后执行、重放及五个查询前缀审计共12次通过。新增18次全部计费，trace累计39次，规则422次和模型64次不变。身份只由实际结算中的自身特召与唯一剩余查询建立对应；多余／歧义原实例保持未知，未知槽位不参与序号减法。
-
-同一冻结core的旧真实MOVE还证明：宿主先入墓时，随后素材MOVE的原始源坐标为144及墓地主体序号；当前重建器保留宿主关系，更新这些瞬时坐标，同时销毁前快照保留素材、入墓快照不保留素材。这是共享core消息布局回归，不是新增v6效果资格。另修正双方次数命名空间，并以失败回归覆盖原始控制者越界，不再发生数组索引崩溃。完整限制／实际规划状态与自主恢复仍待完成。
+[历史原文](TESTING_HISTORY.md#v6同名手牌与宿主离场坐标)
 
 ## v6逐分支资格与负例合同
 
-默认Rust179通过、23忽略；Python默认28通过、7跳过；格式与workspace Clippy通过。持续规则不能用缺少发动选项验收，延迟正反例要求实际结束阶段及随后回合边界。已审阅案例清单固定断言内容身份，JSON状态和任意改写的案例不能授予资格。
-
-VerifiedKnowledge仅由持久证据与新原生审计构造。新CLI案例42次，加原生认证专项首次42／审计42／重复审计42，新增168次；规则开发／审计累计422次，查询审计21次、模型审计64次仍分别列账。6项成对分支可取得运行时资格，整包仍缺80项；当前没有合法灰响应认证，实际灰点仍0。重复审计的语义资格身份相同，调用从42增长到84，不隐去重复成本。
-
-另修正Rusty的知识操作分类：冻结Lua无弃牌费用，改为独立牌库送墓并盖放操作。知识身份变为first-turn-knowledge-419cdd70cb1e3a913d80d7beabc05a153b339659f14f52578c04e4fdcf429658；来源、覆盖清单、牌表与资产不变。12项案例用新身份重新运行，旧知识及报告留作诊断。此处仍不是v6自主决策、完整恢复状态或48手验收；历史真实引擎整套尚未在本阶段重跑。
+[历史原文](TESTING_HISTORY.md#v6逐分支资格与负例合同)
 
 ## v6原始事件与查询见证基础
 
-当前默认Rust171通过、23忽略；格式及workspace Clippy通过。新增17项默认回归覆盖原始解码／前缀、实例素材、抽牌、费用与无效、通常召唤／名称次数、未闭合连锁、缺失SOLVING及素材未知降级；查询审计的预留、重复收费和查询篡改另有单元断言。
-
-真实查询审计：无干扰8次通过；灰流丽旧探针缺少当前查询字段被拒绝6次，新采实际查询更新后7次通过。共21次全部留证，旧查询保留诊断。核验的是人工前缀及实际查询，不是自主恢复或48手验收；完整限制／恢复状态、运行时认证和其余规则继续开发。Python及历史真实引擎整套本阶段尚未重跑。
+[历史原文](TESTING_HISTORY.md#v6原始事件与查询见证基础)
 
 ## v6资源属性与素材容器补强
 
-发现第一组对比器遗漏非怪兽等级／属性／种族／攻守，使Veil的CDB怪兽化配置可能残留在预测中。已用符合真实CDB的单位夹具及严格原生对照复现失败；现在按原卡类型转换静态查询属性，Veil未怪兽化时等级、属性、种族、攻守均按实际查询处理。比较器补查这些字段，素材实例／宿主多重集不一致时拒绝继续；普通超量使用已有超量作素材时，旧素材送墓，不能自动转移。
-
-默认Rust154通过、21忽略，格式与workspace Clippy通过；严格原生对照18次调用通过。模型审计累计64次：旧对照40次保留为诊断，严格复现失败6次、修复后18次。逐案例／导入审计254次仍单列；均不是48手正式评估。整包语义验真、实际事件恢复与自主v6尚未完成。
+[历史原文](TESTING_HISTORY.md#v6资源属性与素材容器补强)
 
 ## v6第一组资源转移（完整语义仍在开发）
 
-新增独立first_turn因果状态，首批仅注册6项转移：Soleret空场手续／盖放、Veil变怪兽、Scythe超量／牌库特召、Decayed Cloak检索。记录无序剩余牌数、实例和宿主、费用后与结算后状态、同名次数及可选触发。没有调用旧v1—v5状态或更改其合同。
-
-10项默认回归通过，包含未知等级／限制、可选触发放弃、目标耗尽、同名素材独立取除、明确失败优先于未知。Veil成为素材、取除后还原原卡属性的失败回归已修复。独立人工准备的真实对照先保存预测，再执行／重放：6步资源投影、两种素材费用分支均通过，18次调用。此前一次目标选择未对齐人工对照的失败6次及通过16次均留证，模型审计累计40次，不计入48手矩阵。
-
-当前默认Rust152通过、21忽略；格式和workspace Clippy通过。知识原生案例阶段的Python27通过、7跳过结果仍适用，本次仅修改Rust模型和测试。资源投影比较不证明历史、次数或恢复状态正确；本阶段尚无完整事件恢复器或自主v6入口。知识包状态与实际灰点资格没有自动提升，剩余规则、完整v6闭环及48手仍待完成。
+[历史原文](TESTING_HISTORY.md#v6第一组资源转移完整语义仍在开发)
 
 ## v6原生案例合同与首批资源规则
 
-新增知识验真8项默认测试及1项本机测试；来源包保持102项分类、86项场景内规则不删减。12个独立人工案例覆盖Soleret空场手续／盖放、Veil变怪兽、Scythe超量／牌库特召、Decayed Cloak检索六项规则的正反例。准备、发动前见证、结算与重放均由真实引擎执行。报告明确保留其余80项缺少成对案例；不授予完整知识包或规划器支持状态。
-
-复现并修复了特殊手续与通常召唤的选项混淆、通用221触发确认码绑定，以及素材费用源区域132的断言。通用触发实验先记录预期源与效果，随后必须由实际CHAINING、SOLVING、SOLVED、CHAIN_END确认；不能当成规划器已经在提示前识别了效果编号。
-
-当前默认Rust142通过、20忽略；Python27通过、7跳过；格式和workspace Clippy通过。真实资源案例专项通过：首次42次调用，安全续跑不增加消费，独立导入审计两轮各42次；伪造结算引用在新增引擎调用前拒绝。案例开发／失败与独立审计累计254次调用全部留证，其中旧worker协议拒绝12次、早期绑定失败也保留；不计入未来48手矩阵或目标达成比例。旧17项真实引擎整套尚未在本阶段重跑。
-
-可移植contract夹具只用于合同负例；真实日志、查询和分块结果位于忽略的本机目录，不将contract夹具当作原生验真证据。接口与复核方法见FIRST_TURN_VERIFICATION.md。
+[历史原文](TESTING_HISTORY.md#v6原生案例合同与首批资源规则)
 
 ## v6持久调用包装层（语义验真前置）
 
-新增CallJournal／JournaledAdapter。账本独占锁、逐记录哈希链；实际调用前sync_all扣费，结果及原始事件分块按内容哈希保存。预留不计消费，续跑显式读取已完成结果；未知调用与重试分别收费。安全检查点绑定候选顺序、搜索状态、预算与已完成调用序列。写入残片先保存证据和恢复标记，再修复尾部；无法确认是否已扣费时保守记录不明消费。包装层doctor不旁路启动进程，ABI检查须经显式probe调用扣费。
-
-新增12项集成与1项写入故障单元回归；涵盖写入失败不启动引擎、结果失败保留扣费、崩溃、身份／内容篡改、检查点与连续运行序列一致、事件去重。真实Scythe探针通过统一账本再次执行，共5次调用；作为独立审计成本，不计效果覆盖或矩阵达成比例。旧零散探索日志仍保留，不能追认其具备新包装层保障。
-
-包装层和检查点原语已可用；完整v6搜索及48手编排尚未接入，尚不能声称整套评估可恢复。
+[历史原文](TESTING_HISTORY.md#v6持久调用包装层语义验真前置)
 
 ## v6基础集成复验
 
-缺失知识模块的编译失败已复现并修复。当前默认Rust120通过、19项按设计忽略；Python默认25通过、7跳过；格式及Clippy通过。新知识专项4默认＋1本机来源检查通过；v6 Scythe真实灰流丽、费用／素材／无效／锚点及独立重放专项1项通过。本轮尚未重跑旧17项真实引擎全量。
-
-知识包记录102项规则、86项场景内假说和14项潜在灰点；所有场景内条目仍是curated，实际可用于已验真策略集合的条目为空。私有验真认证不能从JSON状态字段注入。新手工探针与规则包分开，不提升整包语义状态。
-
-新增JSON使用固定LF，赛事牌表SHA256现为5533c9f0aae115e9a408a26acb6d037d38c9505c1e78970431ffc19ab92cdb88；这是同一41＋15清单的换行规范化，不是改卡。历史摘要保留为诊断，当前摘要重新记录来源／覆盖身份。固定资产组身份未变。
+[历史原文](TESTING_HISTORY.md#v6基础集成复验)
 
 ## 2026-10-16 原表重选与独立资产（第一阶段）
 
-起点a2929f8；Python3.14。新来源主41＋额外15的Rust CLI合法性检查通过；官方10月207行对照无差异。冻结资产13,571文件离线重建身份相同，ABI/doctor通过。新卡人工线路48决策／160原始事件独立重放一致；不等同于86项语义验真或v6评估。
-
-默认Python全量23项通过、7项按设计跳过，包含新增默认14项；另有opt-in真实资产1项通过并重复确认。Rust领域合规3项通过。本阶段未重新运行整套Rust／真实引擎及Python opt-in历史验收。详细来源、修正与边界见TOURNAMENT_RESELECTION.md。
-
-探索性资产调用日志39次（含错误请求／错误前缀，没有删去失败消费），doctor1次；新增opt-in人工线路及重放两轮共4次，合计44次。这是单列的来源／部署审计成本，不计入后续矩阵成功率。doctor在日志建立前执行，另行事后登记，不能冒称全程已有持久扣费保障。正式统一账本与崩溃续跑属于第三阶段待实现项。
+[历史原文](TESTING_HISTORY.md#2026-10-16-原表重选与独立资产第一阶段)
 
 ## 2026-10-16 赛事来源关口核验（未通过，不是v6验收）
 
-基线88d485f。原站HTML、X官方嵌入数据与原始照片取得并核对；原始尺寸1213×911、照片SHA256及完整诊断见TOURNAMENT_SOURCE_GATE.md。照片中至少一张墓穴指名者24224830与冻结OCG2026.10表的Forbidden/0张冲突，已足以拒绝原表；其他全部卡名、数量与规则尚未完成核验。没有更换构筑或升级资产。
-
-原始材料哈希、官方帖子元数据、冻结禁限表源哈希、CDB卡号及Forbidden条目均已检查；领域牌组合规测试3项通过。代码未改，本轮没有重复运行完整Rust、真实引擎或Python验收。下方v5通过数为上一轮历史记录，不代表v6已经实施。
+[历史原文](TESTING_HISTORY.md#2026-10-16-赛事来源关口核验未通过不是v6验收)
 
 ## 2026-10-16 多响应点与稳健展开顺序（验收完成）
 
-实施基线 `782eca9`；主实现 `4084477`，证据与步数边界修复 `8fef50d`，最终源码及初始化共享预算修复 `a058a81`。Windows x64、Python 3.14.7。规划、分析、运行协议v5；profile `phantom-ash-strategy-v1`，初始化 `fixed-ash-strategy-v1`。旧v1—v4身份与读取/重放路径不重算。
-
-| 检查 | 结果 |
-|---|---|
-| 默认Rust workspace | 112 passed、0 failed、17 ignored |
-| 真实引擎 workspace | 17 passed、0 failed；原16效果、16固定起手、14目标请求及v4灰流丽通过 |
-| 最终源码受影响专项 | v5完整矩阵及篡改/预算负例通过；七类人工真实响应及步数边界再次通过 |
-| fmt / Clippy | 原工作区与独立副本通过，offline、locked、warnings denied |
-| Python默认 | 9 passed、6 skipped |
-| Python全量合同 | 13项既有合同及2项新增合同分批全部通过；新增项读取最终真实矩阵 |
-| 独立构建部署 | 全新clone、自行构建target/dist，冻结资产离线部署，doctor ready |
-| 兼容重放 | Rabbit分析v2、Phantom规划v1、Break Sword规划v2、目标v3、灰流丽v4通过 |
-| 重复性 | 两处v5策略/执行身份、恢复状态、资源对照、调用账本及资产哈希一致 |
-
-完整引擎命令为 `cargo test --release --offline --locked --workspace -- --ignored --test-threads=1`。最终收尾只修改v5专用分派与证据逻辑，再运行 `-p ygo-api --test strategy` 及 `--lib seven_effects_have_actual_ash_negation_and_replayed_paid_prefixes` 的opt-in专项；默认workspace、格式及Clippy重新通过。Python使用 `PYTHONPATH=python;tests`，全量合同设置 `YGO_LIVE_ENGINE=1`。一次全量执行的新增v5项读到修复前开发报告，因缺少共享展开字段失败；重生成后 `py -m unittest test_strategy_schemas -v` 两项通过，其余13项已在该全量执行通过。未掩盖旧报告失败或将旧开发报告冒充最终验收报告。
-
-初始化两次搜索共享8个候选、5000次展开和frontier32，实际生成7个候选、累计392次展开；在响应实验前冻结两种首敏感效果不同的方案。第二个中性发现账本expansions为累计值。每格最多512次、共8192次；完整主线最多32语义步骤，包含前缀、灰流丽与后续触发。下表调用含内部见证及必要外部独立重放；重放预留在执行后作为实际消费，不重复相加。
-
-| 响应策略 | Scales先行：调用 / 实际结果 | Boots先行：调用 / 实际结果 |
-|---|---|---|
-| 始终不响应 | 178 / 达标 | 209 / 达标 |
-| Scales送墓 | 241 / 实际被灰后恢复达标 | 79 / 未到响应点，终场达标 |
-| Boots检索 | 76 / 未到响应点，终场达标 | 150 / 实际被灰后恢复达标 |
-| Cloak检索 | 281 / 实际被灰后恢复达标 | 79 / 未到响应点，终场达标 |
-| Gloves送墓 | 76 / 未到响应点，终场达标 | 79 / 未到响应点，终场达标 |
-| Rusty送墓盖放 | 76 / 实际被灰后恢复达标 | 31 / 实际被灰，已验证终场未达标 |
-| 增援检索 | 76 / 未到响应点，终场达标 | 79 / 未到响应点，终场达标 |
-| 愚埋送墓 | 76 / 未到响应点，终场达标 | 79 / 未到响应点，终场达标 |
-| 合计 | 1080 | 785 |
-
-矩阵总额 **1865 / 8192**。未到响应点不记作成功抗灰。Boots先行的无干扰主终场资源较多，但Rusty被灰后本次搜索未找到达成原目标的恢复；因此最坏结果优先排序仍选择Scales参照策略。未达标终场是有界探索的实际结果，不证明全局无解，也不声称顺序一定严格改进。原起手不可触达的增援、愚埋等，用独立合法五张定向起手补充七类真实响应验真，不当作随机起手统计。
-
-失败复现与修复：愚埋冻结Lua实际描述编号；Greaves手牌触发源绑定；只剩结束回合时遗漏合法恢复窗口；软一次应绑定发动时登场批次；成功锚点须绑定完整运行身份；失败结算诊断不得冒充已验证证据；否定和发动/后续探针损失必须使用已验证真值；已结算前缀超步数必须返回预算诊断。步数边界先以实际引擎窗口复现失败，再修复通过。初始化核对发现原两个搜索累计11候选，收紧至共享8候选后重新生成并比较两处报告。素材与Break Sword复活限制原始事件夹具来自真实v3准备，仅测试同一原始帧在v5重建下的解释，不冒充v5场景重放。
-
-独立副本 `../ash-strategy-clean-20261016` 只复制冻结数据、脚本、DLL及禁限表源，未复制target、dist、本机配置或快照；自行导入快照、生成副本路径配置。最终v5报告与原工作区比较：两行策略ID、逐格执行及锚点ID、实际状态、资源对照、目标评估和账本一致。复核结果保存于忽略的 `data/runtime/ash-strategy-acceptance.json`，完整报告为 `data/runtime/ash-strategy-report.json`；运行材料和外部资产不提交。
-
-冻结资产SHA256（两处一致）：
-
-- CDB：`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`
-- Lua清单：`69bf6f9d3fe444fd53890c60bde877f97b753f8d3e218a6349615d09f6740d91`
-- core DLL：`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`
-- 禁限表：`e85912d33eaada6817477c3a8fac0ef0c3e77b6ca25de924826e7f5cbc7e25ab`
+[历史原文](TESTING_HISTORY.md#2026-10-16-多响应点与稳健展开顺序验收完成)
 
 ## 2026-10-16 指定灰流丽中断与恢复（本轮验收完成）
 
-实施基线 `17f0e68`，核心实现 `90c9e45`，实际资源对照 `5613116`，部署CLI重放修复 `8737af1`。Windows x64、Python 3.14.7；冻结core、Lua、CDB及禁限表未升级。新增规划/分析/运行协议v4、profile `phantom-recovery-v1`、初始化 `fixed-interruption-v1`。
-
-| 检查 | 最终结果 |
-|---|---|
-| Rust默认workspace | 104 passed、0 failed、15 ignored |
-| 显式真实引擎workspace | 15 passed、0 failed；原16效果、16固定起手、14目标请求及灰流丽专项通过 |
-| fmt / Clippy（offline、locked、warnings denied） | 原工作区及独立副本通过 |
-| Python默认 / 全量合同 | 8 passed、5 skipped / 13 passed、0 skipped |
-| 人工灰后恢复基准 | 独立编写8步恢复，真实执行及重放通过 |
-| 部署CLI与旧合同 | 新v4三组、旧Rabbit、Phantom v1、Break Sword v2及目标v3重放通过 |
-| 独立源码部署 | `8737af1`全新checkout自行构建，冻结资产离线部署、doctor、v4及v3规划重放通过 |
-| 重复性 | 两处目标/方案/推荐/执行身份、恢复锚点、资源对照与调用账本一致 |
-
-默认测试不要求本机引擎、CDB或报告。真实引擎测试显式使用 `cargo test --release --offline --locked --workspace -- --ignored --test-threads=1`；Python全量设置 `YGO_LIVE_ENGINE=1` 和 `PYTHONPATH=python;tests`。运行报告、外部资产和本机配置继续忽略，不纳入源码。独立副本为 `../ash-recovery-clean-20261016`，只复制冻结数据资产，未复制原工作区target、dist或本机引擎配置；部署生成副本自己的worker和配置。
-
-固定起手、seed=1、每组512次调用、最多8候选、32步、5000展开。以下数字包括外部独立重放；账本中的预留在重放后成为实际调用，不重复相加。
-
-| 组别 | 成功推荐 | 执行及内部见证调用 | 外部重放 | 总额 |
-|---|---:|---:|---:|---:|
-| 对方持灰但不响应 | 5 | 249 | 41 | 290 |
-| 原方案被灰阻断 | 0（合法前缀） | 6 | 1 | 7 |
-| 实际状态恢复 | 5 | 222 | 38 | 260 |
-| 合计 | 10 | 477 | 80 | 557 / 1536 |
-
-基准与恢复的符号展开分别171与95。恢复首推经过Boots特召、Cherubini连接、Boots除外检索、Scales触发复活、Rusty连接及送墓盖Fog，达成原目标。此处只报告本次有界搜索实际验证的结果，不以墙钟变化证明性能改善，不将恢复路线与基准终场差额当作手坑导致的全部损失。
-
-真实事件确认Scales弃牌和灰流丽费用仍支付；Scales的牌库送墓没有发生，Cloak仍留在牌库；效果次数、通常召唤机会不重置。被无效的连锁单独记为effect_negated，不生成成功结算历史。人工Cherubini案例由引擎完成准备与费用送墓，检查对应窗口不存在灰流丽合法动作。相同Ryu-Ran分别留手与被弃，绑定不同实例。未到响应点、错误窗口、覆盖不足和预算截断保留明确失败分类；未知状态不用于证明恢复可行。
-
-失败复现与修复：旧worker不能读取v4字段；严格历史检查暴露手牌源先CHAINING、后费用MOVE的绑定顺序；复审发现受阻Attempt可伪标成功、前缀步数硬编码、恢复组可换请求/知识/预算。最后部署CLI检查复现v4 plan-replay落入旧合同解析，补入口失败回归后修正分派。资源对照按实际窗口见证重算；改选解释只归因于原路线缺少资源，避免错误指向紧接着的下一步。篡改状态、费用历史、前缀、预算、预测、数量差及验证标志由合同或独立重放拒绝。
-
-冻结资产SHA256（两处一致）：
-
-- CDB：`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`
-- Lua manifest：`69bf6f9d3fe444fd53890c60bde877f97b753f8d3e218a6349615d09f6740d91`
-- core DLL：`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`
-
-身份及资产逐项比较另存 `data/runtime/ash-acceptance/cross-checkout.json`。最终文档提交继续在独立副本离线部署并重放新旧报告。
-
-证据报告为 `data/runtime/ash-recovery-report-final.json`，独立重放及检查日志在 `data/runtime/ash-acceptance/`；人工基准为 `data/runtime/ash-manual-recovery.json`。恢复锚点限于早期第一次Scales送墓与灰流丽连锁；已有其他效果连锁、素材锚点或不完整身份时返回覆盖不足。不声称任意手坑恢复或全局无解，后续先设计同一手坑的不同时点及展开顺序。
+[历史原文](TESTING_HISTORY.md#2026-10-16-指定灰流丽中断与恢复本轮验收完成)
 
 ## 2026-10-15 通用目标 v3：证据修复与最终验收
 
-实现提交 `dd13057`；证据修复 `8b6d047`、费用后采样修复 `363fa41`、最终发动源区域修复 `2e1e781`。Windows x64、Python 3.14.7；冻结 core、Lua、CDB及禁限表未升级。规划请求/报告v3、分析v3及运行协议v3保持不变，规划 profile 为 `phantom-goal-v2`。
-
-| 最终源码检查 | 原工作区及独立干净副本结果 |
-|---|---|
-| Rust默认 workspace | 98 passed、0 failed、13 ignored |
-| 显式本机资产/真实引擎 workspace | 13 passed、0 failed |
-| fmt / Clippy（offline、locked、warnings denied） | 通过 |
-| Python默认 | 11项：7 passed、4 skipped（本机报告/资产） |
-| Python全量 | 11 passed、0 skipped |
-| 原效果与固定起手 | 16个效果正反例、16个固定起手及独立重放通过 |
-| 新目标矩阵 | 14个请求、成功推荐及其前缀/辅助分支独立重放通过 |
-| 部署包CLI | doctor、知识来源校验、新目标/收益/历史规划与重放通过 |
-| 旧版兼容 | 重新生成v2 Break Sword并重放；既有Rabbit、Phantom v1报告重放通过 |
-| 评分配置 | v2/v3分别验证默认、环境变量、显式参数；实际权重和诊断分数改变，重放通过 |
-| Rabbit固定512节点复验 | seed=1、512节点、517调用、5条线路重放通过（旧beam节点预算不含最终重放） |
-
-默认测试不要求本机引擎或卡库；opt-in测试使用相同冻结资产。独立副本在最终源码上清除旧 target、dist、快照与本机配置后重建 CLI/worker、部署、导入与 doctor；未复用原工作区构建产物。Python依赖使用已安装环境，额外设置 PYTHONPATH 指向副本/python并记录导入位置，确认全量合同检查使用副本源码、Schema和新报告。
-
-本轮一轮只读整分支审查确认两项重要问题、一项解释问题；均先复现失败再修复。批量召唤现在按完整实例与位置缓存，并在成功帧逐体提交，覆盖异名与同名两体、未完成/失败召唤和缺失身份。Boots自行特殊召唤再被Break Sword复活时计为两次；同名双Boots分别保留实例。
-
-破坏保存MOVE前的剩余素材，送墓保存目的状态且无残留素材。独立原始事件核对进一步发现CHAINING早于费用，故在CHAINED采样费用及对象选择完成后的素材。原始帧夹具也暴露手牌魔法发动源区域错误：现在费用前绑定身份，区域取CHAINING实际位置（魔陷区），素材取CHAINED，实际结算由CHAIN_SOLVED证明。缺失必要帧、绑定或属性时保留未知。历史快照不会因后续取除、离场或重新登场而改变。
-
-贡献与损失统一按有语义的条件节点计算，not保留自身真值；双重否定、all/any组合和未知状态有回归。OR分支失去不等于整个目标失败。伪造历史素材、条件路径、场景、等级、分支起点、收益、引用或验证状态均被合同或独立重放拒绝。CLI版本测试另外修复Windows时钟粒度造成的临时文件名并发冲突。
-
-以下调用为固定seed=1的执行、内部见证及再次独立重放预留总额；相同请求在两个环境的目标ID、推荐ID、执行ID和调用账本逐项一致，CDB、脚本manifest与DLL哈希相同。
-
-| 固定请求 | 完整见证推荐 | 执行及预留重放调用 | 预算 |
-|---|---:|---:|---:|
-| Rusty＋Fog | 6 | 436 | 512 |
-| Cherubini＋Fog | 7 | 378 | 512 |
-| 发动机会 | 4 | 438 | 512 |
-| 消费主终场的后续收益 | 1 | 424 | 512 |
-| 初态已满足 | 1 | 7 | 512 |
-| 无检索对象 | 1 | 7 | 512 |
-| 费用不足 | 8 | 491 | 512 |
-| 同名次数已用 | 4 | 378 | 512 |
-| Break Sword召唤/破坏/结算历史 | 5 | 512 | 512 |
-| 未支持窗口 | 0 | 10 | 512 |
-| 极小预算 | 0 | 0 | 1 |
-| 预算截止保留推荐 | 1 | 118 | 128 |
-| 后续步数不足 | 0 | 413 | 512 |
-| 共享资源冲突 | 0 | 435 | 512 |
-
-后续收益案例验证手牌净增1，同时披露失去Cherubini等原终场条件；没有把不同假设分支的收益相加。128调用案例保留一条完整推荐。无推荐与unknown不代表全局无解，预算/步数截断均保留已有结果。外层保留至多8个完整见证推荐；内嵌analysis的top_k只截取诊断线路，因此Cherubini外层7个推荐与top_k=5并不冲突。评分仍为heuristic，不替代目标事实与实际收益，也未用墙钟波动证明改善。
-
-旧phantom-goal-v1本地报告明确拒绝并提示重新生成；原规划v1/v2身份及重放算法不重算。旧报告与中间修复材料仅作诊断保留。最终汇总和运行日志位于忽略的data/runtime/goal-v3-acceptance/，历史诊断位于data/runtime/goal-v3-work/；引擎、数据库、Lua、个人配置及运行报告继续不进入Git。
-
-支持范围仍为十二卡有限语义、OCG/MR5、固定完整牌组和五张起手、无主动对手响应；Ryu-Ran为合成场景。Greaves可选增级、部分历史等级/阶级信息及其他未支持分支继续明确为缺口；有限搜索与人工基准不等于任意卡效理解或全局最优。下一阶段另行设计单次指定手坑与恢复，随后样本起手评估及构筑诊断。
+[历史原文](TESTING_HISTORY.md#2026-10-15-通用目标-v3证据修复与最终验收)
 
 ## 2026-10-14 第二阶段：逐效果验真与 Break Sword v2
 
-实现提交 `51a62a4`，审查修复提交 `ffaa1e5`。Windows x64、Python 3.14.7；复用原冻结 core、Lua、CDB、禁限表。没有升级资产，没有重新编译 ocgcore；独立 checkout 重新编译 Rust CLI/worker。本机结果不代表远程 CI。
-
-| 本轮检查 | 结果 |
-|---|---|
-| Rust fmt / Clippy（offline、locked、warnings denied） | 通过 |
-| 默认 Rust workspace | 67 passed、0 failed、9 ignored |
-| 显式真实引擎 workspace `--ignored` | 9 passed、0 failed |
-| Python 全量 `YGO_LIVE_ENGINE=1` | 9 passed、0 skipped |
-| Python 默认 | 6 passed、3 skipped（本机资产/报告用例） |
-| `knowledge verify` | 16个支持效果逐例通过，含结算后反例及独立重放 |
-| 固定16起手 | 8个正例达标并重放；4个受限未找到方案；4个覆盖/预算降级分类正确 |
-| 原生同名素材专项 | 两张 Boots 叠 Break、取除、自毁、复活并继续达标及重放通过 |
-| 报告篡改 | 场景、等级、阶级、素材宿主、超量历史拒绝；嵌套 runtime/deck/stats/decisions/versions 损坏拒绝 |
-
-默认测试不要求本机引擎/数据库。显式测试前需 `cargo build --release --workspace --offline --locked`，提供当前 worker；案例使用完整合法牌组、固定起手和实际引擎准备过程，不直接注入己方墓地、次数或召唤历史。
-
-知识 profile：`knowledge-c2c93bf5222e30a45cb600e3b2cc120a4c83a5162d8e37ce28eef4ad3e41cc43`。12张卡、21条效果中16条支持范围内的效果有真实操作案例。符号假设、来源哈希、逐案例证据和完整线路证明分开保存。Greaves 可选增级分支仍不在规划范围；反例覆盖所列条件，不等于所有条件组合验证。
-
-受控 Ryu-Ran 场景、无 Cherubini 额外牌组的默认请求产生8个方案、224次引擎调用、2条独立目标线路。其中完整 Break Sword 链为：
-
-- `cb4cd1cb331628addc375d0589e44528300ca62bc8bf0cb9be214495b6444617`：超量、取除、双方破坏、自身复活触发、两体等级增加、继续做出 Rusty 并盖放 Fog。
-- `4fefaaf4236ebdf1edd52fb745eed36f1cb2c1a9fa9be8b970be8be0e7b0bbe8`：直接 Rusty 路线，作为同一场景的候选对照。
-
-再次 `plan-replay` 检查2条线路与42个去重前缀见证，共44次调用。固定起手的人工基准、规划和外部重放合计均不超过512次：正例213–303次，深度截断16次，其他无方案/覆盖/符号深度案例0次。有限搜索未找到方案不是证明无解；本轮没有用墙钟变化声称性能改善。
-
-一次独立整分支审查发现并修复三项重要问题：同名 overlay MOVE 丢失 position、v3关键嵌套 Schema 过宽、worker异常误归为预测不符。每项均先复现失败再通过回归，修复后全量测试通过；未发起第二轮审查。预算截止导致的 timeout 与 worker 自身 timeout 也分别测试。
-
-保留小项：v2 CLI 接受 `--scoring` 但使用默认旧诊断评分；它不改变目标/资源排序。基准步骤由实施代理手工整理、独立于规划器生成，尚无人类决斗专家策略审阅。
-
-独立干净 checkout 在 `ffaa1e5` 上重新构建并部署，67项默认 Rust、9项显式引擎、Python9项全量、fmt/Clippy 全部通过。重新执行验真 CLI、v2规划/重放；16个效果案例、16个起手结果通过，知识 ID、两条线路 ID 与原工作区一致，CDB/脚本 manifest/DLL 哈希一致。Rabbit 固定512节点重新分析返回5条可重放线路；另外重放既有 Rabbit v2与 Phantom v1报告均通过。临时副本仅携带明确冻结前提和兼容性参考报告，没有复用原 target/dist；验收后清理。使用方法与约束见 [BREAK_SWORD_VERIFICATION.md](BREAK_SWORD_VERIFICATION.md)。详细运行报告保持在忽略的 data/runtime/，数据库、Lua、DLL、个人配置及报告均不进入 Git。
+[历史原文](TESTING_HISTORY.md#2026-10-14-第二阶段逐效果验真与-break-sword-v2)
 
 ## 首版验收记录（历史）
 
-
-最后复验：2026-10-14，Windows x64，Python 3.14.7。以下为实际本机与独立 checkout 结果，不代表远程 CI。2026-10-07 的 Python 依赖阻塞已解决，不再是当前阻塞。
+[历史原文](TESTING_HISTORY.md#首版验收记录历史)
 
 ## 源码、测试与审查
 
-源码基线提交 `1db8cd8`；语义规划实现提交 `e43ab7594aa4e8b8d4be612e26344e6ab0b93950`。源码、锁文件、脚本、Schema、CI、文档和可分发夹具进入 Git；本机配置、数据库、Lua、DLL、快照、部署包和运行报告仍忽略。
-
-| 检查 | 结果 |
-|---|---|
-| `cargo fmt --all -- --check` | 通过 |
-| `cargo clippy --workspace --all-targets --offline --locked -- -D warnings` | 通过 |
-| `cargo test --workspace --offline --locked` | 58 passed、0 failed、4 ignored |
-| opt-in `live_engine` / `live_planner` / API `planning` | 分别 1 / 1 / 2 passed |
-| Python 默认 unittest discovery | 7 项：5 passed、2 skipped |
-| `YGO_LIVE_ENGINE=1` Python 全量 | 7 passed、0 skipped |
-| Python 卡片夹具 validate | 2 张通过 |
-| 新知识、请求及实际规划报告 Schema | 通过；缺理由、缺事前局面、伪造 outcome 三项负例拒绝 |
-
-默认 Rust/Python 测试不携带本机资产；真实引擎和实际快照/报告检查必须显式启用。Python 环境需要项目 test extra 中的 jsonschema；本轮使用已安装依赖，未升级冻结引擎或数据。
-
-回归覆盖：检索/送墓过滤及剩余资源、等级与阶级/连接区别、费用与效果送墓、墓地主动与事件触发、次数共享、Shade 墓地限制、素材消耗、Rusty 素材限制及复活后离场除外；同卡效果编号/实例位置、费用与对象提示、洗牌身份不确定、安全降级；v2 请求/预算/版本/验证状态和决策一致性，v1 原始选择与语义标签/事前证据绑定。
-
-一次独立审查发现四项重要问题：预算或 worker 失败丢失未观察预测、线路重放绕过共享限额、语义标签未严格绑定实际动作、手牌洗牌位置过期。四项均先复现失败，再修复并通过回归。部分嵌套观察消息与旧 v2 Schema 较宽松这一小项保留后续处理，Rust 合同与实际重放提供更严格检查。修复后执行者复验全部检查，没有再进行第二轮审查。
+[历史原文](TESTING_HISTORY.md#源码测试与审查)
 
 ## 冻结版本与独立干净 checkout
 
-在独立目录本地 clone 实现提交，确认 tracked 工作树干净。仅准备这些明确的外部前提：冻结 `cards.cdb`、`scripts.json`、`script/`、x64 `engine/` 及固定 LFLists Git 缓存。未复制旧 target、dist、个人配置或快照。随后独立执行默认测试、格式/Clippy、`deploy-local.ps1 -Offline -FrozenRuntime`，重新生成 release CLI/worker、本机配置和数据快照。
-
-这次验证重新编译了 Rust CLI/worker，复用了冻结 DLL；没有声称从零编译 ocgcore 或在无资产/无 Cargo 缓存的机器上完成联网安装。首次 engine 编译和联网准备前提见 [DEPLOYMENT.md](DEPLOYMENT.md)。复制尚未结束时部署拒绝缺少 manifest；资产就绪后完整重跑成功。
-
-| 资产/检查 | 固定值或结果 |
-|---|---|
-| core / Lua | `38d04c9feb1a26617407091380634c87262fe3f8` / `6e22fedb74cf0c9b6656e9fce8b7331db847c605` |
-| core ABI | API 11.0、x64；doctor assets_ok=true、abi_ok=true、ready=true、issues=[] |
-| LFLists | `1051a65ab853fd84521aa919d1859f9468816c56`；OCG 2026-10-01 |
-| catalog | 13,665 张；`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d` |
-| banlist | 203 项；`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783` |
-| knowledge | 12 张、21 条效果、14 支持；`knowledge-f6b43abb829ce5f6b25e1a77d5840604edd1afeb837b04a9bfaaf799750e4f73` |
-| 独立来源校验 | CDB、脚本 manifest、DLL 哈希与原工作区一致；12 张效果正文/脚本引用校验通过 |
-| 独立 engine smoke | 3 条完整重放线路；墙钟截断，只作为可用性检查 |
-| Rabbit 固定 512 节点分析 | 512 节点、517 次调用、5 条线路独立 replay 通过，终止 node_budget |
-| Phantom 固定 512 调用预算 | 8 个事前方案、224 次调用、2 条目标达成且独立重放线路 |
-| Phantom 再次 plan-replay | 2 条线路、29 个去重前缀见证、31 次共享预算调用，通过 |
-
-独立 checkout 的 Phantom 知识/快照及线路 ID 与原工作区相同：
-
-- `3f2695617463042fffe688ac4eb568a63874a8f6848e3af50752d07e2fcac3d5`
-- `939ce100f739993ba3831f3e45064e4d41a8b2d274d0b36c43798ca18bfc7817`
-
-原工作区既有 Rabbit v2 报告的五条线路也再次重放通过。独立 checkout 同样通过 58 项默认 Rust、4 项 opt-in Rust 和 Python 7 项全量检查。临时 checkout 验收后清理；当前工作区运行报告保存于忽略的 `data/runtime/`。
+[历史原文](TESTING_HISTORY.md#冻结版本与独立干净-checkout)
 
 ## 固定预算对照
 
-同一 Phantom 输入、seed=1、冻结版本和配置 node_budget=512：
-
-| 入口 | 返回的验证线路 | Rusty 在场且 Fog 盖放 | 总引擎调用 |
-|---|---:|---:|---:|
-| `combo plan` | 2 | 2 | 224 |
-| 旧 `combo analyze` beam | 5 | 0 | 517 |
-
-旧 beam 的 rabbit-v1 评分没有该终场目标，且其节点预算不含最终重放；新规划预算含执行和重放。这是目标闭环能力对照，不是相同目标评分下的算法优劣证明。未把墙钟耗时波动当作性能改善。有限方案/frontier/符号展开可能遗漏有效线路，不保证全局最优。
+[历史原文](TESTING_HISTORY.md#固定预算对照)
 
 ## 复验命令
 
-```powershell
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --offline --locked -- -D warnings
-cargo test --workspace --offline --locked
-cargo test -p ygo-engine-adapter --test live_engine --offline --locked -- --ignored
-cargo test -p ygo-planner --test live_planner --offline --locked -- --ignored
-cargo test -p ygo-api --test planning --offline --locked -- --ignored
-$env:PYTHONPATH='python'
-py -m unittest discover -s tests -p 'test_*.py'
-$env:YGO_LIVE_ENGINE='1'
-py -m unittest discover -s tests -p 'test_*.py'
-./scripts/deploy-local.ps1 -Offline -FrozenRuntime
-./dist/ygo-local/ygo.cmd knowledge validate
-./dist/ygo-local/ygo.cmd combo plan --input tests/fixtures/phantom.request.json --output data/runtime/phantom-plan-report.json
-./dist/ygo-local/ygo.cmd combo plan-replay --input data/runtime/phantom-plan-report.json
-```
+[历史原文](TESTING_HISTORY.md#复验命令)
 
-首版范围、未支持效果及报告证据区别见 [SEMANTIC_PLANNING.md](SEMANTIC_PLANNING.md)。实际执行成功不能证明全部人工语义条目正确，固定起手验收也不代表所有合法起手、对手回合或手坑处理。
+## 2026-10-24 Curry冻结输入恢复门禁与只读审计
+
+[历史原文](TESTING_HISTORY.md#2026-10-24-curry冻结输入恢复门禁与只读审计)
+
+## 2026-10-25 Curry父账本锁释放修复与stage 2只读验收
+
+[历史原文](TESTING_HISTORY.md#2026-10-25-curry父账本锁释放修复与stage-2只读验收)

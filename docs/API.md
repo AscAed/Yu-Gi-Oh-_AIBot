@@ -5,6 +5,7 @@
 ## CLI
 
 - `engine doctor`, `engine smoke`：运行时资产/ABI 诊断与真实引擎 smoke。
+- `engine identity --config <toml> [--output <json>]`：只读资产身份及脚本清单差异；不运行决斗，不授予构建或规则资格。
 - `catalog`、`banlist`、`deck validate`：本地快照导入/查询和牌组合法性校验。
 - `combo analyze`、`combo replay`：通用引擎前缀搜索和独立重放。
 - `combo plan`、`combo plan-replay`：读取并分派规划合同 v1–v5；旧报告按各自版本验证。
@@ -19,8 +20,15 @@
 - 引擎 worker：[`ENGINE_PROTOCOL.md`](ENGINE_PROTOCOL.md)。
 - 数据/牌组：领域类型与 snapshot schema；不把本地机器路径当成可移植合同。
 - planning v1–v5 的版本分派在 `crates/ygo-cli/src/main.rs`；first-turn v6 尚没有正式规划 CLI。
+- 首批审计合同：`engine-identity`、`workspace-identity`、`build-record`、`release-evidence`、`coverage-inventory`、`language-audit`、`research-case`、`response-audit`各自为独立v1 schema。结构合法不等于来源可信、原生认证、完整性或最优性；命令和语义边界见[基线审计](BASELINE_AUDIT.md)。
 
 `ApiService` 是库层的薄封装，不代表服务器进程或稳定 Web API。通用 `combo plan` 当前只接 v1–v5，不从 first-turn 内部模块自动推断版本。
+
+## 已有研究入口与副作用边界
+
+`python -m ygo_eval.research`分派案例/问题结构验证、公开信息与终场审计、固定提示准备、原生批次和历史恢复等版本化入口。`prepare-ground-collapse-probe`的固定准备和`--verify-only`属于离线来源/协议合同，不构造可执行worker请求；Curry与Tenki原生批次则各自拥有scope、runner和持久账本，不能互相借用预算或资格。名称相同的`verify-only`、`prepare-only`在不同入口的进程及资产副作用可能不同，须按[研究运行规范](RESEARCH_OPERATIONS.md)和对应版本合同检查，不因名字推断安全。
+
+已存在的研究schema只规定各自请求/报告形状，不授予可达性、响应接受、完整性或最优性资格。报告、源码归档、构建、runner和实际执行身份分开绑定，详见[证据合同](EVIDENCE_CONTRACTS.md)。具体CLI命令和输入仍以[RESEARCH_AUDIT](RESEARCH_AUDIT.md)、对应历史交接和解析器为准；历史示例不是自动执行授权。
 
 ## 拟议能力接口（未发布）
 
@@ -38,4 +46,7 @@
 
 未来本机服务优先调用正式库接口，不解析人类摘要代替机器合同。v1–v5身份/重放路径保持不变；正式v6和证明能力分别版本化。可信知识、可执行线路、搜索完整性、最优性四个维度不得压为现有VerificationLevel的一个状态。
 
-实施入口为[产品演进计划](superpowers/plans/2026-10-19-product-evolution.md)，研究合同见[最优性定义](OPTIMALITY_RESEARCH.md)。
+近期实施入口为[项目再规划](superpowers/plans/2026-10-27-project-realignment.md)，完整目标任务分解见[产品演进计划](superpowers/plans/2026-10-19-product-evolution.md)，研究问题见[最优性定义](OPTIMALITY_RESEARCH.md)。
+
+
+P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。

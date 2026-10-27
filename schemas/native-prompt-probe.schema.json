@@ -1,0 +1,2244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tenki six-stage native experiment contracts v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/manifest"
+    },
+    {
+      "$ref": "#/$defs/stage"
+    },
+    {
+      "$ref": "#/$defs/summary"
+    },
+    {
+      "$ref": "#/$defs/prepared"
+    }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ledger": {
+      "type": "object",
+      "required": [
+        "limit",
+        "consumed",
+        "completed",
+        "unknown",
+        "reserved",
+        "abandoned"
+      ],
+      "properties": {
+        "limit": {
+          "const": 6
+        },
+        "consumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "completed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "reserved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "abandoned": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 0
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 6
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 1
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 5
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 1
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 2
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 4
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 1
+                  },
+                  "unknown": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 2
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 3
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 3
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 3
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 1
+                  },
+                  "unknown": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 2
+                  },
+                  "unknown": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 3
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 4
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 2
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 4
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 1
+                  },
+                  "unknown": {
+                    "const": 3
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 2
+                  },
+                  "unknown": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 3
+                  },
+                  "unknown": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 4
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 5
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 1
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 5
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 1
+                  },
+                  "unknown": {
+                    "const": 4
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 2
+                  },
+                  "unknown": {
+                    "const": 3
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 3
+                  },
+                  "unknown": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 4
+                  },
+                  "unknown": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 5
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "consumed": {
+                "const": 6
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reserved": {
+                "maximum": 0
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "completed": {
+                    "const": 0
+                  },
+                  "unknown": {
+                    "const": 6
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 1
+                  },
+                  "unknown": {
+                    "const": 5
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 2
+                  },
+                  "unknown": {
+                    "const": 4
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 3
+                  },
+                  "unknown": {
+                    "const": 3
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 4
+                  },
+                  "unknown": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 5
+                  },
+                  "unknown": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "completed": {
+                    "const": 6
+                  },
+                  "unknown": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 0
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 1
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 2
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 3
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 4
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 4
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 5
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 5
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unknown": {
+                "const": 6
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "abandoned": {
+                "maximum": 6
+              }
+            }
+          }
+        }
+      ]
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "native_prompt_probe_manifest"
+        },
+        "scope": {
+          "const": "tenki-prompt-probe-v1"
+        },
+        "context": {
+          "$ref": "#/$defs/hash"
+        },
+        "limit": {
+          "const": 6
+        },
+        "planned_calls": {
+          "const": 6
+        },
+        "old_consumed": {
+          "const": 24
+        },
+        "window_seconds": {
+          "const": 7200
+        },
+        "started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_identity": {
+          "$ref": "#/$defs/hash"
+        },
+        "input_sha256": {
+          "type": "object",
+          "required": [
+            "cases",
+            "runner",
+            "worker",
+            "build_record",
+            "identity",
+            "window_start"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/hash"
+          }
+        },
+        "baseline_acceptance_sha256": {
+          "const": "0e88c82501c4bbc229d6326b6b789411a93426f9474a02cd0e83e2c6cacbfcf7"
+        },
+        "preparation_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "stage1_request_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "derivation_rules": {
+          "const": {
+            "2": "stage1_unique_tenki_activation",
+            "3": "stage2_yes_no_false",
+            "4": "exact_stage3_replay",
+            "5": "stage2_yes_no_true_stop_pending15",
+            "6": "exact_stage5_replay"
+          }
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        },
+        "static_source_sha256": {
+          "type": "object",
+          "required": [
+            "data/tmp/ocgcore-source/libduel.cpp"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/hash"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "scope",
+        "context",
+        "limit",
+        "planned_calls",
+        "old_consumed",
+        "window_seconds",
+        "started_at",
+        "source_identity",
+        "input_sha256",
+        "baseline_acceptance_sha256",
+        "preparation_sha256",
+        "stage1_request_sha256",
+        "derivation_rules",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified",
+        "static_source_sha256"
+      ]
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "tenki_prompt_probe_stage"
+        },
+        "scope": {
+          "const": "tenki-prompt-probe-v1"
+        },
+        "stage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "context": {
+          "$ref": "#/$defs/hash"
+        },
+        "request": {
+          "type": "object"
+        },
+        "result": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Ok"
+              ],
+              "properties": {
+                "Ok": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Err"
+              ],
+              "properties": {
+                "Err": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "validation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Ok"
+              ],
+              "properties": {
+                "Ok": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Err"
+              ],
+              "properties": {
+                "Err": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "assets_before": {
+          "type": "object"
+        },
+        "assets_after": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "assets_unchanged": {
+          "type": "boolean"
+        },
+        "independent_replay_matches": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "diagnostic": {
+          "enum": [
+            null,
+            "unexpected_intermediate_prompt",
+            "engine_or_journal_error",
+            "asset_identity_drift",
+            "independent_replay_mismatch",
+            "window_exhausted"
+          ]
+        },
+        "ledger": {
+          "$ref": "#/$defs/ledger"
+        },
+        "started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "scope",
+        "stage",
+        "context",
+        "request",
+        "result",
+        "validation",
+        "assets_before",
+        "assets_after",
+        "assets_unchanged",
+        "independent_replay_matches",
+        "successful",
+        "diagnostic",
+        "ledger",
+        "started_at",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "assets_unchanged": {
+                "const": true
+              },
+              "diagnostic": {
+                "const": null
+              },
+              "result": {
+                "type": "object",
+                "required": [
+                  "Ok"
+                ],
+                "properties": {
+                  "Ok": {
+                    "$ref": "#/$defs/successfulDuelResult"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "validation": {
+                "type": "object",
+                "required": [
+                  "Ok"
+                ],
+                "properties": {
+                  "Ok": {
+                    "type": "object",
+                    "required": [
+                      "pending_opcode",
+                      "raw_prompt_count",
+                      "response_oracle_matches",
+                      "expected_target_matches",
+                      "automatic_decisions_single_legal"
+                    ],
+                    "properties": {
+                      "pending_opcode": {
+                        "type": "integer"
+                      },
+                      "raw_prompt_count": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "response_oracle_matches": {
+                        "const": true
+                      },
+                      "expected_target_matches": {
+                        "const": true
+                      },
+                      "automatic_decisions_single_legal": {
+                        "const": true
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "independent_replay_matches": {
+                "enum": [
+                  null,
+                  true
+                ]
+              },
+              "request": {
+                "$ref": "#/$defs/request"
+              },
+              "assets_before": {
+                "$ref": "#/$defs/consistentEngineIdentity"
+              },
+              "assets_after": {
+                "$ref": "#/$defs/consistentEngineIdentity"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "enum": [
+                  4,
+                  6
+                ]
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "independent_replay_matches": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 1
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "prompt": {
+                        "properties": {
+                          "opcode": {
+                            "const": 11
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 11
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 2
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "prompt": {
+                        "properties": {
+                          "opcode": {
+                            "const": 13
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 13
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 3
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "prompt": {
+                        "properties": {
+                          "opcode": {
+                            "const": 11
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 11
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 4
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "prompt": {
+                        "properties": {
+                          "opcode": {
+                            "const": 11
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 11
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 5
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "prompt": {
+                        "properties": {
+                          "opcode": {
+                            "const": 15
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 15
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": 6
+              },
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "prompt": {
+                        "properties": {
+                          "opcode": {
+                            "const": 15
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "validation": {
+                "properties": {
+                  "Ok": {
+                    "properties": {
+                      "pending_opcode": {
+                        "const": 15
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "scope",
+        "context",
+        "successful",
+        "diagnostic",
+        "old_consumed",
+        "new_consumed",
+        "cumulative_consumed",
+        "ledger",
+        "stages",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "native_prompt_probe_summary"
+        },
+        "scope": {
+          "const": "tenki-prompt-probe-v1"
+        },
+        "context": {
+          "$ref": "#/$defs/hash"
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "diagnostic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "old_consumed": {
+          "const": 24
+        },
+        "new_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 6
+        },
+        "cumulative_consumed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 24,
+          "maximum": 30
+        },
+        "ledger": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ledger"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stages": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "required": [
+              "stage",
+              "successful",
+              "receipt_sha256"
+            ],
+            "properties": {
+              "stage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6
+              },
+              "successful": {
+                "type": "boolean"
+              },
+              "receipt_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "successful": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "diagnostic": {
+                "const": null
+              },
+              "new_consumed": {
+                "const": 6
+              },
+              "cumulative_consumed": {
+                "const": 30
+              },
+              "stages": {
+                "minItems": 6,
+                "items": {
+                  "properties": {
+                    "successful": {
+                      "const": true
+                    }
+                  }
+                },
+                "prefixItems": [
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": 1
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": 2
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": 3
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": 4
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": 5
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": 6
+                      }
+                    }
+                  }
+                ]
+              },
+              "ledger": {
+                "type": "object",
+                "required": [
+                  "limit",
+                  "consumed",
+                  "completed",
+                  "unknown",
+                  "reserved",
+                  "abandoned"
+                ],
+                "properties": {
+                  "limit": {
+                    "const": 6
+                  },
+                  "consumed": {
+                    "const": 6
+                  },
+                  "completed": {
+                    "const": 6
+                  },
+                  "unknown": {
+                    "const": 0
+                  },
+                  "reserved": {
+                    "const": 0
+                  },
+                  "abandoned": {
+                    "const": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": null
+              },
+              "cumulative_consumed": {
+                "const": null
+              },
+              "successful": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 0
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 0
+              },
+              "cumulative_consumed": {
+                "const": 24
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 1
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 1
+              },
+              "cumulative_consumed": {
+                "const": 25
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 2
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 2
+              },
+              "cumulative_consumed": {
+                "const": 26
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 3
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 3
+              },
+              "cumulative_consumed": {
+                "const": 27
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 4
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 4
+              },
+              "cumulative_consumed": {
+                "const": 28
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 5
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 5
+              },
+              "cumulative_consumed": {
+                "const": 29
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ledger": {
+                "type": "object",
+                "properties": {
+                  "consumed": {
+                    "const": 6
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "new_consumed": {
+                "const": 6
+              },
+              "cumulative_consumed": {
+                "const": 30
+              }
+            }
+          }
+        }
+      ]
+    },
+    "prepared": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "native_prompt_probe_prepared"
+        },
+        "scope": {
+          "const": "tenki-prompt-probe-v1"
+        },
+        "context": {
+          "$ref": "#/$defs/hash"
+        },
+        "prepared": {
+          "const": true
+        },
+        "native_calls": {
+          "const": 0
+        },
+        "planned_calls": {
+          "const": 6
+        },
+        "proof_ready": {
+          "const": false
+        },
+        "complete_action_coverage": {
+          "const": false
+        },
+        "global_optimality": {
+          "const": false
+        },
+        "native_probability_verified": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "scope",
+        "context",
+        "prepared",
+        "native_calls",
+        "planned_calls",
+        "proof_ready",
+        "complete_action_coverage",
+        "global_optimality",
+        "native_probability_verified"
+      ]
+    },
+    "names": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "asset": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "sha256"
+          ],
+          "properties": {
+            "status": {
+              "const": "present"
+            },
+            "sha256": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "sha256"
+          ],
+          "properties": {
+            "status": {
+              "const": "missing"
+            },
+            "sha256": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "consistentEngineIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "identity",
+        "roles",
+        "scripts",
+        "timeout_ms",
+        "consistent"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "engine_identity"
+        },
+        "identity": {
+          "$ref": "#/$defs/hash"
+        },
+        "consistent": {
+          "const": true
+        },
+        "timeout_ms": {
+          "const": 30000
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "worker",
+            "dll",
+            "cdb",
+            "script_manifest",
+            "engine_manifest"
+          ],
+          "properties": {
+            "worker": {
+              "type": "object",
+              "required": [
+                "status",
+                "sha256"
+              ],
+              "properties": {
+                "status": {
+                  "const": "present"
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              },
+              "additionalProperties": false
+            },
+            "dll": {
+              "type": "object",
+              "required": [
+                "status",
+                "sha256"
+              ],
+              "properties": {
+                "status": {
+                  "const": "present"
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              },
+              "additionalProperties": false
+            },
+            "cdb": {
+              "type": "object",
+              "required": [
+                "status",
+                "sha256"
+              ],
+              "properties": {
+                "status": {
+                  "const": "present"
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              },
+              "additionalProperties": false
+            },
+            "script_manifest": {
+              "type": "object",
+              "required": [
+                "status",
+                "sha256"
+              ],
+              "properties": {
+                "status": {
+                  "const": "present"
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              },
+              "additionalProperties": false
+            },
+            "engine_manifest": {
+              "type": "object",
+              "required": [
+                "status",
+                "sha256"
+              ],
+              "properties": {
+                "status": {
+                  "const": "present"
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hash"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "scripts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "root_present",
+            "actual",
+            "missing",
+            "extra",
+            "mismatch"
+          ],
+          "properties": {
+            "root_present": {
+              "type": "boolean"
+            },
+            "actual": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "missing": {
+              "$ref": "#/$defs/names"
+            },
+            "extra": {
+              "$ref": "#/$defs/names"
+            },
+            "mismatch": {
+              "$ref": "#/$defs/names"
+            }
+          }
+        }
+      }
+    },
+    "versions": {
+      "type": "object",
+      "required": [
+        "rules",
+        "catalog",
+        "banlist",
+        "engine_sha256",
+        "cdb_sha256",
+        "scripts_sha256",
+        "core_commit",
+        "initializer"
+      ],
+      "properties": {
+        "rules": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalog": {
+          "type": "string"
+        },
+        "banlist": {
+          "type": "string"
+        },
+        "engine_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "cdb_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "scripts_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "core_commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "initializer": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "request": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "engine",
+        "deck",
+        "opening_hand",
+        "seed",
+        "decisions",
+        "versions",
+        "probe_only"
+      ],
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "worker_path",
+            "ocgcore_path",
+            "catalog_path",
+            "scripts_path",
+            "script_manifest_path",
+            "engine_manifest_path",
+            "timeout_ms"
+          ],
+          "properties": {
+            "worker_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ocgcore_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "catalog_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scripts_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "script_manifest_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "engine_manifest_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "timeout_ms": {
+              "const": 30000
+            }
+          }
+        },
+        "deck": {
+          "type": "object",
+          "required": [
+            "main",
+            "extra",
+            "side"
+          ],
+          "properties": {
+            "main": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "minItems": 40,
+              "maxItems": 40
+            },
+            "extra": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "side": {
+              "const": []
+            }
+          },
+          "additionalProperties": false
+        },
+        "opening_hand": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "seed": {
+          "const": 1
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "prompt_id",
+              "player",
+              "choice"
+            ],
+            "properties": {
+              "prompt_id": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "player": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "choice": {
+                "type": "object",
+                "minProperties": 1
+              }
+            }
+          }
+        },
+        "versions": {
+          "$ref": "#/$defs/versions"
+        },
+        "probe_only": {
+          "const": false
+        },
+        "scenario": {
+          "const": null
+        },
+        "interruption": {
+          "const": null
+        },
+        "first_turn": {
+          "const": null
+        },
+        "research_capture": {
+          "const": null
+        }
+      },
+      "additionalProperties": false
+    },
+    "successfulDuelResult": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "status",
+        "events",
+        "prompt",
+        "checkpoint",
+        "error",
+        "versions",
+        "loaded_scripts",
+        "steps",
+        "resolved_decisions",
+        "coverage_gaps"
+      ],
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "status": {
+          "const": "decision_required"
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "sequence",
+              "opcode",
+              "raw",
+              "supported",
+              "fields"
+            ],
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "opcode": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "raw": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              },
+              "supported": {
+                "const": true
+              },
+              "fields": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "prompt": {
+          "type": "object",
+          "required": [
+            "id",
+            "player",
+            "opcode",
+            "actions"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "player": {
+              "const": 0
+            },
+            "opcode": {
+              "type": "integer"
+            },
+            "actions": {
+              "type": "array",
+              "minItems": 1
+            }
+          }
+        },
+        "checkpoint": {
+          "type": "object",
+          "required": [
+            "turn",
+            "turn_player",
+            "phase",
+            "lp",
+            "cards"
+          ],
+          "properties": {
+            "turn": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "turn_player": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "phase": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "lp": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "cards": {
+              "type": "array"
+            }
+          }
+        },
+        "error": {
+          "const": null
+        },
+        "versions": {
+          "$ref": "#/$defs/versions"
+        },
+        "loaded_scripts": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/hash"
+          }
+        },
+        "steps": {
+          "type": "array"
+        },
+        "resolved_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "prompt_id",
+              "player",
+              "choice"
+            ],
+            "properties": {
+              "prompt_id": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "player": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "choice": {
+                "type": "object",
+                "minProperties": 1
+              }
+            }
+          }
+        },
+        "coverage_gaps": {
+          "const": []
+        },
+        "peak_working_set_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "terminal_observation": {
+          "const": null
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

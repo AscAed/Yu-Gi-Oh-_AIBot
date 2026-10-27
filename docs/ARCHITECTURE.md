@@ -13,6 +13,8 @@ ygo-engine-adapter → 子进程 worker → 固定 ocgcore ABI → 卡库/Lua �
 
 本机 worker 隔离核心崩溃，父进程负责预算、报告和重放。`ocgcore`是效果结算权威；未知/不支持提示不得转成推测成功。
 
+基线工具另提供只读`engine identity`及Python身份/覆盖/语言审计入口。研究入口使用独立协议oracle核对响应，涉及原生调用的批次按各自scope通过持久调用账本留证；纯离线审计不因此创建账本。这些模块不是正式v6或证明求解器。使用边界见[BASELINE_AUDIT](BASELINE_AUDIT.md)和[研究运行规范](RESEARCH_OPERATIONS.md)。
+
 ## Rust workspace
 
 | crate | 边界 |
@@ -31,7 +33,11 @@ workspace 成员列表和依赖方向以根 `Cargo.toml` 为准。
 
 ## Python、数据和知识
 
-`python/ygo_data` 验证/导入规范化资料；`python/ygo_eval` 当前仅入口/说明骨架，完整离线评估编排尚待实现。JSON schema在 `schemas/`，部署和实验fixture在 `tests/fixtures/`，人工知识包在 `knowledge/`。本机CDB、Lua、DLL、快照、账本和原生报告位于忽略目录 `data/`，身份信息在相关manifest/报告中。
+`python/ygo_data`提供身份、覆盖和规范化资料工具；`python/ygo_eval`已有研究案例、终场评价、公开观察投影、提示协议oracle、固定原生批次编排与历史来源恢复工具。它们服务于有限案例；16+32手赛事评估编排、构筑候选比较和留出评估闭环仍未交付。
+
+研究数据流为：冻结案例与资产身份 → 版本化输入/来源校验 → 纯协议或公开观察审计 → 有明确scope的原生执行及账本/收据 → 独立重放和报告。不同入口并非都经过所有步骤：Ground Collapse准备只做纯Python离线校验，Curry的固定原生批次则使用独立runner与账本。报告发布、归档和运行时身份各有版本化合同，不能因报告结构正确而扩大资格。详细副作用见[研究运行规范](RESEARCH_OPERATIONS.md)，身份/发布见[证据合同](EVIDENCE_CONTRACTS.md)。
+
+JSON schema在 `schemas/`，部署和实验fixture在 `tests/fixtures/`，人工知识包在 `knowledge/`。本机CDB、Lua、DLL、快照、账本和原生报告位于忽略目录 `data/`，身份信息在相关manifest/报告中。
 
 ## 可信度层级
 

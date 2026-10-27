@@ -1,0 +1,407 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "kind": {
+      "const": "information-audit"
+    },
+    "successful": {
+      "type": "boolean"
+    },
+    "native_calls": {
+      "const": 0
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "native_probability_verified": {
+      "const": false
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "tool_source_identity": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "view",
+          "observation_key",
+          "routing",
+          "provenance"
+        ],
+        "properties": {
+          "view": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rules",
+              "objective",
+              "known_deck_composition",
+              "initial_public_state",
+              "profile",
+              "phase",
+              "own_hand",
+              "visible_history",
+              "legal_menu"
+            ],
+            "properties": {
+              "rules": {},
+              "objective": {},
+              "known_deck_composition": {},
+              "initial_public_state": {},
+              "profile": {
+                "const": "rabbit-idle-observation-v1"
+              },
+              "phase": {
+                "type": "integer"
+              },
+              "own_hand": {},
+              "visible_history": {},
+              "legal_menu": {}
+            }
+          },
+          "observation_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "routing": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event_index",
+              "prompt_id"
+            ],
+            "properties": {
+              "event_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "prompt_id": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "category"
+            ],
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "category": {
+                "enum": [
+                  "historical_native",
+                  "synthetic"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "scope_gaps": {
+      "type": "array"
+    },
+    "policy": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "valid",
+            "groups",
+            "diagnostics",
+            "finite_samples_only",
+            "arbitrary_policy_leak_freedom_proven"
+          ],
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "groups": {
+              "type": "array"
+            },
+            "diagnostics": {
+              "type": "array"
+            },
+            "finite_samples_only": {
+              "const": true
+            },
+            "arbitrary_policy_leak_freedom_proven": {
+              "const": false
+            }
+          }
+        }
+      ]
+    },
+    "probability": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "valid",
+            "model",
+            "origin",
+            "labelled_count",
+            "card_order_count",
+            "native_probability_verified",
+            "instance_merging_verified",
+            "shuffle_deletion_safe"
+          ],
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "model": {
+              "const": "synthetic-independent-uniform-fisher-yates-v1"
+            },
+            "origin": {
+              "const": "synthetic"
+            },
+            "labelled_count": {
+              "const": 120
+            },
+            "card_order_count": {
+              "const": 20
+            },
+            "native_probability_verified": {
+              "const": false
+            },
+            "instance_merging_verified": {
+              "const": false
+            },
+            "shuffle_deletion_safe": {
+              "const": false
+            }
+          }
+        }
+      ]
+    },
+    "ordering": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "valid",
+            "origin",
+            "native_legality",
+            "order_equivalence_proven",
+            "production_reverse_responses_added"
+          ],
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "origin": {
+              "const": "synthetic"
+            },
+            "native_legality": {
+              "const": "unverified"
+            },
+            "order_equivalence_proven": {
+              "const": false
+            },
+            "production_reverse_responses_added": {
+              "const": false
+            }
+          }
+        }
+      ]
+    },
+    "diagnostics": {
+      "type": "array"
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "input_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "observation_profile",
+        "policy_samples",
+        "ideal_probability",
+        "history_range_complete"
+      ],
+      "properties": {
+        "tool": {
+          "type": "boolean"
+        },
+        "observation_profile": {
+          "type": "boolean"
+        },
+        "policy_samples": {
+          "type": "boolean"
+        },
+        "ideal_probability": {
+          "type": "boolean"
+        },
+        "history_range_complete": {
+          "const": false
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "sha256",
+          "category",
+          "scope"
+        ],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "category": {
+            "enum": [
+              "historical_native",
+              "synthetic",
+              "frozen_input",
+              "static_source"
+            ]
+          },
+          "scope": {
+            "enum": [
+              "projection",
+              "inventory",
+              "source",
+              "static"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "successful",
+    "native_calls",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified",
+    "inputs",
+    "tool_source_identity",
+    "observations",
+    "scope_gaps",
+    "policy",
+    "probability",
+    "ordering",
+    "diagnostics",
+    "elapsed_seconds",
+    "input_bytes",
+    "layers",
+    "sources"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "successful": {
+            "const": true
+          }
+        },
+        "required": [
+          "successful"
+        ]
+      },
+      "then": {
+        "properties": {
+          "diagnostics": {
+            "maxItems": 0
+          },
+          "layers": {
+            "properties": {
+              "tool": {
+                "const": true
+              },
+              "observation_profile": {
+                "const": true
+              },
+              "policy_samples": {
+                "const": true
+              },
+              "ideal_probability": {
+                "const": true
+              }
+            }
+          },
+          "policy": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "const": true
+              }
+            }
+          },
+          "probability": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "const": true
+              }
+            }
+          },
+          "ordering": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

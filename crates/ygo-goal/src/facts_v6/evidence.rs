@@ -22,8 +22,8 @@ impl QueryWitness {
         if result.status != ygo_engine_adapter::DuelStatus::DecisionRequired
             || result.error.is_some()
             || prompt.id != event.sequence
-            || ygo_engine_adapter::parse_prompt(event.sequence, &event.raw)?.as_ref()
-                != Some(prompt)
+            || !ygo_engine_adapter::frame_matches_raw(event)?
+            || !ygo_engine_adapter::prompt_matches_raw(prompt, &event.raw)?
         {
             return Err("query capture requires the actual stopped prompt".into());
         }
@@ -635,12 +635,7 @@ pub(super) fn validate_evidence(
         return Err("v6 trace requires its initializer and initial public witness".into());
     }
     for (i, e) in result.events.iter().enumerate() {
-        let decoded = ygo_engine_adapter::decode_frame(i as u64 + 1, &e.raw)?;
-        if e.sequence != decoded.sequence
-            || e.opcode != decoded.opcode
-            || e.fields != decoded.fields
-            || e.supported != decoded.supported
-        {
+        if e.sequence != i as u64 + 1 || !ygo_engine_adapter::frame_matches_raw(e)? {
             return Err("decoded event does not match original raw frame".into());
         }
         let locations: Vec<_> = match e.opcode {
@@ -681,7 +676,7 @@ pub(super) fn validate_evidence(
                     .ok_or("invalid decision sequence")? as usize,
             )
             .ok_or("missing decision prompt")?;
-        let prompt = ygo_engine_adapter::parse_prompt(d.prompt_id, &event.raw)?
+        let prompt = ygo_engine_adapter::recorded_prompt(event)?
             .ok_or("decision has no supported prompt")?;
         if d.player > 1
             || d.prompt_id <= previous_decision

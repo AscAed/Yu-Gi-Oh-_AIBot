@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "kind": "information-policy-samples",
+  "samples": [
+    {
+      "policy_id": "end-demo",
+      "observation_id": "terminal-shuffle-end/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "end-demo",
+      "observation_id": "terminal-shuffle-end/run0/view1",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "shuffle-demo",
+      "observation_id": "terminal-shuffle-end/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "end-demo",
+      "observation_id": "terminal-shuffle-end/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "end-demo",
+      "observation_id": "terminal-shuffle-end/run1/view1",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "shuffle-demo",
+      "observation_id": "terminal-shuffle-end/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    }
+  ]
+}

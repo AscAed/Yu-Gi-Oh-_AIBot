@@ -1465,7 +1465,7 @@ pub(crate) fn plan_context(
 pub(crate) fn recorded_steps(events: &[CoreEventFrame], decisions: &[Decision]) -> Vec<Action> {
     events
         .iter()
-        .filter_map(|e| parse_prompt(e.sequence, &e.raw).ok().flatten())
+        .filter_map(|e| recorded_prompt(e).ok().flatten())
         .filter_map(|p| {
             let choice = if p.player == 0
                 || decisions
@@ -1531,7 +1531,7 @@ fn validate_execution(e: &Execution, r: &PlanReport) -> Result<(), String> {
         return Err("execution prefix/response bytes mismatch".into());
     }
     for frame in &o.events {
-        if decode_frame(frame.sequence, &frame.raw)? != *frame {
+        if !frame_matches_raw(frame)? {
             return Err("raw goal evidence mismatch".into());
         }
     }
@@ -2221,6 +2221,7 @@ mod tests {
             scenario: None,
             interruption: None,
             first_turn: None,
+            research_capture: None,
         };
         let knowledge = KnowledgePack::builtin().unwrap();
         PlanReport {

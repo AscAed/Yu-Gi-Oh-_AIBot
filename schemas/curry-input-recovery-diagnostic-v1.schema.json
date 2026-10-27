@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/curry-input-recovery-diagnostic-v1.schema.json",
+  "title": "Curry pre-stage refusal diagnostic v1",
+  "description": "Path-free failure diagnostic written before any resumed Curry stage or writable journal is opened.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "scope", "checkpoint", "error_code", "role",
+    "expected_sha256", "found_sha256", "proof_ready", "complete_action_coverage",
+    "global_optimality", "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "curry_input_recovery_pre_stage_refusal" },
+    "scope": { "enum": ["curry-option-validation-v1", "curry-option-confirmation-v1"] },
+    "checkpoint": { "const": "normal_resume_pre_stage_gate" },
+    "error_code": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,90}$" },
+    "role": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,100}$" }] },
+    "expected_sha256": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] },
+    "found_sha256": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] },
+    "proof_ready": { "const": false },
+    "complete_action_coverage": { "const": false },
+    "global_optimality": { "const": false },
+    "native_probability_verified": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "role": { "type": "null" } }, "required": ["role"] },
+      "then": { "properties": { "expected_sha256": { "type": "null" }, "found_sha256": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "role": { "type": "string" } }, "required": ["role"] },
+      "then": { "properties": { "expected_sha256": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] }, "found_sha256": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[a-f0-9]{64}$" }] } } }
+    }
+  ]
+}

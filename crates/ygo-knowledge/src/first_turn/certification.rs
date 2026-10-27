@@ -294,11 +294,10 @@ pub(super) fn ash_legality(
         .events
         .iter()
         .map(|e| {
-            let actual = decode_frame(e.sequence, &e.raw)?;
-            if actual.fields != e.fields || actual.opcode != e.opcode {
+            if !ygo_engine_adapter::frame_matches_raw(e)? {
                 return Err("raw native response evidence differs".into());
             }
-            Ok(actual)
+            Ok(e.clone())
         })
         .collect::<Result<Vec<_>, String>>()?;
     let Some(target) = events.iter().find(|e| {

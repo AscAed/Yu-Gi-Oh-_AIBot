@@ -233,11 +233,10 @@ fn subset(expected: &serde_json::Value, actual: &serde_json::Value) -> bool {
     }
 }
 fn raw_event(event: &CoreEventFrame) -> Result<CoreEventFrame, String> {
-    let decoded = decode_frame(event.sequence, &event.raw)?;
-    if decoded != *event {
+    if !ygo_engine_adapter::frame_matches_raw(event)? {
         return Err("raw event and decoded evidence differ".into());
     }
-    Ok(decoded)
+    Ok(event.clone())
 }
 fn count(result: &DuelResult, code: u32, player: u8, zone: u8) -> usize {
     result

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo.local/schemas/research-capture-v1.schema.json",
+  "title": "Opt-in research capture v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "objective",
+    "boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "objective": {
+      "const": "rabbit-own-face-up-xyz-v1"
+    },
+    "boundary": {
+      "const": "first-next-turn-process-return-v1"
+    }
+  }
+}

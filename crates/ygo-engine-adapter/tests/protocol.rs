@@ -49,6 +49,42 @@ fn decodes_hint_and_shuffle_with_pinned_widths() {
     assert_eq!(hand.fields["cards"][0], 42);
     assert!(decode_frame(3, &[33, 0, 1, 0, 0, 0, 42]).is_err());
 }
+
+#[test]
+fn decodes_recover_with_fixed_player_and_amount_widths() {
+    let frame = decode_frame(1, &[92, 1, 200, 0, 0, 0]).unwrap();
+    assert!(frame.supported);
+    assert_eq!(frame.opcode, 92);
+    assert_eq!(
+        frame.fields,
+        serde_json::json!({"player": 1, "amount": 200})
+    );
+    assert!(decode_frame(2, &[92, 2, 200, 0, 0, 0]).is_err());
+    assert!(decode_frame(3, &[92, 0, 200, 0, 0]).is_err());
+    assert!(decode_frame(4, &[92, 0, 200, 0, 0, 0, 0]).is_err());
+}
+
+#[test]
+fn decodes_field_disabled_with_exact_five_byte_width() {
+    let frame = decode_frame(1, &[56, 0xe0, 0xff, 0xe0, 0xff]).unwrap();
+    assert!(frame.supported);
+    assert_eq!(frame.opcode, 56);
+    assert_eq!(
+        frame.fields,
+        serde_json::json!({"disabled_mask": 0xffe0ffe0u32})
+    );
+
+    let zero = decode_frame(2, &[56, 0, 0, 0, 0]).unwrap();
+    assert_eq!(zero.fields, serde_json::json!({"disabled_mask": 0}));
+    let maximum = decode_frame(3, &[56, 0xff, 0xff, 0xff, 0xff]).unwrap();
+    assert_eq!(
+        maximum.fields,
+        serde_json::json!({"disabled_mask": u32::MAX})
+    );
+
+    assert!(decode_frame(4, &[56, 0, 0, 0]).is_err());
+    assert!(decode_frame(5, &[56, 0, 0, 0, 0, 0]).is_err());
+}
 #[test]
 fn position_change_uses_byte_positions_and_set_uses_full_location() {
     let p = decode_frame(1, &[53, 42, 0, 0, 0, 0, 4, 1, 1, 4]).unwrap();
@@ -104,6 +140,7 @@ fn invalid_jsonl_and_wrong_protocol_are_structured_failures() {
         scenario: None,
         interruption: None,
         first_turn: None,
+        research_capture: None,
     };
     out.clear();
     run_worker(

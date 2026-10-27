@@ -1,0 +1,381 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "study_id",
+    "observation_profile",
+    "seed_role",
+    "fixed_actions",
+    "frozen_input",
+    "public",
+    "evidence",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "kind": {
+      "const": "information-route-study"
+    },
+    "study_id": {
+      "const": "rabbit-shuffle-end-information-v1"
+    },
+    "observation_profile": {
+      "const": "rabbit-shuffle-end-observation-v1"
+    },
+    "seed_role": {
+      "const": "reproduction_only"
+    },
+    "fixed_actions": {
+      "const": [
+        8,
+        7
+      ]
+    },
+    "frozen_input": {
+      "type": "object",
+      "required": [
+        "case_sha256",
+        "request_sha256",
+        "frozen_source_sha256",
+        "rules",
+        "assets"
+      ],
+      "properties": {
+        "case_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "frozen_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "public": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rules",
+        "objective",
+        "known_deck_composition",
+        "initial_public_state"
+      ],
+      "properties": {
+        "rules": {
+          "type": "object"
+        },
+        "objective": {
+          "type": "object"
+        },
+        "known_deck_composition": {
+          "type": "object"
+        },
+        "initial_public_state": {
+          "type": "object"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "parent-acceptance"
+              },
+              "sha256": {
+                "const": "cac76781c455854c8629cd47afed69ef090a8e4b7cd05f75e96afdeddb425a0a"
+              },
+              "category": {
+                "const": "parent_audit"
+              },
+              "scope": {
+                "const": "parent"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "parent-contract"
+              },
+              "sha256": {
+                "const": "78d7ea65c136f0c7a33c827b77308af7b900d302f442208ebff4a993bac92dee"
+              },
+              "category": {
+                "const": "parent_contract"
+              },
+              "scope": {
+                "const": "parent"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "terminal-shuffle-end"
+              },
+              "sha256": {
+                "const": "3b391ca175f00910570fde0542a95970c028bc85b7c6623fee01d4d71e428dc7"
+              },
+              "category": {
+                "const": "historical_native"
+              },
+              "scope": {
+                "const": "projection"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "frozen-input"
+              },
+              "sha256": {
+                "const": "de1e0157db84c9c12249798f895e359479ea092c92c593ce0f84e35e5b253879"
+              },
+              "category": {
+                "const": "frozen_input"
+              },
+              "scope": {
+                "const": "source"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "source-request"
+              },
+              "sha256": {
+                "const": "0831cf62ec6587625543e946658be21c58b2aab30d73aedf1d3249597b2353f7"
+              },
+              "category": {
+                "const": "frozen_input"
+              },
+              "scope": {
+                "const": "source"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "core-processor"
+              },
+              "sha256": {
+                "const": "d051d6a006baa9ad4a590d4bcc185bff112e3ed7df256ff25cd8c0ff7beaf085"
+              },
+              "category": {
+                "const": "static_source"
+              },
+              "scope": {
+                "const": "static"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "sha256",
+              "category",
+              "scope"
+            ],
+            "properties": {
+              "role": {
+                "const": "core-constants"
+              },
+              "sha256": {
+                "const": "191315f0c37bdc2fc086dee457bfc8ebb10b27cb1f063d26d5776465f9dbc4aa"
+              },
+              "category": {
+                "const": "static_source"
+              },
+              "scope": {
+                "const": "static"
+              }
+            }
+          }
+        ]
+      },
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "parent-acceptance"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "parent-contract"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "terminal-shuffle-end"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "frozen-input"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "source-request"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "core-processor"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "role": {
+                "const": "core-constants"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "native_probability_verified": {
+      "const": false
+    }
+  }
+}

@@ -1,0 +1,1234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "successful",
+    "native_calls",
+    "inputs",
+    "tool_source_identity",
+    "sources",
+    "observations",
+    "scope_gaps",
+    "policy",
+    "terminal_evaluations",
+    "layers",
+    "diagnostics",
+    "proof_ready",
+    "complete_action_coverage",
+    "global_optimality",
+    "native_probability_verified",
+    "route_audits",
+    "out_of_scope",
+    "historical_reexecution_performed",
+    "new_native_replay_verified"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "const": "information-route-audit"
+    },
+    "successful": {
+      "type": "boolean"
+    },
+    "native_calls": {
+      "type": "integer",
+      "const": 0
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "tool_source_identity": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sources": {
+      "type": "array"
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/observation"
+      }
+    },
+    "scope_gaps": {
+      "type": "array"
+    },
+    "policy": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "terminal_evaluations": {
+      "type": "array"
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provenance",
+        "route",
+        "binding",
+        "policy"
+      ],
+      "properties": {
+        "provenance": {
+          "type": "boolean"
+        },
+        "route": {
+          "type": "boolean"
+        },
+        "binding": {
+          "type": "boolean"
+        },
+        "policy": {
+          "type": "boolean"
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "proof_ready": {
+      "const": false
+    },
+    "complete_action_coverage": {
+      "const": false
+    },
+    "global_optimality": {
+      "const": false
+    },
+    "native_probability_verified": {
+      "const": false
+    },
+    "route_audits": {
+      "type": "array"
+    },
+    "out_of_scope": {
+      "const": [
+        "rabbit-full",
+        "tournament-full"
+      ]
+    },
+    "historical_reexecution_performed": {
+      "const": false
+    },
+    "new_native_replay_verified": {
+      "const": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "successful": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "layers": {
+            "properties": {
+              "provenance": {
+                "const": true
+              },
+              "route": {
+                "const": true
+              },
+              "binding": {
+                "const": true
+              },
+              "policy": {
+                "const": true
+              }
+            }
+          },
+          "observations": {
+            "minProperties": 6,
+            "maxProperties": 6,
+            "properties": {
+              "terminal-shuffle-end/run0/view0": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "view",
+                  "observation_key",
+                  "routing",
+                  "provenance"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "decision"
+                  },
+                  "observation_key": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "view": {
+                    "type": "object"
+                  }
+                },
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/observation"
+                  }
+                ]
+              },
+              "terminal-shuffle-end/run0/view1": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "view",
+                  "observation_key",
+                  "routing",
+                  "provenance"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "decision"
+                  },
+                  "observation_key": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "view": {
+                    "type": "object"
+                  }
+                },
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/observation"
+                  }
+                ]
+              },
+              "terminal-shuffle-end/run0/view2": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "view",
+                  "observation_key",
+                  "routing",
+                  "provenance"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "terminal"
+                  },
+                  "observation_key": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "view": {
+                    "type": "object",
+                    "required": [
+                      "normal_count",
+                      "normal_utility",
+                      "termination",
+                      "legal_menu"
+                    ],
+                    "properties": {
+                      "normal_count": {
+                        "type": "integer",
+                        "const": 0
+                      },
+                      "normal_utility": {
+                        "type": "integer",
+                        "const": 0
+                      },
+                      "termination": {
+                        "const": "terminal_boundary_bound"
+                      },
+                      "legal_menu": {
+                        "const": []
+                      }
+                    }
+                  }
+                },
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/observation"
+                  }
+                ]
+              },
+              "terminal-shuffle-end/run1/view0": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "view",
+                  "observation_key",
+                  "routing",
+                  "provenance"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "decision"
+                  },
+                  "observation_key": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "view": {
+                    "type": "object"
+                  }
+                },
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/observation"
+                  }
+                ]
+              },
+              "terminal-shuffle-end/run1/view1": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "view",
+                  "observation_key",
+                  "routing",
+                  "provenance"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "decision"
+                  },
+                  "observation_key": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "view": {
+                    "type": "object"
+                  }
+                },
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/observation"
+                  }
+                ]
+              },
+              "terminal-shuffle-end/run1/view2": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "view",
+                  "observation_key",
+                  "routing",
+                  "provenance"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "terminal"
+                  },
+                  "observation_key": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "view": {
+                    "type": "object",
+                    "required": [
+                      "normal_count",
+                      "normal_utility",
+                      "termination",
+                      "legal_menu"
+                    ],
+                    "properties": {
+                      "normal_count": {
+                        "type": "integer",
+                        "const": 0
+                      },
+                      "normal_utility": {
+                        "type": "integer",
+                        "const": 0
+                      },
+                      "termination": {
+                        "const": "terminal_boundary_bound"
+                      },
+                      "legal_menu": {
+                        "const": []
+                      }
+                    }
+                  }
+                },
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/observation"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "terminal-shuffle-end/run0/view0",
+              "terminal-shuffle-end/run0/view1",
+              "terminal-shuffle-end/run0/view2",
+              "terminal-shuffle-end/run1/view0",
+              "terminal-shuffle-end/run1/view1",
+              "terminal-shuffle-end/run1/view2"
+            ],
+            "additionalProperties": false
+          },
+          "terminal_evaluations": {
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "binding_valid",
+                "snapshot_count",
+                "utility",
+                "termination",
+                "diagnostics"
+              ],
+              "properties": {
+                "binding_valid": {
+                  "const": true
+                },
+                "snapshot_count": {
+                  "type": "integer",
+                  "const": 0
+                },
+                "utility": {
+                  "type": "integer",
+                  "const": 0
+                },
+                "termination": {
+                  "const": "terminal_boundary_bound"
+                },
+                "diagnostics": {
+                  "const": []
+                }
+              }
+            }
+          },
+          "diagnostics": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "decisionview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rules",
+        "objective",
+        "known_deck_composition",
+        "initial_public_state",
+        "profile",
+        "phase",
+        "own_hand",
+        "visible_history",
+        "legal_menu"
+      ],
+      "properties": {
+        "rules": {
+          "$ref": "#/$defs/rules"
+        },
+        "objective": {
+          "$ref": "#/$defs/objective"
+        },
+        "known_deck_composition": {
+          "$ref": "#/$defs/known_deck_composition"
+        },
+        "initial_public_state": {
+          "$ref": "#/$defs/initial_public_state"
+        },
+        "profile": {
+          "const": "rabbit-shuffle-end-observation-v1"
+        },
+        "phase": {
+          "type": "integer",
+          "const": 4
+        },
+        "own_hand": {
+          "$ref": "#/$defs/own_hand"
+        },
+        "visible_history": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/visible_history"
+            },
+            {
+              "items": {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "new_turn"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "player": {
+                      "type": "integer",
+                      "const": 0
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "legal_menu": {
+          "$ref": "#/$defs/legal_menu"
+        }
+      }
+    },
+    "terminalview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rules",
+        "objective",
+        "known_deck_composition",
+        "initial_public_state",
+        "profile",
+        "phase",
+        "own_hand",
+        "visible_history",
+        "legal_menu",
+        "turn",
+        "turn_player",
+        "normal_count",
+        "normal_utility",
+        "termination"
+      ],
+      "properties": {
+        "rules": {
+          "$ref": "#/$defs/rules"
+        },
+        "objective": {
+          "$ref": "#/$defs/objective"
+        },
+        "known_deck_composition": {
+          "$ref": "#/$defs/known_deck_composition"
+        },
+        "initial_public_state": {
+          "$ref": "#/$defs/initial_public_state"
+        },
+        "profile": {
+          "const": "rabbit-shuffle-end-observation-v1"
+        },
+        "phase": {
+          "type": "null"
+        },
+        "own_hand": {
+          "$ref": "#/$defs/own_hand"
+        },
+        "visible_history": {
+          "$ref": "#/$defs/visible_history"
+        },
+        "legal_menu": {
+          "const": []
+        },
+        "turn": {
+          "type": "integer",
+          "const": 2
+        },
+        "turn_player": {
+          "type": "integer",
+          "const": 1
+        },
+        "normal_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": [
+            0,
+            null
+          ]
+        },
+        "normal_utility": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "enum": [
+            0,
+            null
+          ]
+        },
+        "termination": {
+          "enum": [
+            "unknown",
+            "terminal_boundary_bound"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "termination": {
+                "const": "terminal_boundary_bound"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "normal_count": {
+                "type": "integer",
+                "const": 0
+              },
+              "normal_utility": {
+                "type": "integer",
+                "const": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "normal_count": {
+                "type": "null"
+              },
+              "normal_utility": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "view",
+        "observation_key",
+        "routing",
+        "provenance"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "decision",
+            "terminal"
+          ]
+        },
+        "view": {
+          "type": "object"
+        },
+        "observation_key": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "event_index",
+            "prompt_id"
+          ],
+          "properties": {
+            "event_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "prompt_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "role",
+            "category"
+          ],
+          "properties": {
+            "role": {
+              "const": "terminal-shuffle-end"
+            },
+            "category": {
+              "const": "historical_native"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "decision"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "view": {
+                "$ref": "#/$defs/decisionview"
+              },
+              "routing": {
+                "properties": {
+                  "prompt_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "view": {
+                "$ref": "#/$defs/terminalview"
+              },
+              "routing": {
+                "properties": {
+                  "prompt_id": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "menu_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "choice",
+        "bytes",
+        "cards"
+      ],
+      "properties": {
+        "choice": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command",
+            "index"
+          ],
+          "properties": {
+            "kind": {
+              "const": "command"
+            },
+            "command": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "bytes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "cards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "player",
+              "location",
+              "sequence"
+            ],
+            "properties": {
+              "code": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              "player": {
+                "const": 0
+              },
+              "location": {
+                "const": 2
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4
+              }
+            }
+          },
+          "minItems": 0
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "region",
+        "version"
+      ],
+      "properties": {
+        "region": {
+          "const": "OCG"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "normal_min",
+        "normal_max",
+        "early_win",
+        "loss",
+        "draw",
+        "boundary"
+      ],
+      "properties": {
+        "id": {
+          "const": "rabbit-own-face-up-xyz-v1"
+        },
+        "normal_min": {
+          "const": 0
+        },
+        "normal_max": {
+          "const": 7
+        },
+        "early_win": {
+          "const": 8
+        },
+        "loss": {
+          "const": -2
+        },
+        "draw": {
+          "const": -1
+        },
+        "boundary": {
+          "const": "first-next-turn-process-return-v1"
+        }
+      }
+    },
+    "known_deck_composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "main",
+        "extra",
+        "side"
+      ],
+      "properties": {
+        "main": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "extra": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "side": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "initial_public_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "own_player",
+        "lp",
+        "turn",
+        "turn_player",
+        "own_hand_count",
+        "opponent_hand_count",
+        "empty_field",
+        "opponent_deck_model"
+      ],
+      "properties": {
+        "own_player": {
+          "const": 0
+        },
+        "lp": {
+          "const": [
+            8000,
+            8000
+          ]
+        },
+        "turn": {
+          "const": 1
+        },
+        "turn_player": {
+          "const": 0
+        },
+        "own_hand_count": {
+          "const": 5
+        },
+        "opponent_hand_count": {
+          "const": 0
+        },
+        "empty_field": {
+          "const": true
+        },
+        "opponent_deck_model": {
+          "const": "copy-own-main"
+        }
+      }
+    },
+    "own_hand": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "position"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "position": {
+              "type": "integer",
+              "const": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "position"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "position": {
+              "type": "integer",
+              "const": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "position"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "position": {
+              "type": "integer",
+              "const": 2
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "position"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "position": {
+              "type": "integer",
+              "const": 3
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "position"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "position": {
+              "type": "integer",
+              "const": 4
+            }
+          }
+        }
+      ],
+      "items": false
+    },
+    "visible_history": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "player"
+            ],
+            "properties": {
+              "kind": {
+                "const": "new_turn"
+              },
+              "player": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "player",
+              "cards"
+            ],
+            "properties": {
+              "kind": {
+                "const": "shuffle_hand"
+              },
+              "player": {
+                "const": 0
+              },
+              "cards": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4294967295
+                },
+                "minItems": 5,
+                "maxItems": 5
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "phase"
+            ],
+            "properties": {
+              "kind": {
+                "const": "new_phase"
+              },
+              "phase": {
+                "type": "integer",
+                "enum": [
+                  1,
+                  2,
+                  4,
+                  512
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "hint_type",
+              "player",
+              "value"
+            ],
+            "properties": {
+              "kind": {
+                "const": "initial_hint"
+              },
+              "hint_type": {
+                "const": 1
+              },
+              "player": {
+                "const": 0
+              },
+              "value": {
+                "const": 27
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "player",
+              "menu"
+            ],
+            "properties": {
+              "kind": {
+                "const": "idle"
+              },
+              "player": {
+                "const": 0
+              },
+              "menu": {
+                "$ref": "#/$defs/legal_menu"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "player",
+              "choice",
+              "bytes"
+            ],
+            "properties": {
+              "kind": {
+                "const": "own_action"
+              },
+              "player": {
+                "const": 0
+              },
+              "choice": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "command",
+                  "index"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "command"
+                  },
+                  "command": {
+                    "type": "integer",
+                    "enum": [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  },
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "bytes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 4,
+                "maxItems": 4
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 7,
+      "maxItems": 13
+    },
+    "legal_menu": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/menu_action"
+      },
+      "minItems": 0
+    }
+  }
+}

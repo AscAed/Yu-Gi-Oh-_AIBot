@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "kind": "information-policy-samples",
+  "samples": [
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "rabbit-empty/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-menu-mixture-demo",
+      "observation_id": "rabbit-empty/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "rabbit-empty/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-menu-mixture-demo",
+      "observation_id": "rabbit-empty/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "rabbit-shuffle/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "rabbit-shuffle/run0/view1",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-menu-mixture-demo",
+      "observation_id": "rabbit-shuffle/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "rabbit-shuffle/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "rabbit-shuffle/run1/view1",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-menu-mixture-demo",
+      "observation_id": "rabbit-shuffle/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "terminal-shuffle-end/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "terminal-shuffle-end/run0/view1",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-menu-mixture-demo",
+      "observation_id": "terminal-shuffle-end/run0/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "terminal-shuffle-end/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-end-demo",
+      "observation_id": "terminal-shuffle-end/run1/view1",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 1
+        }
+      ]
+    },
+    {
+      "policy_id": "rabbit-menu-mixture-demo",
+      "observation_id": "terminal-shuffle-end/run1/view0",
+      "distribution": [
+        {
+          "bytes": [
+            7,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        {
+          "bytes": [
+            8,
+            0,
+            0,
+            0
+          ],
+          "numerator": 1,
+          "denominator": 2
+        }
+      ]
+    }
+  ]
+}
