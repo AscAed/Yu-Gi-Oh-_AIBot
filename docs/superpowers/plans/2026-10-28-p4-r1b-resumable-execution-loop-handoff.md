@@ -10,6 +10,8 @@
 
 ## 当前合成覆盖
 
+- 非空恢复初始化：赛事查询夹具经`propose_partial`生成三步有效计划，并由`validate_forecast`复核；以已收费初始调用建立状态，关闭/重开后仍在Semantic阶段、游标0，账本消费保持1。测试`resumable_loop_reopens_with_valid_nonempty_semantic_plan`只覆盖计划绑定与初始化恢复，不执行任何动作。
+- 单动作恢复与安全停止：同一计划执行一步后到达opcode12提示；连续路径和关闭/重开路径都在下一计划动作不可用时返回`original_plan_blocked`，消费不变且状态相同。红测发现resume协调内层状态后未同步外层journal检查点；恢复流程现会持久化协调后的外层快照。测试`unsupported_trigger_boundary_blocks_without_charging_after_reopen`通过。此结果覆盖一次执行后的恢复边界，但提示opcode12的后续处理与成功的多动作等价仍开放。
 - End Phase命令7：初始已收费调用之后只推进一个Execution请求。
 - 独立审计：一条QueryWitness前缀和一个终端根调用分别记账；在两者之间关闭journal、恢复状态，再完成第二次审计。
 - 账本收费序列为初始1次、结束阶段1次、查询审计2次；reservation最终释放，unknown为0。
@@ -18,12 +20,13 @@
 
 ## 未覆盖与限制
 
-此次红测及实现没有在真实OCG进程中暂停/重开，也未完成多动作连续提示端到端对照、进程终止故障注入矩阵、外部并发写入竞争测试或独立原生重放。A3既有测试仍分别覆盖低层完成尾调用复用和未决消费阻断。以上离线结果不得推断为真实R1b资格。
+此次红测及实现没有在真实OCG进程中暂停/重开，也未完成跨提示成功推进的多动作连续端到端对照、每个动作调用边界的成功暂停/重开比较、进程终止故障注入矩阵、外部并发写入竞争测试或独立原生重放。当前查询夹具第一动作后到达opcode12，而下一计划动作在该窗口不可用；实现会在不收费的情况下安全停止。这需要明确建模或选择能完整匹配提示序列的有效计划/夹具，不能靠放宽`validate_forecast`或伪造动作继续。A3既有测试仍分别覆盖低层完成尾调用复用和未决消费阻断。以上离线结果不得推断为真实R1b资格。
 
 本批新增native research、runner、worker及FFI调用0；不创建scope、窗口或收费账本。会计维持认证子集40、政策预留7、规划47，全部历史实际累计未知。C1已记录的Tenki保护哈希失败保持不变。
 
 ## 本批验证结果
 
+- 恢复游标同步修复后追加复验：`cargo fmt --all -- --check`与workspace全目标Clippy通过；planner串行套件为68 passed、9 ignored、0 failed；workspace串行总检为360 passed、36 ignored、0 failed（91条test-result记录）。原始日志保存在本机忽略目录`target/p4-r1b/planner-final.log`及`target/p4-r1b/workspace-resume-fix.log`。
 - `cargo fmt --all -- --check`通过。
 - `cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试、66个集成测试通过，10个既有opt-in用例忽略。
 - `cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试、91个集成测试通过，2个既有资产opt-in用例忽略。

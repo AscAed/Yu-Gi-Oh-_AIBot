@@ -1825,6 +1825,334 @@ mod tests {
         q.decisions.clear();
         (q, r)
     }
+    fn fixture_catalog(result: &DuelResult) -> Catalog {
+        result
+            .checkpoint
+            .cards
+            .iter()
+            .map(|state_card| {
+                let id = CardId(state_card.code);
+                let kind = match state_card.type_flags & 7 {
+                    2 => CardKind::Spell,
+                    4 => CardKind::Trap,
+                    _ => CardKind::Monster,
+                };
+                (
+                    id,
+                    Card {
+                        id,
+                        name: format!("synthetic-{}", id.0),
+                        kind,
+                        type_flags: state_card.type_flags,
+                        level: state_card.level.unwrap_or(0),
+                        attribute: state_card.attribute.unwrap_or(0),
+                        race: state_card.race.unwrap_or(0),
+                        attack: state_card.attack,
+                        defense: state_card.defense,
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect()
+    }
+    fn resource_trace_prefixes() -> Vec<DuelResult> {
+        let mut fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/tournament-2026.trace-resource.json"
+        ))
+        .unwrap();
+        fixture["result"]["events"] = serde_json::json!([]);
+        let base: DuelResult = serde_json::from_value(fixture["result"].clone()).unwrap();
+        let witnesses: Vec<QueryWitness> =
+            serde_json::from_value(fixture["witnesses"].clone()).unwrap();
+        let frames = fixture["frames"].as_array().unwrap();
+        witnesses
+            .iter()
+            .map(|witness| {
+                let mut result = base.clone();
+                result.events = frames
+                    .iter()
+                    .take(witness.event as usize)
+                    .enumerate()
+                    .map(|(index, raw)| {
+                        decode_frame(
+                            index as u64 + 1,
+                            &serde_json::from_value::<Vec<u8>>(raw.clone()).unwrap(),
+                        )
+                        .unwrap()
+                    })
+                    .collect();
+                result.prompt =
+                    parse_prompt(witness.event, &result.events.last().unwrap().raw).unwrap();
+                result.checkpoint = witness.public.visible.clone();
+                result.status = DuelStatus::DecisionRequired;
+                result.error = None;
+                result.resolved_decisions.clear();
+                result
+            })
+            .collect()
+    }
+    #[test]
+    fn resumable_loop_reopens_with_valid_nonempty_semantic_plan() {
+        let (request, mut initial_result) = initial();
+        initial_result.versions = request.versions.clone();
+        let catalog = fixture_catalog(&initial_result);
+        let pack = FirstTurnKnowledge::builtin().unwrap();
+        let witness = QueryWitness::capture(&initial_result).unwrap();
+        let start = actual_state(&initial_result, &[witness], &catalog, &pack)
+            .unwrap()
+            .state;
+        let goal: Goal = serde_json::from_value(serde_json::json!({
+            "version": 1,
+            "expr": {"op":"count", "filter":{"codes":[78449284],"locations":[4]}, "min":1}
+        }))
+        .unwrap();
+        let limits = SearchLimits {
+            candidates: 1,
+            expansions: 150,
+            frontier: 8,
+            steps: 4,
+        };
+        let plans = propose_partial(&start, &catalog, &pack, &goal, &limits).unwrap();
+        let plan = plans
+            .plans
+            .into_iter()
+            .find(|plan| plan.steps.len() >= 2)
+            .expect("fixture goal should produce a valid multistep forecast");
+        validate_forecast(&plan, &start, &catalog, &pack, &goal).unwrap();
+
+        struct Initial(DuelResult);
+        impl EngineAdapter for Initial {
+            fn doctor(&self) -> DoctorReport {
+                panic!("initial result is already supplied")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        let root = a3_test_root("resumable-loop-nonempty-reopen");
+        let path = root.join("calls.jsonl");
+        let journal = CallJournal::open(&path, "resumable-loop", "synthetic-context", 8).unwrap();
+        JournaledAdapter::new(
+            Initial(initial_result.clone()),
+            journal.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&request)
+        .unwrap();
+        let checkpoint = begin_resumable_partial_execution_v1(
+            &request,
+            1,
+            &[],
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+            journal.clone(),
+        )
+        .unwrap();
+        assert_eq!(checkpoint.phase, ResumableExecutionPhaseV1::Semantic);
+        assert_eq!(checkpoint.semantic_step, 0);
+        assert_eq!(plan.steps.len(), 3);
+        assert_eq!(checkpoint.instance_mapping.len(), start.cards.len());
+        assert_eq!(checkpoint.inner.progress.queries.len(), 1);
+        assert_eq!(journal.stats().unwrap().consumed, 1);
+        drop(journal);
+        drop(checkpoint);
+
+        let resumed = resume_resumable_partial_execution_v1(
+            &path,
+            "resumable-loop",
+            "synthetic-context",
+            8,
+            &request,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+        )
+        .unwrap();
+        assert_eq!(resumed.phase, ResumableExecutionPhaseV1::Semantic);
+        assert_eq!(resumed.semantic_step, 0);
+        assert_eq!(resumed.predictions.len(), 0);
+        assert_eq!(resumed.choices.len(), 0);
+        assert_eq!(resumed.instance_mapping.len(), start.cards.len());
+        assert_eq!(resumed.inner.progress.queries.len(), 1);
+        assert_eq!(resumed.inner.progress.ledger.consumed, 1);
+        let _ = std::fs::remove_dir_all(root);
+    }
+    #[test]
+    fn unsupported_trigger_boundary_blocks_without_charging_after_reopen() {
+        use std::collections::VecDeque;
+
+        struct Initial(DuelResult);
+        impl EngineAdapter for Initial {
+            fn doctor(&self) -> DoctorReport {
+                panic!("initial result is already supplied")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        #[derive(Clone)]
+        struct Prefixes(std::sync::Arc<std::sync::Mutex<VecDeque<DuelResult>>>);
+        impl EngineAdapter for Prefixes {
+            fn doctor(&self) -> DoctorReport {
+                panic!("synthetic trace adapter must not call doctor")
+            }
+            fn run(&self, request: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                let mut result =
+                    self.0.lock().unwrap().pop_front().ok_or_else(|| {
+                        WorkerError::new("fixture_exhausted", "test", "no prefix")
+                    })?;
+                result.resolved_decisions = request.decisions.clone();
+                Ok(result)
+            }
+        }
+
+        fn run_case(paused: bool) -> serde_json::Value {
+            let (request, _) = initial();
+            let mut prefixes = resource_trace_prefixes();
+            for result in &mut prefixes {
+                result.versions = request.versions.clone();
+            }
+            let initial_result = prefixes[0].clone();
+            let catalog = fixture_catalog(&initial_result);
+            let pack = FirstTurnKnowledge::builtin().unwrap();
+            let witness = QueryWitness::capture(&initial_result).unwrap();
+            let start = actual_state(&initial_result, &[witness], &catalog, &pack)
+                .unwrap()
+                .state;
+            let goal: Goal = serde_json::from_value(serde_json::json!({
+                "version": 1,
+                "expr": {"op":"count", "filter":{"codes":[78449284],"locations":[4]}, "min":1}
+            }))
+            .unwrap();
+            let limits = SearchLimits {
+                candidates: 1,
+                expansions: 150,
+                frontier: 8,
+                steps: 4,
+            };
+            let plans = propose_partial(&start, &catalog, &pack, &goal, &limits).unwrap();
+            let plan = plans
+                .plans
+                .into_iter()
+                .find(|plan| plan.steps.len() >= 2)
+                .expect("fixture goal should produce a multistep forecast");
+            validate_forecast(&plan, &start, &catalog, &pack, &goal).unwrap();
+
+            let root = a3_test_root(if paused {
+                "resumable-loop-semantic-paused"
+            } else {
+                "resumable-loop-semantic-continuous"
+            });
+            let path = root.join("calls.jsonl");
+            let mut journal =
+                CallJournal::open(&path, "resumable-loop", "synthetic-context", 8).unwrap();
+            JournaledAdapter::new(
+                Initial(initial_result.clone()),
+                journal.clone(),
+                CallPurpose::Execution,
+            )
+            .run(&request)
+            .unwrap();
+            let mut state = begin_resumable_partial_execution_v1(
+                &request,
+                1,
+                &[],
+                &plan,
+                &catalog,
+                &pack,
+                &goal,
+                journal.clone(),
+            )
+            .unwrap();
+            let backend = Prefixes(std::sync::Arc::new(std::sync::Mutex::new(
+                prefixes.into_iter().skip(1).collect::<VecDeque<_>>(),
+            )));
+            advance_resumable_partial_execution_v1_with_backend(
+                &mut state,
+                &plan,
+                &catalog,
+                &pack,
+                &goal,
+                journal.clone(),
+                backend.clone(),
+            )
+            .unwrap();
+            assert_eq!(state.semantic_step, 1);
+            assert_eq!(
+                state
+                    .inner
+                    .progress
+                    .current_prefix
+                    .prompt
+                    .as_ref()
+                    .unwrap()
+                    .opcode,
+                12
+            );
+            if paused {
+                drop(journal);
+                drop(state);
+                state = resume_resumable_partial_execution_v1(
+                    &path,
+                    "resumable-loop",
+                    "synthetic-context",
+                    8,
+                    &request,
+                    &plan,
+                    &catalog,
+                    &pack,
+                    &goal,
+                )
+                .unwrap();
+                journal = CallJournal::open_existing_strict(
+                    &path,
+                    "resumable-loop",
+                    "synthetic-context",
+                    8,
+                )
+                .unwrap()
+                .unwrap();
+            }
+            let before_block = serde_json::to_value(&state).unwrap();
+            let consumed_before_block = journal.stats().unwrap().consumed;
+            let pending_responses = backend.0.lock().unwrap().len();
+            let error = advance_resumable_partial_execution_v1_with_backend(
+                &mut state,
+                &plan,
+                &catalog,
+                &pack,
+                &goal,
+                journal.clone(),
+                backend.clone(),
+            )
+            .unwrap_err();
+            assert!(error.contains("original_plan_blocked"), "{error}");
+            assert_eq!(serde_json::to_value(&state).unwrap(), before_block);
+            assert_eq!(journal.stats().unwrap().consumed, consumed_before_block);
+            assert_eq!(backend.0.lock().unwrap().len(), pending_responses);
+            let summary = serde_json::json!({
+                "phase": state.phase,
+                "semantic_step": state.semantic_step,
+                "choices": state.choices,
+                "predictions": state.predictions,
+                "instance_mapping": state.instance_mapping,
+                "queries": state.inner.progress.queries,
+                "prefix": state.inner.progress.current_prefix,
+                "ledger": journal.stats().unwrap(),
+                "reservations": journal.reservation_state().unwrap(),
+                "pending_responses": backend.0.lock().unwrap().len(),
+            });
+            drop(journal);
+            drop(state);
+            let _ = std::fs::remove_dir_all(root);
+            summary
+        }
+
+        assert_eq!(run_case(false), run_case(true));
+    }
     #[test]
     fn resumable_first_turn_loop_persists_end_phase_and_query_audit_progress() {
         let (mut request, mut initial_result) = initial();

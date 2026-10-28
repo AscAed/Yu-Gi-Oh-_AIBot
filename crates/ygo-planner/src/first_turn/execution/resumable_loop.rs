@@ -960,5 +960,6 @@ pub fn resume_resumable_partial_execution_v1(
         return Err("inner and outer execution checkpoints differ".into());
     }
     state.inner = inner;
+    persist_loop(&state, &exclusive)?;
     Ok(state)
 }
