@@ -56,4 +56,4 @@
 - 本次续接起点为隔离分支`codex/r1b-semantic-resume-tests-20261028`上的`30c1018`，相对`origin/main`领先1提交且工作区干净。该提交修复重开后内外层恢复检查点未同步，并已完成本地格式、Clippy、planner及workspace验证，结果见上方TESTING与P4-R1b交接；由于跨提示多动作恢复和收费边界中断注入仍开放，未创建PR或声称本阶段验收完毕。
 - 再次读取普通发布包的`ygo.exe`与`ygo-engine-worker.exe`，两者SHA-256仍匹配`build-hashes.json`，包内二进制时间戳仍为2026-10-19。未覆盖或运行旧包；它与自身manifest一致不证明由最新源码构建。
 - 对D盘旧工作树只读复核发现分支落后于`origin/main`且存在大量本地修改。相较当前主线，其中工作台脚本移除了`state.loading`期间的互斥，CI将checkout/setup-python action降回旧版本，语言测试也删除输入变化回归。该目录保持原样；这些变更不应直接并入或提交，当前隔离分支已保留主线的导入锁定行为。
-- Windows符号链接专项测试为1 passed、1 skipped（系统策略不允许创建目录符号链接）；Git身份路径测试为11 passed、4 subtests passed。pytest缓存改放系统临时目录后无缓存权限警告。`cargo tree --workspace --duplicates --offline`复查仍只显示上文所列的传递依赖版本并存，未发现可直接删除的重复依赖；`cargo-machete`不可用，未安装额外工具。
+- Windows消费预留路径保护测试文件全套为11 passed、1 skipped、17 subtests passed；系统策略不允许创建目录符号链接，故对应负例跳过。Git身份路径测试为11 passed、4 subtests passed。pytest缓存改放系统临时目录后无缓存权限警告。`cargo tree --workspace --duplicates --offline`复查仍只显示上文所列的传递依赖版本并存，未发现可直接删除的重复依赖；`cargo-machete`不可用，未安装额外工具。
