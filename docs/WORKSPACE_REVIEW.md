@@ -7,7 +7,7 @@
 - 以D盘项目工作区为源码现场。审计起点的`origin/main`为`3ac88db7d70b0423dc70f02f17fd7fa6004373e3`；本机旧分支当时落后39个提交并有源码、schema、测试和文档修改。2026-10-29已将改动重放至该main并提交为`b20abdc`；此处记录本地整合结果，不表示已推送或创建PR。
 - 核对PR #3已在2026-10-28合并；本地源码快照落后其两个编辑器并发修复，当前改动合并保留导入/加载锁、保存锁、立即重绘和Blob导出行为，相关实现见[WORKBENCH](WORKBENCH.md)及[测试记录](TESTING.md)。
 - `tests/`下5个`.tenki-*`目录匹配具名临时测试，内部仅有合成runner、固定请求/回执及命令捕获文件；未发现正式账本或研究证据。确认保留用途后清理了这些中断遗留目录；完整`target/`、`data/runtime/`及历史哈希清单未清理或迁移。
-- 最终提交改动的15篇Markdown中检查416个相对路径目标，缺失0；仅证明链接目标存在。Rust fmt、workspace Clippy和串行workspace 362 passed/36 ignored/0 failed通过；C1/schema Python聚焦24 passed/2 skipped。完整Python套件未重跑，Tenki历史固定哈希失败仍按原pin记录。
+- 最终提交改动的15篇Markdown中检查416个相对路径目标，缺失0；仅证明链接目标存在。Rust fmt、workspace Clippy和串行workspace 362 passed/36 ignored/0 failed通过；C1/schema Python聚焦24 passed/2 skipped。后续PR #7的干净Windows checkout全Python CI为739 passed、21 skipped、1 failed；唯一失败是语言审计单测误依赖本地忽略数据，已在后续分支改为临时合成输入，完整修复验证待完成。Tenki历史固定哈希和source pin保持不变。
 - 未执行当前源码的doctor、真实引擎、worker/runner/FFI、浏览器完整下载、资产切换、部署或发布；默认workspace测试也未执行被忽略的原生资格用例。普通dist与开发配置的部署状态仍按既有证据区分，最新双资产干净发布验收仍开放。
 
 ### 2026-10-29 普通包现场核验补记

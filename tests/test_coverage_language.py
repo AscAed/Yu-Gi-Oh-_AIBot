@@ -204,20 +204,51 @@ class LanguageAuditTests(unittest.TestCase):
         from unittest.mock import patch
         from ygo_data import language_review
 
-        original_digest = language_review._sha256
-        calls = 0
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            source_path = root / 'language-sources.json'
+            sample_path = root / 'releases.json'
+            records_path = root / 'language-records.json'
+            catalog_path = root / 'cards.cdb'
+            catalog_path.write_bytes(b'synthetic catalog')
+            card_ids = list(range(1, 40))
+            source = {
+                'id': 'synthetic-zh',
+                'language': 'zh-Hans',
+                'version': 'fixture-1',
+                'sha256': language_review._sha256(catalog_path),
+                'license': {'redistribution': 'unknown'},
+            }
+            source_path.write_text(json.dumps({'checked_date': 'fixture', 'sources': [source]}), encoding='utf-8')
+            sample_path.write_text(json.dumps({'records': [
+                {'card_id': card_id, 'status': 'released', 'region': 'OCG'} for card_id in card_ids
+            ]}), encoding='utf-8')
+            records_path.write_text('[]', encoding='utf-8')
+            catalog = {
+                card_id: {'name': f'Card {card_id}', 'text': f'Effect {card_id}', 'engine_alias': 0, 'setcode': 0}
+                for card_id in card_ids
+            }
+            original_digest = language_review._sha256
+            calls = 0
 
-        def drifting_digest(path):
-            nonlocal calls
-            if path == language_review.SOURCE_PATH:
-                calls += 1
-                if calls == 2:
-                    return '0' * 64
-            return original_digest(path)
+            def drifting_digest(path):
+                nonlocal calls
+                if path == source_path:
+                    calls += 1
+                    if calls == 2:
+                        return '0' * 64
+                return original_digest(path)
 
-        with patch('ygo_data.language_review._sha256', side_effect=drifting_digest):
-            with self.assertRaisesRegex(ValueError, 'frozen_language_inputs_changed_during_audit'):
-                language_review.build_frozen_report()
+            with (
+                patch.object(language_review, 'SOURCE_PATH', source_path),
+                patch.object(language_review, 'SAMPLE_PATH', sample_path),
+                patch.object(language_review, 'RECORDS_PATH', records_path),
+                patch.object(language_review, 'DB_NAMES', {'synthetic-zh': catalog_path}),
+                patch.object(language_review, '_load_catalog', return_value=catalog),
+                patch('ygo_data.language_review._sha256', side_effect=drifting_digest),
+            ):
+                with self.assertRaisesRegex(ValueError, 'frozen_language_inputs_changed_during_audit'):
+                    language_review.build_frozen_report()
 
         with temporary_directory() as temporary:
             output = Path(temporary) / 'report.json'

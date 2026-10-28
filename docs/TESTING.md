@@ -14,6 +14,12 @@
 - 旧包入口只声明engine/catalog/banlist/deck/combo，`workbench`不是该部署CLI的命令；草稿工作台仍仅存在于当前开发源码。`doctor`不启动决斗，本轮没有运行`engine smoke`、真实runner/worker/FFI或部署脚本。
 - `cargo tree --workspace --offline --locked --duplicates`只报告`hashbrown`因`hashlink`与`indexmap`传递依赖并存的0.14.5/0.17.1两版本；`cargo-machete`未安装，本轮没有联网安装，也未按传递版本差异删除依赖。
 
+## 2026-10-29 干净checkout的Python回归修复
+
+- PR #7的Windows Actions完整Python套件报告**739 passed、21 skipped、1 failed**；失败用例是`LanguageAuditTests.test_language_review_detects_input_hash_drift_and_never_overwrites_report`。它在CI干净checkout中访问被Git忽略的冻结`data/runtime/baseline-2026-10-19/data`输入，故先报`frozen_language_input_missing_or_linked`，没有运行到哈希漂移断言。不是历史Tenki pin失败，也没有证据表明生产逻辑不一致。[失败run](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/40732011021)
+- 后续修复将该单测改为39卡合成发行样本、临时清单/记录/卡库和受控catalog loader；只验证扫描中哈希漂移仍被拒绝，不依赖忽略目录、不改生产代码或既有source pin。目标回归和schema聚焦测试已在本机通过（8 passed、2 skipped）；完整修复后workspace Python Actions结果待补记。
+- 另一次本机全量Python运行在修复前以28%进度主动停止，未完成，不能作为全套通过或失败统计；保留输出于本机忽略日志[`python-tests-20261029-full.log`](../target/p4-r1b-followup/logs/python-tests-20261029-full.log)。
+
 ## 2026-10-28 P4-R1b多动作恢复等价与中断门禁
 
 - 先以红测发现两处恢复差异：已完成尾调用被恢复后没有补回与连续执行相同的动作证据；推进外层语义后，内层A3检查点没有同步实例映射、已用选择和预测，导致下一次续跑因快照不匹配而拒绝。修复后正常完成和恢复完成共用动作证据校验/记录逻辑；外层语义推进在发布外层游标前同步保存内层检查点。请求、计划、用途、收据和预算校验未放宽。
