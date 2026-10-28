@@ -562,28 +562,34 @@ class CurryConsumptionReservationDispatchTests(unittest.TestCase):
         (repo / ".gitignore").write_text("data/runtime\n", encoding="utf-8")
         (repo / "data").mkdir()
         try:
-            os.symlink(outside, repo / "data/runtime", target_is_directory=True)
-        except (OSError, NotImplementedError):
-            self.skipTest("directory symlink creation is unavailable on this Windows configuration")
-        profile = replace(
-            reservation._production_profile(),
-            baseline_relative=Path("data/runtime/p1-curry-recovery-synthetic-e2e-offline-2026-10-24"),
-            output_relative=Path("data/runtime/p1-curry-consumption-reservation-offline-2026-10-24"),
-        )
-        args = type("Args", (), {
-            "baseline_dir": repo / profile.baseline_relative,
-            "output": repo / profile.output_relative / "reservation.json",
-        })()
-        with self.assertRaisesRegex(ValueError, "linked_path_rejected"):
-            reservation._validate_locations(args, repo, profile)
-        self.assertEqual(list(outside.iterdir()), [])
+            try:
+                os.symlink(outside, repo / "data/runtime", target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("directory symlink creation is unavailable on this Windows configuration")
+            profile = replace(
+                reservation._production_profile(),
+                baseline_relative=Path("data/runtime/p1-curry-recovery-synthetic-e2e-offline-2026-10-24"),
+                output_relative=Path("data/runtime/p1-curry-consumption-reservation-offline-2026-10-24"),
+            )
+            args = type("Args", (), {
+                "baseline_dir": repo / profile.baseline_relative,
+                "output": repo / profile.output_relative / "reservation.json",
+            })()
+            with self.assertRaisesRegex(ValueError, "linked_path_rejected"):
+                reservation._validate_locations(args, repo, profile)
+            self.assertEqual(list(outside.iterdir()), [])
+        finally:
+            shutil.rmtree(scratch)
 
     def test_output_parent_link_guard_runs_before_creation_even_without_symlink_support(self):
+        import stat
+        from types import SimpleNamespace
         workspace = Path(__file__).resolve().parents[1]
         scratch = workspace / "target/curry-consumption-reservation-tests" / uuid.uuid4().hex
         repo = scratch / "repo"
         repo.mkdir(parents=True, exist_ok=False)
         (repo / ".gitignore").write_text("data/runtime\n", encoding="utf-8")
+        (repo / "data").mkdir()
         profile = replace(
             reservation._production_profile(),
             baseline_relative=Path("data/runtime/p1-curry-recovery-synthetic-e2e-offline-2026-10-24"),
@@ -593,16 +599,16 @@ class CurryConsumptionReservationDispatchTests(unittest.TestCase):
             "baseline_dir": repo / profile.baseline_relative,
             "output": repo / profile.output_relative / "reservation.json",
         })()
-        real_safe_path = reservation.safe_path
+        real_lstat = Path.lstat
         checked = []
 
-        def reject_parent(path, *, file=False):
-            checked.append(Path(path))
+        def lstat_with_runtime_reparse_point(path, *args, **kwargs):
             if Path(path) == repo / "data/runtime":
-                raise ValueError("linked_path_rejected")
-            return real_safe_path(path, file=file)
+                checked.append(Path(path))
+                return SimpleNamespace(st_mode=stat.S_IFDIR | 0o755, st_file_attributes=0x400)
+            return real_lstat(path, *args, **kwargs)
 
-        with patch.object(reservation, "safe_path", side_effect=reject_parent):
+        with patch.object(Path, "lstat", lstat_with_runtime_reparse_point):
             with self.assertRaisesRegex(ValueError, "linked_path_rejected"):
                 reservation._validate_locations(args, repo, profile)
         self.assertIn(repo / "data/runtime", checked)

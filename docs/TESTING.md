@@ -12,6 +12,11 @@
 - `test_writer_is_exclusive_and_does_not_start_processes`此前写临时报告到原历史恢复目录，无法在不触碰证据树的条件下执行。现将该用例的测试仓库根定位到`target/history-audit-writer-<pid>-<uuid>`，由生产入口原样执行路径/忽略合同及独占文件创建；审计结果使用mock，因该测试目标是writer，不重复验证历史数据解析。测试确认报告创建、同路径第二次写拒绝(`output_already_exists`)，并将`subprocess.run`设为触发即失败。清理位于专属唯一目录的`finally`中；原D盘历史目录未写入或迁移。
 - `PYTHONPATH=python py -m pytest tests/test_history_audit.py -q -p no:cacheprovider`：10 passed、7 skipped、10 subtests passed。pytest提示禁用cache provider后`cache_dir`配置项未知；这是配置警告，不影响退出码。跳过用例依赖本机历史材料，未由隔离writer测试替代。
 
+## 2026-10-28 Windows reparse-point路径保护补验
+
+- 本机`whoami /priv`未列出`SeCreateSymbolicLinkPrivilege`。即使使用提升权限运行，`output_parent_symlink`仍因OS拒绝创建目录链接而跳过；此操作系统级链接行为尚未获得直接验证。
+- 为覆盖同一拒绝分支，`test_output_parent_link_guard_runs_before_creation_even_without_symlink_support`现在模拟`Path.lstat()`对`data/runtime`返回目录属性与`st_file_attributes=0x400`，并继续调用真实`safe_path`和`_validate_locations`。测试确认返回`linked_path_rejected`且输出目录未创建。聚焦两项为1 passed、1 skipped；文件全测`tests/test_curry_consumption_reservation.py`为11 passed、1 skipped、17 subtests passed，退出0。真实链接测试在`finally`清理自己的scratch目录，包括被跳过时。Pytest缓存路径仍有Windows访问警告，不影响结果。
+
 ## 2026-10-28 最新源码隔离worktree部署复验
 
 - 隔离worktree HEAD `3de61b4fc361015268a2fb5f24ded9a0711693e5`从原D盘冻结资产只读复制所需CLI运行资产和LFLists冻结checkout；12,702个官方Lua脚本逐文件哈希均匹配，CDB、scripts.json、engine manifest/core与LFLists提交/OCG文件均匹配。资产只写入worktree的Git忽略路径，D盘源包及源资产未改。
