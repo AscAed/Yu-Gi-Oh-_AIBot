@@ -1,5 +1,12 @@
 # 本机验证记录
 
+## 2026-10-28 最新源码隔离worktree部署复验
+
+- 隔离worktree HEAD `3de61b4fc361015268a2fb5f24ded9a0711693e5`从原D盘冻结资产只读复制所需CLI运行资产和LFLists冻结checkout；12,702个官方Lua脚本逐文件哈希均匹配，CDB、scripts.json、engine manifest/core与LFLists提交/OCG文件均匹配。资产只写入worktree的Git忽略路径，D盘源包及源资产未改。
+- 执行`./scripts/deploy-local.ps1 -Offline -FrozenRuntime`通过，Rust release workspace编译通过；在忽略目录生成127文件的`dist/ygo-local`隔离包。包内`ygo.exe` SHA-256为`858979D5C529A7390229C538AEBE1A9168867669C019534CB1AB3B72BE531877`，worker为`DD331703DE425399D482C3231A0D59F28170634A1F5515C66495BD20EF98112C`；两者均匹配同次release产物及包内`build-hashes.json`。核心manifest记载ocgcore SHA-256 `446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`、ABI 11.0、x64。
+- 导入catalog 13,665张，snapshot ID为`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`；导入banlist 203项，ID为`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`；Knowledge校验12卡通过。部署脚本调用engine doctor，返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。独立catalog/banlist status及`rabbit.ydk`以2026-10-07校验均通过，牌组`legal=true`且无违规。
+- 日志保存在本机忽略路径`target/deploy-local-20261028.log`及`target/deploy-{catalog-status,banlist-status,deck-validate}.log`。没有运行`engine smoke`、`combo replay`或研究账本调用；doctor的ready/ABI结果不等于决斗验证。未与D盘2026-10-19包做身份/账本差异比较，最新源码完整P4-R5门禁仍开放。
+
 ## 2026-10-28 历史证据与路径保护复核
 
 - 对[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md)列出的46个本机忽略目标只读复核：D盘原工作区46/46存在且被Git忽略；展开目录并去重后为54个文件、750,733字节。逐文件哈希保存在忽略文件`target/evidence-retention-source-20261028.json`。复读源文件重算后54/54哈希及大小相同；未复制、改写或删除证据。

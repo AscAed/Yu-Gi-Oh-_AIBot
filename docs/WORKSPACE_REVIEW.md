@@ -69,3 +69,4 @@
 - 路径相关复验：`tests/test_curry_consumption_reservation.py`为11 passed、1 skipped、17 subtests passed；跳过仅因当前Windows策略禁止创建目录符号链接，不能据此声称特权链接负例通过。`tests/test_prepare_curry_ledger_handoff_v5.py`为5 passed。两者pytest缓存目录均遇到访问拒绝警告，测试退出码为0。
 - 历史审计`test_writer_is_exclusive_and_does_not_start_processes`尚未运行。该用例会在原D盘`recovery-2026-10-21`目录创建后删除测试报告；对其父历史树的递归枚举至少见约12.3GB文件，但因临时子目录访问拒绝，此数值不完整。为避免向原证据树写入，也遵从用户暂不迁移的选择，本轮未运行此用例或复制该历史材料；需有安全隔离的最小输入或用户另定方案后再验。
 - 续接分支的本地修复/文档提交未推送：终端Git推送缺少GitHub凭据，GitHub连接器创建分支也返回Authentication Failed。当前离线提交和测试状态保留在隔离worktree；没有创建新PR或合并。真实进程/最新源码部署门禁继续以[TASKS](../TASKS.md)为准。
+- 后续在该隔离worktree使用冻结资产副本运行`deploy-local.ps1 -Offline -FrozenRuntime`：release、包内hash、13,665卡catalog/203项banlist、knowledge校验和doctor ABI/资产检查通过；只读catalog/banlist状态及Rabbit合法性通过。未运行决斗smoke/replay，也未比较D盘旧包的身份/账本；完整部署验收仍开，原D盘包保持2026-10-19且未改。完整命令和资产指纹见[TESTING](TESTING.md)。

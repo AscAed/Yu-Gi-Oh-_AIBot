@@ -6,7 +6,9 @@
 
 当前 `deploy-local.ps1` 只打包 Phantom v1/v2 知识和普通运行资产；不会复制赛事 `tournament-2026` 知识包或其隔离 CDB/Lua/core。赛事规则验真须按 `FIRST_TURN_VERIFICATION.md` 使用独立开发配置，不可通过替换普通包中的 CDB 来混用两套资产。
 
-普通 `dist/ygo-local` 于2026-10-19按冻结资产重建。2026-10-27自检核对包内CLI/worker与 `build-hashes.json` 一致，普通包与赛事开发配置的doctor均返回就绪、`smoke_ok=null`；未重建部署；其后对普通包执行的预算受限决斗smoke和独立replay均通过，详见[TESTING](TESTING.md)。哈希一致与doctor就绪不证明该包由最新工作区构建；最新源码的独立干净checkout双资产验收仍未完成，证据见[TESTING](TESTING.md)。
+普通D盘`dist/ygo-local`于2026-10-19按冻结资产重建。2026-10-27自检核对该旧包的CLI/worker与`build-hashes.json`一致，普通包与赛事开发配置的doctor均返回就绪、`smoke_ok=null`；之后旧包的预算受限决斗smoke和独立replay通过，详见[TESTING](TESTING.md)。
+
+2026-10-28在隔离worktree HEAD `3de61b4`使用原工作区冻结资产副本运行`deploy-local.ps1 -Offline -FrozenRuntime`，在该worktree的忽略目录生成最新源码包。部署CLI与worker哈希匹配同次release产物及包内`build-hashes.json`；catalog、banlist、knowledge导入/验证通过，doctor为`ready=true`、`abi_ok=true`、`assets_ok=true`、`smoke_ok=null`。随后catalog/banlist状态和Rabbit牌组合法性只读检查通过。此包未执行`engine smoke`或`combo replay`，也未与D盘旧包做身份/账本差异认证；因此P4-R5仍开放。D盘旧包没有覆盖。详细产物和限制见[TESTING](TESTING.md)。
 
 普通发布包、赛事开发配置和最终干净双资产包是三种不同状态：赛事当前引用独立冻结资产及debug worker；固定案例及独立重放通过本轮独立账本的两次请求，不是正式v6发布包。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
 
