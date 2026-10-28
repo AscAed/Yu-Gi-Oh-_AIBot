@@ -24,7 +24,7 @@
 - 对[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md)列出的46个本机忽略目标只读复核：D盘原工作区46/46存在且被Git忽略；展开目录并去重后为54个文件、750,733字节。逐文件哈希保存在忽略文件`target/evidence-retention-source-20261028.json`。复读源文件重算后54/54哈希及大小相同；未复制、改写或删除证据。
 - `PYTHONPATH=python py -m pytest tests/test_curry_consumption_reservation.py -q`：11 passed、1 skipped、17 subtests passed。跳过项需要创建目录符号链接，本机Windows配置不允许；同文件的无符号链接能力回退用例通过。此结果不证明特权符号链接负例。
 - `PYTHONPATH=python py -m pytest tests/test_prepare_curry_ledger_handoff_v5.py -q`：5 passed。pytest无法创建本机缓存目录并给出`PytestCacheWarning`，测试退出码为0。该包布局测试使用临时隔离目录，不触碰历史ledger。
-- 历史审计所称的旧目录独占写入用例本次仍未运行；执行前需先定位精确用例和目标，并确认其不会改写唯一历史证据。最新源码双资产干净部署也未运行；部署边界和原包状态见[工作区自检](WORKSPACE_REVIEW.md)。
+- 截至本节路径保护复核时，历史writer测试和最新源码双资产部署尚未执行；两项后续已分别完成隔离writer测试、干净提交部署与smoke/replay，见本文件顶部的更新记录。此处保留的是该轮时间点状态，不覆盖后续结果。
 
 ## 2026-10-28 P4-R1b执行循环离线接入
 
