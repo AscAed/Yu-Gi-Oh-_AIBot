@@ -2,6 +2,8 @@
 
 ## 2026-10-28 P4-R1b执行循环离线接入
 
+- 隔离分支HEAD `c34a505042a634c71c2969239af404d825a7bfe2`（基于`origin/main` `2389906`）执行`cargo build --release --workspace --offline --locked --target-dir target/p4-r1b`通过。Release CLI `ygo-cli.exe` SHA-256=`366956120B0C7DBBE951847ACA297FB7AD0E03496143C3A87335A749404FCBD3`，worker `ygo-engine-worker.exe` SHA-256=`CF2B235DE7897727EE1BFACE24BCCABF293E986ED2BB69120CD47BCB50E02DDD`；仅为忽略目录中的编译产物，没有复制到`dist`。隔离worktree缺少冻结engine/CDB/Lua/LFLists资产，旧D盘`dist/ygo-local`未覆盖；本次未运行doctor、worker或决斗，因此不构成部署/运行时验收。
+
 - 在A3单次调用检查点外新增`ResumablePartialExecutionV1`完整循环游标及`first-turn-resumable-execution-v1` schema。显式API从已完成并收费的初始Execution调用开始；逐步继续复用既有动作绑定、预测、资源比较、实例映射和End Phase规则。查询审计逐次独立记账。旧`execute_partial_v2`和报告合同未变。
 - 先添加并观察到缺失API的红测。聚焦测试贯通合成End Phase调用、QueryWitness前缀审计、终端根审计、释放/重开journal、消费与reservation边界，以及外层语义步骤篡改时收费前拒绝。完整验证中修正了意图构造与语义快照同步顺序；再次运行后通过。该用例不覆盖非空语义计划的多动作连续提示暂停/重开等价，因此该项仍是离线测试缺口。
 - 后续增加`resumable_loop_reopens_with_valid_nonempty_semantic_plan`：从赛事查询夹具经`propose_partial`生成并以`validate_forecast`验真的三步计划，检查初始语义游标关闭/重开后保持在步骤0、账本消费仍为1。聚焦命令`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b resumable_loop_reopens_with_valid_nonempty_semantic_plan -- --nocapture`通过。该用例仅验证非空计划的初始化与恢复，尚未执行任何计划动作，不能替代逐动作连续/暂停等价验证。
