@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "first-turn-resumable-execution-v1.schema.json",
+  "title": "Resumable first-turn execution progress v1",
+  "description": "Progress-only checkpoint for semantic execution and query audit. It never grants a verified execution or replay credential.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "execution_id", "phase", "semantic_step", "inner",
+    "instance_mapping", "used_selections", "current_transition", "before_state",
+    "event_boundary", "predictions", "choices", "identity_gaps", "interruption",
+    "audit", "pending", "diagnostic"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "first_turn_resumable_execution_loop" },
+    "execution_id": { "type": "string", "minLength": 1 },
+    "phase": { "enum": ["semantic", "end_phase", "query_audit", "complete", "blocked"] },
+    "semantic_step": { "type": "integer", "minimum": 0 },
+    "inner": { "$ref": "first-turn-execution-checkpoint-v1.schema.json" },
+    "instance_mapping": { "type": "object", "additionalProperties": { "type": "string" } },
+    "used_selections": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 0 } },
+    "current_transition": { "type": ["object", "null"] },
+    "before_state": { "type": ["object", "null"] },
+    "event_boundary": { "type": "integer", "minimum": 0 },
+    "predictions": { "type": "array", "items": { "type": "object" } },
+    "choices": { "type": "array", "items": { "type": "object" } },
+    "identity_gaps": { "type": "array", "items": { "type": "string" } },
+    "interruption": { "type": ["object", "null"] },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "next_query", "call_ids", "reservation", "diagnostic"],
+      "properties": {
+        "status": { "enum": ["pending", "running", "complete", "blocked"] },
+        "next_query": { "type": "integer", "minimum": 0 },
+        "call_ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "reservation": { "type": ["string", "null"] },
+        "diagnostic": { "type": ["string", "null"] }
+      }
+    },
+    "pending": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["expected_call", "purpose", "request", "phase", "step", "choice", "selection_index", "prior_prefix_sha256"],
+      "properties": {
+        "expected_call": { "type": "integer", "minimum": 1 },
+        "purpose": { "enum": ["execution", "replay", "rule_verification", "probe", "witness", "audit"] },
+        "request": { "type": "object" },
+        "phase": { "enum": ["semantic", "end_phase", "query_audit", "complete", "blocked"] },
+        "step": { "type": ["integer", "null"], "minimum": 0 },
+        "choice": { "type": ["object", "null"] },
+        "selection_index": { "type": ["integer", "null"], "minimum": 0 },
+        "prior_prefix_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "diagnostic": { "type": ["string", "null"] }
+  }
+}

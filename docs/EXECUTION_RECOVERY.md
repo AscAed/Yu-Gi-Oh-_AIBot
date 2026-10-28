@@ -12,10 +12,12 @@ budget state including reservation token ownership, and any pending action/inten
 The checkpoint is not a native qualification, search checkpoint, query receipt,
 or success certificate. Deserializing it never recreates the runtime receipt
 required by `PartialExecutionV2::verified`. The legacy synchronous execution
-API and report contracts are unchanged. This API begins from an already charged
-and completed initial `Execution` call; integrating it into the existing
-monolithic native loop and proving that path with frozen real assets remain
-future work.
+API and report contracts are unchanged. The resumable loop begins from an
+already charged and completed initial `Execution` call. Its current phase is
+one of semantic execution, End Phase, independent query audit, complete, or
+blocked. Semantic state includes the operation's before-state, event boundary,
+selected transition, used selection indices, predictions, instance mapping,
+decision evidence, and interruption diagnostics.
 
 ## Library API
 
@@ -34,6 +36,24 @@ The planner exposes these operations from `ygo_planner::first_turn`:
   prefix, budget, and any trailing intent/call, release the read view, then open
   the existing journal exclusively without repairing it and recheck the charged
   sequence before reconciling.
+- `begin_resumable_partial_execution_v1`: create a versioned outer loop cursor
+  around the A3 per-call cursor. Callers provide prior query witnesses so the
+  actual semantic start can be reconstructed; an empty semantic plan may be
+  used to process an already observed prompt through End Phase.
+- `advance_resumable_partial_execution_v1`: select one step through the same
+  `successors`, `same_action`, `bind_start`, `follow_choice`, resource comparison,
+  and instance-map helpers as the synchronous loop, persist the full loop intent,
+  then delegate exactly one charged action to `advance_execution_v1`.
+- `advance_resumable_query_audit_v1`: advance one witness-prefix or
+  terminal-root audit call, using a separate `Witness` purpose reservation and
+  a separately persisted audit cursor. The synthetic adapter hook is test-only;
+  neither path constructs an `AuditedQueries` capability or a
+  `PartialExecutionV2` report.
+- `resume_resumable_partial_execution_v1`: authenticate the outer state and
+  journal read-only first, then release it and strictly reopen the journal.
+  A completed trailing execution or witness call is reused after request,
+  purpose, result and sequence checks. A proven uncharged intent can be cleared
+  for a later caller-driven advance; unresolved or unknown consumption blocks.
 
 The explicit synthetic adapter hook exists only under `cfg(test)` and is not
 exported by the public `first_turn` module.
@@ -69,6 +89,9 @@ engine truth independent of the charged result.
 | Another writer changes the journal between inspection and exclusive reopen | Strict reopen/sequence check rejects; strict open does not create or repair files. |
 | Budget is exhausted before a continuation | Save a paused intent; adapter calls remain zero. |
 | Result is terminal or contains an error | Preserve the result/diagnostic, but do not create a receipt or formal success. |
+| Outer semantic phase, mapping, selection, or query cursor differs from its saved boundary | Reject before the next adapter call. |
+| Query audit has a completed trailing witness/root call | Authenticate and reuse it; do not charge a duplicate audit call. |
+| Query audit has a charged but unresolved tail or changed reservation | Keep the accounting unknown and refuse further work. |
 
 The recovery path is deliberately conservative. A failure leaves accounting in
 the journal; it never refunds, silently retries, or treats a missing result as
@@ -78,9 +101,11 @@ checkpoint snapshot and current state before it can continue.
 
 ## Validation boundary
 
-Synthetic tests compare continuous calls with pause/reopen calls for charged
-sequence, actual prefix, query witnesses, resource snapshot, predictions, and
-instance mappings. They also simulate a completed trailing call and an
-unresolved debit. No native engine, runner, worker, or FFI call was made for
-this implementation. Real execution pause/reopen, result persistence under
-process termination, and independent replay are not yet certified.
+Synthetic tests exercise the resumable End Phase and query-audit flow across a
+pause/reopen boundary, verify witness and root replay results, exact call
+purposes/sequence, reservation release, and rejection of outer-state tampering
+before charging. The existing A3 tests separately cover completed trailing
+execution-call reuse and unresolved debit refusal. No native engine, runner,
+worker, or FFI call was made for this integration. Real process pause/reopen,
+crash injection across every filesystem boundary, semantic multi-action replay
+against frozen assets, and formal independent replay remain uncertified.

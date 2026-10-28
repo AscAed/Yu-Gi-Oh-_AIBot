@@ -25,7 +25,7 @@ ygo-engine-adapter → 子进程 worker → 固定 ocgcore ABI → 卡库/Lua �
 | `ygo-search` | `combo` 模块执行真实引擎前缀的有界 beam 搜索和评分；根模块另保留静态候选排序原型 |
 | `ygo-knowledge` | 可追溯的结构化知识、来源/覆盖合同及原生规则案例验真 |
 | `ygo-goal` | 目标表达式、实际状态事实和有界后续收益判断 |
-| `ygo-planner` | 连接因果预测、局部观察/执行、独立重放及可恢复符号前沿；first-turn 仍是内部集成 |
+| `ygo-planner` | 连接因果预测、局部观察/执行、独立重放、可恢复符号前沿及caller-driven first-turn执行游标；恢复游标仅保存进度，不构成v6资格或报告凭证，first-turn仍是内部集成 |
 | `ygo-api` | 版本化请求/报告的库层编排；当前没有 HTTP 服务 |
 | `ygo-cli` | 本机命令和 v1–v5 合同版本路由 |
 
@@ -45,7 +45,7 @@ JSON schema在 `schemas/`，部署和实验fixture在 `tests/fixtures/`，人工
 2. 当前状态从真实事件、查询、提示和已支持的规则映射建立；未知约束必须阻断依赖。
 3. 执行证据和预测证据分开保存。故障注入只验证故障合同，不增加规则资格。
 4. 推荐要通过独立重放和合同重算。`engine_verified`不等于评分高；评分 `heuristic` 不等于胜率。
-5. first-turn 报告 v2/搜索前沿续跑是局部内部组件。正式 `combo plan` 仍只路由 v1–v5；完整 v6 门禁未通过。
+5. first-turn 报告 v2、搜索前沿续跑和执行恢复游标是局部内部组件。执行恢复只完成End Phase/查询审计合成暂停重开路径；连续语义多动作等价与真实进程恢复仍未验收。正式 `combo plan` 仍只路由 v1–v5；完整 v6 门禁未通过。合同见[EXECUTION_RECOVERY](EXECUTION_RECOVERY.md)。
 
 每个状态都应绑定规则、牌表、CDB、引擎、Lua、知识、合同和预算身份，具体字段以 schema/serde 验证代码为准。
 

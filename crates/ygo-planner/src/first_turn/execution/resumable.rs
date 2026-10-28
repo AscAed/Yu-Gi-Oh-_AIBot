@@ -109,7 +109,7 @@ impl ExecutionCheckpointV1 {
         Ok(())
     }
 
-    fn checkpoint_name(&self) -> String {
+    pub(super) fn checkpoint_name(&self) -> String {
         format!("execution-v1/{}", self.execution_id)
     }
 }
@@ -120,7 +120,7 @@ fn hash_value<T: Serialize>(value: &T) -> Result<String, String> {
     ))
 }
 
-fn binding(
+pub(super) fn binding(
     request: &RunDuelRequest,
     plan: &ForecastPlan,
     catalog: &Catalog,
@@ -137,7 +137,7 @@ fn binding(
     })
 }
 
-fn execution_id(binding: &ExecutionBindingV1) -> String {
+pub(super) fn execution_id(binding: &ExecutionBindingV1) -> String {
     ygo_knowledge::hash(&serde_json::to_vec(binding).unwrap())
 }
 
@@ -330,7 +330,10 @@ fn validate_intent(
     Ok(())
 }
 
-fn save_progress(checkpoint: &ExecutionCheckpointV1, journal: &CallJournal) -> Result<(), String> {
+pub(super) fn save_progress(
+    checkpoint: &ExecutionCheckpointV1,
+    journal: &CallJournal,
+) -> Result<(), String> {
     journal
         .save_checkpoint(
             &checkpoint.checkpoint_name(),

@@ -353,3 +353,31 @@ pub fn propose_partial(
     output.coverage_gaps = gaps.into_iter().collect();
     Ok(output)
 }
+
+/// Build a validated zero-operation forecast for a caller that only wants to
+/// advance an already observed prompt through End Phase and query audit.
+pub fn empty_forecast_plan(
+    initial: &CausalState,
+    catalog: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    limits: &SearchLimits,
+) -> Result<ForecastPlan, String> {
+    initial.validate(catalog)?;
+    pack.validate()?;
+    goal.validate()?;
+    let start = hash(initial);
+    Ok(plan(
+        &Node {
+            state: initial.clone(),
+            steps: Vec::new(),
+            seen: Vec::new(),
+            first: None,
+            score: 0,
+        },
+        goal,
+        pack,
+        limits,
+        &start,
+    ))
+}

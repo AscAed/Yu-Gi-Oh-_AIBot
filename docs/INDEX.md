@@ -33,6 +33,10 @@
 
 [B2交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)、[工作台运行说明](WORKBENCH.md)、[牌组草稿CLI与合同](DECK_DRAFTS.md)。A1首次结果级错误及查询捕获失败回归通过；B1/B2提供版本化草稿、三分区编辑、本机浏览器操作和YDK/JSON往返，不赋予完整合法性或中文资格。实测范围见[TESTING](TESTING.md)。
 
+## 最近执行恢复批次：P4-R1b可恢复循环接入（实现已接入，等价验证待补）
+
+[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。新增版本化执行循环入口，保存语义阶段、End Phase和逐次查询审计游标；合成End Phase/查询审计暂停重开通过。完整串行workspace为358 passed、36 ignored。连续语义多动作恢复等价、真实进程崩溃恢复和独立原生重放仍未认证；本批原生调用为0。
+
 ## 最近语言数据批次：39卡中文字段离线核验（完成并暂停）
 
 [字段核验说明](LANGUAGE_REVIEW.md)、[数据来源说明](DATA_SOURCES.md)、[C1交接](superpowers/plans/2026-10-28-c1-language-review-handoff.md)。固定39卡样本与两份本地CDB完成只读字段存在性/来源核对；报告不含候选正文，工作台只读接口显示状态。语义、zh-SC类别、使用与再分发依据仍未知，未授予中文资格。实跑和限制见[TESTING](TESTING.md)。

@@ -1,11 +1,13 @@
 # 本机验证记录
 
-## 2026-10-28 PR #3合并后的C1/A3整合自检
+## 2026-10-28 P4-R1b执行循环离线接入
 
-- 基线为已合并PR #3的`main`提交`fc7b177a74557bafdd7a8424abc8402dc7354635`；C1/A3工作区改动移植到独立分支后验证。`cargo fmt --all -- --check`、`cargo clippy --offline --locked --workspace --all-targets -- -D warnings`和全workspace测试均通过；测试共91条结果摘要、**357 passed、36 ignored、0 failed**。汇总日志在本机忽略目录`target/self-audit-20261028/workspace-test-summary.log`，不随干净checkout提供。A3 planner用例21项通过；工作台HTTP用例4项通过。
-- Python聚焦`tests/test_coverage_language.py tests/test_schemas.py`为**23 passed、2 skipped**；本机唯一可用解释器为Python 3.14，出现pytest缓存目录访问拒绝警告但测试通过。完整Python套件最近可复核记录仍为上方C1批次的**749 passed、9 skipped、1 failed**；唯一失败是既有Tenki历史保护锚点哈希不匹配，受保护的`codec.rs`不属于本批改动且本批未放宽保护。Python 3.12运行时当前不可用，因此没有把本机3.14全套尝试当成正式基线。
-- `node --check crates/ygo-cli/src/workbench/app.js`与`git diff --check`通过。没有运行原生引擎、部署、doctor或赛事/冻结资产opt-in；Rust ignored项保持既有明确opt-in边界。
-- 该次部署现场只读清点发现普通包`dist/ygo-local`中的`ygo.exe`与worker仍为**2026-10-19**生成，包内构建哈希与包文件匹配；它早于2026-10-28源码且不含当前工作台/C1/A3工作，因此本轮未覆盖该包。生产包重建与最新源码双资产干净checkout验收仍开放，见[部署说明](DEPLOYMENT.md)及[TASKS](../TASKS.md)。
+- 在A3单次调用检查点外新增`ResumablePartialExecutionV1`完整循环游标及`first-turn-resumable-execution-v1` schema。显式API从已完成并收费的初始Execution调用开始；逐步继续复用既有动作绑定、预测、资源比较、实例映射和End Phase规则。查询审计逐次独立记账。旧`execute_partial_v2`和报告合同未变。
+- 先添加并观察到缺失API的红测。聚焦测试贯通合成End Phase调用、QueryWitness前缀审计、终端根审计、释放/重开journal、消费与reservation边界，以及外层语义步骤篡改时收费前拒绝。完整验证中修正了意图构造与语义快照同步顺序；再次运行后通过。该用例不覆盖非空语义计划的多动作连续提示暂停/重开等价，因此该项仍是离线测试缺口。
+- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/p4-r1b -- -D warnings`通过。`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试及66个集成测试通过，10个既有opt-in测试忽略。`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试及91个集成测试通过，2个既有资产opt-in测试忽略。workspace串行总检`cargo test --workspace --offline --locked --target-dir target/p4-r1b -- --test-threads=1`为**358 passed、36 ignored、0 failed**（91条test-result记录）。忽略项为既有本机冻结资产/引擎、原生收费研究、手工基准及明确opt-in写入测试。日志位于[`target/p4-r1b/logs`](../target/p4-r1b/logs/)。
+- Python schema回归`PYTHONPATH=python py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`为**1 passed、8 deselected**；全Python套件未重跑，因为C1记录的Tenki旧保护哈希失败仍为已知基线，锚点未修改。无真实进程、runner、worker、FFI、doctor或可写研究账本调用；新增原生研究消费为**0**。会计保持认证子集40、政策预留7、规划47，全部历史实际累计未知。
+- 本批关闭的是显式语义执行恢复API与End Phase/查询审计合成路径的离线实现关口；不宣称连续语义多动作暂停/重开等价、真实进程崩溃恢复、外部并发进程竞争或独立原生重放通过。详见[执行恢复合同](EXECUTION_RECOVERY.md)及[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)。
+- 在PR #4合并基线`84c8c5567968bf2dcb8cc2c0b2140f4490c6ea01`上重新复验：`cargo fmt --all -- --check`、全目标Clippy、engine-adapter examples及隔离目录下串行全workspace测试均通过；workspace汇总**358 passed、36 ignored、0 failed**。日志为本机忽略目录[`workspace-test.log`](../target/full-project-audit-20261028/workspace-test.log)。Python语言/schema聚焦复验**24 passed、2 skipped**；新增R1b schema单测**1 passed、8 deselected**。Python 3.14的pytest缓存写入警告不影响测试结果；两项skip仍是本机snapshot/report和真实v2 report opt-in。`node --check`与`git diff --check`通过。该次复验只执行离线测试，未启动引擎、doctor或部署。
 
 ## 2026-10-28 A3执行状态持久化与零原生恢复
 

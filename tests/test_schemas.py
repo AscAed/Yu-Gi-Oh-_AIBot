@@ -162,6 +162,49 @@ class Schemas(unittest.TestCase):
         invalid['progress']['actual_resources']['turn_player'] = 2
         self.assertTrue(list(check.iter_errors(invalid)))
 
+    def test_resumable_execution_loop_contract_is_progress_only_and_versioned(self):
+        check = validator('first-turn-resumable-execution-v1.schema.json')
+        digest = 'a' * 64
+        inner = {
+            'schema_version': 1, 'kind': 'first_turn_execution_checkpoint',
+            'execution_id': digest, 'plan_id': 'p',
+            'binding': {key: digest for key in ('start_request_sha256', 'plan_sha256',
+                         'catalog_sha256', 'knowledge_sha256', 'goal_sha256',
+                         'runtime_versions_sha256')},
+            'progress': {
+                'status': 'ready', 'stage': 'end_phase', 'step': None,
+                'start_request': {}, 'current_request': {}, 'current_prefix': {},
+                'actual_resources': {'turn': 1, 'turn_player': 0, 'phase': 1,
+                                     'lp': [8000, 8000], 'cards': []},
+                'trusted_prefix_request': {}, 'trusted_prefix_call': 1,
+                'last_completed_request': {}, 'last_completed_result': {},
+                'last_completed_error': None, 'instance_mapping': {},
+                'used_selections': [], 'predictions': [], 'queries': [],
+                'pending_action': None, 'pending_intent': None,
+                'completed_call_ids': [1],
+                'ledger': {'consumed': 1, 'reserved': 0, 'completed': 1,
+                           'unknown': 0, 'limit': 7},
+                'reservations': {}, 'diagnostic': None,
+            },
+        }
+        state = {
+            'schema_version': 1, 'kind': 'first_turn_resumable_execution_loop',
+            'execution_id': digest, 'phase': 'end_phase', 'semantic_step': 0,
+            'inner': inner, 'instance_mapping': {}, 'used_selections': [],
+            'current_transition': None, 'before_state': None, 'event_boundary': 0,
+            'predictions': [], 'choices': [], 'identity_gaps': [], 'interruption': None,
+            'audit': {'status': 'pending', 'next_query': 0, 'call_ids': [],
+                      'reservation': None, 'diagnostic': None},
+            'pending': None, 'diagnostic': None,
+        }
+        check.validate(state)
+        invalid = json.loads(json.dumps(state))
+        invalid['verified_receipt'] = {'native': True}
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = json.loads(json.dumps(state))
+        invalid['schema_version'] = 2
+        self.assertTrue(list(check.iter_errors(invalid)))
+
     @unittest.skipUnless(os.environ.get('YGO_LIVE_ENGINE') == '1', 'opt-in: local snapshots/reports')
     def test_actual_snapshots_and_report(self):
         for path in (ROOT / 'data/snapshots').glob('*.json'):

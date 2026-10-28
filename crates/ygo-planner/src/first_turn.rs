@@ -12,19 +12,22 @@ mod dependencies;
 mod execution;
 pub use binding::{bind_pick, bind_start};
 pub use execution::{
-    advance_execution_v1, begin_execution_v1, execute_partial, execute_partial_v2,
+    advance_execution_v1, advance_resumable_partial_execution_v1, advance_resumable_query_audit_v1,
+    begin_execution_v1, begin_resumable_partial_execution_v1, execute_partial, execute_partial_v2,
     execute_partial_v2_with_backend, persist_execution_semantics_v1, replay_partial_execution,
     replay_partial_execution_v2, replay_partial_execution_v2_with_engine, resume_execution_v1,
-    start_partial_v2, validate_choice_checkpoint, validate_partial_execution,
-    validate_partial_execution_v2, AuditedPrefix, ExecutionCheckpointV1, ExecutionFault,
-    ExecutionIntentV1, ExecutionProgressV1, ExecutionRecoveryStatus, ExecutionStage, PartialAnchor,
-    PartialDecisionEvidence, PartialExecution, PartialExecutionV2, PartialFailure,
-    PartialFailureKind, PartialPrediction,
+    resume_resumable_partial_execution_v1, start_partial_v2, validate_choice_checkpoint,
+    validate_partial_execution, validate_partial_execution_v2, AuditedPrefix,
+    ExecutionCheckpointV1, ExecutionFault, ExecutionIntentV1, ExecutionProgressV1,
+    ExecutionRecoveryStatus, ExecutionStage, PartialAnchor, PartialDecisionEvidence,
+    PartialExecution, PartialExecutionV2, PartialFailure, PartialFailureKind, PartialPrediction,
+    ResumableAuditProgressV1, ResumableAuditStatusV1, ResumableExecutionPhaseV1,
+    ResumableLoopIntentV1, ResumablePartialExecutionV1,
 };
 mod search;
 pub use search::{
-    forecast_facts, propose_partial, validate_forecast, ForecastPlan, PartialPlans,
-    ResumableSearch, SearchCheckpoint, SearchLimits,
+    empty_forecast_plan, forecast_facts, propose_partial, validate_forecast, ForecastPlan,
+    PartialPlans, ResumableSearch, SearchCheckpoint, SearchLimits,
 };
 mod observation;
 pub use observation::{actual_state, actual_trigger_state, observed_summon_trigger, ObservedState};

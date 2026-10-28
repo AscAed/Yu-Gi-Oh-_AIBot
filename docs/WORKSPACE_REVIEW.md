@@ -41,3 +41,11 @@
 - 实际普通包`dist/ygo-local`中的CLI与worker时间戳为2026-10-19；`build-hashes.json`与包文件一致，但包明显早于当前源码。保留包和历史验收报告，没有重建或覆盖；最新源码的双资产干净部署门禁仍未通过。
 - 本轮没有发现可以在不破坏兼容合同、历史追溯或忽略目录证据的前提下安全删除的旧模块。版本化v1–v5路径、历史计划/报告及被忽略的账本/运行证据有明确消费者或保留用途；Cargo未安装`cargo-machete`，没有联网安装依赖。后续若清理，应先建立文档中的证据迁移清单并逐项验证消费者。
 - 旧Tenki保护源哈希失败仍为已知未解决项；未改保护哈希或关闭校验。新添文档、schema和报告链接应继续区分仓库内源码目标与不会进入干净checkout的本地`target/`、`data/runtime/`证据路径。
+
+## 2026-10-28 PR #4合并后续接与P4-R1b变更自检
+
+- 远端`origin/main`已刷新并确认PR #4合并提交`84c8c5567968bf2dcb8cc2c0b2140f4490c6ea01`。在该基线建立独立审计分支；原D盘工作树存在多组未提交改动且分支落后于main。逐文件比较后仅移植R1b planner、schema、交接及状态文档；没有覆盖原工作树，也没有把其中移除`state.loading`互斥的旧版工作台文件带回，因此保留PR #3的导入期间编辑锁定修复。
+- R1b新增版本化外层执行游标及逐步推进/查询审计API。最新离线复验为`cargo fmt --all -- --check`通过、workspace全目标Clippy通过、串行workspace测试**358 passed、36 ignored、0 failed**；Python语言/schema聚焦**24 passed、2 skipped**。测试使用隔离`target/full-project-audit-20261028`，日志只在本机忽略目录内，不是干净checkout中的永久证据。pytest有一个Windows临时缓存目录访问警告；测试退出码为0。
+- 当前D盘`dist/ygo-local`中`ygo.exe`与`ygo-engine-worker.exe`时间戳为2026-10-19，实际SHA-256分别匹配同目录manifest；这确认包体与清单一致，但不证明包由2026-10-28源码构建。未覆盖冻结包或重建引擎。最新源码干净checkout双资产部署、进程级暂停/重开、非空多动作恢复等价测试和独立原生重放仍未通过/完成，继续按TASKS开放项处理。
+- CI的`actions/checkout@v4`与`actions/setup-python@v5`曾触发Node 20弃用迁移提示；workflow现升级到官方Node 24兼容的[checkout v7](https://github.com/actions/checkout/releases)和[setup-python v7](https://github.com/actions/setup-python/releases)。托管runner实跑留给PR CI确认，未把本地Rust/Python结果当作GitHub Actions结果。
+- 本次静态核对未发现可以安全移除且无兼容/历史证据消费者的模块。v1–v5协议路径及本机历史账本、报告和日志按现行合同保留；本轮新增隔离Cargo构建目录和日志承担验证证据用途。清理候选仍需先核对消费者、来源和保留策略，不把忽略目录当作垃圾目录批量删除。
