@@ -242,11 +242,18 @@ fn readonly_inspection_never_repairs_or_changes_a_journal() {
     assert_eq!(view.charged_sequence_id().unwrap().len(), 64);
     drop(view);
     assert_eq!(std::fs::read(&path).unwrap(), before);
+    let exclusive = CallJournal::open_existing_strict(&path, "readonly", "frozen", 6)
+        .unwrap()
+        .expect("strict existing journal");
+    assert_eq!(exclusive.stats().unwrap().consumed, 0);
+    drop(exclusive);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
 
     let mut torn = before;
     torn.extend_from_slice(b"{\"torn\":true}");
     std::fs::write(&path, &torn).unwrap();
     assert!(CallJournal::inspect_existing(&path, "readonly", "frozen", 6).is_err());
+    assert!(CallJournal::open_existing_strict(&path, "readonly", "frozen", 6).is_err());
     assert_eq!(std::fs::read(&path).unwrap(), torn);
 }
 

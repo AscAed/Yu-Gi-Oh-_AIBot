@@ -61,8 +61,9 @@ fn local_workbench_authenticates_mutations_and_supports_draft_round_trip() {
         drafts_dir: root.join("drafts"),
         snapshots_dir: root.join("snapshots"),
         catalog_id: None,
+        language_status_path: None,
     };
-    let server = WorkbenchServer::start(config).unwrap();
+    let server = WorkbenchServer::start(config.clone()).unwrap();
     let addr = server.local_addr();
     let token = server.token().to_owned();
     let stop = Arc::new(AtomicBool::new(false));
@@ -153,6 +154,7 @@ fn local_workbench_rejects_foreign_host_origin_and_oversized_body() {
         drafts_dir: root.join("drafts"),
         snapshots_dir: root.join("snapshots"),
         catalog_id: None,
+        language_status_path: None,
     };
     let server = WorkbenchServer::start(config).unwrap();
     let addr = server.local_addr();
@@ -226,6 +228,7 @@ fn selected_snapshot_is_verified_and_card_results_disclose_name_source_and_trans
         drafts_dir: root.join("drafts"),
         snapshots_dir,
         catalog_id: Some(id.clone()),
+        language_status_path: None,
     };
     let server = WorkbenchServer::start(config).unwrap();
     let addr = server.local_addr();
@@ -247,4 +250,96 @@ fn selected_snapshot_is_verified_and_card_results_disclose_name_source_and_trans
 
     stop.store(true, std::sync::atomic::Ordering::SeqCst);
     thread.join().unwrap();
+}
+
+#[test]
+fn language_status_endpoint_exposes_field_states_without_translation_text_and_degrades_safely() {
+    let root = temp_dir();
+    let status_path = root.join("language-status.json");
+    let source_fields = |source: &str| {
+        serde_json::json!({
+            "name":{"status":"candidate","source":source,"reason":"candidate_not_semantically_reviewed","candidate_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+            "text":{"status":"missing","source":source,"reason":"candidate_value_absent"},
+            "alias":{"status":"unknown","source":source,"reason":"localized_alias_mapping_not_defined"},
+            "archetypes":{"status":"unknown","source":source,"reason":"localized_archetype_mapping_not_defined"}
+        })
+    };
+    let language_report = serde_json::json!({
+        "schema_version":1,
+        "kind":"language_field_review",
+        "qualified":false,
+        "cards":[{"card_id":42,"sources":{
+            "mycard-zh-CN-217ae165":{"fields":source_fields("mycard-zh-CN-217ae165")},
+            "mycard-zh-SC-217ae165":{"fields":source_fields("mycard-zh-SC-217ae165")}
+        }}],
+        "translation_payload":"must not reach browser"
+    });
+    fs::write(&status_path, serde_json::to_vec(&language_report).unwrap()).unwrap();
+    let config = WorkbenchConfig {
+        bind: "127.0.0.1:0".parse().unwrap(),
+        drafts_dir: root.join("drafts"),
+        snapshots_dir: root.join("snapshots"),
+        catalog_id: None,
+        language_status_path: Some(status_path.clone()),
+    };
+    let server = WorkbenchServer::start(config.clone()).unwrap();
+    let addr = server.local_addr();
+    let token = server.token().to_owned();
+    let stop = Arc::new(AtomicBool::new(false));
+    let server_stop = stop.clone();
+    let thread = thread::spawn(move || server.serve_until(&server_stop).unwrap());
+    let query = format!(
+        "GET /api/language-status?ids=42,99 HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nConnection: close\r\n\r\n",
+        addr.port(), token
+    );
+    let response = request(addr, &query);
+    assert!(response.contains("\"status\":\"available\""), "{response}");
+    assert!(response.contains("\"card_id\":42"), "{response}");
+    assert!(response.contains("\"status\":\"candidate\""), "{response}");
+    assert!(!response.contains("must not reach browser"), "{response}");
+
+    stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    thread.join().unwrap();
+
+    fs::write(&status_path, "not-json").unwrap();
+    let unavailable_server = WorkbenchServer::start(config.clone()).unwrap();
+    let unavailable_addr = unavailable_server.local_addr();
+    let unavailable_token = unavailable_server.token().to_owned();
+    let unavailable_stop = Arc::new(AtomicBool::new(false));
+    let server_stop = unavailable_stop.clone();
+    let unavailable_thread =
+        thread::spawn(move || unavailable_server.serve_until(&server_stop).unwrap());
+    let unavailable_query = format!(
+        "GET /api/language-status?ids=42 HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nConnection: close\r\n\r\n",
+        unavailable_addr.port(), unavailable_token
+    );
+    let unavailable = request(unavailable_addr, &unavailable_query);
+    assert!(
+        unavailable.contains("\"status\":\"unverified\""),
+        "{unavailable}"
+    );
+    assert!(!unavailable.contains("candidate"), "{unavailable}");
+    unavailable_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    unavailable_thread.join().unwrap();
+
+    let mut invalid_report = language_report;
+    invalid_report["cards"][0]["sources"]["mycard-zh-CN-217ae165"]["fields"]["name"]
+        .as_object_mut()
+        .unwrap()
+        .remove("candidate_sha256");
+    fs::write(&status_path, serde_json::to_vec(&invalid_report).unwrap()).unwrap();
+    let invalid_server = WorkbenchServer::start(config).unwrap();
+    let invalid_addr = invalid_server.local_addr();
+    let invalid_token = invalid_server.token().to_owned();
+    let invalid_stop = Arc::new(AtomicBool::new(false));
+    let server_stop = invalid_stop.clone();
+    let invalid_thread = thread::spawn(move || invalid_server.serve_until(&server_stop).unwrap());
+    let invalid_query = format!(
+        "GET /api/language-status?ids=42 HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nConnection: close\r\n\r\n",
+        invalid_addr.port(), invalid_token
+    );
+    let invalid = request(invalid_addr, &invalid_query);
+    assert!(invalid.contains("\"status\":\"unverified\""), "{invalid}");
+    invalid_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    invalid_thread.join().unwrap();
 }

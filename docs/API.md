@@ -8,7 +8,7 @@
 - `engine identity --config <toml> [--output <json>]`：只读资产身份及脚本清单差异；不运行决斗，不授予构建或规则资格。
 - `catalog`、`banlist`、`deck validate`：本地快照导入/查询和牌组合法性校验。
 - `deck draft create|show|edit|import|export`：独立可保存草稿工具；允许残缺草稿，YDK/JSON仅承诺卡号、分区及数量往返，不替代`deck validate`。
-- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
+- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；可通过`--language-status FILE`加载只读C1字段状态，不返回候选正文。参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
 - `combo analyze`、`combo replay`：通用引擎前缀搜索和独立重放。
 - `combo plan`、`combo plan-replay`：读取并分派规划合同 v1–v5；旧报告按各自版本验证。
 - `knowledge validate`、`knowledge verify`：知识来源/合同检查、独立原生规则案例验真。
@@ -26,6 +26,8 @@
 
 `ApiService` 是库层的薄封装，不代表服务器进程或稳定 Web API。通用 `combo plan` 当前只接 v1–v5，不从 first-turn 内部模块自动推断版本。
 
+First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RECOVERY.md)。它从已收费且完成的起始调用开始，逐个公开提示动作推进，并将意图写入 `CallJournal` 后才调用适配器；它是内部库能力，不扩展当前 CLI/API 的正式分析合同，也不创建查询审计凭证。真实引擎暂停/重开尚未验收。
+
 ## 已有研究入口与副作用边界
 
 `python -m ygo_eval.research`分派案例/问题结构验证、公开信息与终场审计、固定提示准备、原生批次和历史恢复等版本化入口。`prepare-ground-collapse-probe`的固定准备和`--verify-only`属于离线来源/协议合同，不构造可执行worker请求；Curry与Tenki原生批次则各自拥有scope、runner和持久账本，不能互相借用预算或资格。名称相同的`verify-only`、`prepare-only`在不同入口的进程及资产副作用可能不同，须按[研究运行规范](RESEARCH_OPERATIONS.md)和对应版本合同检查，不因名字推断安全。
@@ -34,7 +36,7 @@
 
 ## 工作台边界
 
-当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出和可选本地catalog检索。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。没有catalog时只保留卡号并标记未核验；有catalog时也只显示其原始名称和来源，中文译文仍未核验。
+当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索，以及`GET /api/language-status?ids=...`只读字段状态。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。中文语义、使用和再分发资格仍未核验。
 
 ## 其他拟议能力接口
 

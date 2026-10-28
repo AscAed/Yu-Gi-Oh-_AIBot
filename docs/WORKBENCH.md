@@ -18,6 +18,7 @@ cargo run -p ygo-cli --offline --locked -- workbench serve
 --drafts DIR      草稿目录，默认 data/runtime/workbench/drafts
 --store DIR       快照根目录，默认 data/snapshots
 --catalog-id ID   已导入本地catalog快照ID；不提供时卡名未核验
+--language-status FILE  C1字段状态报告；只读取状态和哈希，不读取候选正文
 --port PORT       固定本机端口；不提供时由系统分配
 ```
 
@@ -36,6 +37,7 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 | `POST /api/import?format=json\|ydk` | 解析导入内容，返回未保存草稿 |
 | `POST /api/export?format=json\|ydk` | 按当前页面内容生成下载，不要求先保存 |
 | `GET /api/cards?q=...` | 可选catalog中的卡号或原始名称检索 |
+| `GET /api/language-status?ids=...` | 可选C1报告中的逐字段状态；不返回候选译文 |
 
 文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。工作台不提供分析、自动构筑或已认证中文搜索。
 
@@ -50,6 +52,7 @@ CLI和工作台复用`ygo-storage`的草稿读写能力。草稿目录含服务�
 ## 当前限制
 
 - 中文卡名、别名及正文没有通过C1语义/来源核验；本地snapshot名称不能作为中文资格。
+- 可通过`--language-status`显示C1冻结候选的字段状态；状态文件缺失/损坏时继续按未核验显示。报告和使用边界见[LANGUAGE_REVIEW](LANGUAGE_REVIEW.md)。
 - 草稿不做禁限、主卡组张数、额外卡组、卡片支持或脚本语义检查。
 - 工作台不启动游戏引擎，不规划线路，不自动构筑，也不写研究账本。
 - B2验收只覆盖本机工作台流程和合成卡表。它不是通用远程服务或发布部署包。

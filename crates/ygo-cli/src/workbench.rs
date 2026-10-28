@@ -26,6 +26,7 @@ pub struct WorkbenchConfig {
     pub drafts_dir: PathBuf,
     pub snapshots_dir: PathBuf,
     pub catalog_id: Option<String>,
+    pub language_status_path: Option<PathBuf>,
 }
 
 impl WorkbenchConfig {
@@ -35,6 +36,7 @@ impl WorkbenchConfig {
             drafts_dir: PathBuf::from("data/runtime/workbench/drafts"),
             snapshots_dir: PathBuf::from("data/snapshots"),
             catalog_id: None,
+            language_status_path: None,
         }
     }
 }
@@ -45,6 +47,7 @@ pub struct WorkbenchServer {
     token: String,
     drafts: Arc<DeckDraftStore>,
     catalog: Option<(String, Arc<Catalog>)>,
+    language_status: Option<BTreeMap<u32, Value>>,
     active_connections: Arc<std::sync::atomic::AtomicUsize>,
 }
 
@@ -61,6 +64,10 @@ impl WorkbenchServer {
             }
             None => None,
         };
+        let language_status = config
+            .language_status_path
+            .as_deref()
+            .and_then(load_language_status);
         let listener = TcpListener::bind(config.bind)
             .map_err(|error| format!("workbench_bind_failed: {error}"))?;
         listener
@@ -76,6 +83,7 @@ impl WorkbenchServer {
             token,
             drafts,
             catalog,
+            language_status,
             active_connections: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         })
     }
@@ -99,6 +107,7 @@ impl WorkbenchServer {
     pub fn serve_until(self, stop: &AtomicBool) -> Result<(), String> {
         let drafts = self.drafts;
         let catalog = self.catalog;
+        let language_status = self.language_status;
         let token = Arc::new(self.token);
         while !stop.load(Ordering::SeqCst) {
             match self.listener.accept() {
@@ -113,12 +122,20 @@ impl WorkbenchServer {
                     }
                     let drafts = drafts.clone();
                     let catalog = catalog.clone();
+                    let language_status = language_status.clone();
                     let token = token.clone();
                     let active_connections = self.active_connections.clone();
                     let port = self.address.port();
                     thread::spawn(move || {
                         let _guard = ConnectionGuard(active_connections);
-                        let _ = handle_connection(stream, port, &token, &drafts, catalog.as_ref());
+                        let _ = handle_connection(
+                            stream,
+                            port,
+                            &token,
+                            &drafts,
+                            catalog.as_ref(),
+                            language_status.as_ref(),
+                        );
                     });
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
@@ -141,11 +158,19 @@ impl Drop for ConnectionGuard {
 
 pub fn execute(args: &[String]) -> Result<(), String> {
     if args.first().map(String::as_str) != Some("serve") {
-        return Err("usage: ygo workbench serve [--drafts DIR] [--store DIR] [--catalog-id ID] [--port PORT]".into());
+        return Err("usage: ygo workbench serve [--drafts DIR] [--store DIR] [--catalog-id ID] [--language-status FILE] [--port PORT]".into());
     }
     let values = parse_options(&args[1..])?;
     for key in values.keys() {
-        if !["--drafts", "--store", "--catalog-id", "--port"].contains(&key.as_str()) {
+        if ![
+            "--drafts",
+            "--store",
+            "--catalog-id",
+            "--language-status",
+            "--port",
+        ]
+        .contains(&key.as_str())
+        {
             return Err(format!("unknown workbench flag: {key}"));
         }
     }
@@ -157,6 +182,7 @@ pub fn execute(args: &[String]) -> Result<(), String> {
         config.snapshots_dir = PathBuf::from(path);
     }
     config.catalog_id = values.get("--catalog-id").cloned();
+    config.language_status_path = values.get("--language-status").map(PathBuf::from);
     if let Some(port) = values.get("--port") {
         let port = port
             .parse::<u16>()
@@ -287,6 +313,7 @@ fn handle_connection(
     token: &str,
     drafts: &DeckDraftStore,
     catalog: Option<&(String, Arc<Catalog>)>,
+    language_status: Option<&BTreeMap<u32, Value>>,
 ) -> Result<(), String> {
     stream
         .set_write_timeout(Some(Duration::from_secs(5)))
@@ -362,7 +389,7 @@ fn handle_connection(
         }
     }
     let (path, query) = split_target(&request.target);
-    let response = route_request(&request, path, query, drafts, catalog);
+    let response = route_request(&request, path, query, drafts, catalog, language_status);
     match response {
         Ok(response) => write_response(&mut stream, response),
         Err(failure) => write_json(
@@ -386,6 +413,7 @@ fn route_request(
     query: &str,
     drafts: &DeckDraftStore,
     catalog: Option<&(String, Arc<Catalog>)>,
+    language_status: Option<&BTreeMap<u32, Value>>,
 ) -> Result<HttpResponse, HttpFailure> {
     match (request.method.as_str(), path) {
         ("GET", "/api/drafts") => {
@@ -551,8 +579,133 @@ fn route_request(
                 json!({"status":status,"catalog_id":catalog_id,"translation_status":"unverified","results":results}),
             )
         }
+        ("GET", "/api/language-status") => {
+            let Some(language_status) = language_status else {
+                return json_response(
+                    200,
+                    json!({"status":"unverified","reason":"language_status_unavailable","qualified":false,"results":[]}),
+                );
+            };
+            let requested = query_value(query, "ids").unwrap_or_default();
+            let ids = requested
+                .split(',')
+                .filter(|value| !value.is_empty())
+                .map(|value| {
+                    value
+                        .parse::<u32>()
+                        .map_err(|_| HttpFailure::new(400, "language_card_id_invalid"))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            if ids.is_empty() || ids.len() > MAX_CARD_RESULTS || ids.contains(&0) {
+                return Err(HttpFailure::new(400, "language_card_ids_invalid"));
+            }
+            let results = ids
+                .iter()
+                .map(|id| {
+                    language_status
+                        .get(id)
+                        .cloned()
+                        .unwrap_or_else(|| {
+                            json!({"card_id":id,"status":"unknown","reason":"card_not_in_review_sample"})
+                        })
+                })
+                .collect::<Vec<_>>();
+            json_response(
+                200,
+                json!({"status":"available","qualified":false,"results":results}),
+            )
+        }
         _ => Err(HttpFailure::new(404, "route_not_found")),
     }
+}
+
+fn load_language_status(path: &std::path::Path) -> Option<BTreeMap<u32, Value>> {
+    const SOURCES: [&str; 2] = ["mycard-zh-CN-217ae165", "mycard-zh-SC-217ae165"];
+    const REASONS: [&str; 5] = [
+        "candidate_value_absent",
+        "candidate_sources_disagree",
+        "candidate_not_semantically_reviewed",
+        "localized_alias_mapping_not_defined",
+        "localized_archetype_mapping_not_defined",
+    ];
+    if path.is_symlink() || std::fs::metadata(path).ok()?.len() > 2 * 1024 * 1024 {
+        return None;
+    }
+    let report: Value = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
+    if report.get("schema_version")?.as_u64()? != 1
+        || report.get("kind")?.as_str()? != "language_field_review"
+        || report.get("qualified")?.as_bool()?
+    {
+        return None;
+    }
+    let cards = report.get("cards")?.as_array()?;
+    let mut result = BTreeMap::new();
+    for card in cards {
+        let id = u32::try_from(card.get("card_id")?.as_u64()?).ok()?;
+        let sources = card.get("sources")?.as_object()?;
+        if sources.len() != SOURCES.len()
+            || SOURCES
+                .iter()
+                .any(|source_id| !sources.contains_key(*source_id))
+        {
+            return None;
+        }
+        let mut safe_sources = serde_json::Map::new();
+        for (source_id, source) in sources {
+            if !SOURCES.contains(&source_id.as_str()) {
+                return None;
+            }
+            let fields = source.get("fields")?.as_object()?;
+            if fields.len() != 4 {
+                return None;
+            }
+            let mut safe_fields = serde_json::Map::new();
+            for field in ["name", "text", "alias", "archetypes"] {
+                let entry = fields.get(field)?.as_object()?;
+                let status = entry.get("status")?.as_str()?;
+                if !["candidate", "missing", "conflict", "unknown"].contains(&status) {
+                    return None;
+                }
+                let source = entry.get("source")?.as_str()?;
+                let reason = entry.get("reason")?.as_str()?;
+                let expected_reason = match status {
+                    "candidate" => "candidate_not_semantically_reviewed",
+                    "missing" => "candidate_value_absent",
+                    "conflict" => "candidate_sources_disagree",
+                    "unknown" if field == "alias" => "localized_alias_mapping_not_defined",
+                    "unknown" if field == "archetypes" => "localized_archetype_mapping_not_defined",
+                    _ => return None,
+                };
+                if source != source_id || !REASONS.contains(&reason) || reason != expected_reason {
+                    return None;
+                }
+                let mut safe = json!({"status":status,"source":source,"reason":reason});
+                if status == "candidate" {
+                    let hash = entry.get("candidate_sha256")?;
+                    let hash = hash.as_str()?;
+                    if hash.len() != 64
+                        || !hash
+                            .bytes()
+                            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+                    {
+                        return None;
+                    }
+                    safe["candidate_sha256"] = Value::String(hash.to_owned());
+                } else if entry.get("candidate_sha256").is_some() {
+                    return None;
+                }
+                safe_fields.insert(field.to_owned(), safe);
+            }
+            safe_sources.insert(source_id.clone(), json!({"fields":safe_fields}));
+        }
+        if result
+            .insert(id, json!({"card_id":id,"sources":safe_sources}))
+            .is_some()
+        {
+            return None;
+        }
+    }
+    Some(result)
 }
 
 fn parse_json<T: serde::de::DeserializeOwned>(body: &[u8]) -> Result<T, HttpFailure> {

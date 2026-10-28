@@ -5,7 +5,7 @@
   if (token) sessionStorage.setItem(tokenKey, token);
   history.replaceState(null, "", location.pathname);
   const $ = (selector) => document.querySelector(selector);
-  const state = { id: null, revision: null, draft: emptyDraft(), dirty: false, saving: false, loading: false, cards: new Map() };
+  const state = { id: null, revision: null, draft: emptyDraft(), dirty: false, saving: false, loading: false, cards: new Map(), language: new Map() };
   function emptyDraft(title = "未命名牌组") { return { schema_version: 1, kind: "deck_draft", title, main: [], extra: [], side: [] }; }
   function notice(text, error = false) { const el = $("#notice"); el.textContent = text; el.dataset.error = error ? "true" : "false"; }
   async function api(path, options = {}) {
@@ -24,7 +24,8 @@
     return match?.name ? `${match.name}（${id}）` : `卡号 ${id}（名称未核验）`;
   }
   async function checkCards(ids) {
-    for (const id of new Set(ids)) {
+    const unique = [...new Set(ids)];
+    for (const id of unique) {
       try {
         const result = await api(`/api/cards?q=${encodeURIComponent(id)}`);
         state.cards.set(id, result.results?.[0] || null);
@@ -32,6 +33,16 @@
         else if (result.status === "unknown_card_id") state.cards.set(id, { unknown: true });
         else $("#catalog-note").textContent = `名称来自所选本地快照；中文译文未核验。`;
       } catch { state.cards.set(id, null); }
+    }
+    if (unique.length) {
+      try {
+        state.language.clear();
+        for (let offset = 0; offset < unique.length; offset += 50) {
+          const batch = unique.slice(offset, offset + 50);
+          const reviewed = await api(`/api/language-status?ids=${encodeURIComponent(batch.join(","))}`);
+          if (reviewed.status === "available") for (const item of reviewed.results || []) state.language.set(item.card_id, item);
+        }
+      } catch { state.language.clear(); }
     }
   }
   function render() {
@@ -55,6 +66,23 @@
         const remove = document.createElement("button"); remove.textContent = "移除"; remove.disabled = locked; remove.addEventListener("click", () => { if (state.saving || state.loading) return; state.draft[zone].splice(index, 1); changed(); });
         row.append(label, remove);
         if (state.cards.get(id)?.unknown) { const warning = document.createElement("small"); warning.textContent = "此卡号不在所选本地卡表中；草稿仍予保留。"; row.append(warning); }
+        const reviewed = state.language.get(id);
+        if (reviewed?.sources) {
+          const languageStatus = document.createElement("small");
+          languageStatus.className = "language-status";
+          languageStatus.textContent = Object.entries(reviewed.sources).map(([source, entry]) => {
+            const fields = entry.fields || {};
+            const label = source.includes("zh-SC") ? "zh-SC（语言类别未确认）" : "zh-CN候选";
+            const stateLabel = (field) => ({candidate:"候选",missing:"缺失",conflict:"冲突",unknown:"未知"}[fields[field]?.status] || "未知");
+            return `${label}：名称${stateLabel("name")}、正文${stateLabel("text")}、别名${stateLabel("alias")}、字段${stateLabel("archetypes")}`;
+          }).join("；") + "（候选未作语义核验）";
+          row.append(languageStatus);
+        } else {
+          const languageStatus = document.createElement("small");
+          languageStatus.className = "language-status";
+          languageStatus.textContent = "中文字段状态未知；译文未核验。";
+          row.append(languageStatus);
+        }
         container.append(row);
       });
       $(`#${zone}-count`).textContent = `${state.draft[zone].length} 张`;

@@ -98,6 +98,70 @@ class Schemas(unittest.TestCase):
             invalid.update(mutation)
             self.assertTrue(list(check.iter_errors(invalid)), mutation)
 
+    def test_language_field_review_contract_is_non_qualifying_and_contains_no_candidate_text(self):
+        from ygo_data.language_review import audit_language_fields
+        check = validator('language-field-review-v1.schema.json')
+        ids = list(range(1, 40))
+        sources = [{'id': 'candidate', 'language': 'zh-Hans', 'version': 'fixture', 'sha256': 'a' * 64,
+                    'license': {'redistribution': 'unknown'}}]
+        report = audit_language_fields(ids, sources, [], {'candidate': {}})
+        report['created_at'] = '2026-10-28T00:00:00+00:00'
+        report['source_manifest_checked_date'] = '2026-10-19'
+        report['legacy_audit_unresolved'] = []
+        report['inputs'] = {'source': 'b' * 64, 'sample': 'c' * 64, 'records': 'd' * 64,
+                            'cn': 'e' * 64, 'sc': 'f' * 64}
+        check.validate(report)
+        invalid = dict(report, qualified=True)
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = dict(report)
+        invalid['candidate_text'] = 'not permitted'
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = dict(report, sample_card_ids=ids[:-1])
+        self.assertTrue(list(check.iter_errors(invalid)))
+
+    def test_first_turn_execution_checkpoint_requires_a_bound_resource_snapshot(self):
+        check = validator('first-turn-execution-checkpoint-v1.schema.json')
+        digest = 'a' * 64
+        checkpoint = {
+            'schema_version': 1,
+            'kind': 'first_turn_execution_checkpoint',
+            'execution_id': digest,
+            'plan_id': 'plan-fixture',
+            'binding': {
+                'start_request_sha256': digest,
+                'plan_sha256': digest,
+                'catalog_sha256': digest,
+                'knowledge_sha256': digest,
+                'goal_sha256': digest,
+                'runtime_versions_sha256': digest,
+            },
+            'progress': {
+                'status': 'ready', 'stage': 'execution', 'step': 0,
+                'start_request': {}, 'current_request': {}, 'current_prefix': {},
+                'actual_resources': {
+                    'turn': 1, 'turn_player': 0, 'phase': 1,
+                    'lp': [8000, 8000], 'cards': [],
+                },
+                'trusted_prefix_request': {}, 'trusted_prefix_call': 1,
+                'last_completed_request': {}, 'last_completed_result': {},
+                'last_completed_error': None, 'instance_mapping': {},
+                'used_selections': [], 'predictions': [], 'queries': [],
+                'pending_action': None, 'pending_intent': None,
+                'completed_call_ids': [1],
+                'ledger': {'consumed': 1, 'reserved': 0, 'completed': 1,
+                           'unknown': 0, 'limit': 7},
+                'reservations': {},
+                'diagnostic': None,
+            },
+        }
+        check.validate(checkpoint)
+        invalid = json.loads(json.dumps(checkpoint))
+        del invalid['progress']['actual_resources']
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = json.loads(json.dumps(checkpoint))
+        invalid['progress']['actual_resources']['turn_player'] = 2
+        self.assertTrue(list(check.iter_errors(invalid)))
+
     @unittest.skipUnless(os.environ.get('YGO_LIVE_ENGINE') == '1', 'opt-in: local snapshots/reports')
     def test_actual_snapshots_and_report(self):
         for path in (ROOT / 'data/snapshots').glob('*.json'):

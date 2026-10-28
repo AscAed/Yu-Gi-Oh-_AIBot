@@ -34,3 +34,10 @@
 - 网络命令在同一次终端调用内设置项目要求的本机代理；当前步骤及人类决策遵循[AGENTS.md](../AGENTS.md)和用户指令。
 
 接续检查点见[暂停交接](HANDOFF_2026-10-27_WORKSPACE_AUDIT.md)。该交接是暂停时快照；执行前以本文件与TASKS/TESTING及实际工作区交叉核对。
+
+## 2026-10-28 PR #3合并后的整合自检
+
+- 起点为PR #3已合入的`main` `fc7b177`。保留D盘原工作区不动，在独立工作树移植C1/A3已有修改并重跑Rust格式、Clippy及全workspace测试：357 passed、36 ignored、0 failed；Python语言/schema聚焦为23 passed、2 skipped。完整证据和解释器边界见[TESTING](TESTING.md)顶部。此次没有运行本机引擎、doctor、正式部署或研究scope。
+- 实际普通包`dist/ygo-local`中的CLI与worker时间戳为2026-10-19；`build-hashes.json`与包文件一致，但包明显早于当前源码。保留包和历史验收报告，没有重建或覆盖；最新源码的双资产干净部署门禁仍未通过。
+- 本轮没有发现可以在不破坏兼容合同、历史追溯或忽略目录证据的前提下安全删除的旧模块。版本化v1–v5路径、历史计划/报告及被忽略的账本/运行证据有明确消费者或保留用途；Cargo未安装`cargo-machete`，没有联网安装依赖。后续若清理，应先建立文档中的证据迁移清单并逐项验证消费者。
+- 旧Tenki保护源哈希失败仍为已知未解决项；未改保护哈希或关闭校验。新添文档、schema和报告链接应继续区分仓库内源码目标与不会进入干净checkout的本地`target/`、`data/runtime/`证据路径。

@@ -5,6 +5,13 @@ use ygo_engine_adapter::*;
 use ygo_goal::{actual_trace_v6, verify_query_replays, Goal, QueryWitness, TraceWindow};
 mod capture;
 pub use capture::*;
+mod resumable;
+#[cfg(test)]
+pub use resumable::advance_execution_v1_with_backend;
+pub use resumable::{
+    advance_execution_v1, begin_execution_v1, persist_execution_semantics_v1, resume_execution_v1,
+    ExecutionCheckpointV1, ExecutionIntentV1, ExecutionProgressV1, ExecutionRecoveryStatus,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1589,6 +1596,20 @@ pub fn execute_partial_v2_with_backend<A: EngineAdapter>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn a3_test_root(label: &str) -> std::path::PathBuf {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/a3-resumable/tests")
+            .join(format!(
+                "{label}-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
     #[test]
     fn prefix_query_versions_are_checked_even_when_public_fields_match() {
         struct Fixed(DuelResult);
@@ -1790,6 +1811,584 @@ mod tests {
             serde_json::from_value(value["cases"][0]["runtime_request"].clone()).unwrap();
         q.decisions.clear();
         (q, r)
+    }
+    #[test]
+    fn resumable_checkpoint_binds_plan_and_request_before_any_continuation() {
+        struct Fixed(DuelResult);
+        impl EngineAdapter for Fixed {
+            fn doctor(&self) -> DoctorReport {
+                panic!("initial result is already charged")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        let (request, mut initial) = initial();
+        initial.versions = request.versions.clone();
+        let pack = FirstTurnKnowledge::builtin().unwrap();
+        let goal: ygo_goal::Goal = serde_json::from_value(serde_json::json!({
+            "version": 1,
+            "expr": {"op": "count", "filter": {}, "min": 1}
+        }))
+        .unwrap();
+        let plan = ForecastPlan {
+            id: "resume-plan".into(),
+            start_id: "resume-start".into(),
+            knowledge_id: pack.id(),
+            limits: SearchLimits::default(),
+            goal_id: goal.id(),
+            first_sensitive: None,
+            steps: vec![],
+            predicted_goal: ygo_goal::Evaluation {
+                node: "/goal".into(),
+                result: ygo_goal::Truth::Unknown,
+                observed: None,
+                matches: vec![],
+                reason: "synthetic forecast only".into(),
+                children: vec![],
+            },
+            predicted_resources: 0,
+        };
+        let root = a3_test_root("bindings");
+        let path = root.join("calls.jsonl");
+        let journal = CallJournal::open(&path, "a3-synthetic", "a3-test-context", 1).unwrap();
+        JournaledAdapter::new(
+            Fixed(initial.clone()),
+            journal.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&request)
+        .unwrap();
+
+        let mut checkpoint = begin_execution_v1(
+            &request,
+            1,
+            &plan,
+            &Default::default(),
+            &pack,
+            &goal,
+            journal.clone(),
+        )
+        .unwrap();
+        assert_eq!(checkpoint.schema_version, 1);
+        assert_eq!(checkpoint.progress.status, ExecutionRecoveryStatus::Ready);
+        assert_eq!(checkpoint.progress.completed_call_ids, vec![1]);
+        checkpoint
+            .validate_bindings(&request, &plan, &Default::default(), &pack, &goal)
+            .unwrap();
+
+        let mut changed_plan = plan.clone();
+        changed_plan.id.push_str("-changed");
+        assert!(checkpoint
+            .validate_bindings(&request, &changed_plan, &Default::default(), &pack, &goal)
+            .is_err());
+        let mut changed_request = request.clone();
+        changed_request.seed = changed_request.seed.wrapping_add(1);
+        assert!(checkpoint
+            .validate_bindings(&changed_request, &plan, &Default::default(), &pack, &goal)
+            .is_err());
+        let prompt = checkpoint.progress.current_prefix.prompt.as_ref().unwrap();
+        let decision = Decision {
+            prompt_id: prompt.id,
+            player: prompt.player,
+            choice: prompt.actions[0].choice.clone(),
+        };
+        let mut next_request = request.clone();
+        next_request.decisions.push(decision.clone());
+        let intent = ExecutionIntentV1::from_prompt(
+            &checkpoint,
+            next_request,
+            ExecutionStage::Execution,
+            Some(0),
+            decision,
+        )
+        .unwrap();
+        let adapter_calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let unused_result = checkpoint.progress.current_prefix.clone();
+        advance_execution_v1_with_backend(&mut checkpoint, intent, journal.clone(), {
+            struct Count(DuelResult, Arc<std::sync::atomic::AtomicUsize>);
+            impl EngineAdapter for Count {
+                fn doctor(&self) -> DoctorReport {
+                    panic!("budget rejection must not call doctor")
+                }
+                fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                    self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    Ok(self.0.clone())
+                }
+            }
+            Count(unused_result, adapter_calls.clone())
+        })
+        .unwrap();
+        assert_eq!(checkpoint.progress.status, ExecutionRecoveryStatus::Paused);
+        assert_eq!(journal.stats().unwrap().consumed, 1);
+        assert_eq!(adapter_calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        drop(journal);
+        let _ = std::fs::remove_dir_all(root);
+    }
+    #[test]
+    fn completed_trailing_call_is_reused_after_reopen_without_a_second_charge() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct Fixed(DuelResult, Arc<AtomicUsize>);
+        impl EngineAdapter for Fixed {
+            fn doctor(&self) -> DoctorReport {
+                panic!("resume never calls doctor")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                self.1.fetch_add(1, Ordering::SeqCst);
+                Ok(self.0.clone())
+            }
+        }
+        let (request, mut initial) = initial();
+        initial.versions = request.versions.clone();
+        let pack = FirstTurnKnowledge::builtin().unwrap();
+        let goal: ygo_goal::Goal = serde_json::from_value(serde_json::json!({
+            "version": 1,
+            "expr": {"op": "count", "filter": {}, "min": 1}
+        }))
+        .unwrap();
+        let plan = ForecastPlan {
+            id: "resume-replay-plan".into(),
+            start_id: "resume-replay-start".into(),
+            knowledge_id: pack.id(),
+            limits: SearchLimits::default(),
+            goal_id: goal.id(),
+            first_sensitive: None,
+            steps: vec![],
+            predicted_goal: ygo_goal::Evaluation {
+                node: "/goal".into(),
+                result: ygo_goal::Truth::Unknown,
+                observed: None,
+                matches: vec![],
+                reason: "synthetic forecast only".into(),
+                children: vec![],
+            },
+            predicted_resources: 0,
+        };
+        let root = a3_test_root("trailing-result-recovery");
+        let path = root.join("calls.jsonl");
+        let journal = CallJournal::open(&path, "a3-replay", "a3-replay-context", 8).unwrap();
+        JournaledAdapter::new(
+            Fixed(initial.clone(), Arc::new(AtomicUsize::new(0))),
+            journal.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&request)
+        .unwrap();
+        let mut checkpoint = begin_execution_v1(
+            &request,
+            1,
+            &plan,
+            &Default::default(),
+            &pack,
+            &goal,
+            journal.clone(),
+        )
+        .unwrap();
+        let prompt = checkpoint.progress.current_prefix.prompt.as_ref().unwrap();
+        let decision = Decision {
+            prompt_id: prompt.id,
+            player: prompt.player,
+            choice: prompt.actions[0].choice.clone(),
+        };
+        let mut next_request = request.clone();
+        next_request.decisions.push(decision.clone());
+        let intent = ExecutionIntentV1::from_prompt(
+            &checkpoint,
+            next_request.clone(),
+            ExecutionStage::Execution,
+            Some(0),
+            decision,
+        )
+        .unwrap();
+        let intent_name = format!("immutable/execution-intent/{}/2", checkpoint.execution_id);
+        journal
+            .save_checkpoint(&intent_name, &serde_json::to_value(&intent).unwrap())
+            .unwrap();
+        checkpoint.progress.status = ExecutionRecoveryStatus::IntentPersisted;
+        checkpoint.progress.pending_action = Some(intent.choice.clone());
+        checkpoint.progress.pending_intent = Some(intent.clone());
+        journal
+            .save_checkpoint(
+                &format!("execution-v1/{}", checkpoint.execution_id),
+                &serde_json::to_value(&checkpoint).unwrap(),
+            )
+            .unwrap();
+
+        let unresolved_path = root.join("unresolved.jsonl");
+        let unresolved = CallJournal::open(
+            &unresolved_path,
+            "a3-unresolved",
+            "a3-unresolved-context",
+            8,
+        )
+        .unwrap();
+        JournaledAdapter::new(
+            Fixed(initial.clone(), Arc::new(AtomicUsize::new(0))),
+            unresolved.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&request)
+        .unwrap();
+        let mut unresolved_checkpoint = begin_execution_v1(
+            &request,
+            1,
+            &plan,
+            &Default::default(),
+            &pack,
+            &goal,
+            unresolved.clone(),
+        )
+        .unwrap();
+        let unresolved_prompt = unresolved_checkpoint
+            .progress
+            .current_prefix
+            .prompt
+            .as_ref()
+            .unwrap();
+        let unresolved_decision = Decision {
+            prompt_id: unresolved_prompt.id,
+            player: unresolved_prompt.player,
+            choice: unresolved_prompt.actions[0].choice.clone(),
+        };
+        let mut unresolved_request = request.clone();
+        unresolved_request
+            .decisions
+            .push(unresolved_decision.clone());
+        let unresolved_intent = ExecutionIntentV1::from_prompt(
+            &unresolved_checkpoint,
+            unresolved_request.clone(),
+            ExecutionStage::Execution,
+            Some(0),
+            unresolved_decision,
+        )
+        .unwrap();
+        unresolved
+            .save_checkpoint(
+                &format!(
+                    "immutable/execution-intent/{}/2",
+                    unresolved_checkpoint.execution_id
+                ),
+                &serde_json::to_value(&unresolved_intent).unwrap(),
+            )
+            .unwrap();
+        unresolved_checkpoint.progress.status = ExecutionRecoveryStatus::IntentPersisted;
+        unresolved_checkpoint.progress.pending_action = Some(unresolved_intent.choice.clone());
+        unresolved_checkpoint.progress.pending_intent = Some(unresolved_intent);
+        unresolved
+            .save_checkpoint(
+                &format!("execution-v1/{}", unresolved_checkpoint.execution_id),
+                &serde_json::to_value(&unresolved_checkpoint).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(
+            unresolved
+                .begin_call(&unresolved_request, CallPurpose::Execution, None)
+                .unwrap(),
+            2
+        );
+        drop(unresolved);
+        assert!(resume_execution_v1(
+            &unresolved_path,
+            "a3-unresolved",
+            "a3-unresolved-context",
+            8,
+            &request,
+            &plan,
+            &Default::default(),
+            &pack,
+            &goal,
+        )
+        .is_err());
+        let unresolved_view = CallJournal::inspect_existing(
+            &unresolved_path,
+            "a3-unresolved",
+            "a3-unresolved-context",
+            8,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(unresolved_view.stats().unwrap().unknown, 1);
+        assert_eq!(unresolved_view.stats().unwrap().consumed, 2);
+        drop(unresolved_view);
+
+        let mut completed = initial;
+        completed.status = DuelStatus::EngineVerified;
+        completed.prompt = None;
+        completed.resolved_decisions = next_request.decisions.clone();
+        let calls = Arc::new(AtomicUsize::new(0));
+        JournaledAdapter::new(
+            Fixed(completed, calls.clone()),
+            journal.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&next_request)
+        .unwrap();
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(journal.stats().unwrap().consumed, 2);
+        drop(journal);
+
+        let resumed = resume_execution_v1(
+            &path,
+            "a3-replay",
+            "a3-replay-context",
+            8,
+            &request,
+            &plan,
+            &Default::default(),
+            &pack,
+            &goal,
+        )
+        .unwrap();
+        assert_eq!(
+            resumed.progress.status,
+            ExecutionRecoveryStatus::CompletedAwaitingAudit
+        );
+        assert_eq!(resumed.progress.completed_call_ids, vec![1, 2]);
+        assert_eq!(resumed.progress.ledger.consumed, 2);
+        assert!(resumed.progress.pending_intent.is_none());
+
+        let before = std::fs::metadata(&path).unwrap().len();
+        let resumed_again = resume_execution_v1(
+            &path,
+            "a3-replay",
+            "a3-replay-context",
+            8,
+            &request,
+            &plan,
+            &Default::default(),
+            &pack,
+            &goal,
+        )
+        .unwrap();
+        assert_eq!(resumed_again.progress.ledger.consumed, 2);
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), before);
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        let _ = std::fs::remove_dir_all(root);
+    }
+    #[test]
+    fn continuous_and_pause_reopen_execution_have_identical_prefix_queries_and_charges() {
+        use std::{
+            collections::VecDeque,
+            sync::atomic::{AtomicUsize, Ordering},
+        };
+        struct Scripted {
+            results: std::sync::Mutex<VecDeque<DuelResult>>,
+            calls: Arc<AtomicUsize>,
+        }
+        impl EngineAdapter for Scripted {
+            fn doctor(&self) -> DoctorReport {
+                panic!("synthetic continuation never calls doctor")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                self.calls.fetch_add(1, Ordering::SeqCst);
+                self.results
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .ok_or_else(|| WorkerError::new("script_exhausted", "test", "no result"))
+            }
+        }
+        fn goal() -> ygo_goal::Goal {
+            serde_json::from_value(serde_json::json!({
+                "version": 1,
+                "expr": {"op": "count", "filter": {}, "min": 1}
+            }))
+            .unwrap()
+        }
+        fn plan(pack: &FirstTurnKnowledge, goal: &ygo_goal::Goal) -> ForecastPlan {
+            ForecastPlan {
+                id: "continuous-vs-resume".into(),
+                start_id: "same-start".into(),
+                knowledge_id: pack.id(),
+                limits: SearchLimits::default(),
+                goal_id: goal.id(),
+                first_sensitive: None,
+                steps: vec![],
+                predicted_goal: ygo_goal::Evaluation {
+                    node: "/goal".into(),
+                    result: ygo_goal::Truth::Unknown,
+                    observed: None,
+                    matches: vec![],
+                    reason: "synthetic forecast only".into(),
+                    children: vec![],
+                },
+                predicted_resources: 0,
+            }
+        }
+        fn next_prompt_result(initial: &DuelResult, resolved: Vec<Decision>) -> DuelResult {
+            let mut result = initial.clone();
+            let old = initial.events.last().unwrap();
+            let frame = decode_frame(old.sequence + 1, &old.raw).unwrap();
+            result.events.push(frame.clone());
+            result.prompt = parse_prompt(frame.sequence, &frame.raw).unwrap();
+            result.resolved_decisions = resolved;
+            result.status = DuelStatus::DecisionRequired;
+            result.error = None;
+            result
+        }
+        fn run_case(paused: bool) -> (ExecutionCheckpointV1, String, usize, std::path::PathBuf) {
+            let (request, mut initial) = initial();
+            initial.versions = request.versions.clone();
+            let pack = FirstTurnKnowledge::builtin().unwrap();
+            let goal = goal();
+            let plan = plan(&pack, &goal);
+            let root = a3_test_root("pause-reopen-equivalence");
+            let path = root.join("calls.jsonl");
+            let journal = CallJournal::open(&path, "a3-equivalence", "same-context", 8).unwrap();
+            journal.reserve("keep-for-later-audit", 1).unwrap();
+            JournaledAdapter::new(
+                Scripted {
+                    results: std::sync::Mutex::new(VecDeque::from([initial.clone()])),
+                    calls: Arc::new(AtomicUsize::new(0)),
+                },
+                journal.clone(),
+                CallPurpose::Execution,
+            )
+            .run(&request)
+            .unwrap();
+            let mut checkpoint = begin_execution_v1(
+                &request,
+                1,
+                &plan,
+                &Default::default(),
+                &pack,
+                &goal,
+                journal.clone(),
+            )
+            .unwrap();
+            let initial_decision = {
+                let prompt = checkpoint.progress.current_prefix.prompt.as_ref().unwrap();
+                Decision {
+                    prompt_id: prompt.id,
+                    player: prompt.player,
+                    choice: prompt.actions[0].choice.clone(),
+                }
+            };
+            let mut first_request = request.clone();
+            first_request.decisions.push(initial_decision.clone());
+            let middle = next_prompt_result(&initial, vec![initial_decision]);
+            let middle_prompt = middle.prompt.as_ref().unwrap();
+            let second_decision = Decision {
+                prompt_id: middle_prompt.id,
+                player: middle_prompt.player,
+                choice: middle_prompt.actions[0].choice.clone(),
+            };
+            let mut second_request = request.clone();
+            second_request.decisions = middle.resolved_decisions.clone();
+            second_request.decisions.push(second_decision.clone());
+            let mut terminal = middle.clone();
+            terminal.status = DuelStatus::EngineVerified;
+            terminal.prompt = None;
+            terminal.resolved_decisions = second_request.decisions.clone();
+            let calls = Arc::new(AtomicUsize::new(0));
+            let first_prompt = checkpoint.progress.current_prefix.prompt.as_ref().unwrap();
+            let first_intent = ExecutionIntentV1::from_prompt(
+                &checkpoint,
+                first_request,
+                ExecutionStage::Execution,
+                Some(0),
+                Decision {
+                    prompt_id: first_prompt.id,
+                    player: first_prompt.player,
+                    choice: first_prompt.actions[0].choice.clone(),
+                },
+            )
+            .unwrap();
+            advance_execution_v1_with_backend(
+                &mut checkpoint,
+                first_intent,
+                journal.clone(),
+                Scripted {
+                    results: std::sync::Mutex::new(VecDeque::from([middle, terminal.clone()])),
+                    calls: calls.clone(),
+                },
+            )
+            .unwrap();
+            let mut open_journal = Some(journal);
+            if paused {
+                drop(open_journal.take());
+                checkpoint = resume_execution_v1(
+                    &path,
+                    "a3-equivalence",
+                    "same-context",
+                    8,
+                    &request,
+                    &plan,
+                    &Default::default(),
+                    &pack,
+                    &goal,
+                )
+                .unwrap();
+            }
+            let journal = match open_journal {
+                Some(journal) => journal,
+                None => CallJournal::open(&path, "a3-equivalence", "same-context", 8).unwrap(),
+            };
+            let second_intent = ExecutionIntentV1::from_prompt(
+                &checkpoint,
+                second_request,
+                ExecutionStage::EndPhase,
+                None,
+                second_decision,
+            )
+            .unwrap();
+            advance_execution_v1_with_backend(
+                &mut checkpoint,
+                second_intent,
+                journal.clone(),
+                Scripted {
+                    results: std::sync::Mutex::new(VecDeque::from([terminal])),
+                    calls: calls.clone(),
+                },
+            )
+            .unwrap();
+            let sequence = journal.charged_sequence_id().unwrap();
+            drop(journal);
+            (checkpoint, sequence, calls.load(Ordering::SeqCst), root)
+        }
+
+        let (continuous, continuous_charges, continuous_adapter_calls, continuous_root) =
+            run_case(false);
+        let (resumed, resumed_charges, resumed_adapter_calls, resumed_root) = run_case(true);
+        assert_eq!(continuous_charges, resumed_charges);
+        assert_eq!(continuous_adapter_calls, 2);
+        assert_eq!(resumed_adapter_calls, 2);
+        assert_eq!(
+            continuous.progress.completed_call_ids,
+            resumed.progress.completed_call_ids
+        );
+        assert_eq!(
+            continuous.progress.queries.len(),
+            resumed.progress.queries.len()
+        );
+        assert_eq!(continuous.progress.ledger.consumed, 3);
+        assert_eq!(resumed.progress.ledger.consumed, 3);
+        assert_eq!(
+            continuous.progress.reservations,
+            BTreeMap::from([("keep-for-later-audit".into(), 1)])
+        );
+        assert_eq!(
+            continuous.progress.reservations,
+            resumed.progress.reservations
+        );
+        assert_eq!(
+            serde_json::to_value(&continuous.progress.current_prefix).unwrap(),
+            serde_json::to_value(&resumed.progress.current_prefix).unwrap()
+        );
+        assert_eq!(
+            continuous.progress.actual_resources,
+            resumed.progress.actual_resources
+        );
+        assert_eq!(
+            serde_json::to_value(&continuous.progress.predictions).unwrap(),
+            serde_json::to_value(&resumed.progress.predictions).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_value(&continuous.progress.instance_mapping).unwrap(),
+            serde_json::to_value(&resumed.progress.instance_mapping).unwrap()
+        );
+        let _ = std::fs::remove_dir_all(continuous_root);
+        let _ = std::fs::remove_dir_all(resumed_root);
     }
     #[test]
     fn a_second_intent_at_the_same_prompt_cannot_replace_the_first_prediction() {

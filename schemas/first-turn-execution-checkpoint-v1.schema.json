@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/first-turn-execution-checkpoint-v1.schema.json",
+  "title": "First-turn execution checkpoint v1",
+  "description": "Authenticated execution progress only. It cannot certify a query, native success, or a replay receipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "execution_id", "binding", "plan_id", "progress"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "first_turn_execution_checkpoint" },
+    "execution_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "plan_id": { "type": "string", "minLength": 1 },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_request_sha256", "plan_sha256", "catalog_sha256", "knowledge_sha256", "goal_sha256", "runtime_versions_sha256"],
+      "properties": {
+        "start_request_sha256": { "$ref": "#/$defs/sha256" },
+        "plan_sha256": { "$ref": "#/$defs/sha256" },
+        "catalog_sha256": { "$ref": "#/$defs/sha256" },
+        "knowledge_sha256": { "$ref": "#/$defs/sha256" },
+        "goal_sha256": { "$ref": "#/$defs/sha256" },
+        "runtime_versions_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "stage", "step", "start_request", "current_request", "current_prefix", "actual_resources", "trusted_prefix_request", "trusted_prefix_call", "last_completed_request", "last_completed_result", "last_completed_error", "instance_mapping", "used_selections", "predictions", "queries", "pending_action", "pending_intent", "completed_call_ids", "ledger", "reservations", "diagnostic"],
+      "properties": {
+        "status": { "enum": ["ready", "intent_persisted", "paused", "completed_awaiting_audit", "blocked"] },
+        "stage": { "enum": ["execution", "query_capture", "end_phase", "witness_replay", "observation", "cleanup"] },
+        "step": { "type": ["integer", "null"], "minimum": 0 },
+        "start_request": { "type": "object" },
+        "current_request": { "type": "object" },
+        "current_prefix": { "type": "object" },
+        "actual_resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["turn", "turn_player", "phase", "lp", "cards"],
+          "properties": {
+            "turn": { "type": "integer", "minimum": 0 },
+            "turn_player": { "type": "integer", "minimum": 0, "maximum": 1 },
+            "phase": { "type": "integer", "minimum": 0, "maximum": 65535 },
+            "lp": { "type": "array", "prefixItems": [{ "type": "integer", "minimum": 0 }, { "type": "integer", "minimum": 0 }], "minItems": 2, "maxItems": 2 },
+            "cards": { "type": "array", "items": { "type": "object" } }
+          }
+        },
+        "trusted_prefix_request": { "type": "object" },
+        "trusted_prefix_call": { "type": "integer", "minimum": 1 },
+        "last_completed_request": { "type": "object" },
+        "last_completed_result": { "type": ["object", "null"] },
+        "last_completed_error": { "type": ["object", "null"] },
+        "instance_mapping": { "type": "object", "additionalProperties": { "type": "string" } },
+        "used_selections": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "uniqueItems": true },
+        "predictions": { "type": "array", "items": { "type": "object" } },
+        "queries": { "type": "array", "items": { "type": "object" } },
+        "pending_action": { "type": ["object", "null"] },
+        "pending_intent": { "anyOf": [{ "$ref": "#/$defs/intent" }, { "type": "null" }] },
+        "completed_call_ids": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "uniqueItems": true },
+        "ledger": {
+          "type": "object",
+          "required": ["consumed", "reserved", "completed", "unknown", "limit"],
+          "properties": {
+            "consumed": { "type": "integer", "minimum": 0 },
+            "reserved": { "type": "integer", "minimum": 0 },
+            "completed": { "type": "integer", "minimum": 0 },
+            "unknown": { "type": "integer", "minimum": 0 },
+            "abandoned": { "type": "integer", "minimum": 0 },
+            "limit": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "reservations": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "diagnostic": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "execution_id", "expected_call", "purpose", "stage", "step", "request", "choice", "prior_prefix_sha256", "instance_mapping", "used_selections", "predictions"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "execution_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "expected_call": { "type": "integer", "minimum": 1 },
+        "purpose": { "const": "execution" },
+        "stage": { "enum": ["execution", "end_phase"] },
+        "step": { "type": ["integer", "null"], "minimum": 0 },
+        "request": { "type": "object" },
+        "choice": { "type": "object" },
+        "prior_prefix_sha256": { "$ref": "#/$defs/sha256" },
+        "instance_mapping": { "type": "object", "additionalProperties": { "type": "string" } },
+        "used_selections": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "uniqueItems": true },
+        "predictions": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

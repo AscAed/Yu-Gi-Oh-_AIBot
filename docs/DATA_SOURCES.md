@@ -24,3 +24,9 @@ OCG LFLists 固定提交 1051a65ab853fd84521aa919d1859f9468816c56，首次导入
 `python -m ygo_data.language audit --sources configs/language-sources-2026-10-19.json --sample <release-evidence.json> [--records <local-language-records.json>] --output <report.json>`逐字段绑定name/text/alias/archetypes来源、语言和核对状态。简繁各有独立记录，同名多ID公开歧义，不猜卡号；没有输入的语言/字段保持缺失。报告始终`qualified: false`，独立语义审阅门禁尚未实现；provenance_checks_passed只说明声明结构无已知缺口。合同见`schemas/language-audit.schema.json`。
 
 来源登记见`configs/language-sources-2026-10-19.json`。本轮代理联网取得mycard固定提交的zh-CN和zh-SC数据库；39卡zh-CN均可按既有卡号找到，但中文名/正文仅为未人工核对的候选，不扩展到alias/字段可信资格。zh-SC路径含义未确认，不能据此自动当作繁体。取得的树未发现LICENSE，GitHub license端点404、README仅称测试数据库，因此再分发权限未知；这不是对不存在任何许可的法律结论。全部外部原始文字/库和本机报告仅置于忽略的`data/runtime/baseline-2026-10-19/data/`，不提交正文。
+
+## C1离线字段核验（2026-10-28）
+
+新增`python -m ygo_data.language_review audit --output <独占报告路径>`，固定读取上述来源清单、39卡冻结发行样本、语言记录和两份CDB；SQLite只读，采集前后核对输入哈希。报告合同为`schemas/language-field-review-v1.schema.json`，实跑产物位于忽略目录`data/runtime/c1-language-review-offline-2026-10-28/language-review.json`。来源清单、样本、记录和CDB哈希、字段数量及其限制集中见[LANGUAGE_REVIEW](LANGUAGE_REVIEW.md)。
+
+此核验只确认字段是否存在、来源记录/卡号映射以及候选值摘要；不判断翻译语义、zh-SC语言类别、别名映射、使用权或再分发权。报告仅存名称/正文候选哈希，不存文字；工作台状态接口也不返回正文。正式语言资格仍未通过，原始CDB和语言记录继续留在忽略目录。
