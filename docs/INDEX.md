@@ -10,14 +10,14 @@
 | 全局最优的定义与证明关口 | [OPTIMALITY_RESEARCH.md](OPTIMALITY_RESEARCH.md) | 研究定义与可行性门禁，不代表现有能力或接口 |
 | 当前状态与开放任务 | [TASKS.md](../TASKS.md) | 当前状态的唯一入口；各批次历史数字不覆盖顶部 |
 | 验证结果与限制 | [TESTING.md](TESTING.md) | 按日期、源码与范围读取；旧结果不代表当前源码已复验 |
+| 历史忽略目录证据的清点与处置决定 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 保留SHA-256身份清单；按用户决定暂不迁移，不能把哈希视为备份 |
 | 能力与差距 | [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 区分已验证、局部验证、未验证、未实现 |
-| 依赖顺序与本轮任务 | [ROADMAP.md](ROADMAP.md)、[项目再规划](superpowers/plans/2026-10-27-project-realignment.md) | 研究与产品工作台双轨推进；完成状态仍只维护于TASKS |
+| 依赖顺序与本轮任务 | [ROADMAP.md](ROADMAP.md)、[当前实施路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md) | 研究与产品工作台双轨推进；完成状态仍只维护于TASKS |
 | 研究运行、scope、预算、窗口及停止条件 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md) | 研究操作规范；旧批次准备不构成新执行授权 |
 | 报告、来源、会计和资格绑定 | [EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 证据合同；来源身份、实际消费和资格分别核验 |
 | 基线及研究工具用法 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md) | 工具及合同说明；实跑状态和限制仍见TASKS/TESTING |
 | 模块边界与数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | 以crate依赖和调用路径为准 |
 | 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
-| 被文档引用的忽略目录证据与迁移要求 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 路径盘点不是哈希验真/备份；清理前先确认消费者与可恢复副本 |
 | 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
 | JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md)、[WORKBENCH.md](WORKBENCH.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md) | schema和解析器为规范性定义；WORKBENCH记录当前本机HTTP界面与安全边界；执行恢复仅描述可恢复进度，不授予成功资格 |
 | 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
@@ -34,9 +34,9 @@
 
 [B2交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)、[工作台运行说明](WORKBENCH.md)、[牌组草稿CLI与合同](DECK_DRAFTS.md)。A1首次结果级错误及查询捕获失败回归通过；B1/B2提供版本化草稿、三分区编辑、本机浏览器操作和YDK/JSON往返，不赋予完整合法性或中文资格。实测范围见[TESTING](TESTING.md)。
 
-## 最近执行恢复批次：P4-R1b可恢复循环接入（实现已接入，等价验证待补）
+## 最近执行恢复批次：P4-R1b离线多动作等价与中断门禁（已通过；真实续跑未认证）
 
-[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。新增版本化执行循环入口，保存语义阶段、End Phase和逐次查询审计游标；合成测试覆盖逐提示单动作暂停/重开、收费后未知消费拒绝重试、意图未收费时恢复，以及内层结果完成而外层快照未发布时的对账恢复。当前workspace串行总检为362 passed、36 ignored，详见TESTING的2026-10-28增补记录。连续语义多动作恢复等价、真实进程崩溃恢复和独立原生重放仍未认证；本批原生调用为0。
+[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。非空两动作语义路线通过连续执行与每个调用边界暂停/重开对照；完成尾调用复用、持久化失败前收费门禁和只读检查后账本竞争也有合成验证。完整串行workspace为362 passed、36 ignored。真实进程崩溃恢复、操作系统级故障注入及独立原生重放仍未认证；本批原生调用为0。
 
 ## 最近语言数据批次：39卡中文字段离线核验（完成并暂停）
 
@@ -49,7 +49,7 @@
 ## 阅读路径
 
 1. 新加入的代理：本文件 → [AGENTS.md](../AGENTS.md) → [TASKS](../TASKS.md) → [PROJECT_ASSESSMENT](PROJECT_ASSESSMENT.md) → 相关模块文档。
-2. 产品与双轨任务：[PRODUCT_VISION](PRODUCT_VISION.md) → [ROADMAP](ROADMAP.md) → [项目再规划](superpowers/plans/2026-10-27-project-realignment.md)。最优性工作先读[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
+2. 产品与双轨任务：[PRODUCT_VISION](PRODUCT_VISION.md) → [ROADMAP](ROADMAP.md) → [2026-10-28当前实施路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)。[2026-10-27再规划](superpowers/plans/2026-10-27-project-realignment.md)是历史时点记录。最优性工作先读[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
 3. 研究与证据：[RESEARCH_OPERATIONS](RESEARCH_OPERATIONS.md) → [EVIDENCE_CONTRACTS](EVIDENCE_CONTRACTS.md) → 对应工具文档、当前交接与TESTING；具体运行须遵守该次授权和停止条件。
 4. 运行与来源：[DEPLOYMENT](DEPLOYMENT.md) → [ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)、[DATA_SOURCES](DATA_SOURCES.md)、[TOURNAMENT_RESELECTION](TOURNAMENT_RESELECTION.md)、[TOURNAMENT_SOURCE_GATE](TOURNAMENT_SOURCE_GATE.md) → 对应日期验证和实际报告。
 5. 实现设计：[ARCHITECTURE](ARCHITECTURE.md) → [DOMAIN_MODEL](DOMAIN_MODEL.md)、[ENGINE_ADAPTERS](ENGINE_ADAPTERS.md)、[ENGINE_PROTOCOL](ENGINE_PROTOCOL.md)、[SEARCH_AND_SCORING](SEARCH_AND_SCORING.md)、[API](API.md)。规则与规划另见[FIRST_TURN_PILOT](FIRST_TURN_PILOT.md)、[SEMANTIC_PLANNING](SEMANTIC_PLANNING.md)、[GOAL_PLANNING](GOAL_PLANNING.md)、[BREAK_SWORD_VERIFICATION](BREAK_SWORD_VERIFICATION.md)、[RECOVERY_PLANNING](RECOVERY_PLANNING.md)、[ASH_STRATEGY_PLANNING](ASH_STRATEGY_PLANNING.md)及对应Rust测试。

@@ -1,5 +1,7 @@
 # 项目再规划实施计划：研究与卡组工作台双轨
 
+> **历史时点说明：**本计划描述截至2026-10-27的状态和方案。2026-10-28之后A1、B1、B2、C1字段盘点及A3/R1b已有进展，以[当前任务](../../../TASKS.md)、[验证记录](../../TESTING.md)和[2026-10-28实施路线](2026-10-28-project-status-and-next-steps.md)为准。保留本文原始任务背景，不把过时基线当作当前事实。
+
 > 执行者先读[产品愿景](../../PRODUCT_VISION.md)、[当前任务](../../../TASKS.md)、[路线图](../../ROADMAP.md)和[最新Ground Collapse交接](2026-10-27-ground-collapse-preparation-handoff.md)。本次仅交付文档；下列工程、数据和研究任务均未执行。复选框表示未来任务步骤，实时完成状态只维护于TASKS。后续实施按已授权范围逐任务执行，可使用 `superpowers:executing-plans`；本计划本身不授予运行原生实验或提交资产的权限。
 
 **规范：**实验授权、预算和停止条件依[研究运行规范](../../RESEARCH_OPERATIONS.md)；身份、会计、失败与交付证据依[证据合同](../../EVIDENCE_CONTRACTS.md)。历史scope仍使用其原合同，不倒填新规则。

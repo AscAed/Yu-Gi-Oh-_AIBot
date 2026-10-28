@@ -101,7 +101,7 @@
     let loadError;
     try {
       const saved=await api(`/api/drafts/${encodeURIComponent(id)}`);
-      state.id=saved.id; state.revision=saved.revision; state.draft=saved.draft; state.dirty=false; state.cards.clear();
+      state.id=saved.id; state.revision=saved.revision; state.draft=saved.draft; state.dirty=false; state.cards.clear(); state.language.clear();
       await checkCards([...state.draft.main,...state.draft.extra,...state.draft.side]);
       await refreshList();
     } catch(error) { loadError=error; }
@@ -133,7 +133,7 @@
     try {
       const content=await file.text();
       const imported=await api(`/api/import?format=${format}`,{method:"POST",body:content});
-      state.id=null; state.revision=null; state.draft=imported.draft; state.dirty=true; state.cards.clear();
+      state.id=null; state.revision=null; state.draft=imported.draft; state.dirty=true; state.cards.clear(); state.language.clear();
       await checkCards([...state.draft.main,...state.draft.extra,...state.draft.side]);
     } catch(error) { importError=error; }
     finally { state.loading=false; render(); }
@@ -145,7 +145,7 @@
     try { const blob=await api(`/api/export?format=${format}`,{method:"POST",body:JSON.stringify(state.draft),responseType:"blob"}); const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`deck.${format}`; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000); }
     catch(error){notice(error.message,true);}
   }
-  $("#new-draft").addEventListener("click",async()=>{if(state.saving||state.loading)return;state.id=null;state.revision=null;state.draft=emptyDraft();state.cards.clear();state.dirty=false;render();await refreshList();notice("新建空白草稿。中文译文未核验；牌组合法性未检查。");});
+  $("#new-draft").addEventListener("click",async()=>{if(state.saving||state.loading)return;state.id=null;state.revision=null;state.draft=emptyDraft();state.cards.clear();state.language.clear();state.dirty=false;render();await refreshList();notice("新建空白草稿。中文译文未核验；牌组合法性未检查。");});
   $("#save").addEventListener("click",saveDraft); $("#refresh-list").addEventListener("click",()=>refreshList().catch(e=>notice(e.message,true)));
   $("#title").addEventListener("input",()=>{if(state.saving||state.loading)return;state.draft.title=$("#title").value;state.dirty=true;});
   for(const zone of ["main","extra","side"]) $("[data-add-button="+zone+"]").addEventListener("click",async()=>{if(state.saving||state.loading)return;const input=$(`[data-add=${zone}]`);const id=Number(input.value);if(!Number.isInteger(id)||id<=0||id>4294967295){notice("请输入非零 u32 卡号。",true);return;}state.draft[zone].push(id);input.value="";await changed();});
