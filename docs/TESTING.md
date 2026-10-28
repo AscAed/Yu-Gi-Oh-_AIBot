@@ -7,6 +7,11 @@
 - 新包`engine identity`为`c1ac757ae9d350a959cc743812c66108dce20f0645b66ec4ade2fd851e3100c2`且`consistent=true`；实际Lua脚本12,727个，无缺失/额外/不匹配。D盘旧CLI不支持该命令，不能做完整身份对象比较。旧包与新包CLI/worker哈希不同；旧包自身二进制仍匹配其`build-hashes.json`。两包共用的CDB、核心DLL、引擎manifest、脚本manifest、LFLists提交和OCG文件一致；catalog ID/13,665张、banlist ID/203项及Rabbit牌组合法性只读状态一致。没有可比研究账本，因此不声称账本相等或全包等价。
 - 随后将验证记录提交为`27ab161`，在`git status`干净的提交上再次运行`deploy-local.ps1 -Offline -FrozenRuntime`。release构建命中现有产物，包重建、catalog/banlist导入、knowledge校验和doctor均退出0；对该包重跑smoke为340节点、27,310ms、3条EngineVerified，独立replay 3/3通过。日志及报告为`target/deploy-clean-checkout-20261028.log`、`target/deploy-clean-smoke.{json,log}`、`target/deploy-clean-replay.{json,log}`。后续文档提交仅改变文档；提交`d1e94b2`的最终包再次重建，包内`TESTING.md` SHA-256与源码相同，CLI SHA-256 `858979D5C529A7390229C538AEBE1A9168867669C019534CB1AB3B72BE531877`与`target/release/ygo-cli.exe`及包内`build-hashes.json`相同。没有新增研究scope调用；本地诊断smoke/replay不是正式研究实验。dist与日志属于本机Git忽略证据，不是提交归档。
 
+## 2026-10-28 历史审计独占写入测试隔离
+
+- `test_writer_is_exclusive_and_does_not_start_processes`此前写临时报告到原历史恢复目录，无法在不触碰证据树的条件下执行。现将该用例的测试仓库根定位到`target/history-audit-writer-<pid>-<uuid>`，由生产入口原样执行路径/忽略合同及独占文件创建；审计结果使用mock，因该测试目标是writer，不重复验证历史数据解析。测试确认报告创建、同路径第二次写拒绝(`output_already_exists`)，并将`subprocess.run`设为触发即失败。清理位于专属唯一目录的`finally`中；原D盘历史目录未写入或迁移。
+- `PYTHONPATH=python py -m pytest tests/test_history_audit.py -q -p no:cacheprovider`：10 passed、7 skipped、10 subtests passed。pytest提示禁用cache provider后`cache_dir`配置项未知；这是配置警告，不影响退出码。跳过用例依赖本机历史材料，未由隔离writer测试替代。
+
 ## 2026-10-28 最新源码隔离worktree部署复验
 
 - 隔离worktree HEAD `3de61b4fc361015268a2fb5f24ded9a0711693e5`从原D盘冻结资产只读复制所需CLI运行资产和LFLists冻结checkout；12,702个官方Lua脚本逐文件哈希均匹配，CDB、scripts.json、engine manifest/core与LFLists提交/OCG文件均匹配。资产只写入worktree的Git忽略路径，D盘源包及源资产未改。

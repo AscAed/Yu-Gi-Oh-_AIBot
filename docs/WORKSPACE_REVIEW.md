@@ -67,6 +67,6 @@
 - 该扫描只检查Markdown链接目标存在性，不验证锚点、内容哈希、证据是否过期或目标是否应公开；之前记载的源码目标数和分组统计来自不同扫描快照，应以对应日期范围理解，不把这次结果外推为全部证据验真。
 - 随后修正证据保留清单中的分组标题笔误：实际为`data/runtime/` 11项、`target/` 35项，共46个目标。只读重查原D盘工作区后46/46存在且被Git忽略；目录展开并去重为54个文件、750,733字节。逐文件哈希清单写入当前隔离worktree的忽略文件`target/evidence-retention-source-20261028.json`，回读重算54/54大小和SHA-256均匹配。用户选择暂不迁移，因此没有复制或移动历史证据；哈希文件不属于提交内容。
 - 路径相关复验：`tests/test_curry_consumption_reservation.py`为11 passed、1 skipped、17 subtests passed；跳过仅因当前Windows策略禁止创建目录符号链接，不能据此声称特权链接负例通过。`tests/test_prepare_curry_ledger_handoff_v5.py`为5 passed。两者pytest缓存目录均遇到访问拒绝警告，测试退出码为0。
-- 历史审计`test_writer_is_exclusive_and_does_not_start_processes`尚未运行。该用例会在原D盘`recovery-2026-10-21`目录创建后删除测试报告；对其父历史树的递归枚举至少见约12.3GB文件，但因临时子目录访问拒绝，此数值不完整。为避免向原证据树写入，也遵从用户暂不迁移的选择，本轮未运行此用例或复制该历史材料；需有安全隔离的最小输入或用户另定方案后再验。
+- 历史审计文件现将`test_writer_is_exclusive_and_does_not_start_processes`输出定向到`target/`下的隔离临时仓库，并mock只读审计结果，测试覆盖忽略目录合同、独占创建、重复写拒绝和不启动子进程，不再写入原D盘恢复证据目录。该文件全测为10 passed、7 skipped、10 subtests passed；跳过项依赖本机历史数据，结果不覆盖其历史内容验证。此前对历史树估算至少约12.3GB、且临时目录枚举不完整的记录仍仅作容量线索。
 - 续接分支的本地修复/文档提交未推送：终端Git推送缺少GitHub凭据，GitHub连接器创建分支也返回Authentication Failed。当前离线提交和测试状态保留在隔离worktree；没有创建新PR或合并。真实进程/最新源码部署门禁继续以[TASKS](../TASKS.md)为准。
 - 随后在提交`27ab161`的干净worktree上重建隔离包，smoke为340节点，独立replay 3/3通过；最终提交`d1e94b2`只更新文档，重建后的包内TESTING文档哈希匹配源码且CLI二进制哈希与已通过smoke/replay者一致。初次部署遗漏的25个公共Lua脚本已补齐，源/目标共12,727个脚本SHA-256一致。旧CLI不支持identity命令；共用核心/DLL/script/CDB/LFLists资产、catalog/banlist状态及Rabbit合法性只读比较一致，但CLI/worker哈希不同且没有可比研究账本，完整跨版本等价继续未知。原D盘旧包保持2026-10-19且未改。完整命令、失败修复经过和限制见[TESTING](TESTING.md)。
