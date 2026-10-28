@@ -2645,6 +2645,80 @@ mod tests {
             decision.clone(),
         )
         .unwrap();
+        journal
+            .save_checkpoint(
+                &format!(
+                    "immutable/execution-intent/{}/{}",
+                    checkpoint.inner.execution_id, intent.expected_call
+                ),
+                &serde_json::to_value(&intent).unwrap(),
+            )
+            .unwrap();
+        checkpoint.inner.progress.pending_action = Some(decision.clone());
+        checkpoint.inner.progress.pending_intent = Some(intent.clone());
+        checkpoint.inner.progress.status = ExecutionRecoveryStatus::IntentPersisted;
+        super::resumable::save_progress(&checkpoint.inner, &journal).unwrap();
+        checkpoint.pending = Some(ResumableLoopIntentV1 {
+            expected_call: intent.expected_call,
+            purpose: CallPurpose::Execution,
+            request: next_request.clone(),
+            phase: ResumableExecutionPhaseV1::EndPhase,
+            step: None,
+            choice: Some(decision.clone()),
+            selection_index: None,
+            prior_prefix_sha256: ygo_knowledge::hash(
+                &serde_json::to_vec(&checkpoint.inner.progress.current_prefix).unwrap(),
+            ),
+        });
+        journal
+            .save_checkpoint(
+                &format!("execution-loop-v1/{}", checkpoint.execution_id),
+                &serde_json::to_value(&checkpoint).unwrap(),
+            )
+            .unwrap();
+
+        // First stop after the durable intent but before the journal debit.
+        drop(checkpoint);
+        drop(journal);
+        let mut checkpoint = resume_resumable_partial_execution_v1(
+            &path,
+            "resumable-loop",
+            "synthetic-context",
+            8,
+            &request,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+        )
+        .unwrap();
+        assert!(checkpoint.pending.is_none());
+        assert_eq!(
+            checkpoint.inner.progress.status,
+            ExecutionRecoveryStatus::Ready
+        );
+        assert_eq!(checkpoint.inner.progress.ledger.consumed, 1);
+        let journal =
+            CallJournal::open_existing_strict(&path, "resumable-loop", "synthetic-context", 8)
+                .unwrap()
+                .unwrap();
+        let intent = ExecutionIntentV1::from_prompt(
+            &checkpoint.inner,
+            next_request.clone(),
+            ExecutionStage::EndPhase,
+            None,
+            decision.clone(),
+        )
+        .unwrap();
+        journal
+            .save_checkpoint(
+                &format!(
+                    "immutable/execution-intent/{}/{}",
+                    checkpoint.inner.execution_id, intent.expected_call
+                ),
+                &serde_json::to_value(&intent).unwrap(),
+            )
+            .unwrap();
         checkpoint.inner.progress.pending_action = Some(decision.clone());
         checkpoint.inner.progress.pending_intent = Some(intent.clone());
         checkpoint.inner.progress.status = ExecutionRecoveryStatus::IntentPersisted;

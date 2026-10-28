@@ -35,7 +35,7 @@
 
 ## 最近执行恢复批次：P4-R1b可恢复循环接入（实现已接入，等价验证待补）
 
-[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。新增版本化执行循环入口，保存语义阶段、End Phase和逐次查询审计游标；合成测试覆盖逐提示单动作暂停/重开、收费后未知消费拒绝重试，以及内层结果完成而外层快照未发布时的恢复对账。当前workspace串行总检为362 passed、36 ignored，详见TESTING的2026-10-28增补记录。连续语义多动作恢复等价、真实进程崩溃恢复和独立原生重放仍未认证；本批原生调用为0。
+[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。新增版本化执行循环入口，保存语义阶段、End Phase和逐次查询审计游标；合成测试覆盖逐提示单动作暂停/重开、收费后未知消费拒绝重试、意图未收费时恢复，以及内层结果完成而外层快照未发布时的对账恢复。当前workspace串行总检为362 passed、36 ignored，详见TESTING的2026-10-28增补记录。连续语义多动作恢复等价、真实进程崩溃恢复和独立原生重放仍未认证；本批原生调用为0。
 
 ## 最近语言数据批次：39卡中文字段离线核验（完成并暂停）
 
