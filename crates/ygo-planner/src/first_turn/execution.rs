@@ -2624,27 +2624,83 @@ mod tests {
         let mut terminal = initial_result.clone();
         terminal.status = DuelStatus::EngineVerified;
         terminal.prompt = None;
-        let mut calls = request.decisions.clone();
-        calls.push(Decision {
+        let decision = Decision {
             prompt_id: sequence,
             player: 0,
             choice: Choice::Command {
                 command: 7,
                 index: 0,
             },
-        });
+        };
+        let mut calls = request.decisions.clone();
+        calls.push(decision.clone());
         terminal.resolved_decisions = calls;
-        advance_resumable_partial_execution_v1_with_backend(
-            &mut checkpoint,
-            &plan,
-            &catalog,
-            &pack,
-            &goal,
+        let mut next_request = request.clone();
+        next_request.decisions.push(decision.clone());
+        let intent = ExecutionIntentV1::from_prompt(
+            &checkpoint.inner,
+            next_request.clone(),
+            ExecutionStage::EndPhase,
+            None,
+            decision.clone(),
+        )
+        .unwrap();
+        checkpoint.inner.progress.pending_action = Some(decision.clone());
+        checkpoint.inner.progress.pending_intent = Some(intent.clone());
+        checkpoint.inner.progress.status = ExecutionRecoveryStatus::IntentPersisted;
+        super::resumable::save_progress(&checkpoint.inner, &journal).unwrap();
+        checkpoint.pending = Some(ResumableLoopIntentV1 {
+            expected_call: intent.expected_call,
+            purpose: CallPurpose::Execution,
+            request: next_request,
+            phase: ResumableExecutionPhaseV1::EndPhase,
+            step: None,
+            choice: Some(decision),
+            selection_index: None,
+            prior_prefix_sha256: ygo_knowledge::hash(
+                &serde_json::to_vec(&checkpoint.inner.progress.current_prefix).unwrap(),
+            ),
+        });
+        journal
+            .save_checkpoint(
+                &format!("execution-loop-v1/{}", checkpoint.execution_id),
+                &serde_json::to_value(&checkpoint).unwrap(),
+            )
+            .unwrap();
+
+        // Simulate process loss after the result is charged and recorded in
+        // the inner checkpoint, but before the outer semantic snapshot moves.
+        advance_execution_v1_with_backend(
+            &mut checkpoint.inner,
+            intent,
             journal.clone(),
             Fixed(terminal.clone()),
         )
         .unwrap();
+        assert_eq!(checkpoint.phase, ResumableExecutionPhaseV1::EndPhase);
+        assert_eq!(journal.stats().unwrap().consumed, 2);
+        drop(checkpoint);
+        drop(journal);
+
+        let mut checkpoint = resume_resumable_partial_execution_v1(
+            &path,
+            "resumable-loop",
+            "synthetic-context",
+            8,
+            &request,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+        )
+        .unwrap();
         assert_eq!(checkpoint.phase, ResumableExecutionPhaseV1::QueryAudit);
+        assert!(checkpoint.pending.is_none());
+        assert_eq!(checkpoint.inner.progress.ledger.consumed, 2);
+        let journal =
+            CallJournal::open_existing_strict(&path, "resumable-loop", "synthetic-context", 8)
+                .unwrap()
+                .unwrap();
         assert_eq!(journal.stats().unwrap().consumed, 2);
 
         advance_resumable_query_audit_v1_with_backend(
