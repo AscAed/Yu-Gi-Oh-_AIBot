@@ -1,5 +1,12 @@
 # 本机验证记录
 
+## 2026-10-28 历史证据与路径保护复核
+
+- 对[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md)列出的46个本机忽略目标只读复核：D盘原工作区46/46存在且被Git忽略；展开目录并去重后为54个文件、750,733字节。逐文件哈希保存在忽略文件`target/evidence-retention-source-20261028.json`。复读源文件重算后54/54哈希及大小相同；未复制、改写或删除证据。
+- `PYTHONPATH=python py -m pytest tests/test_curry_consumption_reservation.py -q`：11 passed、1 skipped、17 subtests passed。跳过项需要创建目录符号链接，本机Windows配置不允许；同文件的无符号链接能力回退用例通过。此结果不证明特权符号链接负例。
+- `PYTHONPATH=python py -m pytest tests/test_prepare_curry_ledger_handoff_v5.py -q`：5 passed。pytest无法创建本机缓存目录并给出`PytestCacheWarning`，测试退出码为0。该包布局测试使用临时隔离目录，不触碰历史ledger。
+- 历史审计所称的旧目录独占写入用例本次仍未运行；执行前需先定位精确用例和目标，并确认其不会改写唯一历史证据。最新源码双资产干净部署也未运行；部署边界和原包状态见[工作区自检](WORKSPACE_REVIEW.md)。
+
 ## 2026-10-28 P4-R1b执行循环离线接入
 
 - 隔离分支HEAD `c34a505042a634c71c2969239af404d825a7bfe2`（基于`origin/main` `2389906`）执行`cargo build --release --workspace --offline --locked --target-dir target/p4-r1b`通过。Release CLI `ygo-cli.exe` SHA-256=`366956120B0C7DBBE951847ACA297FB7AD0E03496143C3A87335A749404FCBD3`，worker `ygo-engine-worker.exe` SHA-256=`CF2B235DE7897727EE1BFACE24BCCABF293E986ED2BB69120CD47BCB50E02DDD`；仅为忽略目录中的编译产物，没有复制到`dist`。隔离worktree缺少冻结engine/CDB/Lua/LFLists资产，旧D盘`dist/ygo-local`未覆盖；本次未运行doctor、worker或决斗，因此不构成部署/运行时验收。
