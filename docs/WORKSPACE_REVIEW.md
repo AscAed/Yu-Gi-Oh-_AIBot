@@ -65,3 +65,7 @@
 - 最新隔离源码Release构建使用`cargo build --release --workspace --offline --locked --target-dir target/p4-r1b`通过。HEAD `c34a505042a634c71c2969239af404d825a7bfe2`产物CLI/worker哈希分别为`366956120B0C7DBBE951847ACA297FB7AD0E03496143C3A87335A749404FCBD3`和`CF2B235DE7897727EE1BFACE24BCCABF293E986ED2BB69120CD47BCB50E02DDD`。隔离工作树没有冻结运行资产，故本批只证明Release可构建，不运行doctor/worker/决斗，不构成部署验收；原D盘旧包保持不变。
 - 对112篇跟踪Markdown重新扫描本地相对链接：当前隔离worktree内有68个目标缺失，其中19条指向`data/runtime/`证据，49条指向`target/`日志/产物；逐项映射到原D盘工作区后，68/68目标仍存在。此结果表明隔离worktree不是这些历史证据的自包含副本，不代表原工作区证据丢失。当前没有迁移、复制或删除它们；下一步须按消费者、身份绑定、重建性与保留策略逐项建立可恢复归档，再调整链接。
 - 该扫描只检查Markdown链接目标存在性，不验证锚点、内容哈希、证据是否过期或目标是否应公开；之前记载的源码目标数和分组统计来自不同扫描快照，应以对应日期范围理解，不把这次结果外推为全部证据验真。
+- 随后修正证据保留清单中的分组标题笔误：实际为`data/runtime/` 11项、`target/` 35项，共46个目标。只读重查原D盘工作区后46/46存在且被Git忽略；目录展开并去重为54个文件、750,733字节。逐文件哈希清单写入当前隔离worktree的忽略文件`target/evidence-retention-source-20261028.json`，回读重算54/54大小和SHA-256均匹配。用户选择暂不迁移，因此没有复制或移动历史证据；哈希文件不属于提交内容。
+- 路径相关复验：`tests/test_curry_consumption_reservation.py`为11 passed、1 skipped、17 subtests passed；跳过仅因当前Windows策略禁止创建目录符号链接，不能据此声称特权链接负例通过。`tests/test_prepare_curry_ledger_handoff_v5.py`为5 passed。两者pytest缓存目录均遇到访问拒绝警告，测试退出码为0。
+- 历史审计`test_writer_is_exclusive_and_does_not_start_processes`尚未运行。该用例会在原D盘`recovery-2026-10-21`目录创建后删除测试报告；对其父历史树的递归枚举至少见约12.3GB文件，但因临时子目录访问拒绝，此数值不完整。为避免向原证据树写入，也遵从用户暂不迁移的选择，本轮未运行此用例或复制该历史材料；需有安全隔离的最小输入或用户另定方案后再验。
+- 续接分支的本地修复/文档提交未推送：终端Git推送缺少GitHub凭据，GitHub连接器创建分支也返回Authentication Failed。当前离线提交和测试状态保留在隔离worktree；没有创建新PR或合并。真实进程/最新源码部署门禁继续以[TASKS](../TASKS.md)为准。
