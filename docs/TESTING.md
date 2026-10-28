@@ -17,7 +17,7 @@
 ## 2026-10-29 干净checkout的Python回归修复
 
 - PR #7的Windows Actions完整Python套件报告**739 passed、21 skipped、1 failed**；失败用例是`LanguageAuditTests.test_language_review_detects_input_hash_drift_and_never_overwrites_report`。它在CI干净checkout中访问被Git忽略的冻结`data/runtime/baseline-2026-10-19/data`输入，故先报`frozen_language_input_missing_or_linked`，没有运行到哈希漂移断言。不是历史Tenki pin失败，也没有证据表明生产逻辑不一致。[失败run](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/40732011021)
-- 后续修复将该单测改为39卡合成发行样本、临时清单/记录/卡库和受控catalog loader；只验证扫描中哈希漂移仍被拒绝，不依赖忽略目录、不改生产代码或既有source pin。目标回归和schema聚焦测试已在本机通过（8 passed、2 skipped）；完整修复后workspace Python Actions结果待补记。
+- 后续修复将该单测改为39卡合成发行样本、临时清单/记录/卡库和受控catalog loader；只验证扫描中哈希漂移仍被拒绝，不依赖忽略目录、不改生产代码或既有source pin。目标回归和schema聚焦测试本机通过（8 passed、2 skipped）。PR #8修复提交`84650f70f7447f4b2282a69447487b34a5a7aaeb`的干净Windows Actions通过：Rust格式、Clippy、workspace测试、Python套件及样例卡数据验证均成功；Python为**740 passed、21 skipped、0 failed（761项）**，耗时1169.02秒。[PR #8](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/pull/8)、[成功run](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/40736563854)。
 - 另一次本机全量Python运行在修复前以28%进度主动停止，未完成，不能作为全套通过或失败统计；保留输出于本机忽略日志[`python-tests-20261029-full.log`](../target/p4-r1b-followup/logs/python-tests-20261029-full.log)。
 
 ## 2026-10-28 P4-R1b多动作恢复等价与中断门禁
