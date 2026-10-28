@@ -29,7 +29,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] 完成本次纯文档定位、研究规范、证据规范、历史导航和双轨阶段计划；核对记录见[TESTING](docs/TESTING.md)顶部。
 - [x] 2026-10-27环境自检：区分部署包与开发资产，清理229个已确认空测试目录和本轮隔离Cargo缓存，整理pytest缓存及冗余直接依赖；范围和验证见[TESTING](docs/TESTING.md)。
 - [x] 本轮环境自检：Python 3.12干净快照、隔离部署文档复制、普通部署smoke与replay、离线验真及文档检查；覆盖、跳过项和后续保留边界见[工作区自检](docs/WORKSPACE_REVIEW.md)及[验证记录](docs/TESTING.md)。
-- [ ] 环境后续：已建[历史证据保留清单](docs/EVIDENCE_RETENTION.md)，盘点出46个被跟踪文档引用、原工作区均存在但全部被Git忽略的目标；已在本机忽略目录生成54个唯一文件的SHA-256源清单，但尚未建立可恢复归档或迁移。Windows消费预留路径保护测试为11 passed、1 skipped，因本机策略不能创建目录符号链接；须在有符号链接权限的环境补验该负例。旧目录独占写入用例尚未运行，须先确认用例及写入目标。最新源码隔离双资产包已构建且doctor通过，但未运行smoke/replay及旧包身份/账本比较，部署验收仍开放。当前未授予任何研究scope。
+- [ ] 环境后续：已建[历史证据保留清单](docs/EVIDENCE_RETENTION.md)，盘点出46个被跟踪文档引用、原工作区均存在且全部被Git忽略的目标；已在本机忽略目录生成54个唯一文件的SHA-256源清单，用户决定暂不迁移，故不复制或移动历史证据。Windows消费预留路径保护测试为11 passed、1 skipped，因本机策略不能创建目录符号链接；须在有符号链接权限的环境补验该负例。旧目录独占写入用例尚未运行，须先确认用例及写入目标。最新源码隔离双资产包的doctor、预算受限smoke及3/3线路独立replay已通过；新旧包的共用资产身份、catalog/banlist状态及Rabbit合法性已只读比较。P4-R5仍开放：部署包是在文档修改未提交时生成，并非干净checkout验收；旧CLI不支持`engine identity`，旧包与新包CLI/worker哈希不同，也没有可比的研究账本证据。当前未授予任何研究scope。
 - [x] A1 / P4-R1a：首次`DuelResult.error`与`QueryWitness::capture`失败均先由合成收费账本红测复现，再修复诊断验证器；没有可信查询、成功资格、收据或可恢复前缀。测试证据见[TESTING](docs/TESTING.md)与[交接](docs/superpowers/plans/2026-10-28-first-failure-and-deck-draft-handoff.md)。
 - [x] B1 / P3.1：完成空/部分草稿、主/额外/Side编辑及YDK/JSON导入导出；草稿不等于完整合法牌组。CLI说明见[DECK_DRAFTS](docs/DECK_DRAFTS.md)。
 - [x] B2 / P3：交付本机中文单页工作台，支持草稿新建/编辑/保存/重开、YDK/JSON往返及可选本地卡表查询；名称/译文仍明确标为未核验。服务与边界见[WORKBENCH](docs/WORKBENCH.md)，验收见[TESTING](docs/TESTING.md)。
@@ -44,7 +44,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。
-- [ ] P4-R5：最新源码隔离worktree的双资产冻结包和doctor已通过；须补无研究scope的预算受限smoke/replay与旧包身份/账本比较，完整门禁仍开放。详见[DEPLOYMENT](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
+- [ ] P4-R5：隔离双资产包doctor、预算受限smoke与3/3线路独立replay已通过；共用资产身份及catalog/banlist状态已只读比较。仍须从干净checkout复建并复验文档冻结状态；旧CLI不支持`engine identity`，旧包CLI/worker哈希不同，且无可比研究账本，故不可声称旧新包完全同一或账本等价。详见[DEPLOYMENT](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 

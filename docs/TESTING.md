@@ -1,5 +1,12 @@
 # 本机验证记录
 
+## 2026-10-28 最新源码隔离部署smoke与replay
+
+- 在隔离worktree从D盘只读复制冻结资产后，首次smoke暴露部署暂存遗漏：只复制了12,702个official Lua文件，没有复制25个公共脚本根目录Lua文件，导致`constant.lua`等回调加载失败。补齐这25个文件后，对比源/目标脚本树共12,727个文件，缺失、额外和哈希不匹配均为0；D盘源资产及旧包未改。
+- 重新执行`deploy-local.ps1 -Offline -FrozenRuntime`成功。doctor为`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`；其`smoke_ok=null`仅表示doctor未自带smoke。独立预算smoke日志`target/deploy-smoke-rerun.log`显示318节点、27,288ms、以`time_budget`结束，3条线路均标记`EngineVerified`。独立`combo replay`最终JSON `target/deploy-replay-final.json`列出3/3 `replay_verified=true`且`engine_verified`。该预算结果不证明全搜索或全局最优。
+- 新包`engine identity`为`c1ac757ae9d350a959cc743812c66108dce20f0645b66ec4ade2fd851e3100c2`且`consistent=true`；实际Lua脚本12,727个，无缺失/额外/不匹配。D盘旧CLI不支持该命令，不能做完整身份对象比较。旧包与新包CLI/worker哈希不同；旧包自身二进制仍匹配其`build-hashes.json`。两包共用的CDB、核心DLL、引擎manifest、脚本manifest、LFLists提交和OCG文件一致；catalog ID/13,665张、banlist ID/203项及Rabbit牌组合法性只读状态一致。没有可比研究账本，因此不声称账本相等或全包等价。
+- 构建包含尚未提交的文档修改，故本次不是干净checkout构建。没有新增研究scope调用；本地诊断smoke/replay不计作正式研究实验。遗留干净checkout冻结包复建及其文档哈希复验，P4-R5继续开放。日志和报告留在本机Git忽略的`target/`与`dist/`中，不是提交归档。
+
 ## 2026-10-28 最新源码隔离worktree部署复验
 
 - 隔离worktree HEAD `3de61b4fc361015268a2fb5f24ded9a0711693e5`从原D盘冻结资产只读复制所需CLI运行资产和LFLists冻结checkout；12,702个官方Lua脚本逐文件哈希均匹配，CDB、scripts.json、engine manifest/core与LFLists提交/OCG文件均匹配。资产只写入worktree的Git忽略路径，D盘源包及源资产未改。
