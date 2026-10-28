@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "language-field-review-v1.schema.json",
+  "type": "object",
+  "required": ["schema_version", "kind", "scope", "qualified", "qualification_gate", "created_at", "source_manifest_checked_date", "sample_card_ids", "source_count", "record_count", "language_categories", "sources", "ambiguous_names", "cards", "inputs", "legacy_audit_unresolved"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "language_field_review"},
+    "scope": {"const": "explicit-39-card-candidates"},
+    "qualified": {"const": false},
+    "qualification_gate": {"const": "independent_semantic_and_usage_review_required"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "source_manifest_checked_date": {"type": ["string", "null"], "format": "date"},
+    "sample_card_ids": {"type": "array", "minItems": 39, "maxItems": 39, "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 4294967295}},
+    "source_count": {"type": "integer", "minimum": 1},
+    "record_count": {"type": "integer", "minimum": 0},
+    "language_categories": {"type": "object", "additionalProperties": {"enum": ["zh-Hans", "zh-Hant", "und"]}},
+    "sources": {"type": "array", "items": {"type": "object", "required": ["id", "language", "version", "sha256", "license"], "properties": {"id": {"type": "string"}, "language": {"type": "string"}, "upstream_locale": {"type": "string"}, "version": {"type": "string"}, "file": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "license": {"type": "object", "required": ["redistribution"], "properties": {"redistribution": {"enum": ["unknown", "permitted", "prohibited"]}, "evidence": {"type": "string"}, "readme_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": true}, "restrictions": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": true}},
+    "ambiguous_names": {"type": "array", "items": {"type": "object", "required": ["source", "candidate_sha256", "card_ids"], "properties": {"source": {"type": "string"}, "candidate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "card_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}}}, "additionalProperties": false}},
+    "cards": {"type": "array", "minItems": 39, "maxItems": 39, "items": {"type": "object", "required": ["card_id", "sources"], "properties": {"card_id": {"type": "integer", "minimum": 1, "maximum": 4294967295}, "sources": {"type": "object", "additionalProperties": {"$ref": "#/$defs/sourceReview"}}}, "additionalProperties": false}},
+    "inputs": {"type": "object", "minProperties": 5, "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    ,"legacy_audit_unresolved": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "fieldReview": {"type": "object", "required": ["status", "source", "reason"], "properties": {"status": {"enum": ["candidate", "missing", "conflict", "unknown"]}, "source": {"type": "string"}, "reason": {"type": "string"}, "candidate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false},
+    "sourceReview": {"type": "object", "required": ["language_category", "language_category_status", "semantic_review", "usage_basis", "redistribution", "fields", "engine_metadata"], "properties": {"language_category": {"enum": ["zh-Hans", "zh-Hant", "und"]}, "language_category_status": {"enum": ["candidate", "unknown"]}, "semantic_review": {"const": "not_reviewed"}, "usage_basis": {"type": "object", "required": ["status", "reason"], "properties": {"status": {"enum": ["unknown", "supported"]}, "reason": {"type": "string"}}, "additionalProperties": false}, "redistribution": {"enum": ["unknown", "permitted", "prohibited"]}, "fields": {"type": "object", "required": ["name", "text", "alias", "archetypes"], "properties": {"name": {"$ref": "#/$defs/fieldReview"}, "text": {"$ref": "#/$defs/fieldReview"}, "alias": {"$ref": "#/$defs/fieldReview"}, "archetypes": {"$ref": "#/$defs/fieldReview"}}, "additionalProperties": false}, "engine_metadata": {"type": "object", "required": ["alias_id", "setcode", "note"], "properties": {"alias_id": {"type": ["integer", "null"], "minimum": 0}, "setcode": {"type": ["integer", "null"], "minimum": 0}, "note": {"type": "string"}}, "additionalProperties": false}}, "additionalProperties": false}
+  }
+}

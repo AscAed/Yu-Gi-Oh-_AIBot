@@ -192,6 +192,89 @@ class InventorySchemaTests(unittest.TestCase):
 
 
 class LanguageAuditTests(unittest.TestCase):
+    def test_language_review_strict_json_rejects_duplicate_keys(self):
+        from ygo_data.language_review import _strict_json
+        with temporary_directory() as temporary:
+            path = Path(temporary) / 'duplicate.json'
+            path.write_text('{"card_id":1,"card_id":2}', encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'duplicate_json_key:card_id'):
+                _strict_json(path)
+
+    def test_language_review_detects_input_hash_drift_and_never_overwrites_report(self):
+        from unittest.mock import patch
+        from ygo_data import language_review
+
+        original_digest = language_review._sha256
+        calls = 0
+
+        def drifting_digest(path):
+            nonlocal calls
+            if path == language_review.SOURCE_PATH:
+                calls += 1
+                if calls == 2:
+                    return '0' * 64
+            return original_digest(path)
+
+        with patch('ygo_data.language_review._sha256', side_effect=drifting_digest):
+            with self.assertRaisesRegex(ValueError, 'frozen_language_inputs_changed_during_audit'):
+                language_review.build_frozen_report()
+
+        with temporary_directory() as temporary:
+            output = Path(temporary) / 'report.json'
+            output.write_text('preserve', encoding='utf-8')
+            with patch('ygo_data.language_review.build_frozen_report', side_effect=AssertionError('must not scan')):
+                self.assertEqual(language_review.main(['audit', '--output', str(output)]), 1)
+            self.assertEqual(output.read_text(encoding='utf-8'), 'preserve')
+
+    def test_language_field_review_keeps_unmapped_fields_unknown_and_hides_candidate_text(self):
+        from ygo_data.language_review import audit_language_fields
+
+        sources = [
+            {'id': 'cn', 'language': 'zh-Hans', 'version': 'pin-1', 'sha256': 'a' * 64,
+             'license': {'redistribution': 'unknown'}},
+            {'id': 'sc', 'language': 'und', 'upstream_locale': 'zh-SC', 'version': 'pin-1',
+             'sha256': 'b' * 64, 'license': {'redistribution': 'unknown'}},
+        ]
+        records = [
+            {'card_id': 1, 'language': 'zh-Hans',
+             'name': {'value': '同名候选', 'source': 'cn', 'status': 'unverified'},
+             'text': {'value': '候选正文', 'source': 'cn', 'status': 'unverified'}},
+            {'card_id': 2, 'language': 'zh-Hans',
+             'name': {'value': '同名候选', 'source': 'cn', 'status': 'unverified'}},
+        ]
+        catalogs = {
+            'cn': {1: {'name': '同名候选', 'text': '候选正文', 'engine_alias': 2, 'setcode': 0x1234},
+                   2: {'name': '同名候选', 'text': '', 'engine_alias': 1, 'setcode': 0x1234}},
+            'sc': {1: {'name': '另一候选名', 'text': '另一候选正文', 'engine_alias': 2, 'setcode': 0x1234}},
+        }
+
+        report = audit_language_fields([1, 2, 3], sources, records, catalogs)
+
+        self.assertFalse(report['qualified'])
+        self.assertEqual(report['language_categories']['sc'], 'und')
+        self.assertEqual(report['cards'][0]['sources']['cn']['fields']['name']['status'], 'candidate')
+        self.assertEqual(report['cards'][0]['sources']['sc']['fields']['name']['status'], 'candidate')
+        self.assertEqual(report['cards'][0]['sources']['cn']['fields']['alias']['status'], 'unknown')
+        self.assertEqual(report['cards'][0]['sources']['cn']['fields']['archetypes']['status'], 'unknown')
+        self.assertEqual(report['cards'][1]['sources']['cn']['fields']['text']['status'], 'missing')
+        self.assertEqual(report['cards'][2]['sources']['cn']['fields']['name']['status'], 'missing')
+        self.assertEqual(report['ambiguous_names'][0]['card_ids'], [1, 2])
+        self.assertNotIn('候选正文', json.dumps(report, ensure_ascii=False))
+        self.assertNotIn('候选名', json.dumps(report, ensure_ascii=False))
+
+    def test_language_field_review_reports_conflicts_and_rejects_bad_samples(self):
+        from ygo_data.language_review import audit_language_fields
+
+        source = {'id': 'cn', 'language': 'zh-Hans', 'version': 'pin-1', 'sha256': 'a' * 64,
+                  'license': {'redistribution': 'unknown'}}
+        record = {'card_id': 7, 'language': 'zh-Hans',
+                  'name': {'value': 'record name', 'source': 'cn', 'status': 'unverified'}}
+        report = audit_language_fields([7], [source], [record], {'cn': {7: {'name': 'cdb name', 'text': ''}}})
+        self.assertEqual(report['cards'][0]['sources']['cn']['fields']['name']['status'], 'conflict')
+        self.assertEqual(report['cards'][0]['sources']['cn']['fields']['name']['reason'], 'candidate_sources_disagree')
+        with self.assertRaises(ValueError):
+            audit_language_fields([7, 7], [source], [], {'cn': {}})
+
     def test_language_cli_rejects_invalid_records_before_creating_report(self):
         from contextlib import redirect_stderr
         from io import StringIO

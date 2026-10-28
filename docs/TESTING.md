@@ -1,5 +1,29 @@
 # 本机验证记录
 
+## 2026-10-28 PR #3合并后的C1/A3整合自检
+
+- 基线为已合并PR #3的`main`提交`fc7b177a74557bafdd7a8424abc8402dc7354635`；C1/A3工作区改动移植到独立分支后验证。`cargo fmt --all -- --check`、`cargo clippy --offline --locked --workspace --all-targets -- -D warnings`和全workspace测试均通过；测试共91条结果摘要、**357 passed、36 ignored、0 failed**。汇总日志在本机忽略目录`target/self-audit-20261028/workspace-test-summary.log`，不随干净checkout提供。A3 planner用例21项通过；工作台HTTP用例4项通过。
+- Python聚焦`tests/test_coverage_language.py tests/test_schemas.py`为**23 passed、2 skipped**；本机唯一可用解释器为Python 3.14，出现pytest缓存目录访问拒绝警告但测试通过。完整Python套件最近可复核记录仍为上方C1批次的**749 passed、9 skipped、1 failed**；唯一失败是既有Tenki历史保护锚点哈希不匹配，受保护的`codec.rs`不属于本批改动且本批未放宽保护。Python 3.12运行时当前不可用，因此没有把本机3.14全套尝试当成正式基线。
+- `node --check crates/ygo-cli/src/workbench/app.js`与`git diff --check`通过。没有运行原生引擎、部署、doctor或赛事/冻结资产opt-in；Rust ignored项保持既有明确opt-in边界。
+- 该次部署现场只读清点发现普通包`dist/ygo-local`中的`ygo.exe`与worker仍为**2026-10-19**生成，包内构建哈希与包文件匹配；它早于2026-10-28源码且不含当前工作台/C1/A3工作，因此本轮未覆盖该包。生产包重建与最新源码双资产干净checkout验收仍开放，见[部署说明](DEPLOYMENT.md)及[TASKS](../TASKS.md)。
+
+## 2026-10-28 A3执行状态持久化与零原生恢复
+
+- 新增`ExecutionCheckpointV1`与`ExecutionIntentV1`，通过`ygo_planner::first_turn`提供起始检查点、单步推进、语义快照保存和恢复接口。状态绑定初始请求、plan、catalog、知识包、goal及运行时版本，并保存阶段/步骤、已认证实际前缀与资源快照、实例映射、选择、预测、QueryWitness、待处理动作和账本。该接口从已完成且已收费的初始Execution调用开始；原同步`execute_partial_v2`接口及报告合同保持不变，真实执行循环尚未改接新接口。
+- 收费续步前先保存不可变意图和待处理检查点。恢复先用`inspect_existing`验证账本、checkpoint、预算、结果和收费序列，再释放只读句柄，以新增`open_existing_strict`独占打开既有账本；strict模式拒绝撕裂/空/损坏尾记录，不创建或修复文件。独占重开后再次比较统计、预留令牌映射、收费序列、进度快照和意图。已完成的唯一尾部调用只复用认证结果；未决/未知消费拒绝推进且不退款、不自动重试。`actual_resources`必须与已认证实际前缀checkpoint一致。序列化状态不产生`PartialExecutionV2`运行时凭证。
+- planner单元测试：**21 passed、0 failed**；包含连续运行与两次暂停重开的收费序列、实际前缀/资源、QueryWitness、预测和实例映射对照，计划/请求绑定拒绝、预算耗尽时adapter调用0、已完成尾调用复用、未决收费阻断及重复零调用恢复。engine-adapter完整测试在workspace总检内执行：该crate54个单元测试、journal19项和相关集成测试均通过；strict重开对损坏账本拒绝且字节不变。
+- 最终`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/a3-resumable -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/a3-resumable -- --test-threads=1`共**357 passed、36 ignored、0 failed**（91条test-result摘要）。忽略项是既有冻结引擎/本机资产、原生研究、手工基准和明确opt-in写入用例；逐项说明保留在[`workspace-test.log`](../target/a3-resumable/logs/workspace-test.log)。Python schema回归`py -m pytest tests/test_schemas.py -ra --tb=short`为**6 passed、2 skipped**；跳过项为本机snapshot/report opt-in和真实v2 report opt-in。schema JSON语法检查通过。日志与汇总位于[`target/a3-resumable/logs`](../target/a3-resumable/logs/)。
+- 本批新增原生研究/runner/worker/FFI调用为**0**。未运行doctor、真实资产opt-in或48手评估。认证消费子集40、政策预留7、规划47不变，旧confirmation与全部历史实际累计仍未知。C1已记录的Tenki保护哈希全Python失败未在本批重跑或修改。此处只关闭A3离线实现与合成恢复关口；真实进程暂停/重开、正式循环接入及独立重放仍未认证。详情见[执行恢复合同](EXECUTION_RECOVERY.md)和[A3交接](superpowers/plans/2026-10-28-a3-execution-recovery-handoff.md)。
+
+## 2026-10-28 C1牌组中文字段离线核验
+
+- 冻结输入是39个唯一发行样本卡号、来源清单、语言记录及两份只读SQLite CDB。报告路径为`data/runtime/c1-language-review-offline-2026-10-28/language-review.json`，大小136,708字节；SHA-256及逐项来源见[LANGUAGE_REVIEW](LANGUAGE_REVIEW.md)。审计在读取前后重算全部输入哈希，未启动runner、worker、FFI或可写研究账本。
+- 报告为39卡、2来源、`qualified=false`。zh-CN `zh-Hans`候选名称/正文各39项；zh-SC类别保持`und`，候选名称/正文各38项、各缺失1项；两来源的alias及archetypes映射均未知各39项；同源候选名冲突0。旧语言审计另有197条未解决项。这些数字描述字段覆盖，不证明翻译正确或来源获授权。
+- 新schema正反例和合成回归：最终聚焦命令`PYTHONPATH=python py -m pytest tests/test_coverage_language.py tests/test_schemas.py -ra --tb=short`为**22 passed、2 skipped、0 failed**。跳过项是既有本地snapshot/report及真实v2报告opt-in。显式枚举`tests/test_*.py`运行全套后为**749 passed、9 skipped、1 failed**（759项，1840.50秒）；唯一失败是既有`test_seven_historical_ledgers_reaudit_read_only_without_runner`的旧Tenki保护锚点：它预期`crates/ygo-engine-adapter/src/codec.rs`为`e8f97eef…aad133`，当前字节为`62339e56…577e68`，错误`protected_source_change_hash_mismatch`。本批未改该文件，该路径`git diff`为空；未放宽历史保护检查。9项跳过原因及完整输出见[`python-full.log`](../target/c1-language-review-tests/python-full.log)。
+- 工作台增加只读`GET /api/language-status?ids=...`，只返回卡号、固定来源ID、字段状态/原因及候选哈希；不返回候选名称或正文。候选状态缺少哈希的红测失败后，加载器拒绝不完整/损坏材料并降级为未核验。`workbench_http`为**4 passed**，红测日志见[`status-loader-red.log`](../target/c1-language-review-tests/status-loader-red.log)；本机隔离服务HTTP验收确认固定39卡报告可读、样本外ID为unknown、无catalog时仍未核验，并创建、更新、重新读取含重复卡号的草稿成功，摘要在[`http-smoke-summary.json`](../target/c1-language-review-tests/http-smoke-summary.json)。首次尝试连接用户原生浏览器时，Computer Use授权超时，没有执行原生浏览器动作；随后改用隔离的Codex应用内浏览器完成真实界面验收：打开已保存草稿、显示“候选/缺失/未知”与`zh-SC`语言类别未确认、在无catalog状态继续编辑、保存并刷新列表后重新打开，结果摘要见[`browser-smoke-summary.json`](../target/c1-language-review-tests/browser-smoke-summary.json)。候选正文没有进入响应或界面。集成日志见[`workbench-http.log`](../target/c1-language-review-tests/workbench-http.log)。
+- Rust格式`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/c1-language-review -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/c1-language-review -- --test-threads=1`为**353 passed、36 ignored、0 failed**，91条测试结果记录。被忽略项仍是既有本机资产、研究、基准及显式opt-in测试；日志见[`rust-workspace.log`](../target/c1-language-review-tests/rust-workspace.log)、[`rust-clippy.log`](../target/c1-language-review-tests/rust-clippy.log)及[`rust-fmt-check.log`](../target/c1-language-review-tests/rust-fmt-check.log)。
+- 本批新增原生研究/runner/worker/FFI调用0；认证消费子集40、政策预留7、规划47不变；旧confirmation与全部历史实际累计仍未知。语义审阅、zh-SC类别、使用依据、再分发资格和正式中文搜索未通过。Rust隔离CLI使用本机系统分配端口，仅写入`target/c1-workbench-browser/`并已停止；无部署变更。
+
 ## 2026-10-28 B2本机中文牌组工作台
 
 - 工作台实现复用B1 `DeckDocumentV1`与安全草稿存储。草稿存储集成测试4 passed，覆盖三分区顺序/重复卡、随机标识独占创建、同revision并发更新仅一方成功、过期revision拒绝及文件不变；共享发布器故障注入确认替换失败后原稿可恢复。CLI草稿集成测试3 passed，现有命令回归5 passed；HTTP集成3 passed，覆盖loopback Host、mutation Origin、Bearer令牌、1MiB请求体限制、草稿读写/409冲突、YDK导入导出及经过`SnapshotStore`验证的本地catalog名称来源。`ygo-domain`三分区草稿相关测试5 passed。

@@ -174,6 +174,33 @@ fn open_locked(path: &Path) -> Result<File, WorkerError> {
     Ok(file)
 }
 
+fn open_existing_locked(path: &Path) -> Result<Option<File>, WorkerError> {
+    let mut options = OpenOptions::new();
+    options.read(true).write(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.share_mode(0);
+    }
+    let file = match options.open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(io_fail(error)),
+    };
+    #[cfg(unix)]
+    {
+        use std::os::fd::AsRawFd;
+        extern "C" {
+            fn flock(fd: i32, operation: i32) -> i32;
+        }
+        // LOCK_EX | LOCK_NB: do not wait behind another budget owner.
+        if unsafe { flock(file.as_raw_fd(), 2 | 4) } != 0 {
+            return Err(io_fail(std::io::Error::last_os_error()));
+        }
+    }
+    Ok(Some(file))
+}
+
 impl State {
     fn sequence_id(&self, count: usize) -> Result<String, WorkerError> {
         let sequence: Vec<_> = self
@@ -410,6 +437,122 @@ enum StoredResult {
 }
 
 impl CallJournal {
+    /// Open an existing journal exclusively without creating, repairing, or
+    /// rewriting it. Torn or incomplete data is rejected for recovery callers.
+    pub fn open_existing_strict(
+        path: impl AsRef<Path>,
+        scope: &str,
+        context: &str,
+        limit: usize,
+    ) -> Result<Option<Arc<Self>>, WorkerError> {
+        if scope.is_empty() || context.is_empty() || limit == 0 {
+            return Err(fail(
+                "journal_contract",
+                "scope, context and positive limit required",
+            ));
+        }
+        let path = path.as_ref();
+        let Some(mut file) = open_existing_locked(path)? else {
+            return Ok(None);
+        };
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).map_err(io_fail)?;
+        if bytes.is_empty() || bytes.last() != Some(&b'\n') {
+            return Err(fail(
+                "journal_readonly_incomplete",
+                "empty or truncated journal cannot be opened for strict recovery",
+            ));
+        }
+        let mut state = State {
+            file,
+            sequence: 0,
+            last_hash: String::new(),
+            calls: BTreeMap::new(),
+            reserved: BTreeMap::new(),
+            limit,
+            faulted: false,
+            recoveries: Vec::new(),
+            checkpoints: BTreeMap::new(),
+            checkpoint_budgets: BTreeMap::new(),
+            checkpoint_reservations: BTreeMap::new(),
+        };
+        let mut recovery_markers = BTreeMap::new();
+        let lines = bytes[..bytes.len() - 1]
+            .split(|byte| *byte == b'\n')
+            .collect::<Vec<_>>();
+        if lines.iter().any(|line| line.is_empty()) {
+            return Err(fail(
+                "journal_readonly_incomplete",
+                "blank journal record cannot be opened for strict recovery",
+            ));
+        }
+        let mut byte_offset = 0u64;
+        for line in lines {
+            let record: Record = serde_json::from_slice(line).map_err(io_fail)?;
+            if record.sequence != state.sequence
+                || record.previous != state.last_hash
+                || record.hash != record_hash(record.sequence, &record.previous, &record.entry)?
+            {
+                return Err(fail(
+                    "journal_hash",
+                    "journal sequence or hash chain mismatch",
+                ));
+            }
+            if state.sequence == 0 {
+                match &record.entry {
+                    Entry::Header {
+                        version: 1,
+                        scope: found_scope,
+                        context: found_context,
+                        limit: found_limit,
+                    } if found_scope == scope
+                        && found_context == context
+                        && *found_limit == limit => {}
+                    _ => {
+                        return Err(fail(
+                            "journal_context",
+                            "scope, context, version or budget changed",
+                        ))
+                    }
+                }
+            }
+            if let Entry::Recovery { evidence } = &record.entry {
+                if recovery_markers
+                    .insert(
+                        evidence.tail_hash.clone(),
+                        (record.previous.clone(), byte_offset),
+                    )
+                    .is_some()
+                {
+                    return Err(fail(
+                        "journal_contract",
+                        "duplicate recovery marker binding",
+                    ));
+                }
+            }
+            state.check(&record.entry)?;
+            state.apply(record.entry);
+            state.sequence += 1;
+            state.last_hash = record.hash;
+            byte_offset += line.len() as u64 + 1;
+        }
+        if state.sequence == 0 {
+            return Err(fail(
+                "journal_readonly_incomplete",
+                "journal header missing",
+            ));
+        }
+        let mut name = path.as_os_str().to_owned();
+        name.push(".blobs");
+        let journal = Arc::new(Self {
+            state: Mutex::new(state),
+            blobs: PathBuf::from(name),
+        });
+        journal.verify()?;
+        journal.verify_recovery_markers(&recovery_markers)?;
+        Ok(Some(journal))
+    }
+
     /// Inspect an existing journal without creating directories, appending a
     /// header, recovering a torn tail, or otherwise changing evidence.
     pub fn inspect_existing(
@@ -715,6 +858,9 @@ impl CallJournal {
     pub fn stats(&self) -> Result<LedgerStats, WorkerError> {
         Ok(self.lock()?.stats())
     }
+    pub fn reservation_state(&self) -> Result<BTreeMap<String, usize>, WorkerError> {
+        Ok(self.lock()?.reserved.clone())
+    }
     /// Disclose an uncertain completed/crashed call without refunding its debit.
     pub fn acknowledge_unknown(&self, call_id: u64, reason: &str) -> Result<(), WorkerError> {
         self.lock()?.append(Entry::Abandon {
@@ -812,6 +958,15 @@ impl CallJournal {
             return Ok(None);
         }
         Ok(self.lock()?.checkpoint_budgets.get(name).cloned())
+    }
+    pub fn checkpoint_reservations(
+        &self,
+        name: &str,
+    ) -> Result<Option<BTreeMap<String, usize>>, WorkerError> {
+        if self.checkpoint(name)?.is_none() {
+            return Ok(None);
+        }
+        Ok(self.lock()?.checkpoint_reservations.get(name).cloned())
     }
     /// Charged request-purpose-result identity at an immutable checkpoint.
     /// This stays stable when later calls extend the same journal.
@@ -1098,6 +1253,18 @@ impl ReadOnlyJournal {
         self.journal.stats()
     }
 
+    pub fn reservation_state(&self) -> Result<BTreeMap<String, usize>, WorkerError> {
+        self.journal.reservation_state()
+    }
+
+    pub fn unresolved_calls(&self) -> Result<Vec<u64>, WorkerError> {
+        self.journal.unresolved_calls()
+    }
+
+    pub fn call_purpose(&self, call_id: u64) -> Result<CallPurpose, WorkerError> {
+        self.journal.call_purpose(call_id)
+    }
+
     pub fn checkpoint(&self, name: &str) -> Result<Option<serde_json::Value>, WorkerError> {
         self.journal.checkpoint(name)
     }
@@ -1108,6 +1275,13 @@ impl ReadOnlyJournal {
 
     pub fn checkpoint_budget(&self, name: &str) -> Result<Option<LedgerStats>, WorkerError> {
         self.journal.checkpoint_budget(name)
+    }
+
+    pub fn checkpoint_reservations(
+        &self,
+        name: &str,
+    ) -> Result<Option<BTreeMap<String, usize>>, WorkerError> {
+        self.journal.checkpoint_reservations(name)
     }
 
     pub fn checkpoint_charged_sequence_id(
