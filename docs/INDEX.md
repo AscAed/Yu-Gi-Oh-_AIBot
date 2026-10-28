@@ -17,6 +17,7 @@
 | 基线及研究工具用法 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md) | 工具及合同说明；实跑状态和限制仍见TASKS/TESTING |
 | 模块边界与数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | 以crate依赖和调用路径为准 |
 | 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
+| 被文档引用的忽略目录证据与迁移要求 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 路径盘点不是哈希验真/备份；清理前先确认消费者与可恢复副本 |
 | 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
 | JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md)、[WORKBENCH.md](WORKBENCH.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md) | schema和解析器为规范性定义；WORKBENCH记录当前本机HTTP界面与安全边界；执行恢复仅描述可恢复进度，不授予成功资格 |
 | 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
@@ -35,7 +36,7 @@
 
 ## 最近执行恢复批次：P4-R1b可恢复循环接入（实现已接入，等价验证待补）
 
-[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。新增版本化执行循环入口，保存语义阶段、End Phase和逐次查询审计游标；合成End Phase/查询审计暂停重开通过。完整串行workspace为358 passed、36 ignored。连续语义多动作恢复等价、真实进程崩溃恢复和独立原生重放仍未认证；本批原生调用为0。
+[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。新增版本化执行循环入口，保存语义阶段、End Phase和逐次查询审计游标；合成测试覆盖逐提示单动作暂停/重开、收费后未知消费拒绝重试、意图未收费时恢复，以及内层结果完成而外层快照未发布时的对账恢复。当前workspace串行总检为362 passed、36 ignored，详见TESTING的2026-10-28增补记录。连续语义多动作恢复等价、真实进程崩溃恢复和独立原生重放仍未认证；本批原生调用为0。
 
 ## 最近语言数据批次：39卡中文字段离线核验（完成并暂停）
 

@@ -226,6 +226,18 @@ fn choose_semantic_action(
     if state.phase != ResumableExecutionPhaseV1::Semantic {
         return Err("semantic action requested outside semantic phase".into());
     }
+    if let Some(step) = state.current_transition.as_ref() {
+        if prompt.opcode == 11 || prompt.opcode == 12 {
+            return Err("semantic operation closed before choosing an action".into());
+        }
+        let before = state
+            .before_state
+            .as_ref()
+            .ok_or("semantic operation before-state is missing")?;
+        let (choice, selection) = follow_choice(result, step, before, &state.used_selections)?;
+        return Ok((choice, selection, ExecutionStage::Execution));
+    }
+
     let planned = plan
         .steps
         .get(state.semantic_step)
@@ -248,68 +260,55 @@ fn choose_semantic_action(
             )
         })?
         .clone();
-    if state.current_transition.is_none() {
-        let source = lookup(&before.state, &step.source).ok_or("source instance missing")?;
-        if !source.identity_known {
-            return Err("source identity unknown".into());
-        }
-        let trigger = before.state.pending.iter().any(|pending| {
-            pending.rule_id == step.rule_id
-                && pending.source == step.source
-                && pending.eligibility == Truth::Yes
-        });
-        let rule = pack.rule(&step.rule_id).ok_or("missing rule")?;
-        let choice = bind_start(result, &source.card, rule, step.kind, trigger)?;
-        let mut prediction = PartialPrediction {
-            checkpoint_id: None,
-            step: state.semantic_step,
-            before_call: journal.stats().map_err(|e| e.message)?.consumed as u64 + 1,
-            at_prompt: prompt.id,
-            goal_before: ygo_goal::evaluate(
-                &goal.expr,
-                &forecast_facts(&before.state),
-                &Default::default(),
-            ),
-            goal_after: ygo_goal::evaluate(
-                &goal.expr,
-                &forecast_facts(&step.after_resolution),
-                &Default::default(),
-            ),
-            public: before.public.clone(),
-            candidates: comparisons(&before.state, &options, goal),
-            expected_following_rules: plan.steps[state.semantic_step + 1..]
-                .iter()
-                .map(|s| s.rule_id.clone())
-                .collect(),
-            selected: step.clone(),
-            differences: Vec::new(),
-            after_prompt: None,
-        };
-        prediction.checkpoint_id = Some(immutable_prediction_checkpoint(&plan.id, &prediction));
-        journal
-            .save_checkpoint(
-                prediction.checkpoint_id.as_deref().unwrap(),
-                &serde_json::to_value(&prediction).unwrap(),
-            )
-            .map_err(|e| e.message)?;
-        state.predictions.push(prediction);
-        state.current_transition = Some(step);
-        state.before_state = Some(before.state);
-        state.event_boundary = result.events.len();
-        state.used_selections.clear();
-        return Ok((choice, None, ExecutionStage::Execution));
+    let source = lookup(&before.state, &step.source).ok_or("source instance missing")?;
+    if !source.identity_known {
+        return Err("source identity unknown".into());
     }
-    let step = state.current_transition.as_ref().unwrap();
-    if prompt.opcode == 11 || prompt.opcode == 12 {
-        return Err("semantic operation closed before choosing an action".into());
-    }
-    let (choice, selection) = follow_choice(
-        result,
-        step,
-        state.before_state.as_ref().unwrap(),
-        &state.used_selections,
-    )?;
-    Ok((choice, selection, ExecutionStage::Execution))
+    let trigger = before.state.pending.iter().any(|pending| {
+        pending.rule_id == step.rule_id
+            && pending.source == step.source
+            && pending.eligibility == Truth::Yes
+    });
+    let rule = pack.rule(&step.rule_id).ok_or("missing rule")?;
+    let choice = bind_start(result, &source.card, rule, step.kind, trigger)?;
+    let mut prediction = PartialPrediction {
+        checkpoint_id: None,
+        step: state.semantic_step,
+        before_call: journal.stats().map_err(|e| e.message)?.consumed as u64 + 1,
+        at_prompt: prompt.id,
+        goal_before: ygo_goal::evaluate(
+            &goal.expr,
+            &forecast_facts(&before.state),
+            &Default::default(),
+        ),
+        goal_after: ygo_goal::evaluate(
+            &goal.expr,
+            &forecast_facts(&step.after_resolution),
+            &Default::default(),
+        ),
+        public: before.public.clone(),
+        candidates: comparisons(&before.state, &options, goal),
+        expected_following_rules: plan.steps[state.semantic_step + 1..]
+            .iter()
+            .map(|s| s.rule_id.clone())
+            .collect(),
+        selected: step.clone(),
+        differences: Vec::new(),
+        after_prompt: None,
+    };
+    prediction.checkpoint_id = Some(immutable_prediction_checkpoint(&plan.id, &prediction));
+    journal
+        .save_checkpoint(
+            prediction.checkpoint_id.as_deref().unwrap(),
+            &serde_json::to_value(&prediction).unwrap(),
+        )
+        .map_err(|e| e.message)?;
+    state.predictions.push(prediction);
+    state.current_transition = Some(step);
+    state.before_state = Some(before.state);
+    state.event_boundary = result.events.len();
+    state.used_selections.clear();
+    Ok((choice, None, ExecutionStage::Execution))
 }
 
 fn apply_execution_outcome(
@@ -487,6 +486,7 @@ fn advance_resumable_partial_execution_with_backend<A: EngineAdapter>(
         state.instance_mapping.clone(),
         state.used_selections.clone(),
         state.predictions.clone(),
+        state.before_state.as_ref(),
         &journal,
     )?;
     persist_loop(state, &journal)?;
@@ -960,5 +960,6 @@ pub fn resume_resumable_partial_execution_v1(
         return Err("inner and outer execution checkpoints differ".into());
     }
     state.inner = inner;
+    persist_loop(&state, &exclusive)?;
     Ok(state)
 }

@@ -50,3 +50,23 @@
 - CI的`actions/checkout@v4`与`actions/setup-python@v5`曾触发Node 20弃用迁移提示；workflow现升级到官方Node 24兼容的[checkout v7](https://github.com/actions/checkout/releases)和[setup-python v7](https://github.com/actions/setup-python/releases)。托管runner实跑留给PR CI确认，未把本地Rust/Python结果当作GitHub Actions结果。
 - 对112篇已跟踪Markdown作相对路径存在性扫描：676个仓库源码目标无缺失；另有69条`target/`、`data/runtime/`或`data/tmp/`本机证据路径不属于干净checkout源码目标，扫描未验证锚点或目标内容。`cargo tree --workspace --duplicates --offline --locked`仅见由`rusqlite/hashlink`与`toml/indexmap`依赖路径带入的`hashbrown` 0.14/0.17并存；未发现可直接删除的重复crate，`cargo-machete`当前未安装。
 - 本次静态核对未发现可以安全移除且无兼容/历史证据消费者的模块。v1–v5协议路径及本机历史账本、报告和日志按现行合同保留；本轮新增隔离Cargo构建目录和日志承担验证证据用途。清理候选仍需先核对消费者、来源和保留策略，不把忽略目录当作垃圾目录批量删除。
+
+## 2026-10-28 恢复修复提交后的自检续记
+
+- 本次续接起点为隔离分支`codex/r1b-semantic-resume-tests-20261028`上的`30c1018`，相对`origin/main`领先1提交且工作区干净。该提交修复重开后内外层恢复检查点未同步，并已完成本地格式、Clippy、planner及workspace验证，结果见上方TESTING与P4-R1b交接；由于跨提示多动作恢复和收费边界中断注入仍开放，未创建PR或声称本阶段验收完毕。
+- 再次读取普通发布包的`ygo.exe`与`ygo-engine-worker.exe`，两者SHA-256仍匹配`build-hashes.json`，包内二进制时间戳仍为2026-10-19。未覆盖或运行旧包；它与自身manifest一致不证明由最新源码构建。
+- 对D盘旧工作树只读复核发现分支落后于`origin/main`且存在大量本地修改。相较当前主线，其中工作台脚本移除了`state.loading`期间的互斥，CI将checkout/setup-python action降回旧版本，语言测试也删除输入变化回归。该目录保持原样；这些变更不应直接并入或提交，当前隔离分支已保留主线的导入锁定行为。
+- Windows消费预留路径保护测试文件全套为11 passed、1 skipped、17 subtests passed；系统策略不允许创建目录符号链接，故对应负例跳过。Git身份路径测试为11 passed、4 subtests passed。pytest缓存改放系统临时目录后无缓存权限警告。`cargo tree --workspace --duplicates --offline`复查仍只显示上文所列的传递依赖版本并存，未发现可直接删除的重复依赖；`cargo-machete`不可用，未安装额外工具。
+
+## 2026-10-28 恢复边界复验与历史证据链接盘点
+
+- 本轮起点为提交`b26e4a8`（基于`origin/main`的`2389906`），工作树干净。恢复循环合成故障注入覆盖意图已持久化但尚未收费的恢复清理，以及Execution结果已写入journal/内层检查点、外层pending快照尚未发布时的认证对账；后者恢复到QueryAudit且消费仍为2。planner套件70 passed/9 ignored；workspace串行总检362 passed/36 ignored；workspace全目标Clippy、fmt及`git diff --check`通过。新增测试不运行引擎、worker、doctor或研究scope。
+- 工作台异步边界静态复核：保存时控件锁定；`openDraft()`和`importFile()`在首个await前设置`loading`并在`finally`释放；`changed()`先同步重绘再异步查卡，避免移除按钮沿用旧数组索引；导出API显式请求Blob。`node --check crates/ygo-cli/src/workbench/app.js`通过，workspace中的4个`workbench_http`集成测试通过。没有运行真实浏览器交错时序测试；此检查不能证明浏览器层全部竞态已排除。
+- 最新隔离源码Release构建使用`cargo build --release --workspace --offline --locked --target-dir target/p4-r1b`通过。HEAD `c34a505042a634c71c2969239af404d825a7bfe2`产物CLI/worker哈希分别为`366956120B0C7DBBE951847ACA297FB7AD0E03496143C3A87335A749404FCBD3`和`CF2B235DE7897727EE1BFACE24BCCABF293E986ED2BB69120CD47BCB50E02DDD`。隔离工作树没有冻结运行资产，故本批只证明Release可构建，不运行doctor/worker/决斗，不构成部署验收；原D盘旧包保持不变。
+- 对112篇跟踪Markdown重新扫描本地相对链接：当前隔离worktree内有68个目标缺失，其中19条指向`data/runtime/`证据，49条指向`target/`日志/产物；逐项映射到原D盘工作区后，68/68目标仍存在。此结果表明隔离worktree不是这些历史证据的自包含副本，不代表原工作区证据丢失。当前没有迁移、复制或删除它们；下一步须按消费者、身份绑定、重建性与保留策略逐项建立可恢复归档，再调整链接。
+- 该扫描只检查Markdown链接目标存在性，不验证锚点、内容哈希、证据是否过期或目标是否应公开；之前记载的源码目标数和分组统计来自不同扫描快照，应以对应日期范围理解，不把这次结果外推为全部证据验真。
+- 随后修正证据保留清单中的分组标题笔误：实际为`data/runtime/` 11项、`target/` 35项，共46个目标。只读重查原D盘工作区后46/46存在且被Git忽略；目录展开并去重为54个文件、750,733字节。逐文件哈希清单写入当前隔离worktree的忽略文件`target/evidence-retention-source-20261028.json`，回读重算54/54大小和SHA-256均匹配。用户选择暂不迁移，因此没有复制或移动历史证据；哈希文件不属于提交内容。
+- 路径相关复验：`tests/test_curry_consumption_reservation.py`为11 passed、1 skipped、17 subtests passed。OS级目录symlink创建即使提升权限仍被拒绝；另一个用例现通过真实`safe_path`处理模拟Windows reparse属性，验证拒绝发生在输出目录创建前。`tests/test_prepare_curry_ledger_handoff_v5.py`为5 passed。pytest缓存仍有访问警告，退出码为0；OS级链接本身仍需有权限的环境直接验。
+- 历史审计文件现将`test_writer_is_exclusive_and_does_not_start_processes`输出定向到`target/`下的隔离临时仓库，并mock只读审计结果，测试覆盖忽略目录合同、独占创建、重复写拒绝和不启动子进程，不再写入原D盘恢复证据目录。该文件全测为10 passed、7 skipped、10 subtests passed；跳过项依赖本机历史数据，结果不覆盖其历史内容验证。此前对历史树估算至少约12.3GB、且临时目录枚举不完整的记录仍仅作容量线索。
+- 此前GitHub凭据缺失时，本地提交暂留隔离worktree；恢复推送后已将分支同步至远端并创建[PR #6](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/pull/6)。PR当前open、GitHub无status checks，尚未合并。真实进程/最新源码部署门禁继续以[TASKS](../TASKS.md)为准。
+- 随后在提交`27ab161`的干净worktree上重建隔离包，smoke为340节点，独立replay 3/3通过；提交`d1e94b2`重建时包内TESTING文档哈希匹配源码且CLI二进制哈希与已通过smoke/replay者一致。使用当前采样器从旧包配置只读采集身份，新旧包均consistent；共用CDB/core DLL/manifests和12,727个脚本哈希完全一致，CLI/worker哈希不同。旧包catalog/banlist状态及Rabbit合法性检查一致。新旧包均无`.jsonl`账本，包内schema不包含账本实例，故没有包内账本可比；包外scope账本继续独立保留。历史审计writer回归另已改为隔离临时仓库测试，结果与限制见[TESTING](TESTING.md)。原D盘旧包保持2026-10-19且未改。

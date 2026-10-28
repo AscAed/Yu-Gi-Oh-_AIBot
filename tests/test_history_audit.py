@@ -172,21 +172,33 @@ class HistoryAuditTests(unittest.TestCase):
         self.assertFalse(report['valid']);self.assertIn('blob_directory_changed_during_audit',report['diagnostics'])
 
     def test_writer_is_exclusive_and_does_not_start_processes(self):
-        from uuid import uuid4
+        import os
+        import shutil
         from types import SimpleNamespace
-        from ygo_eval.history_audit import audit_to_output
+        from uuid import uuid4
+        import ygo_eval.history_audit as module
         repo=Path(__file__).resolve().parents[1]
-        recovery=repo/'data/runtime/p1-terminal-followup-2026-10-20/recovery-2026-10-21'
-        if not recovery.exists():self.skipTest('local pinned history unavailable')
-        output=recovery/('test-audit-'+uuid4().hex+'.json')
+        temp_parent=repo/'target'
+        temp_parent.mkdir(exist_ok=True)
+        temp_repo=temp_parent/f'history-audit-writer-{os.getpid()}-{uuid4().hex}'
+        temp_repo.mkdir()
         try:
-            args=SimpleNamespace(baseline_dir=recovery.parent,output=output)
-            with patch('subprocess.run',side_effect=AssertionError('no process')):
-                report=audit_to_output(args)
+            repo=temp_repo
+            (repo/'.gitignore').write_text('data/runtime/\n',encoding='utf8')
+            module_path=repo/'python/ygo_eval/history_audit.py'
+            module_path.parent.mkdir(parents=True)
+            output=repo/'data/runtime/p1-terminal-followup-2026-10-20/recovery-2026-10-21/test-audit.json'
+            args=SimpleNamespace(baseline_dir=repo,output=output)
+            with patch.object(module,'__file__',str(module_path)), \
+                 patch.object(module,'audit_history',return_value={'valid':True,'native_calls':0}), \
+                 patch('subprocess.run',side_effect=AssertionError('no process')):
+                report=module.audit_to_output(args)
                 self.assertTrue(report['valid'])
-                with self.assertRaisesRegex(ValueError,'output_already_exists'):audit_to_output(args)
+                self.assertTrue(output.is_file())
+                with self.assertRaisesRegex(ValueError,'output_already_exists'):
+                    module.audit_to_output(args)
         finally:
-            if output.exists():output.unlink()
+            shutil.rmtree(temp_repo)
 
     def test_input_change_during_capture_is_rejected_without_writing(self):
         import ygo_eval.history_audit as module
