@@ -8,7 +8,7 @@
 
 普通D盘`dist/ygo-local`于2026-10-19按冻结资产重建。2026-10-27自检核对该旧包的CLI/worker与`build-hashes.json`一致，普通包与赛事开发配置的doctor均返回就绪、`smoke_ok=null`；之后旧包的预算受限决斗smoke和独立replay通过，详见[TESTING](TESTING.md)。
 
-2026-10-28在隔离worktree以D盘冻结资产副本、干净提交`27ab161`构建的包，doctor返回`ready/abi_ok/assets_ok=true`。补齐公共Lua脚本根目录后，预算受限smoke产生3条`EngineVerified`线路（318节点、27,288ms、`time_budget`终止），独立`combo replay`验证3/3线路；包内`TESTING.md`与源码文档SHA-256相同。D盘旧包CLI不支持`engine identity`；旧包与新包的CLI/worker哈希不同，但核心DLL、引擎manifest、脚本manifest、CDB/LFLists、catalog及banlist的共用资产字段一致。旧包catalog/banlist状态及Rabbit合法性检查通过。没有可比研究账本，不代表账本等价或原生研究资格。完整证据和失败/修复经过见[TESTING](TESTING.md)。
+2026-10-28在隔离worktree以D盘冻结资产副本、干净提交构建的包，doctor返回`ready/abi_ok/assets_ok=true`。预算受限smoke的两次独立运行分别产生318节点/27,288ms和340节点/27,310ms，均以`time_budget`终止且有3条`EngineVerified`线路；独立`combo replay`验证3/3线路。最终文档提交`d1e94b2`的包内`TESTING.md`与源码文档SHA-256相同，CLI哈希仍与此前smoke/replay使用的二进制一致。D盘旧包CLI不支持`engine identity`；旧包与新包的CLI/worker哈希不同，但核心DLL、引擎manifest、脚本manifest、CDB/LFLists、catalog及banlist的共用资产字段一致。旧包catalog/banlist状态及Rabbit合法性检查通过。没有可比研究账本，不代表账本等价或原生研究资格。完整证据和失败/修复经过见[TESTING](TESTING.md)。
 
 本次隔离部署包已在干净提交上复建并完成smoke/replay；原D盘旧包没有覆盖。P4-R5仍因旧CLI缺少完整身份接口、旧包CLI/worker哈希不同及缺少可比研究账本而保留跨版本等价性未知项。
 
