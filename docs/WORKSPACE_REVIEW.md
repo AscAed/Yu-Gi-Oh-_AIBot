@@ -50,3 +50,10 @@
 - CI的`actions/checkout@v4`与`actions/setup-python@v5`曾触发Node 20弃用迁移提示；workflow现升级到官方Node 24兼容的[checkout v7](https://github.com/actions/checkout/releases)和[setup-python v7](https://github.com/actions/setup-python/releases)。托管runner实跑留给PR CI确认，未把本地Rust/Python结果当作GitHub Actions结果。
 - 对112篇已跟踪Markdown作相对路径存在性扫描：676个仓库源码目标无缺失；另有69条`target/`、`data/runtime/`或`data/tmp/`本机证据路径不属于干净checkout源码目标，扫描未验证锚点或目标内容。`cargo tree --workspace --duplicates --offline --locked`仅见由`rusqlite/hashlink`与`toml/indexmap`依赖路径带入的`hashbrown` 0.14/0.17并存；未发现可直接删除的重复crate，`cargo-machete`当前未安装。
 - 本次静态核对未发现可以安全移除且无兼容/历史证据消费者的模块。v1–v5协议路径及本机历史账本、报告和日志按现行合同保留；本轮新增隔离Cargo构建目录和日志承担验证证据用途。清理候选仍需先核对消费者、来源和保留策略，不把忽略目录当作垃圾目录批量删除。
+
+## 2026-10-28 恢复修复提交后的自检续记
+
+- 本次续接起点为隔离分支`codex/r1b-semantic-resume-tests-20261028`上的`30c1018`，相对`origin/main`领先1提交且工作区干净。该提交修复重开后内外层恢复检查点未同步，并已完成本地格式、Clippy、planner及workspace验证，结果见上方TESTING与P4-R1b交接；由于跨提示多动作恢复和收费边界中断注入仍开放，未创建PR或声称本阶段验收完毕。
+- 再次读取普通发布包的`ygo.exe`与`ygo-engine-worker.exe`，两者SHA-256仍匹配`build-hashes.json`，包内二进制时间戳仍为2026-10-19。未覆盖或运行旧包；它与自身manifest一致不证明由最新源码构建。
+- 对D盘旧工作树只读复核发现分支落后于`origin/main`且存在大量本地修改。相较当前主线，其中工作台脚本移除了`state.loading`期间的互斥，CI将checkout/setup-python action降回旧版本，语言测试也删除输入变化回归。该目录保持原样；这些变更不应直接并入或提交，当前隔离分支已保留主线的导入锁定行为。
+- Windows符号链接专项测试为1 passed、1 skipped（系统策略不允许创建目录符号链接）；Git身份路径测试为11 passed、4 subtests passed。pytest缓存改放系统临时目录后无缓存权限警告。`cargo tree --workspace --duplicates --offline`复查仍只显示上文所列的传递依赖版本并存，未发现可直接删除的重复依赖；`cargo-machete`不可用，未安装额外工具。
