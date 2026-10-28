@@ -99,9 +99,18 @@
   }
   async function importFile(file) {
     if (state.saving || state.loading) return;
+    state.loading=true; render();
     const format=file.name.toLowerCase().endsWith(".ydk")?"ydk":"json";
-    try { const imported=await api(`/api/import?format=${format}`,{method:"POST",body:await file.text()}); state.id=null; state.revision=null; state.draft=imported.draft; state.dirty=true; state.cards.clear(); await checkCards([...state.draft.main,...state.draft.extra,...state.draft.side]); render(); notice("导入完成，尚未保存为工作区草稿。中文译文未核验。"); }
-    catch(error){notice(error.message,true);}
+    let importError;
+    try {
+      const content=await file.text();
+      const imported=await api(`/api/import?format=${format}`,{method:"POST",body:content});
+      state.id=null; state.revision=null; state.draft=imported.draft; state.dirty=true; state.cards.clear();
+      await checkCards([...state.draft.main,...state.draft.extra,...state.draft.side]);
+    } catch(error) { importError=error; }
+    finally { state.loading=false; render(); }
+    if(importError) notice(importError.message,true);
+    else notice("导入完成，尚未保存为工作区草稿。中文译文未核验。");
   }
   async function exportDraft(format) {
     state.draft.title=$("#title").value;
