@@ -29,7 +29,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] 完成本次纯文档定位、研究规范、证据规范、历史导航和双轨阶段计划；核对记录见[TESTING](docs/TESTING.md)顶部。
 - [x] 2026-10-27环境自检：区分部署包与开发资产，清理229个已确认空测试目录和本轮隔离Cargo缓存，整理pytest缓存及冗余直接依赖；范围和验证见[TESTING](docs/TESTING.md)。
 - [x] 本轮环境自检：Python 3.12干净快照、隔离部署文档复制、普通部署smoke与replay、离线验真及文档检查；覆盖、跳过项和后续保留边界见[工作区自检](docs/WORKSPACE_REVIEW.md)及[验证记录](docs/TESTING.md)。
-- [ ] 环境后续：已建[历史证据保留清单](docs/EVIDENCE_RETENTION.md)，盘点出46个被跟踪文档引用、原工作区均存在且全部被Git忽略的目标；已在本机忽略目录生成54个唯一文件的SHA-256源清单，用户决定暂不迁移，故不复制或移动历史证据。Windows消费预留路径保护测试为11 passed、1 skipped，因本机策略不能创建目录符号链接；须在有符号链接权限的环境补验该负例。历史审计文件改为在隔离测试目录验证独占写入，10 passed、7 skipped、10 subtests passed，不再写原恢复目录。最新源码隔离双资产包已在干净提交上重建；doctor、预算受限smoke、3/3线路独立replay及包内TESTING文档哈希匹配均通过。新旧包的共用资产字段、catalog/banlist状态及Rabbit合法性已只读比较。完整旧包身份对象和研究账本无法比较：旧CLI不支持`engine identity`，CLI/worker哈希不同且没有可比账本，不能据此声称完全包或账本等价。P4-R5仍开放此兼容性证据缺口；当前未授予任何研究scope。
+- [ ] 环境后续：已建[历史证据保留清单](docs/EVIDENCE_RETENTION.md)，盘点出46个被跟踪文档引用、原工作区均存在且全部被Git忽略的目标；已在本机忽略目录生成54个唯一文件的SHA-256源清单，用户决定暂不迁移，故不复制或移动历史证据。Windows消费预留路径保护测试为11 passed、1 skipped，因本机策略不能创建目录符号链接；须在有符号链接权限的环境补验该负例。历史审计文件改为在隔离测试目录验证独占写入，10 passed、7 skipped、10 subtests passed，不再写原恢复目录。最新源码隔离双资产包已在干净提交上重建；doctor、预算受限smoke、3/3线路独立replay及包内TESTING文档哈希匹配均通过。用当前只读采样器分别采集新旧包身份，两包均consistent；CDB、DLL、engine/script manifest及12,727个脚本哈希完全一致，差异为worker与CLI二进制。旧包catalog/banlist状态及Rabbit合法性相同。没有可比研究账本，因此账本等价保持未知；P4-R5保留此项，当前未授予任何研究scope。
 - [x] A1 / P4-R1a：首次`DuelResult.error`与`QueryWitness::capture`失败均先由合成收费账本红测复现，再修复诊断验证器；没有可信查询、成功资格、收据或可恢复前缀。测试证据见[TESTING](docs/TESTING.md)与[交接](docs/superpowers/plans/2026-10-28-first-failure-and-deck-draft-handoff.md)。
 - [x] B1 / P3.1：完成空/部分草稿、主/额外/Side编辑及YDK/JSON导入导出；草稿不等于完整合法牌组。CLI说明见[DECK_DRAFTS](docs/DECK_DRAFTS.md)。
 - [x] B2 / P3：交付本机中文单页工作台，支持草稿新建/编辑/保存/重开、YDK/JSON往返及可选本地卡表查询；名称/译文仍明确标为未核验。服务与边界见[WORKBENCH](docs/WORKBENCH.md)，验收见[TESTING](docs/TESTING.md)。
@@ -44,7 +44,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。
-- [ ] P4-R5：隔离包已从干净提交`27ab161`重建，doctor、预算受限smoke、3/3线路独立replay及打包文档哈希匹配通过。共用资产身份及catalog/banlist状态已只读比较。完整旧包身份对象及研究账本无法比较（旧CLI不支持`engine identity`，CLI/worker哈希不同且无可比账本）；因此只完成当前运行包验收，跨版本兼容性/账本等价继续标为未知。详见[DEPLOYMENT](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
+- [ ] P4-R5：隔离包从干净提交重建，doctor、预算受限smoke、3/3线路独立replay、打包文档哈希及新旧包身份采样通过。当前采样器读取旧配置显示两包consistent；CDB、DLL、两个manifest及脚本树相同，CLI/worker按版本变化。旧CLI本身没有identity命令，但不妨碍当前采样器读取旧资产。缺少可比研究账本，因此跨版本账本等价仍未知。详见[DEPLOYMENT](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 
