@@ -61,5 +61,6 @@
 ## 2026-10-28 恢复边界复验与历史证据链接盘点
 
 - 本轮开始时，隔离分支在`origin/main`之上包含6个本地提交且工作树干净。恢复循环合成故障注入覆盖意图已持久化但尚未收费的恢复清理，以及Execution结果已写入journal/内层检查点、外层pending快照尚未发布时的认证对账；后者恢复到QueryAudit且消费仍为2。planner套件70 passed/9 ignored；workspace串行总检362 passed/36 ignored；workspace全目标Clippy、fmt及`git diff --check`通过。新增测试不运行引擎、worker、doctor或研究scope。
+- 工作台异步边界静态复核：保存时控件锁定；`openDraft()`和`importFile()`在首个await前设置`loading`并在`finally`释放；`changed()`先同步重绘再异步查卡，避免移除按钮沿用旧数组索引；导出API显式请求Blob。`node --check crates/ygo-cli/src/workbench/app.js`通过，workspace中的4个`workbench_http`集成测试通过。没有运行真实浏览器交错时序测试；此检查不能证明浏览器层全部竞态已排除。
 - 对112篇跟踪Markdown重新扫描本地相对链接：当前隔离worktree内有68个目标缺失，其中19条指向`data/runtime/`证据，49条指向`target/`日志/产物；逐项映射到原D盘工作区后，68/68目标仍存在。此结果表明隔离worktree不是这些历史证据的自包含副本，不代表原工作区证据丢失。当前没有迁移、复制或删除它们；下一步须按消费者、身份绑定、重建性与保留策略逐项建立可恢复归档，再调整链接。
 - 该扫描只检查Markdown链接目标存在性，不验证锚点、内容哈希、证据是否过期或目标是否应公开；之前记载的源码目标数和分组统计来自不同扫描快照，应以对应日期范围理解，不把这次结果外推为全部证据验真。
