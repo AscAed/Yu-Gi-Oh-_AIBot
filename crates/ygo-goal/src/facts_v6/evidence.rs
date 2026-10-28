@@ -752,7 +752,7 @@ pub(super) fn validate_evidence(
 mod tests {
     use super::*;
     use std::sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc,
     };
     use ygo_engine_adapter::*;
@@ -821,16 +821,19 @@ mod tests {
             serde_json::from_value(report["cases"][0]["runtime_request"].clone()).unwrap(),
         )
     }
+    static NEXT_JOURNAL_ID: AtomicU64 = AtomicU64::new(0);
+
     fn journal(limit: usize) -> Arc<CallJournal> {
         let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../data/tmp")
             .join(format!(
-                "query-audit-{}-{}.jsonl",
+                "query-audit-{}-{}-{}.jsonl",
                 std::process::id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
-                    .as_nanos()
+                    .as_nanos(),
+                NEXT_JOURNAL_ID.fetch_add(1, Ordering::Relaxed)
             ));
         CallJournal::open(&p, "query-audit-unit", "recorded-oracle", limit).unwrap()
     }

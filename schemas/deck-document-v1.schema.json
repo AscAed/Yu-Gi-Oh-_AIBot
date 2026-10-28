@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/deck-document-v1.schema.json",
+  "title": "Yu-Gi-Oh! editable deck draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "title", "main", "extra", "side"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "deck_draft"},
+    "title": {"type": "string"},
+    "main": {"$ref": "#/$defs/cards"},
+    "extra": {"$ref": "#/$defs/cards"},
+    "side": {"$ref": "#/$defs/cards"}
+  },
+  "$defs": {
+    "cards": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+    }
+  }
+}

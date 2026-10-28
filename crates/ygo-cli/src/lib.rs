@@ -6,6 +6,8 @@ pub enum Command {
     BanlistImport,
     BanlistStatus,
     DeckValidate,
+    DeckDraft,
+    WorkbenchServe,
     DeckOptimize,
     ComboAnalyze,
     ComboReplay,
@@ -20,6 +22,8 @@ pub enum Command {
     ComboPlan,
     ComboPlanReplay,
 }
+
+pub mod workbench;
 
 impl Command {
     pub fn parse<I, S>(args: I) -> Option<Self>
@@ -45,6 +49,8 @@ impl Command {
             [a, b] if a == "catalog" && b == "sync" => Some(Self::CatalogSync),
             [a, b] if a == "catalog" && b == "status" => Some(Self::CatalogStatus),
             [a, b] if a == "deck" && b == "validate" => Some(Self::DeckValidate),
+            [a, b] if a == "deck" && b == "draft" => Some(Self::DeckDraft),
+            [a, b] if a == "workbench" && b == "serve" => Some(Self::WorkbenchServe),
             [a, b] if a == "deck" && b == "optimize" => Some(Self::DeckOptimize),
             [a, b] if a == "combo" && b == "analyze" => Some(Self::ComboAnalyze),
             [a, b] if a == "engine" && b == "doctor" => Some(Self::EngineDoctor),

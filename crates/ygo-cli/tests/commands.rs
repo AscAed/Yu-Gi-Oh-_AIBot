@@ -25,3 +25,16 @@ fn parses_knowledge_explanation_and_causal_planning_commands() {
 fn parses_live_knowledge_verification() {
     assert!(ygo_cli::Command::parse(["knowledge", "verify"]).is_some());
 }
+
+#[test]
+fn parses_the_offline_deck_draft_command_family() {
+    assert_eq!(Command::parse(["deck", "draft"]), Some(Command::DeckDraft));
+}
+
+#[test]
+fn parses_the_local_workbench_service_command() {
+    assert_eq!(
+        Command::parse(["workbench", "serve"]),
+        Some(Command::WorkbenchServe)
+    );
+}
