@@ -4,7 +4,9 @@
 
 该清单登记被Markdown相对链接引用、但不属于Git跟踪内容的运行证据。证据可能包含收费账本、冻结输入、部署身份、构建和验证日志；它们的保留用途不同，不能作为普通缓存批量清除。
 
-2026-10-28扫描了112篇跟踪Markdown。隔离worktree中68条目标路径不存在，映射到原D盘工作区后均存在；去重为46个目标，其中11个在`data/runtime/`、35个在`target/`。原工作区检查显示46个目标都被Git忽略，未跟踪、未复制、未计算内容哈希或验证内部引用。目录链接只验证目录存在，不代表其全部内容已盘点。该结果是路径清单，不是证据验真或备份证明。
+2026-10-28扫描了112篇跟踪Markdown。隔离worktree中68条目标路径不存在，映射到原D盘工作区后均存在；去重为46个目标。目录链接只验证目录存在，不代表其全部内容已盘点。原工作区检查显示这些目标都被Git忽略；初始扫描没有复制或计算内容哈希。
+
+随后对原D盘工作区中的46个目标做了只读复核：全部仍存在且被Git忽略。展开3个目录目标并按相对路径去重，共盘点54个文件、750,733字节。逐文件SHA-256与字节数保存在隔离worktree的忽略文件`target/evidence-retention-source-20261028.json`；其中两个`.bin`文件只记录路径、大小和哈希，未读取内容。该清单用于后续迁移时校验源文件，不是归档副本、许可审查或恢复演练；原文件未修改。
 
 ## 保留分级
 
@@ -19,7 +21,7 @@
 
 路径相对于仓库根目录。`被引用文档`列出当前已知消费者；相同产物可能还有未扫描的代码、报告或本地消费者。
 
-### `data/runtime/`：10个目标
+### `data/runtime/`：11个目标
 
 | 目标 | 被引用文档 |
 |---|---|
@@ -35,7 +37,7 @@
 | `data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json` | `docs/EVIDENCE_CONTRACTS.md`, `docs/HISTORY_INDEX.md`, `docs/TESTING_HISTORY.md` |
 | `data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json` | `TASKS_HISTORY.md`, `docs/INDEX.md`, `docs/TESTING.md`, `docs/TESTING_HISTORY.md` |
 
-### `target/`：36个目标
+### `target/`：35个目标
 
 | 目标 | 被引用文档 |
 |---|---|
