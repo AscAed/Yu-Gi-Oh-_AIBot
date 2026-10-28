@@ -6,11 +6,23 @@ use ygo_goal::{actual_trace_v6, verify_query_replays, Goal, QueryWitness, TraceW
 mod capture;
 pub use capture::*;
 mod resumable;
+mod resumable_loop;
 #[cfg(test)]
 pub use resumable::advance_execution_v1_with_backend;
 pub use resumable::{
     advance_execution_v1, begin_execution_v1, persist_execution_semantics_v1, resume_execution_v1,
     ExecutionCheckpointV1, ExecutionIntentV1, ExecutionProgressV1, ExecutionRecoveryStatus,
+};
+pub use resumable_loop::{
+    advance_resumable_partial_execution_v1, advance_resumable_query_audit_v1,
+    begin_resumable_partial_execution_v1, resume_resumable_partial_execution_v1,
+    ResumableAuditProgressV1, ResumableAuditStatusV1, ResumableExecutionPhaseV1,
+    ResumableLoopIntentV1, ResumablePartialExecutionV1,
+};
+#[cfg(test)]
+pub use resumable_loop::{
+    advance_resumable_partial_execution_v1_with_backend,
+    advance_resumable_query_audit_v1_with_backend,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -1596,6 +1608,7 @@ pub fn execute_partial_v2_with_backend<A: EngineAdapter>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ygo_domain::{Card, CardId, CardKind};
     fn a3_test_root(label: &str) -> std::path::PathBuf {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/a3-resumable/tests")
@@ -1811,6 +1824,177 @@ mod tests {
             serde_json::from_value(value["cases"][0]["runtime_request"].clone()).unwrap();
         q.decisions.clear();
         (q, r)
+    }
+    #[test]
+    fn resumable_first_turn_loop_persists_end_phase_and_query_audit_progress() {
+        let (mut request, mut initial_result) = initial();
+        let initial_queries = Vec::<QueryWitness>::new();
+        initial_result.versions = request.versions.clone();
+        let mut raw = vec![11, 0];
+        raw.extend([0; 24]);
+        raw.extend([0, 1, 0]);
+        let sequence = initial_result.events.last().unwrap().sequence + 1;
+        let frame = decode_frame(sequence, &raw).unwrap();
+        initial_result.events.push(frame.clone());
+        initial_result.prompt = parse_prompt(sequence, &raw).unwrap();
+        initial_result.status = DuelStatus::DecisionRequired;
+        initial_result.error = None;
+        initial_result.resolved_decisions.clear();
+        request.decisions.clear();
+        let catalog: Catalog = initial_result
+            .checkpoint
+            .cards
+            .iter()
+            .map(|state_card| {
+                let id = CardId(state_card.code);
+                let kind = match state_card.type_flags & 7 {
+                    2 => CardKind::Spell,
+                    4 => CardKind::Trap,
+                    _ => CardKind::Monster,
+                };
+                (
+                    id,
+                    Card {
+                        id,
+                        name: format!("synthetic-{}", id.0),
+                        kind,
+                        type_flags: state_card.type_flags,
+                        level: state_card.level.unwrap_or(0),
+                        attribute: state_card.attribute.unwrap_or(0),
+                        race: state_card.race.unwrap_or(0),
+                        attack: state_card.attack,
+                        defense: state_card.defense,
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect();
+
+        let pack = FirstTurnKnowledge::builtin().unwrap();
+        let goal: ygo_goal::Goal = serde_json::from_value(serde_json::json!({
+            "version": 1,
+            "expr": {"op": "count", "filter": {}, "min": 1}
+        }))
+        .unwrap();
+        let start_witness = QueryWitness::capture(&initial_result).unwrap();
+        let start_state = actual_state(&initial_result, &[start_witness], &catalog, &pack)
+            .unwrap()
+            .state;
+        let plan = empty_forecast_plan(
+            &start_state,
+            &catalog,
+            &pack,
+            &goal,
+            &SearchLimits::default(),
+        )
+        .unwrap();
+        let root = a3_test_root("resumable-loop-end-phase");
+        let path = root.join("calls.jsonl");
+        let journal = CallJournal::open(&path, "resumable-loop", "synthetic-context", 8).unwrap();
+        struct Fixed(DuelResult);
+        impl EngineAdapter for Fixed {
+            fn doctor(&self) -> DoctorReport {
+                panic!("resumable execution must not call doctor")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        JournaledAdapter::new(
+            Fixed(initial_result.clone()),
+            journal.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&request)
+        .unwrap();
+        let mut checkpoint = begin_resumable_partial_execution_v1(
+            &request,
+            1,
+            &initial_queries,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+            journal.clone(),
+        )
+        .unwrap();
+        let mut tampered = checkpoint.clone();
+        tampered.semantic_step += 1;
+        assert!(advance_resumable_partial_execution_v1_with_backend(
+            &mut tampered,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+            journal.clone(),
+            Fixed(initial_result.clone())
+        )
+        .is_err());
+        assert_eq!(journal.stats().unwrap().consumed, 1);
+        let mut terminal = initial_result.clone();
+        terminal.status = DuelStatus::EngineVerified;
+        terminal.prompt = None;
+        let mut calls = request.decisions.clone();
+        calls.push(Decision {
+            prompt_id: sequence,
+            player: 0,
+            choice: Choice::Command {
+                command: 7,
+                index: 0,
+            },
+        });
+        terminal.resolved_decisions = calls;
+        advance_resumable_partial_execution_v1_with_backend(
+            &mut checkpoint,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+            journal.clone(),
+            Fixed(terminal.clone()),
+        )
+        .unwrap();
+        assert_eq!(checkpoint.phase, ResumableExecutionPhaseV1::QueryAudit);
+        assert_eq!(journal.stats().unwrap().consumed, 2);
+
+        advance_resumable_query_audit_v1_with_backend(
+            &mut checkpoint,
+            journal.clone(),
+            Fixed(initial_result.clone()),
+        )
+        .unwrap();
+        assert_eq!(checkpoint.audit.next_query, 1);
+        assert_eq!(journal.stats().unwrap().consumed, 3);
+        drop(journal);
+        drop(checkpoint);
+
+        let mut checkpoint = resume_resumable_partial_execution_v1(
+            &path,
+            "resumable-loop",
+            "synthetic-context",
+            8,
+            &request,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+        )
+        .unwrap();
+        let journal =
+            CallJournal::open_existing_strict(&path, "resumable-loop", "synthetic-context", 8)
+                .unwrap()
+                .unwrap();
+        advance_resumable_query_audit_v1_with_backend(
+            &mut checkpoint,
+            journal.clone(),
+            Fixed(terminal),
+        )
+        .unwrap();
+        assert_eq!(checkpoint.audit.status, ResumableAuditStatusV1::Complete);
+        assert_eq!(checkpoint.audit.call_ids.len(), 2);
+        assert_eq!(journal.stats().unwrap().consumed, 4);
+        assert_eq!(journal.stats().unwrap().reserved, 0);
+        let _ = std::fs::remove_dir_all(root);
     }
     #[test]
     fn resumable_checkpoint_binds_plan_and_request_before_any_continuation() {
