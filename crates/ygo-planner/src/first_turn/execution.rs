@@ -2154,6 +2154,116 @@ mod tests {
         assert_eq!(run_case(false), run_case(true));
     }
     #[test]
+    fn resumable_loop_refuses_to_retry_after_crash_with_unknown_consumption() {
+        use std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        };
+
+        struct Initial(DuelResult);
+        impl EngineAdapter for Initial {
+            fn doctor(&self) -> DoctorReport {
+                panic!("initial result is already supplied")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        struct Crash(Arc<AtomicUsize>);
+        impl EngineAdapter for Crash {
+            fn doctor(&self) -> DoctorReport {
+                panic!("synthetic crash adapter must not call doctor")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                panic!("simulated process loss after the call debit")
+            }
+        }
+
+        let (request, mut initial_result) = initial();
+        initial_result.versions = request.versions.clone();
+        let catalog = fixture_catalog(&initial_result);
+        let pack = FirstTurnKnowledge::builtin().unwrap();
+        let witness = QueryWitness::capture(&initial_result).unwrap();
+        let start = actual_state(&initial_result, &[witness], &catalog, &pack)
+            .unwrap()
+            .state;
+        let goal: Goal = serde_json::from_value(serde_json::json!({
+            "version": 1,
+            "expr": {"op":"count", "filter":{"codes":[78449284],"locations":[4]}, "min":1}
+        }))
+        .unwrap();
+        let limits = SearchLimits {
+            candidates: 1,
+            expansions: 150,
+            frontier: 8,
+            steps: 4,
+        };
+        let plans = propose_partial(&start, &catalog, &pack, &goal, &limits).unwrap();
+        let plan = plans
+            .plans
+            .into_iter()
+            .find(|plan| plan.steps.len() >= 2)
+            .expect("fixture goal should produce a valid multistep forecast");
+        validate_forecast(&plan, &start, &catalog, &pack, &goal).unwrap();
+
+        let root = a3_test_root("resumable-loop-unknown-consumption");
+        let path = root.join("calls.jsonl");
+        let journal = CallJournal::open(&path, "resumable-loop", "synthetic-context", 8).unwrap();
+        JournaledAdapter::new(
+            Initial(initial_result.clone()),
+            journal.clone(),
+            CallPurpose::Execution,
+        )
+        .run(&request)
+        .unwrap();
+        let mut state = begin_resumable_partial_execution_v1(
+            &request,
+            1,
+            &[],
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+            journal.clone(),
+        )
+        .unwrap();
+
+        let adapter_calls = Arc::new(AtomicUsize::new(0));
+        let crashed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = advance_resumable_partial_execution_v1_with_backend(
+                &mut state,
+                &plan,
+                &catalog,
+                &pack,
+                &goal,
+                journal.clone(),
+                Crash(adapter_calls.clone()),
+            );
+        }));
+        assert!(crashed.is_err());
+        assert_eq!(adapter_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(journal.stats().unwrap().unknown, 1);
+        drop(journal);
+        drop(state);
+
+        let error = resume_resumable_partial_execution_v1(
+            &path,
+            "resumable-loop",
+            "synthetic-context",
+            8,
+            &request,
+            &plan,
+            &catalog,
+            &pack,
+            &goal,
+        )
+        .unwrap_err();
+        assert!(error.contains("unknown consumption"), "{error}");
+        assert_eq!(adapter_calls.load(Ordering::SeqCst), 1);
+        let _ = std::fs::remove_dir_all(root);
+    }
+    #[test]
     fn resumable_first_turn_loop_persists_end_phase_and_query_audit_progress() {
         let (mut request, mut initial_result) = initial();
         let initial_queries = Vec::<QueryWitness>::new();
