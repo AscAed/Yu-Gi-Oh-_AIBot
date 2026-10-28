@@ -204,20 +204,63 @@ class LanguageAuditTests(unittest.TestCase):
         from unittest.mock import patch
         from ygo_data import language_review
 
-        original_digest = language_review._sha256
-        calls = 0
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            source_path = root / 'sources.json'
+            sample_path = root / 'releases.json'
+            records_path = root / 'language-records.json'
+            db_names = {
+                'cn': root / 'cn.cdb',
+                'sc': root / 'sc.cdb',
+            }
+            for path in db_names.values():
+                with closing(sqlite3.connect(path)) as db:
+                    db.execute('CREATE TABLE datas (id INTEGER, alias INTEGER, setcode INTEGER)')
+                    db.execute('CREATE TABLE texts (id INTEGER, name TEXT, desc TEXT)')
+                    db.executemany('INSERT INTO datas VALUES (?, 0, 0)', [(card_id,) for card_id in range(1, 40)])
+                    db.executemany(
+                        'INSERT INTO texts VALUES (?, ?, ?)',
+                        [(card_id, f'candidate-{card_id}', f'text-{card_id}') for card_id in range(1, 40)],
+                    )
+                    db.commit()
+            sources = [
+                {'id': source_id, 'language': language, 'sha256': language_review._sha256(path),
+                 'license': {'redistribution': 'unknown'}}
+                for (source_id, language), path in zip(
+                    [('cn', 'zh-Hans'), ('sc', 'und')], db_names.values(), strict=True
+                )
+            ]
+            source_path.write_text(json.dumps({'checked_date': '2026-10-28', 'sources': sources}), encoding='utf-8')
+            sample_path.write_text(json.dumps({'records': [
+                {'card_id': card_id, 'status': 'released', 'region': 'OCG'}
+                for card_id in range(1, 40)
+            ]}), encoding='utf-8')
+            records_path.write_text('[]', encoding='utf-8')
 
-        def drifting_digest(path):
-            nonlocal calls
-            if path == language_review.SOURCE_PATH:
-                calls += 1
-                if calls == 2:
-                    return '0' * 64
-            return original_digest(path)
+            original_digest = language_review._sha256
+            calls = 0
 
-        with patch('ygo_data.language_review._sha256', side_effect=drifting_digest):
-            with self.assertRaisesRegex(ValueError, 'frozen_language_inputs_changed_during_audit'):
-                language_review.build_frozen_report()
+            def drifting_digest(path):
+                nonlocal calls
+                if path == source_path:
+                    calls += 1
+                    if calls == 2:
+                        return '0' * 64
+                return original_digest(path)
+
+            with (
+                patch.multiple(
+                    language_review,
+                    SOURCE_PATH=source_path,
+                    SAMPLE_PATH=sample_path,
+                    RECORDS_PATH=records_path,
+                    DB_NAMES=db_names,
+                ),
+                patch('ygo_data.language_review._sha256', side_effect=drifting_digest),
+                patch('ygo_data.language.audit_language', return_value={'unresolved': []}),
+            ):
+                with self.assertRaisesRegex(ValueError, 'frozen_language_inputs_changed_during_audit'):
+                    language_review.build_frozen_report()
 
         with temporary_directory() as temporary:
             output = Path(temporary) / 'report.json'
