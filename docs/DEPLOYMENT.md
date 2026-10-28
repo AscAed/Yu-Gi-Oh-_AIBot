@@ -10,7 +10,7 @@
 
 2026-10-28在隔离worktree以D盘冻结资产副本、干净提交构建的包，doctor返回`ready/abi_ok/assets_ok=true`。预算受限smoke的两次独立运行分别产生318节点/27,288ms和340节点/27,310ms，均以`time_budget`终止且有3条`EngineVerified`线路；独立`combo replay`验证3/3线路。最终文档提交`d1e94b2`的包内`TESTING.md`与源码文档SHA-256相同，CLI哈希仍与此前smoke/replay使用的二进制一致。旧版CLI自身不支持`engine identity`，但当前CLI只读采样器以旧包配置读取资产后，两包均`consistent=true`；CDB、core DLL、engine/script manifest及12,727个脚本哈希一致，CLI和worker哈希不同。旧包catalog/banlist状态及Rabbit合法性检查通过。没有可比研究账本，不代表账本等价或原生研究资格。完整证据和失败/修复经过见[TESTING](TESTING.md)。
 
-本次隔离部署包已在干净提交上复建并完成smoke/replay；原D盘旧包没有覆盖。当前采样器已用旧包配置比较两代资产身份；P4-R5仅保留没有可比研究账本的范围限制，不宣称账本等价。
+本次隔离部署包已在干净提交上复建并完成smoke/replay；原D盘旧包没有覆盖。当前采样器已用旧包配置比较两代资产身份。逐文件盘点显示新旧包分别含127和67个文件，均无`.jsonl`研究账本文件；新包ledger相关文件仅为schema。P4-R5不从包内样本推断包外正式scope账本等价，资产身份验收范围见[TESTING](TESTING.md)。
 
 普通发布包、赛事开发配置和最终干净双资产包是三种不同状态：赛事当前引用独立冻结资产及debug worker；固定案例及独立重放通过本轮独立账本的两次请求，不是正式v6发布包。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
 

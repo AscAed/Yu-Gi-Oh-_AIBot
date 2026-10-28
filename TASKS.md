@@ -44,7 +44,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。
-- [ ] P4-R5：隔离包从干净提交重建，doctor、预算受限smoke、3/3线路独立replay、打包文档哈希及新旧包身份采样通过。当前采样器读取旧配置显示两包consistent；CDB、DLL、两个manifest及脚本树相同，CLI/worker按版本变化。旧CLI本身没有identity命令，但不妨碍当前采样器读取旧资产。缺少可比研究账本，因此跨版本账本等价仍未知。详见[DEPLOYMENT](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
+- [ ] P4-R5：隔离包从干净提交重建，doctor、预算受限smoke、3/3线路独立replay、打包文档哈希及新旧包身份采样通过。当前采样器读取旧配置显示两包consistent；CDB、DLL、两个manifest及脚本树相同，CLI/worker按版本变化。旧CLI本身没有identity命令，但不妨碍当前采样器读取旧资产。新旧包分别67/127文件，均不含`.jsonl`账本文件（新包ledger相关文件仅为schema）；包外正式scope账本不因包验收而获等价结论。详见[DEPLOYMENT](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 
