@@ -1862,6 +1862,7 @@ mod tests {
         .unwrap();
         fixture["result"]["events"] = serde_json::json!([]);
         let base: DuelResult = serde_json::from_value(fixture["result"].clone()).unwrap();
+        let decisions = base.resolved_decisions.clone();
         let witnesses: Vec<QueryWitness> =
             serde_json::from_value(fixture["witnesses"].clone()).unwrap();
         let frames = fixture["frames"].as_array().unwrap();
@@ -1886,7 +1887,57 @@ mod tests {
                 result.checkpoint = witness.public.visible.clone();
                 result.status = DuelStatus::DecisionRequired;
                 result.error = None;
-                result.resolved_decisions.clear();
+                result.resolved_decisions = decisions
+                    .iter()
+                    .filter(|decision| decision.prompt_id < witness.event)
+                    .cloned()
+                    .collect();
+                result
+            })
+            .collect()
+    }
+    fn resource_prompt_prefixes() -> Vec<DuelResult> {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/tournament-2026.trace-resource.json"
+        ))
+        .unwrap();
+        let mut fixture = fixture;
+        fixture["result"]["events"] = serde_json::json!([]);
+        let mut base: DuelResult = serde_json::from_value(fixture["result"].clone()).unwrap();
+        base.events.clear();
+        let decisions = base.resolved_decisions.clone();
+        let witnesses: Vec<QueryWitness> =
+            serde_json::from_value(fixture["witnesses"].clone()).unwrap();
+        let frames = fixture["frames"].as_array().unwrap();
+        [10u64, 11, 14, 15, 17]
+            .into_iter()
+            .map(|event| {
+                let mut result = base.clone();
+                result.events = frames
+                    .iter()
+                    .take(event as usize)
+                    .enumerate()
+                    .map(|(index, raw)| {
+                        decode_frame(
+                            index as u64 + 1,
+                            &serde_json::from_value::<Vec<u8>>(raw.clone()).unwrap(),
+                        )
+                        .unwrap()
+                    })
+                    .collect();
+                result.prompt = parse_prompt(event, &result.events.last().unwrap().raw).unwrap();
+                result.checkpoint = if event <= 11 {
+                    witnesses[0].public.visible.clone()
+                } else {
+                    witnesses[1].public.visible.clone()
+                };
+                result.resolved_decisions = decisions
+                    .iter()
+                    .filter(|decision| decision.prompt_id < event)
+                    .cloned()
+                    .collect();
+                result.status = DuelStatus::DecisionRequired;
+                result.error = None;
                 result
             })
             .collect()
@@ -1979,6 +2030,207 @@ mod tests {
         assert_eq!(resumed.inner.progress.queries.len(), 1);
         assert_eq!(resumed.inner.progress.ledger.consumed, 1);
         let _ = std::fs::remove_dir_all(root);
+    }
+    #[test]
+    fn resumable_semantic_operation_reopens_between_recorded_prompt_decisions() {
+        use std::collections::VecDeque;
+        use std::sync::{Arc, Mutex};
+
+        struct Initial(DuelResult);
+        impl EngineAdapter for Initial {
+            fn doctor(&self) -> DoctorReport {
+                panic!("initial result is already supplied")
+            }
+            fn run(&self, _: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                Ok(self.0.clone())
+            }
+        }
+        #[derive(Clone)]
+        struct Prefixes(Arc<Mutex<VecDeque<DuelResult>>>);
+        impl EngineAdapter for Prefixes {
+            fn doctor(&self) -> DoctorReport {
+                panic!("synthetic trace adapter must not call doctor")
+            }
+            fn run(&self, request: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+                let result = self.0.lock().unwrap().pop_front().ok_or_else(|| {
+                    WorkerError::new("fixture_exhausted", "test", "no prompt prefix")
+                })?;
+                if request.decisions != result.resolved_decisions {
+                    return Err(WorkerError::new(
+                        "fixture_decisions_mismatch",
+                        "test",
+                        "execution request differs from the recorded trace decisions",
+                    ));
+                }
+                Ok(result)
+            }
+        }
+
+        fn run_case(paused_after_each_prompt: bool) -> Vec<serde_json::Value> {
+            let (request, mut initial_result) = initial();
+            initial_result.versions = request.versions.clone();
+            let catalog = fixture_catalog(&initial_result);
+            let pack = FirstTurnKnowledge::builtin().unwrap();
+            let witness = QueryWitness::capture(&initial_result).unwrap();
+            let start = actual_state(&initial_result, &[witness], &catalog, &pack)
+                .unwrap()
+                .state;
+            let goal: Goal = serde_json::from_value(serde_json::json!({
+                "version": 1,
+                "expr": {"op":"count", "filter":{"codes":[78449284],"locations":[4]}, "min":1}
+            }))
+            .unwrap();
+            let limits = SearchLimits {
+                candidates: 1,
+                expansions: 150,
+                frontier: 8,
+                steps: 4,
+            };
+            let plans = propose_partial(&start, &catalog, &pack, &goal, &limits).unwrap();
+            let plan = plans
+                .plans
+                .into_iter()
+                .find(|plan| plan.steps.len() >= 2)
+                .expect("fixture goal should produce a valid multistep forecast");
+            validate_forecast(&plan, &start, &catalog, &pack, &goal).unwrap();
+            let mut prefixes = resource_prompt_prefixes();
+            for result in &mut prefixes {
+                result.versions = request.versions.clone();
+            }
+
+            let root = a3_test_root(if paused_after_each_prompt {
+                "resumable-loop-prompt-by-prompt-reopened"
+            } else {
+                "resumable-loop-prompt-by-prompt-continuous"
+            });
+            let path = root.join("calls.jsonl");
+            let mut journal =
+                CallJournal::open(&path, "resumable-loop", "synthetic-context", 8).unwrap();
+            JournaledAdapter::new(
+                Initial(initial_result.clone()),
+                journal.clone(),
+                CallPurpose::Execution,
+            )
+            .run(&request)
+            .unwrap();
+            let mut state = begin_resumable_partial_execution_v1(
+                &request,
+                1,
+                &[],
+                &plan,
+                &catalog,
+                &pack,
+                &goal,
+                journal.clone(),
+            )
+            .unwrap();
+            let backend = Prefixes(Arc::new(Mutex::new(prefixes.into())));
+            let mut snapshots = Vec::new();
+            for (index, expected_prompt) in [10u64, 11, 14, 15, 17].into_iter().enumerate() {
+                advance_resumable_partial_execution_v1_with_backend(
+                    &mut state,
+                    &plan,
+                    &catalog,
+                    &pack,
+                    &goal,
+                    journal.clone(),
+                    backend.clone(),
+                )
+                .unwrap_or_else(|error| panic!("advance before prompt {expected_prompt}: {error}"));
+                assert_eq!(
+                    state
+                        .inner
+                        .progress
+                        .current_prefix
+                        .prompt
+                        .as_ref()
+                        .unwrap()
+                        .id,
+                    expected_prompt
+                );
+                assert_eq!(
+                    state.semantic_step,
+                    usize::from(expected_prompt == 17),
+                    "semantic step should advance only at its closed action window"
+                );
+                assert_eq!(journal.stats().unwrap().consumed, index + 2);
+                let snapshot = serde_json::json!({
+                    "phase": state.phase,
+                    "semantic_step": state.semantic_step,
+                    "choices": state.choices,
+                    "predictions": state.predictions,
+                    "mapping": state.instance_mapping,
+                    "used_selections": state.used_selections,
+                    "prefix": state.inner.progress.current_prefix,
+                    "queries": state.inner.progress.queries,
+                    "ledger": journal.stats().unwrap(),
+                    "reservations": journal.reservation_state().unwrap(),
+                    "pending_responses": backend.0.lock().unwrap().len(),
+                });
+                snapshots.push(snapshot.clone());
+                if paused_after_each_prompt {
+                    drop(journal);
+                    drop(state);
+                    state = resume_resumable_partial_execution_v1(
+                        &path,
+                        "resumable-loop",
+                        "synthetic-context",
+                        8,
+                        &request,
+                        &plan,
+                        &catalog,
+                        &pack,
+                        &goal,
+                    )
+                    .unwrap();
+                    journal = CallJournal::open_existing_strict(
+                        &path,
+                        "resumable-loop",
+                        "synthetic-context",
+                        8,
+                    )
+                    .unwrap()
+                    .unwrap();
+                    assert_eq!(
+                        serde_json::json!({
+                            "phase": state.phase,
+                            "semantic_step": state.semantic_step,
+                            "choices": state.choices,
+                            "predictions": state.predictions,
+                            "mapping": state.instance_mapping,
+                            "used_selections": state.used_selections,
+                            "prefix": state.inner.progress.current_prefix,
+                            "queries": state.inner.progress.queries,
+                            "ledger": journal.stats().unwrap(),
+                            "reservations": journal.reservation_state().unwrap(),
+                            "pending_responses": backend.0.lock().unwrap().len(),
+                        }),
+                        snapshot,
+                        "reopen should preserve the observable semantic checkpoint"
+                    );
+                }
+            }
+            assert_eq!(state.semantic_step, 1);
+            assert_eq!(
+                state
+                    .inner
+                    .progress
+                    .current_prefix
+                    .prompt
+                    .as_ref()
+                    .unwrap()
+                    .opcode,
+                12
+            );
+            assert_eq!(backend.0.lock().unwrap().len(), 0);
+            assert_eq!(journal.stats().unwrap().consumed, 6);
+            drop(journal);
+            drop(state);
+            let _ = std::fs::remove_dir_all(root);
+            snapshots
+        }
+
+        assert_eq!(run_case(false), run_case(true));
     }
     #[test]
     fn unsupported_trigger_boundary_blocks_without_charging_after_reopen() {

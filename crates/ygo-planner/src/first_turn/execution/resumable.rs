@@ -355,6 +355,7 @@ pub fn persist_execution_semantics_v1(
     instance_mapping: BTreeMap<String, String>,
     used_selections: BTreeSet<usize>,
     predictions: Vec<PartialPrediction>,
+    active_before_state: Option<&CausalState>,
     journal: &CallJournal,
 ) -> Result<(), String> {
     checkpoint.validate_bindings(
@@ -377,14 +378,21 @@ pub fn persist_execution_semantics_v1(
     if saved != serde_json::to_value(&*checkpoint).map_err(|e| e.to_string())? {
         return Err("semantic snapshot differs from authenticated checkpoint".into());
     }
-    let observed = actual_state(
-        &checkpoint.progress.current_prefix,
-        &checkpoint.progress.queries,
-        catalog,
-        pack,
-    )?;
-    let observed_ids = observed
-        .state
+    // Intermediate prompts may intentionally lack a closed-window observation;
+    // bind an in-flight action's instance map to its authenticated start state.
+    let observed_state = match active_before_state {
+        Some(before) => before.clone(),
+        None => {
+            actual_state(
+                &checkpoint.progress.current_prefix,
+                &checkpoint.progress.queries,
+                catalog,
+                pack,
+            )?
+            .state
+        }
+    };
+    let observed_ids = observed_state
         .cards
         .iter()
         .map(|card| card.id.as_str())

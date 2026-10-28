@@ -13,6 +13,7 @@
 - 非空恢复初始化：赛事查询夹具经`propose_partial`生成三步有效计划，并由`validate_forecast`复核；以已收费初始调用建立状态，关闭/重开后仍在Semantic阶段、游标0，账本消费保持1。测试`resumable_loop_reopens_with_valid_nonempty_semantic_plan`只覆盖计划绑定与初始化恢复，不执行任何动作。
 - 单动作恢复与安全停止：同一计划执行一步后到达opcode12提示；连续路径和关闭/重开路径都在下一计划动作不可用时返回`original_plan_blocked`，消费不变且状态相同。红测发现resume协调内层状态后未同步外层journal检查点；恢复流程现会持久化协调后的外层快照。测试`unsupported_trigger_boundary_blocks_without_charging_after_reopen`通过。此结果覆盖一次执行后的恢复边界，但提示opcode12的后续处理与成功的多动作等价仍开放。
 - 未知消费崩溃边界：合成adapter在意图已持久化且journal已收费后panic，形成未知消费；关闭/重开后恢复失败关闭，且adapter没有第二次调用。测试`resumable_loop_refuses_to_retry_after_crash_with_unknown_consumption`通过。它只覆盖收费后结果未知，不替代结果已完成但外层checkpoint未发布、意图持久化未收费及其他故障边界。
+- 逐提示语义动作恢复：冻结trace event8起始的一个特殊召唤动作，经提示10、11、14、15到17；adapter断言每次请求决策与trace既有决策完全相同。连续执行与每次调用后暂停/重开的阶段、游标、动作证据、预测、映射、选择、原始前缀、query和收费状态一致。修复了中间提示复用已认证动作起始`before_state`的问题。测试`resumable_semantic_operation_reopens_between_recorded_prompt_decisions`通过；其范围止于第一个语义动作，opcode12后的下一语义计划步骤仍会安全阻断。
 - End Phase命令7：初始已收费调用之后只推进一个Execution请求。
 - 独立审计：一条QueryWitness前缀和一个终端根调用分别记账；在两者之间关闭journal、恢复状态，再完成第二次审计。
 - 账本收费序列为初始1次、结束阶段1次、查询审计2次；reservation最终释放，unknown为0。
@@ -29,6 +30,7 @@
 
 - 恢复游标同步修复后追加复验：`cargo fmt --all -- --check`与workspace全目标Clippy通过；planner串行套件为68 passed、9 ignored、0 failed；workspace串行总检为360 passed、36 ignored、0 failed（91条test-result记录）。原始日志保存在本机忽略目录`target/p4-r1b/planner-final.log`及`target/p4-r1b/workspace-resume-fix.log`。
 - 新增未知消费崩溃负例后复验：聚焦测试通过，planner串行套件为69 passed、9 ignored、0 failed；workspace串行总检为361 passed、36 ignored、0 failed（91条test-result记录）。格式检查与workspace全目标Clippy通过；workspace日志为本机忽略目录`target/p4-r1b/workspace-crash-boundary.log`。
+- 新增逐提示特殊召唤暂停/重开回归并修复中间状态观测后：聚焦回归通过，planner串行套件为70 passed、9 ignored、0 failed；workspace串行总检为362 passed、36 ignored、0 failed（91条test-result记录）。`cargo fmt --all -- --check`与workspace全目标Clippy通过；workspace日志为本机忽略目录`target/p4-r1b/workspace-prompt-reopen.log`。
 - `cargo fmt --all -- --check`通过。
 - `cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试、66个集成测试通过，10个既有opt-in用例忽略。
 - `cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试、91个集成测试通过，2个既有资产opt-in用例忽略。
