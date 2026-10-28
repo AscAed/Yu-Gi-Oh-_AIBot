@@ -3,8 +3,36 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use ygo_goal::{actual_trace_v6, TraceWindow};
 
 const CHECKPOINT_KIND: &str = "first_turn_execution_checkpoint";
+
+#[cfg(test)]
+std::thread_local! {
+    static FAIL_PROGRESS_SAVE: std::cell::Cell<(usize, Option<usize>)> =
+        const { std::cell::Cell::new((0, None)) };
+}
+
+#[cfg(test)]
+pub fn fail_next_execution_progress_save_v1() {
+    fail_execution_progress_save_v1(1);
+}
+
+#[cfg(test)]
+pub fn fail_execution_progress_save_v1(at_attempt: usize) {
+    FAIL_PROGRESS_SAVE.with(|state| state.set((0, Some(at_attempt))));
+}
+
+#[cfg(test)]
+fn should_fail_progress_save() -> bool {
+    FAIL_PROGRESS_SAVE.with(|state| {
+        let (attempts, fail_at) = state.get();
+        let attempts = attempts + 1;
+        let should_fail = fail_at == Some(attempts);
+        state.set((attempts, if should_fail { None } else { fail_at }));
+        should_fail
+    })
+}
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -334,6 +362,10 @@ pub(super) fn save_progress(
     checkpoint: &ExecutionCheckpointV1,
     journal: &CallJournal,
 ) -> Result<(), String> {
+    #[cfg(test)]
+    if should_fail_progress_save() {
+        return Err("injected execution checkpoint publication failure".into());
+    }
     journal
         .save_checkpoint(
             &checkpoint.checkpoint_name(),
@@ -355,7 +387,6 @@ pub fn persist_execution_semantics_v1(
     instance_mapping: BTreeMap<String, String>,
     used_selections: BTreeSet<usize>,
     predictions: Vec<PartialPrediction>,
-    active_before_state: Option<&CausalState>,
     journal: &CallJournal,
 ) -> Result<(), String> {
     checkpoint.validate_bindings(
@@ -378,29 +409,38 @@ pub fn persist_execution_semantics_v1(
     if saved != serde_json::to_value(&*checkpoint).map_err(|e| e.to_string())? {
         return Err("semantic snapshot differs from authenticated checkpoint".into());
     }
-    // Intermediate prompts may intentionally lack a closed-window observation;
-    // bind an in-flight action's instance map to its authenticated start state.
-    let observed_state = match active_before_state {
-        Some(before) => before.clone(),
-        None => {
-            actual_state(
+    let trace = actual_trace_v6(
+        &checkpoint.progress.current_prefix,
+        catalog,
+        pack,
+        &checkpoint.progress.queries,
+    )?;
+    let mapping_is_bound = match trace.window {
+        TraceWindow::OwnMainAction => {
+            let observed_ids = actual_state(
                 &checkpoint.progress.current_prefix,
                 &checkpoint.progress.queries,
                 catalog,
                 pack,
             )?
             .state
+            .cards
+            .iter()
+            .map(|card| card.id.clone())
+            .collect::<BTreeSet<_>>();
+            instance_mapping
+                .values()
+                .all(|instance| observed_ids.contains(instance))
         }
+        TraceWindow::Pending => {
+            // During a multi-prompt operation mapped instances can temporarily
+            // leave the visible facts. The mapping cannot advance until the
+            // operation closes, so retain only the last authenticated mapping.
+            instance_mapping == checkpoint.progress.instance_mapping
+        }
+        _ => return Err("semantic snapshot is outside a supported action window".into()),
     };
-    let observed_ids = observed_state
-        .cards
-        .iter()
-        .map(|card| card.id.as_str())
-        .collect::<BTreeSet<_>>();
-    if instance_mapping
-        .values()
-        .any(|instance| !observed_ids.contains(instance.as_str()))
-    {
+    if !mapping_is_bound {
         return Err("instance mapping references an unobserved actual instance".into());
     }
     let mut steps = BTreeSet::new();

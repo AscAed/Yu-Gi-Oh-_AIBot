@@ -1,54 +1,43 @@
 # 本机验证记录
 
-## 2026-10-28 最新源码隔离部署smoke与replay
+## 2026-10-29 P4-R1b信任边界与恢复发布补检
 
-- 在隔离worktree从D盘只读复制冻结资产后，首次smoke暴露部署暂存遗漏：只复制了12,702个official Lua文件，没有复制25个公共脚本根目录Lua文件，导致`constant.lua`等回调加载失败。补齐这25个文件后，对比源/目标脚本树共12,727个文件，缺失、额外和哈希不匹配均为0；D盘源资产及旧包未改。
-- 重新执行`deploy-local.ps1 -Offline -FrozenRuntime`成功。doctor为`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`；其`smoke_ok=null`仅表示doctor未自带smoke。独立预算smoke日志`target/deploy-smoke-rerun.log`显示318节点、27,288ms、以`time_budget`结束，3条线路均标记`EngineVerified`。独立`combo replay`最终JSON `target/deploy-replay-final.json`列出3/3 `replay_verified=true`且`engine_verified`。该预算结果不证明全搜索或全局最优。
-- 新包`engine identity`为`c1ac757ae9d350a959cc743812c66108dce20f0645b66ec4ade2fd851e3100c2`且`consistent=true`；实际Lua脚本12,727个，无缺失/额外/不匹配。D盘旧CLI自身不支持identity子命令，因此用当前CLI对旧包配置做只读采样，结果保存于忽略文件`target/deploy-legacy-identity-rechecked.json`。旧包身份为`b9f3c661db6310285d916096afdcba8e9285852949b619a39ae0dccc1a51951d`且`consistent=true`；两边12,727个脚本路径/哈希集合相同，CDB、core DLL、engine manifest、script manifest、LFLists提交与OCG文件相同。worker哈希不同（旧`ad4a5929…f37fd11c`、新`dd331703…be98112c`），CLI亦与各自manifest一致但不同。catalog ID/13,665张、banlist ID/203项及Rabbit牌组合法性只读状态一致。身份采样只哈希资产文件，没有启动旧worker。没有可比研究账本，因此不声称账本等价。
-- 发布包文件清点：当前包127个文件、原D盘旧包67个文件；两者均无`.jsonl`研究账本。当前包的ledger命名文件只有8个schema，schema不包含账本实例。包内没有可用于历史消费/账本等价比较的记录；包外正式scope ledger按原位置单独保留，不迁移、不推断等价。
-- 随后将验证记录提交为`27ab161`，在`git status`干净的提交上再次运行`deploy-local.ps1 -Offline -FrozenRuntime`。release构建命中现有产物，包重建、catalog/banlist导入、knowledge校验和doctor均退出0；对该包重跑smoke为340节点、27,310ms、3条EngineVerified，独立replay 3/3通过。日志及报告为`target/deploy-clean-checkout-20261028.log`、`target/deploy-clean-smoke.{json,log}`、`target/deploy-clean-replay.{json,log}`。后续文档提交仅改变文档；提交`d1e94b2`的最终包再次重建，包内`TESTING.md` SHA-256与源码相同，CLI SHA-256 `858979D5C529A7390229C538AEBE1A9168867669C019534CB1AB3B72BE531877`与`target/release/ygo-cli.exe`及包内`build-hashes.json`相同。没有新增研究scope调用；本地诊断smoke/replay不是正式研究实验。dist与日志属于本机Git忽略证据，不是提交归档。
+- 只读代码审阅发现初始`QueryWitness`在独立重放前即可影响语义选择；公开入口现在要求不可伪造的`AuditedQueries`能力，并核对其绑定的初始请求、收费结果和完整见证序列。未匹配时在创建执行检查点前拒绝。合成循环测试通过仅供`cfg(test)`使用的内部分支，不开放生产调用。
+- 只读代码审阅另发现终局查询审计预留与内/外检查点分步发布会留下不可恢复窗口。预留改为在外层查询审计状态可恢复后创建；若预留已写入但进度检查点发布失败，重开只接受与查询游标完全匹配的唯一预留，并将账本快照同步后继续。故障注入回归覆盖预留后发布失败，以及Witness收费完成后外层发布失败；重开核验唯一尾调用并复用结果，不重复收费。
+- 最终验证（基于已整合的`origin/main`提交）：`cargo fmt --all -- --check`通过；workspace全目标Clippy `-D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**362 passed、36 ignored、0 failed**（91条test-result摘要，日志见[`workspace-tests-20261029.log`](../target/p4-r1b-followup/logs/workspace-tests-20261029.log)）；Python C1/schema聚焦套件**24 passed、2 skipped**。最终提交涉及的15份Markdown共416个本地链接目标均存在；`git diff --check`通过。清理5个确认由失败/中断测试遗留的`.tenki-*`临时目录，未删改历史运行证据。跳过项仍是两个显式本地证据opt-in。未重跑完整Python套件；已知Tenki历史`codec.rs`保护哈希失败和原pin保持不变。
+- 此补检不认证真实进程崩溃/文件系统故障矩阵、真实OCG调用或独立原生重放；原生/runner/worker/FFI调用仍为0。原始费用及未知累计沿用TASKS顶部会计口径。
 
-## 2026-10-28 历史审计独占写入测试隔离
+## 2026-10-29 普通部署包现场只读复核
 
-- `test_writer_is_exclusive_and_does_not_start_processes`此前写临时报告到原历史恢复目录，无法在不触碰证据树的条件下执行。现将该用例的测试仓库根定位到`target/history-audit-writer-<pid>-<uuid>`，由生产入口原样执行路径/忽略合同及独占文件创建；审计结果使用mock，因该测试目标是writer，不重复验证历史数据解析。测试确认报告创建、同路径第二次写拒绝(`output_already_exists`)，并将`subprocess.run`设为触发即失败。清理位于专属唯一目录的`finally`中；原D盘历史目录未写入或迁移。
-- `PYTHONPATH=python py -m pytest tests/test_history_audit.py -q -p no:cacheprovider`：10 passed、7 skipped、10 subtests passed。pytest提示禁用cache provider后`cache_dir`配置项未知；这是配置警告，不影响退出码。跳过用例依赖本机历史材料，未由隔离writer测试替代。
+- 检查`dist/ygo-local`现有CLI与worker的SHA-256，分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内`build-hashes.json`一致。文件时间仍为2026-10-19；源码/文档提交`9f527d3`尚未部署到该普通包。
+- 对旧包运行只读`engine doctor`，结果`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。Catalog为`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`（13,665条）；banlist为`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`（203条，生效日2026-10-01）。
+- 旧包入口只声明engine/catalog/banlist/deck/combo，`workbench`不是该部署CLI的命令；草稿工作台仍仅存在于当前开发源码。`doctor`不启动决斗，本轮没有运行`engine smoke`、真实runner/worker/FFI或部署脚本。
+- `cargo tree --workspace --offline --locked --duplicates`只报告`hashbrown`因`hashlink`与`indexmap`传递依赖并存的0.14.5/0.17.1两版本；`cargo-machete`未安装，本轮没有联网安装，也未按传递版本差异删除依赖。
 
-## 2026-10-28 Windows reparse-point路径保护补验
+## 2026-10-28 P4-R1b多动作恢复等价与中断门禁
 
-- 本机`whoami /priv`未列出`SeCreateSymbolicLinkPrivilege`。即使使用提升权限运行，`output_parent_symlink`仍因OS拒绝创建目录链接而跳过；此操作系统级链接行为尚未获得直接验证。
-- 为覆盖同一拒绝分支，`test_output_parent_link_guard_runs_before_creation_even_without_symlink_support`现在模拟`Path.lstat()`对`data/runtime`返回目录属性与`st_file_attributes=0x400`，并继续调用真实`safe_path`和`_validate_locations`。测试确认返回`linked_path_rejected`且输出目录未创建。聚焦两项为1 passed、1 skipped；文件全测`tests/test_curry_consumption_reservation.py`为11 passed、1 skipped、17 subtests passed，退出0。真实链接测试在`finally`清理自己的scratch目录，包括被跳过时。Pytest缓存路径仍有Windows访问警告，不影响结果。
+- 先以红测发现两处恢复差异：已完成尾调用被恢复后没有补回与连续执行相同的动作证据；推进外层语义后，内层A3检查点没有同步实例映射、已用选择和预测，导致下一次续跑因快照不匹配而拒绝。修复后正常完成和恢复完成共用动作证据校验/记录逻辑；外层语义推进在发布外层游标前同步保存内层检查点。请求、计划、用途、收据和预算校验未放宽。
+- 新增非空两动作合成对照：第一步使用仓库trace夹具中的XYZ procedure并跨越连续提示，第二步按公开菜单执行合成normal summon，随后进入End Phase和query audit。每个语义Execution调用后均释放journal并恢复；连续与恢复结果的动作证据（11项）、预测（2项）、实例映射、已用选择、13份query、前缀、reservation及账本收费序列相同。账本为26次完成消费：Execution 12次、Witness 14次，unknown 0；adapter调用26次。引擎结果来自合成adapter，不能视为真实规则或原生重放证据。End Phase/query audit跨恢复另由`resumable_first_turn_loop_persists_end_phase_and_query_audit_progress`覆盖，不把该多动作测试中的连续query审计表述为逐审计调用暂停对照。
+- 仅测试编译的故障钩子验证语义快照发布、外层调用意图发布失败均发生在收费前：继续adapter调用0，既有消费保持1；恢复后不凭空推进。另在账本已有完整执行结果、进度检查点尚未发布时中断，恢复从账本认证并复用尾调用；adapter总调用仍为1、消费为2，无重复收费。未决尾部的未知消费阻断由A3回归覆盖。新增竞争用例在外层只读检查释放后、内层恢复前用另一个真实`CallJournal`写入完成的合成记录；恢复识别到未绑定调用并拒绝继续。另验证持有writer时恢复拒绝。故障钩子没有进入非测试构建。
+- 最终验证：`cargo fmt --all -- --check`通过；`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**70 passed、10 ignored、0 failed**；`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**145 passed、2 ignored、0 failed**；workspace全目标Clippy `-D warnings`通过；workspace默认串行测试为**362 passed、36 ignored、0 failed**（91条结果摘要）。忽略项是既有冻结资产/真实引擎/原生收费研究、手工基准及明确opt-in测试；逐项原因见[`workspace-tests-final.log`](../target/p4-r1b-followup/logs/workspace-tests-final.log)。日志另见[`planner-tests-final.log`](../target/p4-r1b-followup/logs/planner-tests-final.log)、[`engine-adapter-tests.log`](../target/p4-r1b-followup/logs/engine-adapter-tests.log)和[`workspace-clippy-final.log`](../target/p4-r1b-followup/logs/workspace-clippy-final.log)。schema回归`py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`为**1 passed、8 deselected**；完整Python套件未重跑，C1记录的Tenki历史`codec.rs`保护哈希失败及原pin保留。
+- 本批新增原生研究、真实runner、worker和FFI调用为**0**；没有创建研究窗口或收费账本。认证消费子集40、政策预留7、规划47不变；旧confirmation与全部历史实际累计仍未知。仍未认证真实OCG进程暂停/终止/重开、操作系统级文件系统崩溃矩阵及独立原生重放。
 
-## 2026-10-28 最新源码隔离worktree部署复验
+# 2026-10-28 项目现状与文档路线核对
 
-- 隔离worktree HEAD `3de61b4fc361015268a2fb5f24ded9a0711693e5`从原D盘冻结资产只读复制所需CLI运行资产和LFLists冻结checkout；12,702个官方Lua脚本逐文件哈希均匹配，CDB、scripts.json、engine manifest/core与LFLists提交/OCG文件均匹配。资产只写入worktree的Git忽略路径，D盘源包及源资产未改。
-- 执行`./scripts/deploy-local.ps1 -Offline -FrozenRuntime`通过，Rust release workspace编译通过；在忽略目录生成127文件的`dist/ygo-local`隔离包。包内`ygo.exe` SHA-256为`858979D5C529A7390229C538AEBE1A9168867669C019534CB1AB3B72BE531877`，worker为`DD331703DE425399D482C3231A0D59F28170634A1F5515C66495BD20EF98112C`；两者均匹配同次release产物及包内`build-hashes.json`。核心manifest记载ocgcore SHA-256 `446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`、ABI 11.0、x64。
-- 导入catalog 13,665张，snapshot ID为`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`；导入banlist 203项，ID为`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`；Knowledge校验12卡通过。部署脚本调用engine doctor，返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。独立catalog/banlist status及`rabbit.ydk`以2026-10-07校验均通过，牌组`legal=true`且无违规。
-- 日志保存在本机忽略路径`target/deploy-local-20261028.log`及`target/deploy-{catalog-status,banlist-status,deck-validate}.log`。没有运行`engine smoke`、`combo replay`或研究账本调用；doctor的ready/ABI结果不等于决斗验证。未与D盘2026-10-19包做身份/账本差异比较，最新源码完整P4-R5门禁仍开放。
-
-## 2026-10-28 历史证据与路径保护复核
-
-- 对[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md)列出的46个本机忽略目标只读复核：D盘原工作区46/46存在且被Git忽略；展开目录并去重后为54个文件、750,733字节。逐文件哈希保存在忽略文件`target/evidence-retention-source-20261028.json`。复读源文件重算后54/54哈希及大小相同；未复制、改写或删除证据。
-- `PYTHONPATH=python py -m pytest tests/test_curry_consumption_reservation.py -q`：11 passed、1 skipped、17 subtests passed。跳过项需要创建目录符号链接，本机Windows配置不允许；同文件的无符号链接能力回退用例通过。此结果不证明特权符号链接负例。
-- `PYTHONPATH=python py -m pytest tests/test_prepare_curry_ledger_handoff_v5.py -q`：5 passed。pytest无法创建本机缓存目录并给出`PytestCacheWarning`，测试退出码为0。该包布局测试使用临时隔离目录，不触碰历史ledger。
-- 截至本节路径保护复核时，历史writer测试和最新源码双资产部署尚未执行；两项后续已分别完成隔离writer测试、干净提交部署与smoke/replay，见本文件顶部的更新记录。此处保留的是该轮时间点状态，不覆盖后续结果。
+- 本轮仅修改/新增Markdown；未改源码、schema、运行资产、账本、部署包或Git提交。进入本轮时工作区已有多项源码、测试和文档修改及未跟踪文件，均保留；分支相对origin落后2个提交，本轮未fetch/pull。既有源码修改不属于本轮文档交付范围。
+- 复核入口为`docs/INDEX.md`、`TASKS.md`、`PRODUCT_VISION.md`、`PROJECT_ASSESSMENT.md`、`ROADMAP.md`、`API.md`、`ARCHITECTURE.md`、`WORKBENCH.md`、`ENVIRONMENT_AUDIT.md`、`WORKSPACE_REVIEW.md`、日期化TESTING与开发/普通部署说明。部署事实区分开发CLI工作台与2026-10-19普通dist；未把旧包哈希、历史smoke或doctor提升为当前源码发布证明。
+- 16项愿景ID（UX-01、LANG-01/02、DATA-01/02、DECK-01、BUILD-01/02、KNOW-01/02、COMBO-01/02/03、LOOP-01、ENG-01、TRUST-01）逐项检查均存在于PROJECT_ASSESSMENT及本轮实施计划；计划通过需求族映射到后续阶段，不复制TASKS状态。
+- 对20份当前修改或新增Markdown执行相对路径存在性扫描，检查409个本地链接，缺失0；只核对路径存在，不验证外链、片段锚点的语义或目标内容正确性。`git diff --check`退出0；Git提示既有若干文件将发生LF/CRLF转换，本轮未改行尾策略。
+- 文档交叉核对保留Python完整套件历史结果**749 passed、9 skipped、1 failed**（Tenki历史保护`codec.rs`哈希不匹配）；R1b之后未重跑完整Python套件。Rust与schema测试数仍取各自日期记录，不是本轮新运行结果。认证消费子集40、政策预留7、规划47；旧confirmation及全部历史实际消费继续未知。
+- 本轮没有运行doctor、cargo/pytest测试、构建、worker/runner/FFI/native、真实浏览器、资产切换、部署或发布。这是本轮范围声明；部署状态按保存证据复核，不代表现场重新运行。
 
 ## 2026-10-28 P4-R1b执行循环离线接入
 
-- 隔离分支HEAD `c34a505042a634c71c2969239af404d825a7bfe2`（基于`origin/main` `2389906`）执行`cargo build --release --workspace --offline --locked --target-dir target/p4-r1b`通过。Release CLI `ygo-cli.exe` SHA-256=`366956120B0C7DBBE951847ACA297FB7AD0E03496143C3A87335A749404FCBD3`，worker `ygo-engine-worker.exe` SHA-256=`CF2B235DE7897727EE1BFACE24BCCABF293E986ED2BB69120CD47BCB50E02DDD`；仅为忽略目录中的编译产物，没有复制到`dist`。隔离worktree缺少冻结engine/CDB/Lua/LFLists资产，旧D盘`dist/ygo-local`未覆盖；本次未运行doctor、worker或决斗，因此不构成部署/运行时验收。
-
 - 在A3单次调用检查点外新增`ResumablePartialExecutionV1`完整循环游标及`first-turn-resumable-execution-v1` schema。显式API从已完成并收费的初始Execution调用开始；逐步继续复用既有动作绑定、预测、资源比较、实例映射和End Phase规则。查询审计逐次独立记账。旧`execute_partial_v2`和报告合同未变。
 - 先添加并观察到缺失API的红测。聚焦测试贯通合成End Phase调用、QueryWitness前缀审计、终端根审计、释放/重开journal、消费与reservation边界，以及外层语义步骤篡改时收费前拒绝。完整验证中修正了意图构造与语义快照同步顺序；再次运行后通过。该用例不覆盖非空语义计划的多动作连续提示暂停/重开等价，因此该项仍是离线测试缺口。
-- 后续增加`resumable_loop_reopens_with_valid_nonempty_semantic_plan`：从赛事查询夹具经`propose_partial`生成并以`validate_forecast`验真的三步计划，检查初始语义游标关闭/重开后保持在步骤0、账本消费仍为1。聚焦命令`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b resumable_loop_reopens_with_valid_nonempty_semantic_plan -- --nocapture`通过。该用例仅验证非空计划的初始化与恢复，尚未执行任何计划动作，不能替代逐动作连续/暂停等价验证。
-- 继续用同一三步计划推进第一动作，再在提示opcode12边界分别连续运行和关闭/重开。最初红测发现恢复协调后的内层状态没有同步回外层journal检查点，修复后两种路径均在下一步`original_plan_blocked`处以收费前拒绝收敛；消费计数不增加，状态和未消费的合成响应队列不变。回归`unsupported_trigger_boundary_blocks_without_charging_after_reopen`通过。该证据覆盖一次语义动作后的恢复与安全停止，不代表后续动作已执行；提示opcode12处的计划连续推进仍是开放项。
-- 修复后全`ygo-planner`串行套件通过：**68 passed、9 ignored、0 failed**（24单元测试、44集成测试）；恢复修复后的workspace串行总检通过：**360 passed、36 ignored、0 failed**（91条test-result记录）。原始日志保存在本机忽略目录`target/p4-r1b/planner-final.log`与`target/p4-r1b/workspace-resume-fix.log`。planner全目标Clippy及`cargo fmt --all -- --check`通过。
 - `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/p4-r1b -- -D warnings`通过。`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试及66个集成测试通过，10个既有opt-in测试忽略。`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试及91个集成测试通过，2个既有资产opt-in测试忽略。workspace串行总检`cargo test --workspace --offline --locked --target-dir target/p4-r1b -- --test-threads=1`为**358 passed、36 ignored、0 failed**（91条test-result记录）。忽略项为既有本机冻结资产/引擎、原生收费研究、手工基准及明确opt-in写入测试。日志位于[`target/p4-r1b/logs`](../target/p4-r1b/logs/)。
 - Python schema回归`PYTHONPATH=python py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`为**1 passed、8 deselected**；全Python套件未重跑，因为C1记录的Tenki旧保护哈希失败仍为已知基线，锚点未修改。无真实进程、runner、worker、FFI、doctor或可写研究账本调用；新增原生研究消费为**0**。会计保持认证子集40、政策预留7、规划47，全部历史实际累计未知。
 - 本批关闭的是显式语义执行恢复API与End Phase/查询审计合成路径的离线实现关口；不宣称连续语义多动作暂停/重开等价、真实进程崩溃恢复、外部并发进程竞争或独立原生重放通过。详见[执行恢复合同](EXECUTION_RECOVERY.md)及[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)。
-- 后续工作区自检复验Windows路径保护：`tests/test_curry_consumption_reservation.py`全文件为**11 passed、1 skipped、17 subtests passed**；`output_parent_symlink`因当前Windows配置不允许创建目录符号链接而跳过。另行聚焦的两个路径保护用例为1 passed、1 skipped；`tests/test_identity.py`为**11 passed、4 subtests passed**。pytest缓存指定到系统临时目录后无缓存警告；这些测试不触发引擎或研究账本。
-- 新增`resumable_loop_refuses_to_retry_after_crash_with_unknown_consumption`：先持久化执行意图，再让合成adapter在收费调用中panic；journal显示1个未知消费，关闭/重开后恢复拒绝继续，adapter总调用数仍为1。该负例覆盖收费后结果未记录的崩溃边界，不证明成功调用尾部复用、跨提示多动作等价或其它检查点发布故障矩阵。聚焦测试通过；planner串行套件**69 passed、9 ignored、0 failed**，`cargo fmt --all -- --check`和workspace全目标Clippy通过；workspace串行测试**361 passed、36 ignored、0 failed**（91条test-result记录），日志为本机忽略目录`target/p4-r1b/workspace-crash-boundary.log`。本次未启动引擎、worker、doctor或研究scope。
-- 逐提示trace回归`resumable_semantic_operation_reopens_between_recorded_prompt_decisions`通过。它要求adapter每次调用的决策列表与冻结赛事trace完全一致；一个特殊召唤动作依次处理提示10/11/14/15/17，并在每个收费调用后暂停重开，对照连续路径的语义阶段/游标、选择证据、预测、实例映射、使用的选择、原始前缀、query witnesses、journal账本与未消费响应数。测试发现并修复两处中间提示错误：续步时误重新计算要求闭合主阶段的实际状态，以及保存语义快照时未复用动作开始时的认证状态。该用例只完成一个语义动作；提示17关闭该动作后，下一计划步骤在opcode12不可用。尝试改从后续trace见证启动会被`actual_state()`以“trace must start at the untouched own first main phase”拒绝；不得用中途状态绕过起始条件。planner串行套件**70 passed、9 ignored、0 failed**；workspace串行测试**362 passed、36 ignored、0 failed**（91条test-result记录）；格式和workspace全目标Clippy通过。日志为本机忽略目录`target/p4-r1b/workspace-prompt-reopen.log`；未启动引擎、worker、doctor或研究scope。
-- End Phase恢复测试模拟两个相邻崩溃点：意图及内外层pending检查点已持久化、journal尚未收费时重开，会清理未收费pending并恢复Ready，消费保持1；之后Execution结果已收费并写入内层检查点、外层仍保留旧快照时重开，会从认证结果对账进入QueryAudit，消费保持2，不会再收费。测试`resumable_first_turn_loop_persists_end_phase_and_query_audit_progress`通过。它覆盖合成状态边界，不覆盖意图写入部分失败或真实OS进程掉电。
-- 在PR #4合并基线`84c8c5567968bf2dcb8cc2c0b2140f4490c6ea01`上重新复验：`cargo fmt --all -- --check`、全目标Clippy、engine-adapter examples及隔离目录下串行全workspace测试均通过；workspace汇总**358 passed、36 ignored、0 failed**。日志为本机忽略目录[`workspace-test.log`](../target/full-project-audit-20261028/workspace-test.log)。Python语言/schema聚焦复验**24 passed、2 skipped**；新增R1b schema单测**1 passed、8 deselected**。Python 3.14的pytest缓存写入警告不影响测试结果；两项skip仍是本机snapshot/report和真实v2 report opt-in。`node --check`与`git diff --check`通过。该次复验只执行离线测试，未启动引擎、doctor或部署。
 
 ## 2026-10-28 A3执行状态持久化与零原生恢复
 

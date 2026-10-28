@@ -10,28 +10,20 @@
 
 ## 当前合成覆盖
 
-- 非空恢复初始化：赛事查询夹具经`propose_partial`生成三步有效计划，并由`validate_forecast`复核；以已收费初始调用建立状态，关闭/重开后仍在Semantic阶段、游标0，账本消费保持1。测试`resumable_loop_reopens_with_valid_nonempty_semantic_plan`只覆盖计划绑定与初始化恢复，不执行任何动作。
-- 单动作恢复与安全停止：同一计划执行一步后到达opcode12提示；连续路径和关闭/重开路径都在下一计划动作不可用时返回`original_plan_blocked`，消费不变且状态相同。红测发现resume协调内层状态后未同步外层journal检查点；恢复流程现会持久化协调后的外层快照。测试`unsupported_trigger_boundary_blocks_without_charging_after_reopen`通过。此结果覆盖一次执行后的恢复边界，但提示opcode12的后续处理与成功的多动作等价仍开放。
-- 未知消费崩溃边界：合成adapter在意图已持久化且journal已收费后panic，形成未知消费；关闭/重开后恢复失败关闭，且adapter没有第二次调用。测试`resumable_loop_refuses_to_retry_after_crash_with_unknown_consumption`通过。它只覆盖收费后结果未知，不替代结果已完成但外层checkpoint未发布、意图持久化未收费及其他故障边界。
-- 逐提示语义动作恢复：冻结trace event8起始的一个特殊召唤动作，经提示10、11、14、15到17；adapter断言每次请求决策与trace既有决策完全相同。连续执行与每次调用后暂停/重开的阶段、游标、动作证据、预测、映射、选择、原始前缀、query和收费状态一致。修复了中间提示复用已认证动作起始`before_state`的问题。测试`resumable_semantic_operation_reopens_between_recorded_prompt_decisions`通过；其范围止于第一个语义动作，opcode12后的下一语义计划步骤仍会安全阻断。
 - End Phase命令7：初始已收费调用之后只推进一个Execution请求。
 - 独立审计：一条QueryWitness前缀和一个终端根调用分别记账；在两者之间关闭journal、恢复状态，再完成第二次审计。
-- 两个相邻恢复边界：意图及内外层pending检查点已保存但尚未收费时，重开清理pending并保持Ready/消费1；结果已收费并写入内层检查点、外层快照尚未发布时，重开从认证结果对账进入QueryAudit且消费保持2。均为合成状态检查，不等同于真实进程终止或文件系统持久性实验。
 - 账本收费序列为初始1次、结束阶段1次、查询审计2次；reservation最终释放，unknown为0。
 - 篡改外层语义步骤时，收费前拒绝，消费数仍为1。
 - schema对版本化状态正例、伪造凭证和错误版本负例通过。
 
 ## 未覆盖与限制
 
-此次红测及实现没有在真实OCG进程中暂停/重开，也未完成跨提示成功推进的多动作连续端到端对照、每个动作调用边界的成功暂停/重开比较、进程终止故障注入矩阵、外部并发写入竞争测试或独立原生重放。当前查询夹具第一动作后到达opcode12，而下一计划动作在该窗口不可用；实现会在不收费的情况下安全停止。尝试以同一冻结trace的后续见证重新开局也被首状态合同拒绝，要求输入保持“未行动的首个己方主要阶段”。因此需寻找从合法首状态开始且计划与轨迹均有效的多动作序列；不能靠放宽`validate_forecast`、把中途见证当首状态或伪造动作继续。A3既有测试仍分别覆盖低层完成尾调用复用和未决消费阻断。以上离线结果不得推断为真实R1b资格。
+此次红测及实现没有在真实OCG进程中暂停/重开，也未完成多动作连续提示端到端对照、进程终止故障注入矩阵、外部并发写入竞争测试或独立原生重放。A3既有测试仍分别覆盖低层完成尾调用复用和未决消费阻断。以上离线结果不得推断为真实R1b资格。
 
 本批新增native research、runner、worker及FFI调用0；不创建scope、窗口或收费账本。会计维持认证子集40、政策预留7、规划47，全部历史实际累计未知。C1已记录的Tenki保护哈希失败保持不变。
 
 ## 本批验证结果
 
-- 恢复游标同步修复后追加复验：`cargo fmt --all -- --check`与workspace全目标Clippy通过；planner串行套件为68 passed、9 ignored、0 failed；workspace串行总检为360 passed、36 ignored、0 failed（91条test-result记录）。原始日志保存在本机忽略目录`target/p4-r1b/planner-final.log`及`target/p4-r1b/workspace-resume-fix.log`。
-- 新增未知消费崩溃负例后复验：聚焦测试通过，planner串行套件为69 passed、9 ignored、0 failed；workspace串行总检为361 passed、36 ignored、0 failed（91条test-result记录）。格式检查与workspace全目标Clippy通过；workspace日志为本机忽略目录`target/p4-r1b/workspace-crash-boundary.log`。
-- 新增逐提示特殊召唤暂停/重开回归并修复中间状态观测后：聚焦回归通过，planner串行套件为70 passed、9 ignored、0 failed；workspace串行总检为362 passed、36 ignored、0 failed（91条test-result记录）。`cargo fmt --all -- --check`与workspace全目标Clippy通过；workspace日志为本机忽略目录`target/p4-r1b/workspace-prompt-reopen.log`。
 - `cargo fmt --all -- --check`通过。
 - `cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试、66个集成测试通过，10个既有opt-in用例忽略。
 - `cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试、91个集成测试通过，2个既有资产opt-in用例忽略。
@@ -42,4 +34,23 @@
 
 ## 尚未认证
 
-目前集成测试覆盖End Phase及逐次QueryWitness/终端根审计的合成暂停重开，但没有完成非空语义计划下多动作连续提示与逐边界恢复的等价测试。真实OCG进程暂停/重开、跨文件系统边界崩溃注入、外部并发进程竞争及独立原生重放仍未认证。后续真实实验须另定scope、预算和窗口；本交接不授权原生执行。
+本文件末尾的2026-10-28续接附录记录后续完成的多动作等价与中断门禁；上面的原始交接保留其当时“尚未覆盖”的历史状态。真实OCG进程暂停/重开、操作系统级跨文件系统边界崩溃注入及独立原生重放仍未认证。后续真实实验须另定scope、预算和窗口；本交接不授权原生执行。
+
+## 2026-10-28续接：P4-R1b多动作恢复等价与中断门禁
+
+### 结果
+
+- 新增`nonempty_two_action_plan_matches_continuous_and_every_prompt_boundary_reopen`。固定计划包含trace夹具中的两暗属性三级怪兽XYZ procedure和后续normal summon。第一步跨越多个连续提示，第二步进入End Phase，再完成独立query audit。合成适配器下连续与每个语义调用边界暂停、重开的决策证据、前缀、实例映射、选择、预测、查询和reservation逐项一致；最终账本26次完成消费、unknown 0，其中Execution 12次、Witness 14次。End Phase/query audit的恢复边界由原独立回归继续覆盖。
+- 红测确认完成尾调用恢复缺少decision evidence；正常和恢复路径现在共享`record_execution_decision`校验和记录。另修复语义推进未先同步A3检查点的问题，避免外层状态前进后内层快照落后。
+- 新测试专用故障钩子验证语义快照保存与外层意图发布失败时adapter调用0；两种失败后状态均可恢复且没有虚构消费。另在调用结果已完整进入账本、执行进度检查点尚未发布时中断；恢复按原请求/用途认证并复用尾调用，adapter总调用保持1，不重复收费。未决调用拒绝推进。只读检查后的竞争测试在窗口间写入另一条有效合成账本记录，恢复保留该记录并在发现未绑定消费后拒绝继续；持有独占writer也会阻止恢复。
+
+### 验证
+
+- `cargo fmt --all -- --check`通过。
+- planner串行测试：**70 passed、10 ignored、0 failed**；engine-adapter串行测试：**145 passed、2 ignored、0 failed**。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/p4-r1b-followup -- -D warnings`通过；`cargo test --workspace --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`：**362 passed、36 ignored、0 failed**，91条test-result摘要。
+- `py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`：**1 passed、8 deselected**。未运行完整Python套件；C1的Tenki历史保护哈希失败和原pin未更改。最终日志在`target/p4-r1b-followup/logs/`。
+
+### 限制及交付边界
+
+本轮新增原生研究、runner、worker、FFI调用0。合成结果不产生正式凭证。验证了测试钩子模拟的进程边界失败、CallJournal完成/未决尾部和确定性账本竞争，不等于操作系统级进程终止或逐次文件系统写入故障覆盖。真实OCG暂停、重开、未知收费恢复及独立原生重放继续开放，须另定scope、预算和窗口。会计保持认证消费子集40、政策预留7、规划47，全部历史实际累计未知。

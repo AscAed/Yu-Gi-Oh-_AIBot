@@ -14,6 +14,42 @@ use std::{
 
 const LOOP_KIND: &str = "first_turn_resumable_execution_loop";
 
+#[cfg(test)]
+std::thread_local! {
+    static LOOP_CHECKPOINT_PUBLICATION: std::cell::Cell<(usize, Option<usize>)> =
+        const { std::cell::Cell::new((0, None)) };
+    static BEFORE_LOOP_REOPEN: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+pub fn fail_resumable_loop_publication_v1(at_attempt: usize) {
+    LOOP_CHECKPOINT_PUBLICATION.with(|state| state.set((0, Some(at_attempt))));
+}
+
+#[cfg(test)]
+pub fn before_resumable_loop_reopen_v1(hook: impl FnOnce() + 'static) {
+    BEFORE_LOOP_REOPEN.with(|slot| *slot.borrow_mut() = Some(Box::new(hook)));
+}
+
+#[cfg(test)]
+fn run_before_loop_reopen_hook() {
+    if let Some(hook) = BEFORE_LOOP_REOPEN.with(|slot| slot.borrow_mut().take()) {
+        hook();
+    }
+}
+
+#[cfg(test)]
+fn should_fail_loop_publication() -> bool {
+    LOOP_CHECKPOINT_PUBLICATION.with(|state| {
+        let (attempts, fail_at) = state.get();
+        let attempts = attempts + 1;
+        let should_fail = fail_at == Some(attempts);
+        state.set((attempts, if should_fail { None } else { fail_at }));
+        should_fail
+    })
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResumableExecutionPhaseV1 {
@@ -89,6 +125,10 @@ impl ResumablePartialExecutionV1 {
 }
 
 fn persist_loop(state: &ResumablePartialExecutionV1, journal: &CallJournal) -> Result<(), String> {
+    #[cfg(test)]
+    if should_fail_loop_publication() {
+        return Err("injected resumable loop checkpoint publication failure".into());
+    }
     journal
         .save_checkpoint(
             &state.checkpoint_name(),
@@ -114,11 +154,160 @@ fn validate_loop_boundary(
     Ok(())
 }
 
+fn query_audit_reservation_is_unpublished(
+    state: &ResumablePartialExecutionV1,
+    stats: &LedgerStats,
+    reservations: &BTreeMap<String, usize>,
+) -> bool {
+    if state.phase != ResumableExecutionPhaseV1::QueryAudit
+        || state.audit.status != ResumableAuditStatusV1::Running
+        || state.pending.is_some()
+    {
+        return false;
+    }
+    let Some(token) = state.audit.reservation.as_deref() else {
+        return false;
+    };
+    let remaining = state
+        .inner
+        .progress
+        .queries
+        .len()
+        .saturating_add(1)
+        .saturating_sub(state.audit.next_query);
+    let Some(actual_remaining) = reservations.get(token) else {
+        return false;
+    };
+    if *actual_remaining != remaining {
+        return false;
+    }
+    let mut expected_stats = state.inner.progress.ledger.clone();
+    expected_stats.reserved += remaining;
+    let mut expected_reservations = state.inner.progress.reservations.clone();
+    expected_reservations.insert(token.to_owned(), remaining);
+    expected_stats == *stats && expected_reservations == *reservations
+}
+
+fn query_audit_call_is_unpublished(
+    state: &ResumablePartialExecutionV1,
+    stats: &LedgerStats,
+    reservations: &BTreeMap<String, usize>,
+) -> bool {
+    let Some(intent) = state.pending.as_ref() else {
+        return false;
+    };
+    if state.phase != ResumableExecutionPhaseV1::QueryAudit
+        || intent.purpose != CallPurpose::Witness
+        || intent.expected_call != stats.consumed as u64
+        || stats.consumed != stats.completed
+        || stats.unknown != 0
+        || state.inner.progress.ledger.consumed.saturating_add(1) != stats.consumed
+    {
+        return false;
+    }
+    let Some(token) = state.audit.reservation.as_deref() else {
+        return false;
+    };
+    let mut expected_reservations = state.inner.progress.reservations.clone();
+    let Some(previous_remaining) = expected_reservations.get(token).copied() else {
+        return false;
+    };
+    if previous_remaining == 0 {
+        return false;
+    }
+    if previous_remaining == 1 {
+        expected_reservations.remove(token);
+    } else {
+        expected_reservations.insert(token.to_owned(), previous_remaining - 1);
+    }
+    let mut expected_stats = state.inner.progress.ledger.clone();
+    expected_stats.consumed += 1;
+    expected_stats.completed += 1;
+    expected_stats.reserved -= 1;
+    expected_stats == *stats && expected_reservations == *reservations
+}
+
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(test, allow(dead_code))]
 pub fn begin_resumable_partial_execution_v1(
     request: &RunDuelRequest,
     initial_call: u64,
     initial_queries: &[QueryWitness],
+    audited_queries: &AuditedQueries,
+    plan: &ForecastPlan,
+    catalog: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    journal: Arc<CallJournal>,
+) -> Result<ResumablePartialExecutionV1, String> {
+    let initial = journal
+        .load_result(initial_call, request)
+        .map_err(|error| error.message)?
+        .ok_or("initial charged result is missing")?;
+    let mut queries = initial_queries.to_vec();
+    let captured = QueryWitness::capture(&initial)?;
+    if !queries
+        .iter()
+        .any(|query| serde_json::to_value(query).ok() == serde_json::to_value(&captured).ok())
+    {
+        queries.push(captured);
+    }
+    if !audited_queries.matches(request, &initial, &queries) {
+        return Err("initial query witnesses lack a matching independent audit".into());
+    }
+    begin_resumable_partial_execution_v1_inner(
+        request,
+        initial_call,
+        queries,
+        plan,
+        catalog,
+        pack,
+        goal,
+        journal,
+    )
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+pub fn begin_resumable_partial_execution_v1_for_test(
+    request: &RunDuelRequest,
+    initial_call: u64,
+    initial_queries: &[QueryWitness],
+    plan: &ForecastPlan,
+    catalog: &Catalog,
+    pack: &FirstTurnKnowledge,
+    goal: &Goal,
+    journal: Arc<CallJournal>,
+) -> Result<ResumablePartialExecutionV1, String> {
+    let initial = journal
+        .load_result(initial_call, request)
+        .map_err(|error| error.message)?
+        .ok_or("initial charged result is missing")?;
+    let mut queries = initial_queries.to_vec();
+    let captured = QueryWitness::capture(&initial)?;
+    if !queries
+        .iter()
+        .any(|query| serde_json::to_value(query).ok() == serde_json::to_value(&captured).ok())
+    {
+        queries.push(captured);
+    }
+    begin_resumable_partial_execution_v1_inner(
+        request,
+        initial_call,
+        queries,
+        plan,
+        catalog,
+        pack,
+        goal,
+        journal,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn begin_resumable_partial_execution_v1_inner(
+    request: &RunDuelRequest,
+    initial_call: u64,
+    queries: Vec<QueryWitness>,
     plan: &ForecastPlan,
     catalog: &Catalog,
     pack: &FirstTurnKnowledge,
@@ -134,14 +323,6 @@ pub fn begin_resumable_partial_execution_v1(
         goal,
         journal.clone(),
     )?;
-    let captured = QueryWitness::capture(&inner.progress.current_prefix)?;
-    let mut queries = initial_queries.to_vec();
-    if !queries
-        .iter()
-        .any(|query| serde_json::to_value(query).ok() == serde_json::to_value(&captured).ok())
-    {
-        queries.push(captured);
-    }
     inner.progress.queries = queries;
     save_progress(&inner, &journal)?;
     let start = observed(
@@ -226,23 +407,29 @@ fn choose_semantic_action(
     if state.phase != ResumableExecutionPhaseV1::Semantic {
         return Err("semantic action requested outside semantic phase".into());
     }
-    if let Some(step) = state.current_transition.as_ref() {
-        if prompt.opcode == 11 || prompt.opcode == 12 {
-            return Err("semantic operation closed before choosing an action".into());
-        }
-        let before = state
-            .before_state
-            .as_ref()
-            .ok_or("semantic operation before-state is missing")?;
-        let (choice, selection) = follow_choice(result, step, before, &state.used_selections)?;
-        return Ok((choice, selection, ExecutionStage::Execution));
-    }
-
     let planned = plan
         .steps
         .get(state.semantic_step)
         .ok_or("semantic plan exhausted")?
         .clone();
+    if let Some(step) = state.current_transition.as_ref() {
+        if !same_action(&planned, step, &state.instance_mapping) {
+            return Err("saved semantic transition differs from the current plan step".into());
+        }
+        if prompt.opcode == 11 || prompt.opcode == 12 {
+            return Err("semantic operation closed before choosing an action".into());
+        }
+        return follow_choice(
+            result,
+            step,
+            state
+                .before_state
+                .as_ref()
+                .ok_or("semantic before-state is missing")?,
+            &state.used_selections,
+        )
+        .map(|(choice, selection)| (choice, selection, ExecutionStage::Execution));
+    }
     let before = observed(result, &state.inner.progress.queries, catalog, pack)?;
     let unknown = required_instances_unknown(&planned, &before.state, &state.instance_mapping);
     if !unknown.is_empty() {
@@ -338,13 +525,9 @@ fn apply_execution_outcome(
             return Ok(());
         }
         state.phase = ResumableExecutionPhaseV1::QueryAudit;
-        let token = format!("resumable-query-audit-{}", state.execution_id);
-        let needed = state.inner.progress.queries.len() + 1;
-        journal.reserve(&token, needed).map_err(|e| e.message)?;
-        state.audit.reservation = Some(token);
+        state.audit.reservation = Some(format!("resumable-query-audit-{}", state.execution_id));
         state.audit.status = ResumableAuditStatusV1::Running;
-        state.inner.progress.ledger = journal.stats().map_err(|e| e.message)?;
-        state.inner.progress.reservations = journal.reservation_state().map_err(|e| e.message)?;
+        state.audit.status = ResumableAuditStatusV1::Running;
     } else if state.phase == ResumableExecutionPhaseV1::EndPhase {
         if result.status != DuelStatus::DecisionRequired {
             return Err("end phase did not stop at a supported decision".into());
@@ -410,7 +593,71 @@ fn apply_execution_outcome(
     state.inner.progress.instance_mapping = state.instance_mapping.clone();
     state.inner.progress.used_selections = state.used_selections.clone();
     state.inner.progress.predictions = state.predictions.clone();
+    // Keep the single-call checkpoint synchronized with the semantic cursor
+    // before publishing the outer loop checkpoint. If the process stops in
+    // between, the saved execution intent lets recovery replay this exact
+    // completed outcome without charging again.
+    save_progress(&state.inner, journal)?;
     let _ = goal;
+    Ok(())
+}
+
+fn record_execution_decision(
+    state: &mut ResumablePartialExecutionV1,
+    intent: &ResumableLoopIntentV1,
+    prefix: &DuelResult,
+    completed_call: u64,
+) -> Result<(), String> {
+    let decision = intent
+        .choice
+        .as_ref()
+        .ok_or("execution intent choice is missing")?;
+    let prompt = prefix
+        .prompt
+        .as_ref()
+        .ok_or("intent prefix prompt is missing")?;
+    let mut expected_decisions = prefix.resolved_decisions.clone();
+    expected_decisions.push(decision.clone());
+    let mut expected_request = state.inner.progress.start_request.clone();
+    expected_request.decisions = expected_decisions;
+    let expected_step =
+        (intent.phase == ResumableExecutionPhaseV1::Semantic).then_some(state.semantic_step);
+    let expected_hash =
+        ygo_knowledge::hash(&serde_json::to_vec(prefix).map_err(|e| e.to_string())?);
+    if intent.purpose != CallPurpose::Execution
+        || intent.expected_call != completed_call
+        || intent.phase != state.phase
+        || intent.step != expected_step
+        || serde_json::to_value(&intent.request).map_err(|e| e.to_string())?
+            != serde_json::to_value(expected_request).map_err(|e| e.to_string())?
+        || decision.prompt_id != prompt.id
+        || decision.player != prompt.player
+        || !prompt
+            .actions
+            .iter()
+            .any(|action| action.choice == decision.choice)
+        || intent.prior_prefix_sha256 != expected_hash
+        || state
+            .choices
+            .iter()
+            .any(|choice| choice.before_call == intent.expected_call)
+    {
+        return Err("completed execution intent does not match its saved decision boundary".into());
+    }
+    if let Some(index) = intent.selection_index {
+        state.used_selections.insert(index);
+    }
+    state.choices.push(PartialDecisionEvidence {
+        checkpoint_id: None,
+        before_call: intent.expected_call,
+        step: intent.step,
+        prompt: decision.prompt_id,
+        prefix_id: prefix_id(prefix),
+        public: first_turn_public_state(&prefix.checkpoint),
+        choice: decision.choice.clone(),
+        instance_map: state.instance_mapping.clone(),
+        used_roles: state.used_selections.clone(),
+    });
     Ok(())
 }
 
@@ -486,7 +733,6 @@ fn advance_resumable_partial_execution_with_backend<A: EngineAdapter>(
         state.instance_mapping.clone(),
         state.used_selections.clone(),
         state.predictions.clone(),
-        state.before_state.as_ref(),
         &journal,
     )?;
     persist_loop(state, &journal)?;
@@ -527,20 +773,9 @@ fn advance_resumable_partial_execution_with_backend<A: EngineAdapter>(
         persist_loop(state, &journal)?;
         return Ok(());
     }
-    if let Some(index) = selection {
-        state.used_selections.insert(index);
-    }
-    state.choices.push(PartialDecisionEvidence {
-        checkpoint_id: None,
-        before_call: state.pending.as_ref().unwrap().expected_call,
-        step: state.pending.as_ref().unwrap().step,
-        prompt: decision.prompt_id,
-        prefix_id: prefix_id(&prefix),
-        public: first_turn_public_state(&prefix.checkpoint),
-        choice: decision.choice.clone(),
-        instance_map: state.instance_mapping.clone(),
-        used_roles: state.used_selections.clone(),
-    });
+    let completed_call = state.inner.progress.ledger.consumed as u64;
+    let completed_intent = state.pending.as_ref().unwrap().clone();
+    record_execution_decision(state, &completed_intent, &prefix, completed_call)?;
     apply_execution_outcome(state, plan, catalog, pack, goal, &journal)?;
     state.pending = None;
     persist_loop(state, &journal)
@@ -657,6 +892,33 @@ fn advance_resumable_query_audit_with_backend<A: EngineAdapter>(
         .last_completed_result
         .as_ref()
         .ok_or("terminal root result missing")?;
+    let token = state
+        .audit
+        .reservation
+        .as_deref()
+        .ok_or("query audit reservation missing")?;
+    let needed = state
+        .inner
+        .progress
+        .queries
+        .len()
+        .saturating_add(1)
+        .saturating_sub(state.audit.next_query);
+    match journal
+        .remaining_reservation(token)
+        .map_err(|e| e.message)?
+    {
+        Some(remaining) if remaining == needed => {}
+        Some(_) => return Err("query audit reservation differs from its cursor".into()),
+        None if state.audit.next_query == 0 => {
+            journal.reserve(token, needed).map_err(|e| e.message)?
+        }
+        None => return Err("query audit reservation disappeared".into()),
+    }
+    state.inner.progress.ledger = journal.stats().map_err(|e| e.message)?;
+    state.inner.progress.reservations = journal.reservation_state().map_err(|e| e.message)?;
+    save_progress(&state.inner, &journal)?;
+    persist_loop(state, &journal)?;
     let mut request = state.inner.progress.start_request.clone();
     if let Some(witness) = state.inner.progress.queries.get(state.audit.next_query) {
         request.decisions = root
@@ -689,11 +951,6 @@ fn advance_resumable_query_audit_with_backend<A: EngineAdapter>(
         .save_checkpoint(&name, &intent_value)
         .map_err(|e| e.message)?;
     persist_loop(state, &journal)?;
-    let token = state
-        .audit
-        .reservation
-        .as_deref()
-        .ok_or("query audit reservation missing")?;
     let actual = JournaledAdapter::new(backend, journal.clone(), CallPurpose::Witness)
         .run_reserved(&request, token)
         .map_err(|e| e.message)?;
@@ -750,21 +1007,47 @@ pub fn resume_resumable_partial_execution_v1(
         state
             .inner
             .validate_bindings(request, plan, catalog, pack, goal)?;
-        if readonly.checkpoint_consumed(&name).map_err(|e| e.message)?
-            != Some(state.inner.progress.ledger.consumed)
-            || readonly.checkpoint_budget(&name).map_err(|e| e.message)?
-                != Some(state.inner.progress.ledger.clone())
-            || readonly
+        let checkpoint_matches = readonly.checkpoint_consumed(&name).map_err(|e| e.message)?
+            == Some(state.inner.progress.ledger.consumed)
+            && readonly.checkpoint_budget(&name).map_err(|e| e.message)?
+                == Some(state.inner.progress.ledger.clone())
+            && readonly
                 .checkpoint_reservations(&name)
                 .map_err(|e| e.message)?
-                != Some(state.inner.progress.reservations.clone())
+                == Some(state.inner.progress.reservations.clone());
+        let read_stats = readonly.stats().map_err(|e| e.message)?;
+        let read_reservations = readonly.reservation_state().map_err(|e| e.message)?;
+        let live_matches = read_stats == state.inner.progress.ledger
+            && read_reservations == state.inner.progress.reservations;
+        let reservation_unpublished =
+            query_audit_reservation_is_unpublished(&state, &read_stats, &read_reservations);
+        let execution_tail_complete = state.pending.as_ref().is_some_and(|intent| {
+            intent.purpose == CallPurpose::Execution
+                && intent.expected_call == read_stats.consumed as u64
+                && read_stats.consumed == read_stats.completed
+                && read_stats.unknown == 0
+                && state.inner.progress.ledger.consumed.saturating_add(1) == read_stats.consumed
+                && read_stats.reserved == state.inner.progress.ledger.reserved
+                && read_reservations == state.inner.progress.reservations
+                && readonly.call_purpose(intent.expected_call).ok() == Some(CallPurpose::Execution)
+        });
+        let audit_tail_complete =
+            query_audit_call_is_unpublished(&state, &read_stats, &read_reservations)
+                && state.pending.as_ref().is_some_and(|intent| {
+                    readonly.call_purpose(intent.expected_call).ok() == Some(CallPurpose::Witness)
+                });
+        if !checkpoint_matches
+            || (!live_matches
+                && !reservation_unpublished
+                && !execution_tail_complete
+                && !audit_tail_complete)
         {
             return Err("outer checkpoint ledger binding differs".into());
         }
         (
             state,
             value,
-            readonly.stats().map_err(|e| e.message)?,
+            read_stats,
             readonly.charged_sequence_id().map_err(|e| e.message)?,
         )
     };
@@ -839,7 +1122,14 @@ pub fn resume_resumable_partial_execution_v1(
             }
             return Err("query-audit intent is not at the single recoverable call boundary".into());
         }
-        if read_stats != state.inner.progress.ledger {
+        let read_reservations = CallJournal::inspect_existing(&path, scope, context, limit)
+            .map_err(|e| e.message)?
+            .ok_or("journal missing")?
+            .reservation_state()
+            .map_err(|e| e.message)?;
+        let reservation_unpublished =
+            query_audit_reservation_is_unpublished(&state, &read_stats, &read_reservations);
+        if read_stats != state.inner.progress.ledger && !reservation_unpublished {
             return Err("query audit ledger changed after checkpoint".into());
         }
         for (index, call) in state.audit.call_ids.iter().enumerate() {
@@ -906,11 +1196,20 @@ pub fn resume_resumable_partial_execution_v1(
         {
             return Err("query audit ledger changed during exclusive reopen".into());
         }
+        if reservation_unpublished {
+            state.inner.progress.ledger = exclusive.stats().map_err(|e| e.message)?;
+            state.inner.progress.reservations =
+                exclusive.reservation_state().map_err(|e| e.message)?;
+            save_progress(&state.inner, &exclusive)?;
+            persist_loop(&state, &exclusive)?;
+        }
         return Ok(state);
     }
     // Drop the read-only handle before the low-level strict exclusive reopen.
     let old_pending = state.pending.clone();
     drop(state);
+    #[cfg(test)]
+    run_before_loop_reopen_hook();
     let inner = resume_execution_v1(
         &path, scope, context, limit, request, plan, catalog, pack, goal,
     )?;
@@ -934,10 +1233,14 @@ pub fn resume_resumable_partial_execution_v1(
         serde_json::from_value(value).map_err(|e| e.to_string())?;
     if let Some(intent) = old_pending {
         if inner.progress.ledger.consumed as u64 == intent.expected_call {
+            let prior_prefix = state.inner.progress.current_prefix.clone();
+            record_execution_decision(
+                &mut state,
+                &intent,
+                &prior_prefix,
+                inner.progress.ledger.consumed as u64,
+            )?;
             state.inner = inner;
-            if let Some(index) = intent.selection_index {
-                state.used_selections.insert(index);
-            }
             apply_execution_outcome(&mut state, plan, catalog, pack, goal, &exclusive)?;
             state.pending = None;
             persist_loop(&state, &exclusive)?;
@@ -960,6 +1263,5 @@ pub fn resume_resumable_partial_execution_v1(
         return Err("inner and outer execution checkpoints differ".into());
     }
     state.inner = inner;
-    persist_loop(&state, &exclusive)?;
     Ok(state)
 }

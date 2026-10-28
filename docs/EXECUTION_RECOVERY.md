@@ -37,9 +37,12 @@ The planner exposes these operations from `ygo_planner::first_turn`:
   the existing journal exclusively without repairing it and recheck the charged
   sequence before reconciling.
 - `begin_resumable_partial_execution_v1`: create a versioned outer loop cursor
-  around the A3 per-call cursor. Callers provide prior query witnesses so the
-  actual semantic start can be reconstructed; an empty semantic plan may be
-  used to process an already observed prompt through End Phase.
+  around the A3 per-call cursor. Callers provide prior query witnesses and a
+  matching `AuditedQueries` capability created by independent replay; the
+  capability must bind the exact initial request, charged result, and complete
+  witness list (including the current prompt). Unverified history cannot affect
+  semantic choices. An empty semantic plan may be used to process an already
+  observed prompt through End Phase.
 - `advance_resumable_partial_execution_v1`: select one step through the same
   `successors`, `same_action`, `bind_start`, `follow_choice`, resource comparison,
   and instance-map helpers as the synchronous loop, persist the full loop intent,
@@ -86,6 +89,7 @@ engine truth independent of the charged result.
 | Journal is truncated, malformed, unknown, abandoned, or has a different context | Read-only inspection rejects; no repair or free retry. |
 | A call was charged but result is incomplete/unknown | Stop and retain unknown consumption. |
 | Call completed but checkpoint publication was interrupted | Authenticate purpose, request, result and intent, then reuse that result. |
+| Query-audit reservation was written before its progress checkpoint | Accept only the exact expected reservation for the saved query cursor, then publish the journal snapshot before continuing. |
 | Another writer changes the journal between inspection and exclusive reopen | Strict reopen/sequence check rejects; strict open does not create or repair files. |
 | Budget is exhausted before a continuation | Save a paused intent; adapter calls remain zero. |
 | Result is terminal or contains an error | Preserve the result/diagnostic, but do not create a receipt or formal success. |
@@ -101,11 +105,31 @@ checkpoint snapshot and current state before it can continue.
 
 ## Validation boundary
 
-Synthetic tests exercise the resumable End Phase and query-audit flow across a
-pause/reopen boundary, verify witness and root replay results, exact call
-purposes/sequence, reservation release, and rejection of outer-state tampering
-before charging. The existing A3 tests separately cover completed trailing
-execution-call reuse and unresolved debit refusal. No native engine, runner,
-worker, or FFI call was made for this integration. Real process pause/reopen,
-crash injection across every filesystem boundary, semantic multi-action replay
-against frozen assets, and formal independent replay remain uncertified.
+Synthetic tests exercise both an empty-plan End Phase/query-audit recovery and a
+non-empty two-action semantic route. The latter uses the frozen repository trace
+fixture for an XYZ procedure and consecutive prompts, then a synthetic normal
+summon result, End Phase, and query audit. Continuous and prompt-boundary
+pause/reopen runs compare decision evidence, predictions, instance mapping,
+used selections, 13 witnesses, actual prefix, reservations, and the ordered
+26-call ledger (12 `Execution`, 14 `Witness`). The query-audit cursor's own
+pause/reopen remains covered by a separate End Phase/query-audit test.
+
+Test-only interruption hooks cover failure while publishing a semantic
+snapshot and while publishing the outer call intent; both fail before the next
+adapter invocation and leave the existing debit intact. Another injected stop
+occurs after a completed result is in the journal but before its progress
+checkpoint is published. Recovery authenticates and reuses that trailing result
+without a duplicate charge. Existing A3 coverage also refuses unresolved
+consumption. A deterministic competing-writer test appends a valid synthetic
+call after the outer read-only inspection releases its handle and before inner
+recovery; the new unbound ledger entry is retained and resume refuses to
+continue. A separately held exclusive writer also prevents resume. These tests
+exercise the real `CallJournal` parser, locks, accounting and checkpoint code
+with synthetic results; they do not simulate OS process death at every
+filesystem write boundary.
+
+No native engine, runner, worker, FFI or research-budget call was made. The
+synthetic adapter does not mint `PartialExecutionV2`, `AuditedQueries`, or any
+native qualification. Real process pause/reopen, OS-level crash injection,
+replay against frozen live assets, and formal independent replay remain
+uncertified.

@@ -45,7 +45,8 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 | 能力边界 | 输入/产出意图 | 失败与兼容约束 |
 |---|---|---|
 | 卡牌查询/显示 | 语言、中文检索、字段过滤 → 稳定卡号、显示文本、版本/来源、覆盖 | 歧义或缺译明确；显示语言不改变引擎身份 |
-| 牌组草稿/校验 | 主/额外/Side、锁定约束 → 可保存草稿或指定版本完整校验 | 草稿可残缺；完整分析沿用合法性门禁；导入导出数量往返 |
+| 牌组草稿 | 已实现`DeckDocumentV1`、CLI和本机工作台，可保存残缺草稿并导入/导出YDK/JSON | 不代表完整合法；见[DECK_DRAFTS](DECK_DRAFTS.md)和[WORKBENCH](WORKBENCH.md) |
+| 牌组锁定/完整校验编排 | 拟议：主/额外/Side、锁定约束 → 修改候选及分析前校验 | 保持完整牌组合法性门禁；不得静默修改锁定卡 |
 | 构筑候选/互动 | 指定卡、主题/字段、草稿/完整牌组 → 候选、关系、条件与证据 | 不覆盖原稿；未知/假设不变成认证；不违背锁定约束 |
 | 牌组识别 | 卡组及目录/知识版本 → 多主题/字段、玩法假设、互动依据及未知 | setcode事实与玩法推断分开；混合/未知牌组不强制单标签 |
 | 分析任务/评估 | 牌组、目标、情景、预算、版本 → 进度、报告、对照及恢复入口 | 失败/取消/未知消费保留；不泄露隐藏牌序；不保证所有版本可安全续跑 |
@@ -54,7 +55,7 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 未来本机服务优先调用正式库接口，不解析人类摘要代替机器合同。v1–v5身份/重放路径保持不变；正式v6和证明能力分别版本化。可信知识、可执行线路、搜索完整性、最优性四个维度不得压为现有VerificationLevel的一个状态。
 
-近期实施入口为[项目再规划](superpowers/plans/2026-10-27-project-realignment.md)，完整目标任务分解见[产品演进计划](superpowers/plans/2026-10-19-product-evolution.md)，研究问题见[最优性定义](OPTIMALITY_RESEARCH.md)。
+近期实施入口为[2026-10-28项目现状与路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)，完整目标任务分解见[产品演进计划](superpowers/plans/2026-10-19-product-evolution.md)，研究问题见[最优性定义](OPTIMALITY_RESEARCH.md)。
 
 
 P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。

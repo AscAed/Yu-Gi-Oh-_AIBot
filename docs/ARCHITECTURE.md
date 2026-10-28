@@ -6,7 +6,8 @@
 ygo-cli
   ├─ combo analyze/replay → ygo-api::combo → ygo-search::combo → ygo-engine-adapter
   ├─ combo plan/plan-replay → ygo-api planning v1–v5 → planner/goal/knowledge + engine adapter
-  └─ knowledge validate/verify → ygo-knowledge → 独立原生案例 + ygo-storage 账本
+  ├─ knowledge validate/verify → ygo-knowledge → 独立原生案例 + ygo-storage 账本
+  └─ workbench serve → loopback HTTP/单页草稿界面 → DeckDocumentV1 + ygo-storage
 
 ygo-engine-adapter → 子进程 worker → 固定 ocgcore ABI → 卡库/Lua 回调
 ```
@@ -25,9 +26,9 @@ ygo-engine-adapter → 子进程 worker → 固定 ocgcore ABI → 卡库/Lua �
 | `ygo-search` | `combo` 模块执行真实引擎前缀的有界 beam 搜索和评分；根模块另保留静态候选排序原型 |
 | `ygo-knowledge` | 可追溯的结构化知识、来源/覆盖合同及原生规则案例验真 |
 | `ygo-goal` | 目标表达式、实际状态事实和有界后续收益判断 |
-| `ygo-planner` | 连接因果预测、局部观察/执行、独立重放、可恢复符号前沿及caller-driven first-turn执行游标；恢复游标仅保存进度，不构成v6资格或报告凭证，first-turn仍是内部集成 |
-| `ygo-api` | 版本化请求/报告的库层编排；当前没有 HTTP 服务 |
-| `ygo-cli` | 本机命令和 v1–v5 合同版本路由 |
+| `ygo-planner` | 连接因果预测、局部观察/执行、独立重放及可恢复符号前沿；first-turn 仍是内部集成 |
+| `ygo-api` | 版本化请求/报告的库层编排；未提供通用 HTTP 服务器 |
+| `ygo-cli` | 本机命令、v1–v5合同版本路由，以及loopback草稿工作台服务 |
 
 workspace 成员列表和依赖方向以根 `Cargo.toml` 为准。
 
@@ -45,14 +46,18 @@ JSON schema在 `schemas/`，部署和实验fixture在 `tests/fixtures/`，人工
 2. 当前状态从真实事件、查询、提示和已支持的规则映射建立；未知约束必须阻断依赖。
 3. 执行证据和预测证据分开保存。故障注入只验证故障合同，不增加规则资格。
 4. 推荐要通过独立重放和合同重算。`engine_verified`不等于评分高；评分 `heuristic` 不等于胜率。
-5. first-turn 报告 v2、搜索前沿续跑和执行恢复游标是局部内部组件。执行恢复只完成End Phase/查询审计合成暂停重开路径；连续语义多动作等价与真实进程恢复仍未验收。正式 `combo plan` 仍只路由 v1–v5；完整 v6 门禁未通过。合同见[EXECUTION_RECOVERY](EXECUTION_RECOVERY.md)。
+5. first-turn 报告 v2/搜索前沿续跑是局部内部组件。正式 `combo plan` 仍只路由 v1–v5；完整 v6 门禁未通过。
 
 每个状态都应绑定规则、牌表、CDB、引擎、Lua、知识、合同和预算身份，具体字段以 schema/serde 验证代码为准。
 
-## 拟议产品架构（尚未实现）
+## 已有工作台与拟议产品架构
+
+`ygo-cli workbench serve`已提供仅绑定`127.0.0.1`的单页草稿工作台，复用`DeckDocumentV1`、三分区编辑和`ygo-storage`持久化；可导入/导出YDK与JSON，可选读取本机catalog名称及C1字段状态。它不提供牌组分析、构筑、研究任务、worker或证明服务，中文卡名及候选译文也未获得语义或许可资格。详细接口及安全边界见[WORKBENCH](WORKBENCH.md)。
+
+**拟议产品架构（未实现部分）**
 
 依据[产品愿景](PRODUCT_VISION.md)，未来本机浏览器通过本机服务调用库层编排，重型任务继续隔离worker执行；服务和界面不直接重写游戏规则或将中文指令拼成shell。中文显示/检索映射、用户牌组草稿、任务编排和候选更新各有独立边界，使用稳定卡号和不可变资产版本连接现有领域/存储。
 
 构筑层消费知识关系与版本化评估报告，产生有约束候选；Combo层执行/比较候选，数据回到构筑评估。知识候选、原生执行、搜索完整性及最优性证明分别留证；拟议证明层不能借用engine_verified代替其资格。具体研究定义见[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
 
-替代引擎必须适配提示、事件、信息边界和能力合同，经真实行为及证明兼容验收；现有EngineAdapter trait不自动提供任意引擎兼容。接口及实现任务见[API规划边界](API.md)与[实施计划](superpowers/plans/2026-10-19-product-evolution.md)，本节不声明已有HTTP、UI、构筑器或证明服务。
+替代引擎必须适配提示、事件、信息边界和能力合同，经真实行为及证明兼容验收；现有EngineAdapter trait不自动提供任意引擎兼容。通用分析服务、构筑器、证明服务及引擎替换入口仍拟议。接口及后续实现任务见[API规划边界](API.md)与[最新实施计划](superpowers/plans/2026-10-28-project-status-and-next-steps.md)。
