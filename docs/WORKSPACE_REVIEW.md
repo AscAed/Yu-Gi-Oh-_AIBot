@@ -57,3 +57,9 @@
 - 再次读取普通发布包的`ygo.exe`与`ygo-engine-worker.exe`，两者SHA-256仍匹配`build-hashes.json`，包内二进制时间戳仍为2026-10-19。未覆盖或运行旧包；它与自身manifest一致不证明由最新源码构建。
 - 对D盘旧工作树只读复核发现分支落后于`origin/main`且存在大量本地修改。相较当前主线，其中工作台脚本移除了`state.loading`期间的互斥，CI将checkout/setup-python action降回旧版本，语言测试也删除输入变化回归。该目录保持原样；这些变更不应直接并入或提交，当前隔离分支已保留主线的导入锁定行为。
 - Windows消费预留路径保护测试文件全套为11 passed、1 skipped、17 subtests passed；系统策略不允许创建目录符号链接，故对应负例跳过。Git身份路径测试为11 passed、4 subtests passed。pytest缓存改放系统临时目录后无缓存权限警告。`cargo tree --workspace --duplicates --offline`复查仍只显示上文所列的传递依赖版本并存，未发现可直接删除的重复依赖；`cargo-machete`不可用，未安装额外工具。
+
+## 2026-10-28 恢复边界复验与历史证据链接盘点
+
+- 本轮开始时，隔离分支在`origin/main`之上包含6个本地提交且工作树干净。恢复循环新增合成崩溃边界：Execution结果已写入journal和内层检查点、外层pending快照尚未发布时，重开后从认证结果对账进入QueryAudit且消费仍为2。planner套件70 passed/9 ignored；workspace串行总检362 passed/36 ignored；workspace全目标Clippy、fmt及`git diff --check`通过。新增测试不运行引擎、worker、doctor或研究scope。
+- 对112篇跟踪Markdown重新扫描本地相对链接：当前隔离worktree内有68个目标缺失，其中19条指向`data/runtime/`证据，49条指向`target/`日志/产物；逐项映射到原D盘工作区后，68/68目标仍存在。此结果表明隔离worktree不是这些历史证据的自包含副本，不代表原工作区证据丢失。当前没有迁移、复制或删除它们；下一步须按消费者、身份绑定、重建性与保留策略逐项建立可恢复归档，再调整链接。
+- 该扫描只检查Markdown链接目标存在性，不验证锚点、内容哈希、证据是否过期或目标是否应公开；之前记载的源码目标数和分组统计来自不同扫描快照，应以对应日期范围理解，不把这次结果外推为全部证据验真。
