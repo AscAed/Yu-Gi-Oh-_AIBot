@@ -7,6 +7,13 @@
 - 最终验证（基于已整合的`origin/main`提交）：`cargo fmt --all -- --check`通过；workspace全目标Clippy `-D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**362 passed、36 ignored、0 failed**（91条test-result摘要，日志见[`workspace-tests-20261029.log`](../target/p4-r1b-followup/logs/workspace-tests-20261029.log)）；Python C1/schema聚焦套件**24 passed、2 skipped**。最终提交涉及的15份Markdown共416个本地链接目标均存在；`git diff --check`通过。清理5个确认由失败/中断测试遗留的`.tenki-*`临时目录，未删改历史运行证据。跳过项仍是两个显式本地证据opt-in。未重跑完整Python套件；已知Tenki历史`codec.rs`保护哈希失败和原pin保持不变。
 - 此补检不认证真实进程崩溃/文件系统故障矩阵、真实OCG调用或独立原生重放；原生/runner/worker/FFI调用仍为0。原始费用及未知累计沿用TASKS顶部会计口径。
 
+## 2026-10-29 普通部署包现场只读复核
+
+- 检查`dist/ygo-local`现有CLI与worker的SHA-256，分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内`build-hashes.json`一致。文件时间仍为2026-10-19；源码/文档提交`9f527d3`尚未部署到该普通包。
+- 对旧包运行只读`engine doctor`，结果`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。Catalog为`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`（13,665条）；banlist为`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`（203条，生效日2026-10-01）。
+- 旧包入口只声明engine/catalog/banlist/deck/combo，`workbench`不是该部署CLI的命令；草稿工作台仍仅存在于当前开发源码。`doctor`不启动决斗，本轮没有运行`engine smoke`、真实runner/worker/FFI或部署脚本。
+- `cargo tree --workspace --offline --locked --duplicates`只报告`hashbrown`因`hashlink`与`indexmap`传递依赖并存的0.14.5/0.17.1两版本；`cargo-machete`未安装，本轮没有联网安装，也未按传递版本差异删除依赖。
+
 ## 2026-10-28 P4-R1b多动作恢复等价与中断门禁
 
 - 先以红测发现两处恢复差异：已完成尾调用被恢复后没有补回与连续执行相同的动作证据；推进外层语义后，内层A3检查点没有同步实例映射、已用选择和预测，导致下一次续跑因快照不匹配而拒绝。修复后正常完成和恢复完成共用动作证据校验/记录逻辑；外层语义推进在发布外层游标前同步保存内层检查点。请求、计划、用途、收据和预算校验未放宽。

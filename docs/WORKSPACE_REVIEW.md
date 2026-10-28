@@ -10,6 +10,11 @@
 - 最终提交改动的15篇Markdown中检查416个相对路径目标，缺失0；仅证明链接目标存在。Rust fmt、workspace Clippy和串行workspace 362 passed/36 ignored/0 failed通过；C1/schema Python聚焦24 passed/2 skipped。完整Python套件未重跑，Tenki历史固定哈希失败仍按原pin记录。
 - 未执行当前源码的doctor、真实引擎、worker/runner/FFI、浏览器完整下载、资产切换、部署或发布；默认workspace测试也未执行被忽略的原生资格用例。普通dist与开发配置的部署状态仍按既有证据区分，最新双资产干净发布验收仍开放。
 
+### 2026-10-29 普通包现场核验补记
+
+- 对现存`dist/ygo-local`执行只读doctor，结果ready/ABI/assets均为true、issues为空、`smoke_ok=null`；catalog为13,665条，banlist为203条且生效日2026-10-01。包内CLI与worker SHA-256均匹配`build-hashes.json`，两文件时间为2026-10-19；这只证明旧包内部完整性，不表示它包含提交`9f527d3`的开发能力。
+- 旧包命令入口不含`workbench`；工作台仍未发布进普通包。未执行smoke、引擎、runner/worker/FFI或部署。相关哈希、快照ID与边界见[TESTING](TESTING.md)。`cargo-machete`未安装；offline依赖树仅发现hashbrown两版本由不同传递依赖路径引入，未发现据此可安全删除的模块或依赖。
+
 ## 2026-10-28状态补记
 
 本节以下矩阵保留原自检时点的记录，不能把其中“未交付通用工作台”理解为当前没有任何工作台。2026-10-28已交付本机loopback草稿工作台、C1字段状态只读接口、A1诊断修复、B1草稿编辑/往返及A3/R1b可恢复循环入口；能力及边界见[TASKS](../TASKS.md)、[WORKBENCH](WORKBENCH.md)、[EXECUTION_RECOVERY](EXECUTION_RECOVERY.md)和日期化[TESTING](TESTING.md)。通用分析服务、自动构筑、真实执行恢复和独立发布仍未完成。
