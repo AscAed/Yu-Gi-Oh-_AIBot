@@ -7,6 +7,12 @@
 - 修复后完整默认Python套件运行**757 passed、9 skipped、1 failed**（1677.36秒）。唯一失败为`tests/test_native_tenki_placement_confirmation.py::TenkiPlacementConfirmationTests::test_seven_historical_ledgers_reaudit_read_only_without_runner`，因历史受保护源码校验返回`protected_source_change_hash_mismatch`；没有改动历史pin或证据。完整日志见[`python-full-after-testpaths.log`](../target/w1b1-analysis-job-tests/python-full-after-testpaths.log)。
 - 因此收集边界问题已修复；完整本机Python门禁仍有上述已知历史pin失败，不能记为全绿。9个跳过项维持各自本机资产、符号链接能力或显式opt-in条件。
 
+## 2026-10-30 CI并行下工作台HTTP测试目录冲突
+
+- PR #12首轮Windows CI的`cargo test --workspace --locked`失败于`selected_snapshot_is_verified_and_card_results_disclose_name_source_and_translation_state`；`WorkbenchServer::start`报告`draft_store_already_locked`（Windows错误33）。格式与Clippy步骤通过；失败日志来自GitHub Actions run `41062674776`。
+- 该集成测试文件中的临时目录曾以进程ID和系统时间纳秒拼名；Windows时钟精度下，并行调用不能保证目录名唯一。改为进程内原子序号并以`create_dir`确认独占，碰到已存在名称就继续分配。
+- 修复后本机默认并行重复运行`cargo test -p ygo-cli --test workbench_http --offline --locked`五次，均为**4 passed、0 failed**。记录见[`workbench-http-unique-tempdirs.log`](../target/w1b1-analysis-job-tests/workbench-http-unique-tempdirs.log)。新的PR检查结果待提交修复后确认。
+
 ## 2026-10-30 W1-B1无路径任务合同与纯状态机
 
 - 实施从`main / d3bc212ccdc782d6988162f2030de00836df315c`开始，保留既有未提交路线与文档修改。新增`AnalysisJobRecordV1`、独立schema、严格JSON及纯状态转换；没有新增任务文件存储、HTTP、队列或界面。合同和状态/失败矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)，当前断点见[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
