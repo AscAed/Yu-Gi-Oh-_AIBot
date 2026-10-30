@@ -26,7 +26,7 @@ cargo run -p ygo-cli --offline --locked -- workbench serve
 
 ## HTTP接口
 
-API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌访问API；状态修改还要求同源Origin。服务检查Host为当前`127.0.0.1:port`，不设置跨域许可。请求体上限1 MiB，头部上限16 KiB，读写超时5秒，最多并发处理32个连接。不接受chunked请求。草稿由生成的随机标识寻址，浏览器不能指定本机路径。
+API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌访问API；所有API非GET请求（包含当前未注册的DELETE）在路由分派前还要求精确同源Origin。服务检查Host为当前`127.0.0.1:port`，不设置跨域许可。请求体上限1 MiB，头部上限16 KiB，读写超时5秒，最多并发处理32个连接。不接受chunked请求。草稿由生成的随机标识寻址，浏览器不能指定本机路径。
 
 | 方法与路径 | 用途 |
 |---|---|
@@ -43,7 +43,9 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 
 ## 分析接入设计状态
 
-工作台目前没有分析任务端点，也不调用`combo analyze`。待实现的W1设计在[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)：计划以草稿revision冻结输入，先执行现有完整牌组、起手、禁限、catalog/CDB校验，再进入最多一个运行和一个排队任务的本机队列。设计中的状态查询和排队取消均尚未实现；同步分析不能承诺运行中立即取消，也没有细粒度搜索进度。该设计文档中的Rabbit走查和验收场景不是已运行测试或真实分析结果。
+工作台目前没有分析任务端点，也不调用`combo analyze`。W1-A已提供Rust库内部`ygo_cli::workbench_analysis::freeze_analysis_input`：以草稿ID和revision在同一存储锁内读取牌组，然后调用现有`prepare`验证完整牌组、五张起手、规则、禁限日期、预算及catalog/CDB一致性。它返回自有输入和版本身份，错误只暴露稳定代码；该函数不创建任务、不构造adapter、不启动worker。保留的总体设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)，本阶段交接见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)。
+
+W1-B队列、任务状态/结果端点、排队取消及重启后的未知状态尚未实现。之后若执行冻结输入，必须在实际运行前重新核验引擎资产；持有冻结对象不表示实时资产仍与冻结身份相同。W1-C本机分析仍需单独验收。Rabbit走查和任务场景是设计资料，不是本批真实分析结果。
 
 ## 保存与本机数据
 

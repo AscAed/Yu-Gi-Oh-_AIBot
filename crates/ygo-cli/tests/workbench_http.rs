@@ -167,6 +167,21 @@ fn local_workbench_rejects_foreign_host_origin_and_oversized_body() {
     assert!(request(addr, &foreign_host).starts_with("HTTP/1.1 400"));
     let foreign_origin = format!("POST /api/drafts HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://evil.test\r\nAuthorization: Bearer {}\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}", addr.port(), token);
     assert!(request(addr, &foreign_origin).starts_with("HTTP/1.1 403"));
+    let foreign_origin_put = format!("PUT /api/drafts/not-a-managed-id HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://evil.test\r\nAuthorization: Bearer {}\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}", addr.port(), token);
+    assert!(request(addr, &foreign_origin_put).starts_with("HTTP/1.1 403"));
+    let foreign_delete = format!("DELETE /api/not-implemented HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://evil.test\r\nAuthorization: Bearer {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", addr.port(), token);
+    assert!(
+        request(addr, &foreign_delete).starts_with("HTTP/1.1 403"),
+        "every non-GET API method must pass the origin gate before route lookup"
+    );
+    let missing_origin_delete = format!("DELETE /api/not-implemented HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", addr.port(), token);
+    assert!(request(addr, &missing_origin_delete).starts_with("HTTP/1.1 403"));
+    let foreign_host_delete = format!("DELETE /api/not-implemented HTTP/1.1\r\nHost: evil.test:{}\r\nOrigin: http://127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", addr.port(), addr.port(), token);
+    assert!(request(addr, &foreign_host_delete).starts_with("HTTP/1.1 400"));
+    let local_delete = format!("DELETE /api/not-implemented HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", addr.port(), addr.port(), token);
+    assert!(request(addr, &local_delete).starts_with("HTTP/1.1 404"));
+    let invalid_token_delete = format!("DELETE /api/not-implemented HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://127.0.0.1:{}\r\nAuthorization: Bearer invalid-token\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", addr.port(), addr.port());
+    assert!(request(addr, &invalid_token_delete).starts_with("HTTP/1.1 403"));
     let invalid_input = format!("POST /api/drafts HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nContent-Type: application/json\r\nContent-Length: 1\r\nConnection: close\r\n\r\nx", addr.port(), addr.port(), token);
     assert!(request(addr, &invalid_input).starts_with("HTTP/1.1 400"));
     let oversized = format!("POST /api/drafts HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nOrigin: http://127.0.0.1:{}\r\nAuthorization: Bearer {}\r\nContent-Length: 1048577\r\nConnection: close\r\n\r\n", addr.port(), addr.port(), token);

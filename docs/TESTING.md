@@ -1,5 +1,23 @@
 # 本机验证记录
 
+## 2026-10-30 W1-A工作台同源保护与分析输入冻结
+
+- 先写跨站`DELETE /api/not-implemented`红测并运行旧门禁，测试失败；旧代码只检查POST/PUT，DELETE跨站请求到达路由并绕过Origin拒绝。本地Host、Bearer token及foreign/missing Origin的DELETE均加入回归。修复后同源未知DELETE进入路由并返回404，跨站/缺Origin返回403，异Host返回400；现有草稿POST/PUT和其他HTTP回归通过。
+- 新增内部Rust库能力`ygo_cli::workbench_analysis::freeze_analysis_input`。它以`DeckDraftStore::load_at_revision`在同一存储互斥锁内加载并核对revision，复制牌组数据；解析内容寻址catalog与生效banlist快照，校验OCG规则、完整牌组、五张起手、日期、禁限、搜索预算和catalog/CDB哈希，并通过现有`prepare`生成运行请求。冻结结果拥有请求、catalog及运行版本身份；资产在prepare前后重算，变化返回稳定错误码。该路径只读取合成资产及快照，不构造adapter、不启动worker、不创建任务/收费账本。
+- 合成单测覆盖合法冻结后修改草稿及移除默认snapshot、旧revision、39张非法牌组、手牌数量不足、无效日期、banlist未生效、预算越界、catalog/CDB不匹配、worker资产缺失和错误不泄露本机根路径。聚焦测试4 passed；`workbench_http` 4 passed；`ygo-cli` crate全套25 passed、0 ignored。
+- `cargo fmt --all -- --check`与workspace全目标Clippy `-D warnings`通过。串行workspace测试为**366 passed、36 ignored、0 failed**；36项均为仓库已有的显式冻结资产、原生研究、人工准备或本机报告opt-in，本批未运行这些项。日志在[`fmt.log`](../target/w1a-workbench-freeze-tests/fmt.log)、[`ygo-cli-tests.log`](../target/w1a-workbench-freeze-tests/ygo-cli-tests.log)、[`clippy.log`](../target/w1a-workbench-freeze-tests/clippy.log)和[`workspace-serial.log`](../target/w1a-workbench-freeze-tests/workspace-serial.log)。
+- 全程使用`--offline --locked`及隔离`target/w1a-isolated`；本批新增原生研究、真实runner、worker、FFI和收费调用为0。未运行真实分析、浏览器、doctor、真实资产opt-in或部署。认证消费子集40、政策预留7、规划47不变；旧confirmation和全部历史实际累计仍未知，Tenki历史pin及已知Python历史失败记录保持原样。
+- 旧失败门禁和行为现状来自代码/测试，不构成Curry历史来源认证。W1-A只完成同源防护和分析输入冻结；W1-B任务HTTP/队列、W1-C真实本机分析仍开放。详见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)。
+- 后续安全审阅发现`FrozenAnalysisInput`含`RunDuelRequest.engine`本机路径和完整catalog副本，原先可被serde无意序列化；已移除其serde实现，并将W1-B约束为独立的无路径任务存储合同。此防护是代码/API边界调整，不替代W1-B的HTTP响应和持久化回归。
+- 对移除serde实现后的最终工作区重新运行验证：`cargo fmt --all -- --check`通过；`cargo test -p ygo-cli --offline --locked --target-dir target/w1a-isolated -- --test-threads=1`为**25 passed、0 failed**；workspace全目标Clippy `-D warnings`通过；`cargo test --workspace --offline --locked --target-dir target/w1a-isolated -- --test-threads=1`为**366 passed、36 ignored、0 failed**（91条test-result记录）。终端输出未保存到仓库；workspace复跑汇总日志在忽略目录[`workspace-serial-audit.log`](../target/w1a-isolated/workspace-serial-audit.log)。
+
+## 2026-10-30 W1设计完成后的路线文档核对
+
+- 本轮只读基线：分支`codex/w1-workbench-analysis-design-20261030`，HEAD `8315232`，开始时工作区干净。阅读TASKS、INDEX、产品愿景、评估、路线图、API、部署、环境审计、自检、W1设计及E1报告；按当前代码入口和已保存日期化记录核对能力边界。两个引用对话已读取，只用于需求和历史背景。
+- 普通`dist/ygo-local`的`ygo.exe`与`ygo-engine-worker.exe` SHA-256分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与`build-hashes.json`匹配。engine.toml的worker、ocgcore、catalog、scripts、script manifest和engine manifest六个路径存在。未运行二进制或验证资产内容；普通包仍为2026-10-19版本且无workbench命令。
+- 文档更新将E1与W1设计标为完成，将Curry来源链和W1实现保留开放。保留Windows CI Python 740 passed/21 skipped/0 failed及本机历史749 passed/9 skipped/1 failed的各自日期和范围；本轮没有运行doctor、Cargo、pytest、浏览器、引擎、runner、worker、FFI、收费实验或部署。
+- 通过检查：`git diff --check`；对11份本轮涉及的Markdown检查439个本地文件目标，缺失0。相对链接检查只验证目标存在，不证明链接语义、文档结论或运行能力。当前实施路线为[W1设计后路线](superpowers/plans/2026-10-30-post-w1-project-route.md)。
+
 ## 2026-10-30 W1工作台受限分析接入设计
 
 - 新增[W1设计文档](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)，并同步更新TASKS、INDEX、API及WORKBENCH，明确设计与现有功能的边界。

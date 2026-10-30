@@ -1,6 +1,6 @@
 # 技术路线
 
-本文件只说明阶段依赖和退出条件。目标以[PRODUCT_VISION](PRODUCT_VISION.md)为准，当前状态和认证数字只维护在[TASKS](../TASKS.md)，实跑证据见[TESTING](TESTING.md)，当前小批见[2026-10-30项目现状与路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)。[2026-10-28路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)、[2026-10-27双轨计划](superpowers/plans/2026-10-27-project-realignment.md)与[2026-10-19实施计划](superpowers/plans/2026-10-19-product-evolution.md)保留各自时点的任务分解，不作为当前进度表。
+本文件只说明阶段依赖和退出条件。目标以[PRODUCT_VISION](PRODUCT_VISION.md)为准，当前状态和认证数字只维护在[TASKS](../TASKS.md)，实跑证据见[TESTING](TESTING.md)，当前小批见[W1设计完成后的项目路线](superpowers/plans/2026-10-30-post-w1-project-route.md)。[W1前路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)、[2026-10-28路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)、[2026-10-27双轨计划](superpowers/plans/2026-10-27-project-realignment.md)与[2026-10-19实施计划](superpowers/plans/2026-10-19-product-evolution.md)保留各自时点的任务分解，不作为当前进度表。
 
 ## 产品基础与研究基础
 
@@ -18,7 +18,7 @@
 
 P1已取得局部原生提示及离线准备证据，下一次研究先从[P1.2阻断矩阵](P1_MICROCASE.md)选一个可验收缺口；Ground Collapse原生发现仅为候选之一，须另定scope、预算和窗口，不续用旧材料。历史帧重算不替代原生覆盖。
 
-P4/R1a、P3.1、B2及C1有限样本字段存在性/来源盘点已完成；R1b非空多动作逐收费边界合成等价、中断和竞争门禁已通过。真实恢复、文件系统故障矩阵及独立原生重放仍未认证。近期双轨任务为E1历史保护锚点只读诊断、W1工作台分析接入设计、L1中文语义/许可核验、R1b-3真实恢复实验设计、W2普通用户发布准备和P1单一阻断研究。C1盘点不代表中文资格通过；工作台基础交付不依赖P1全部准入或P4规则认证。P4仍按R1→R5验收。每批只关闭一个可独立验证的缺口，并按实测耗时、调用、内存和证据体积重新估算。P1小实验成功不代表全卡证明可交付，失败也不降低最终目标。
+P4/R1a、P3.1、B2及C1有限样本字段存在性/来源盘点已完成；R1b非空多动作逐收费边界合成等价、中断和竞争门禁已通过。E1诊断和W1工作台受限分析接入设计已完成；Curry来源链与W1实现仍开放。真实恢复、文件系统故障矩阵及独立原生重放仍未认证。近期双轨任务为D3文档收敛、W1-A安全与任务冻结、W1-B队列与结果边界、W1-C本机分析验收、L1中文语义/许可核验、R1b-3真实恢复实验设计、W2普通用户发布准备和P1单一阻断研究。C1盘点不代表中文资格通过；工作台基础交付不依赖P1全部准入或P4规则认证。P4仍按R1→R5验收。每批只关闭一个可独立验证的缺口，并按实测耗时、调用、内存和证据体积重新估算。P1小实验成功不代表全卡证明可交付，失败也不降低最终目标。
 
 2026-10-19目标确认取代早期“所有UI最后做”的全局顺序；不改变v6专项内部的规则/报告/评估门禁。下列R编号保留以兼容原任务引用，它们整体对应P4。
 

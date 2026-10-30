@@ -95,6 +95,22 @@ impl DeckDraftStore {
         self.load_unlocked(id)
     }
 
+    /// Read a draft and verify its expected revision under the same store lock.
+    /// The returned value is owned, so callers can safely freeze it after the
+    /// lock is released without observing a later update.
+    pub fn load_at_revision(
+        &self,
+        id: &str,
+        expected_revision: &str,
+    ) -> Result<StoredDeckDraft, String> {
+        let _guard = self.operation.lock().map_err(|_| "draft_store_poisoned")?;
+        let stored = self.load_unlocked(id)?;
+        if stored.revision != expected_revision {
+            return Err("revision_conflict".into());
+        }
+        Ok(stored)
+    }
+
     fn load_unlocked(&self, id: &str) -> Result<StoredDeckDraft, String> {
         let path = self.path(id);
         let metadata =

@@ -38,7 +38,7 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索，以及`GET /api/language-status?ids=...`只读字段状态。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。中文语义、使用和再分发资格仍未核验。
 
-工作台分析任务接口尚未实现。待实现的W1设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)：它复用`ComboAnalyzeRequest`和现有`prepare`校验，草稿ID/revision仅作为任务层输入绑定；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
+工作台分析任务HTTP接口尚未实现。W1-A已增加Rust库内部能力`ygo_cli::workbench_analysis::freeze_analysis_input`：它只接受服务管理的草稿ID/revision与结构化分析参数，在同一草稿存储互斥锁内读取并核对revision，将草稿内容复制进拥有自身的`ComboAnalyzeRequest`，解析固定catalog和banlist ID，再复用现有`prepare`校验牌组、五张起手、规则、日期/禁限、搜索预算和catalog/CDB身份。返回对象记录请求及资产版本身份并使用稳定错误码，不包括HTTP路由、任务持久化、队列或运行执行；失败不会创建任务或启动adapter。该进程内对象还包含runtime asset路径与完整本地catalog，因此没有serde wire/persistence实现；W1-B需使用独立的无路径任务记录。保留[W1设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)、[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)和[工作台说明](WORKBENCH.md)。未来执行前仍须重新核对实时资产；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
 
 ## 其他拟议能力接口
 
@@ -57,7 +57,7 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 未来本机服务优先调用正式库接口，不解析人类摘要代替机器合同。v1–v5身份/重放路径保持不变；正式v6和证明能力分别版本化。可信知识、可执行线路、搜索完整性、最优性四个维度不得压为现有VerificationLevel的一个状态。
 
-近期实施入口为[2026-10-28项目现状与路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)，完整目标任务分解见[产品演进计划](superpowers/plans/2026-10-19-product-evolution.md)，研究问题见[最优性定义](OPTIMALITY_RESEARCH.md)。
+近期实施入口为[W1设计完成后的项目路线](superpowers/plans/2026-10-30-post-w1-project-route.md)，W1分析接口设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)；完整产品目标见[产品愿景](PRODUCT_VISION.md)，研究问题见[最优性定义](OPTIMALITY_RESEARCH.md)。
 
 
 P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。
