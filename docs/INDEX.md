@@ -12,7 +12,7 @@
 | 验证结果与限制 | [TESTING.md](TESTING.md) | 按日期、源码与范围读取；旧结果不代表当前源码已复验 |
 | 历史忽略目录证据的清点与处置决定 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 保留SHA-256身份清单；按用户决定暂不迁移，不能把哈希视为备份 |
 | 能力与差距 | [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 区分已验证、局部验证、未验证、未实现 |
-| 依赖顺序与本轮任务 | [ROADMAP.md](ROADMAP.md)、[当前实施路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md) | 研究与产品工作台双轨推进；完成状态仍只维护于TASKS |
+| 依赖顺序与本轮任务 | [ROADMAP.md](ROADMAP.md)、[当前实施路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md) | 研究与产品工作台双轨推进；完成状态仍只维护于TASKS |
 | 研究运行、scope、预算、窗口及停止条件 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md) | 研究操作规范；旧批次准备不构成新执行授权 |
 | 报告、来源、会计和资格绑定 | [EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 证据合同；来源身份、实际消费和资格分别核验 |
 | 基线及研究工具用法 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md) | 工具及合同说明；实跑状态和限制仍见TASKS/TESTING |
@@ -23,6 +23,10 @@
 | 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
 | 数据来源、版本与许可 | [DATA_SOURCES.md](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
 | 历史计划、交接及故障链 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[任务历史快照](../TASKS_HISTORY.md)、[验证历史快照](TESTING_HISTORY.md) | 原入口保留历史标题锚点；快照是拆分前正文，不替代原报告、源码、账本及固定窗口边界 |
+
+## 最近只读诊断：E1 Tenki 历史保护锚点
+
+[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)已核实 Tenki 归档中的 `codec.rs` 为 `224…`，Ground Collapse 工具包成员为 `e8…`，并比对了两者与当前文件的代码差异。Ground Collapse 工具包没有绑定为 Curry scope 实际执行源码的证据；Curry 迁移适用性仍未知。原失败及 pin 未改。范围和限制见[TESTING](TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
 ## 最近研究批次：Ground Collapse离线准备（已完成并暂停）
 
@@ -49,7 +53,7 @@
 ## 阅读路径
 
 1. 新加入的代理：本文件 → [AGENTS.md](../AGENTS.md) → [TASKS](../TASKS.md) → [PROJECT_ASSESSMENT](PROJECT_ASSESSMENT.md) → 相关模块文档。
-2. 产品与双轨任务：[PRODUCT_VISION](PRODUCT_VISION.md) → [ROADMAP](ROADMAP.md) → [2026-10-28当前实施路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)。[2026-10-27再规划](superpowers/plans/2026-10-27-project-realignment.md)是历史时点记录。最优性工作先读[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
+2. 产品与双轨任务：[PRODUCT_VISION](PRODUCT_VISION.md) → [ROADMAP](ROADMAP.md) → [2026-10-30当前实施路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)。[2026-10-28实施路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)及更早计划是历史时点记录。最优性工作先读[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
 3. 研究与证据：[RESEARCH_OPERATIONS](RESEARCH_OPERATIONS.md) → [EVIDENCE_CONTRACTS](EVIDENCE_CONTRACTS.md) → 对应工具文档、当前交接与TESTING；具体运行须遵守该次授权和停止条件。
 4. 运行与来源：[DEPLOYMENT](DEPLOYMENT.md) → [ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)、[DATA_SOURCES](DATA_SOURCES.md)、[TOURNAMENT_RESELECTION](TOURNAMENT_RESELECTION.md)、[TOURNAMENT_SOURCE_GATE](TOURNAMENT_SOURCE_GATE.md) → 对应日期验证和实际报告。
 5. 实现设计：[ARCHITECTURE](ARCHITECTURE.md) → [DOMAIN_MODEL](DOMAIN_MODEL.md)、[ENGINE_ADAPTERS](ENGINE_ADAPTERS.md)、[ENGINE_PROTOCOL](ENGINE_PROTOCOL.md)、[SEARCH_AND_SCORING](SEARCH_AND_SCORING.md)、[API](API.md)。规则与规划另见[FIRST_TURN_PILOT](FIRST_TURN_PILOT.md)、[SEMANTIC_PLANNING](SEMANTIC_PLANNING.md)、[GOAL_PLANNING](GOAL_PLANNING.md)、[BREAK_SWORD_VERIFICATION](BREAK_SWORD_VERIFICATION.md)、[RECOVERY_PLANNING](RECOVERY_PLANNING.md)、[ASH_STRATEGY_PLANNING](ASH_STRATEGY_PLANNING.md)及对应Rust测试。
