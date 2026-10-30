@@ -12,6 +12,12 @@ use ygo_engine_adapter::{ProcessEngineConfig, RunDuelRequest};
 use ygo_search::combo::SearchBudget;
 use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
+pub mod jobs;
+
+#[cfg(test)]
+#[path = "workbench_analysis/jobs_tests.rs"]
+mod jobs_tests;
+
 #[derive(Clone, Debug)]
 pub struct AnalysisFreezeSpec {
     pub draft_id: String,
@@ -345,7 +351,7 @@ mod tests {
         format!("{kind}-{}", hash(&provenance))
     }
 
-    fn fixtures(
+    pub(super) fn fixtures(
         root: &Path,
     ) -> (
         DeckDraftStore,
@@ -465,7 +471,7 @@ mod tests {
         (drafts, store, engine, catalog_id, banlist_id, draft)
     }
 
-    fn spec(
+    pub(super) fn spec(
         draft_id: String,
         revision: String,
         banlist_id: String,

@@ -1,12 +1,14 @@
 # 工作区自检与维护矩阵
 
+2026-10-30本轮静态基线为本地`main` / `d3bc212`，开始时工作区干净；W1-A已合并，W1-B/C开放。旧普通包哈希与清单一致且六项配置路径存在，不能证明最新源码已部署；赛事开发与历史干净部署各自保留证据。下述`8315232`及未提交工作区描述属于W1设计和实现时的历史记录。当前路线见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
+
 本文件记录2026-10-27及后续接续时的自检范围、证据入口和未完成项，便于代理定位下一步；它不替代[TASKS](../TASKS.md)的当前状态、[TESTING](TESTING.md)的具体验证或[部署说明](DEPLOYMENT.md)。工作区和机器状态会变化；实际操作前应重新核查。
 
-## 2026-10-30 W1设计后当前基线
+## 2026-10-30 W1设计后基线（历史时点）
 
-- 设计阶段基线为`codex/w1-workbench-analysis-design-20261030` / `8315232`，起始工作区干净。后续W1-A已在同名工作分支实现并通过离线Rust验证；当前未提交变更和本轮验证以[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)及[TESTING](TESTING.md)为准。D2、E1只读诊断仍有文档证据；E1中的Curry执行源码来源链仍未知。
+- 设计阶段基线为`codex/w1-workbench-analysis-design-20261030` / `8315232`，起始工作区干净。后续W1-A已在同名工作分支实现并通过离线Rust验证；当时未提交变更和验证见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)及[TESTING](TESTING.md)。D2、E1只读诊断仍有文档证据；E1中的Curry执行源码来源链仍未知。
 - 静态核对普通旧包CLI/worker哈希与包清单一致，配置的六个主要资产路径存在。普通包为2026-10-19构建且没有workbench命令；核对未运行二进制，不证明新源码部署或干净发布验收。
-- W1-A完成；W1-B队列/结果边界及W1-C真实本机分析仍开放。后续路线以[W1后项目路线](superpowers/plans/2026-10-30-post-w1-project-route.md)和[TASKS](../TASKS.md)为准。
+- W1-A完成；W1-B队列/结果边界及W1-C真实本机分析仍开放。后续路线以[W1-A后项目路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)和[TASKS](../TASKS.md)为准。
 
 ## 2026-10-30 runtime访问清单补记
 
@@ -40,7 +42,7 @@
 
 本机完整Python套件最新记录为749 passed、9 skipped、1 failed；失败是Tenki历史保护`codec.rs`锚点与当前字节不匹配。后续R1b批次未运行全套；历史记录不代表当前全绿，也不授权改写固定锚点。普通dist仍是旧包；开发CLI的工作台没有进入该发布目录。
 
-当时的后续安排为R1b-1非空多动作逐收费边界恢复等价、R1b-2中断/竞争负例、E1固定哈希历史来源只读诊断，以及产品线的W1分析接入设计、W2干净环境发布准备和L1中文候选语义/许可复核。R1b-3真实恢复仅在离线门禁通过后另行设计并授权；P1每批只选一个阻断研究。该日期计划只保留历史任务分解；当前状态见[TASKS](../TASKS.md)，当前顺序见[W1后项目路线](superpowers/plans/2026-10-30-post-w1-project-route.md)。
+当时的后续安排为R1b-1非空多动作逐收费边界恢复等价、R1b-2中断/竞争负例、E1固定哈希历史来源只读诊断，以及产品线的W1分析接入设计、W2干净环境发布准备和L1中文候选语义/许可复核。R1b-3真实恢复仅在离线门禁通过后另行设计并授权；P1每批只选一个阻断研究。该日期计划只保留历史任务分解；当前状态见[TASKS](../TASKS.md)，当前顺序见[W1-A后项目路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
 
 ## 对话依据与当前事实
 

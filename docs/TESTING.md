@@ -1,5 +1,30 @@
 # 本机验证记录
 
+## 2026-10-30 pytest默认收集范围修复与完整自检
+
+- 首次从仓库根目录运行`py -m pytest -ra --tb=short`时，pytest递归进入被Git忽略的`data/runtime`，在收集期产生512个`PermissionError: [WinError 5]`；这是本机受保护目录的收集错误，不是512个断言失败。原始日志见[`python-full-self-audit.log`](../target/w1b1-analysis-job-tests/python-full-self-audit.log)。
+- 在`pyproject.toml`为pytest配置`testpaths = ["tests"]`，令默认收集限定在测试目录，保留既有target缓存位置。修复后`py -m pytest --collect-only -q`成功收集767项（1.92秒），不再遍历`data/runtime`。
+- 修复后完整默认Python套件运行**757 passed、9 skipped、1 failed**（1677.36秒）。唯一失败为`tests/test_native_tenki_placement_confirmation.py::TenkiPlacementConfirmationTests::test_seven_historical_ledgers_reaudit_read_only_without_runner`，因历史受保护源码校验返回`protected_source_change_hash_mismatch`；没有改动历史pin或证据。完整日志见[`python-full-after-testpaths.log`](../target/w1b1-analysis-job-tests/python-full-after-testpaths.log)。
+- 因此收集边界问题已修复；完整本机Python门禁仍有上述已知历史pin失败，不能记为全绿。9个跳过项维持各自本机资产、符号链接能力或显式opt-in条件。
+
+## 2026-10-30 W1-B1无路径任务合同与纯状态机
+
+- 实施从`main / d3bc212ccdc782d6988162f2030de00836df315c`开始，保留既有未提交路线与文档修改。新增`AnalysisJobRecordV1`、独立schema、严格JSON及纯状态转换；没有新增任务文件存储、HTTP、队列或界面。合同和状态/失败矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)，当前断点见[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
+- 先写聚焦测试：未实现模块导致编译红测，schema缺失导致Python红测。额外有限浮点bit样本真实复现`0x723f4114006c08c7`往返摘要不一致，启用serde_json `float_roundtrip`后通过；默认Python解析NaN的红测亦复现，已加严格常量与有限number检查。红测与最终日志保留于[`target/w1b1-analysis-job-tests`](../target/w1b1-analysis-job-tests/)，不把测试语料生成问题误记为生产根因。
+- 8项新增Rust测试覆盖真实W1-A合成冻结后的任务复制、三分区/重复/顺序、创建任务后更新草稿和移除snapshot、白名单无路径、两个摘要及runtime/request绑定、状态矩阵/revision/时间/终态、报告原因与空线路/top_k关系、递归字段与数字/重复键拒绝、非有限评分及固定种子4096个bit样本中的有限f64精确往返。与4项W1-A聚焦测试合计**12 passed、0 failed**。Rust和schema共用**121项语料（14正例、107负例）**，单独标注schema无法表达的摘要及跨字段关系，未把结构通过称作来源认证。
+- 独立只读子任务审阅源码、schema、语料、文档和日志，没有执行测试；发现的非有限JSON数字、top_k超额和错误revision负例隔离不足均已处理。摘要及限制见[`read-only-review.json`](../target/w1b1-analysis-job-tests/read-only-review.json)。最终语料复验为聚焦12 passed与schema 6 passed；新增fixture在真实任务创建后修改原草稿/移除快照，任务字节仍一致。
+- 实跑命令统一设置`CARGO_TARGET_DIR=target/w1b1-isolated`，所有编译命令显式使用同一`--target-dir target/w1b1-isolated --offline --locked`。`cargo test -p ygo-cli ... -- --test-threads=1`为**33 passed、0 ignored、0 failed**，包括已有同源/草稿/导入导出/卡表与状态接口回归。`cargo fmt --all -- --check`、workspace全目标Clippy `-D warnings`通过；最终串行workspace为**374 passed、36 ignored、0 failed**（91条结果记录）。初次Clippy只发现新增测试的默认值后字段重赋，已修复并复验。日志分别见[`ygo-cli-final.log`](../target/w1b1-analysis-job-tests/ygo-cli-final.log)、[`fmt-reviewed.log`](../target/w1b1-analysis-job-tests/fmt-reviewed.log)、[`clippy-reviewed.log`](../target/w1b1-analysis-job-tests/clippy-reviewed.log)和[`workspace-final.log`](../target/w1b1-analysis-job-tests/workspace-final.log)。36项忽略的名称及原始原因逐项保存在[`ignored-tests.json`](../target/w1b1-analysis-job-tests/ignored-tests.json)，均为既有opt-in研究/冻结资产或人工准备案例，未启用。
+- Python执行`py -m pytest tests/test_workbench_analysis_job_schema.py tests/test_schemas.py tests/test_coverage_language.py -q -ra`，**30 passed、2 skipped、4 subtests passed**；两项均为`test_schemas.py`显式opt-in的本机snapshots/reports或actual v2 report。相关日志为[`python-related-final.log`](../target/w1b1-analysis-job-tests/python-related-final.log)；最终121语料的schema专测再次为6 passed，见[`schema-after-review.log`](../target/w1b1-analysis-job-tests/schema-after-review.log)。没有运行Python全套，已知Tenki历史pin及其原失败记录不变，未将本批Rust通过解释为历史链通过。
+- 所有新运行材料只写入忽略target。本批新增原生研究、真实runner、worker和引擎FFI调用均为0；未运行真实分析、doctor、真实资产opt-in或48手评估，不改部署、active资产，不提交或推送。认证消费子集40、政策预留7、规划47维持原义，旧confirmation及全部历史实际累计仍未知。W1-B1验收只关闭合同/状态核心关口；W1-B2队列、W1-B3持久化/报告发布/重启及W1-C真实本机分析待后续独立实施。
+- 收尾`git diff --check`通过；对7份相关Markdown检查本地文件目标，无缺失或访问失败，记录见[`document-links.json`](../target/w1b1-analysis-job-tests/document-links.json)。该检查只验证文件目标，不认证锚点语义或运行证据；最终源码/日志绑定见[`verification-summary.json`](../target/w1b1-analysis-job-tests/verification-summary.json)。
+
+## 2026-10-30 W1-A后路线文档复核
+
+- 开始时本地`main` / `d3bc212`、工作区干净；对照TASKS、INDEX、代码、W1-A交接、产品愿景与历史报告。引用对话记录PR #11合并及CI成功，本轮不声称新运行CI或补造Python计数。
+- `Get-FileHash -Algorithm SHA256`核对旧包CLI `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`、worker `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内build-hashes.json一致；读取engine.toml并用`Test-Path -LiteralPath`确认六个主要路径存在。仅检查文件身份和路径，不证明当前源码已部署、资产内容完整或运行成功。
+- 保留历史W1-A Rust 366 passed/36 ignored/0 failed、本机Python 749 passed/9 skipped/1 failed、PR #8干净Windows CI 740 passed/21 skipped/0 failed，各自范围见下文；本轮未运行doctor、引擎、收费实验、部署或全量测试。
+- 本轮新增[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)，同步任务、评估、接口、经验及部署边界；对12份Markdown检查463个本地链接目标，缺失0；16项愿景编号均见于项目评估；`git diff --check`通过，变更范围仅含Markdown。这些检查仅验证文档关系，不授予运行资格。
+
 ## 2026-10-30 W1-A工作台同源保护与分析输入冻结
 
 - 先写跨站`DELETE /api/not-implemented`红测并运行旧门禁，测试失败；旧代码只检查POST/PUT，DELETE跨站请求到达路由并绕过Origin拒绝。本地Host、Bearer token及foreign/missing Origin的DELETE均加入回归。修复后同源未知DELETE进入路由并返回404，跨站/缺Origin返回403，异Host返回400；现有草稿POST/PUT和其他HTTP回归通过。

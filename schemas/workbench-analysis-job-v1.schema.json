@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ygo:workbench-analysis-job-v1",
+  "title": "Path-free local workbench analysis job v1",
+  "$comment": "Structural contract. Rust strict reading also rejects duplicate keys and non-lexical integers, recomputes both digests, checks cross-field identities, dates, hand/deck, time ordering and report top_k. This record is neither provenance nor an execution credential.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "job_id", "revision", "created_at_ms", "updated_at_ms", "input", "state", "report", "error_code"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "kind": {"const": "workbench_analysis_job"},
+    "job_id": {"$ref": "#/$defs/id"},
+    "revision": {"type": "integer", "minimum": 1, "maximum": 18446744073709551615},
+    "created_at_ms": {"$ref": "#/$defs/u64"},
+    "updated_at_ms": {"$ref": "#/$defs/u64"},
+    "input": {"$ref": "#/$defs/input"},
+    "state": {"enum": ["queued", "running", "completed", "budget_limited", "failed", "cancelled", "interrupted", "unknown"]},
+    "report": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/report"}]},
+    "error_code": {"enum": [null, "analysis_failed", "service_restarted", "completion_uncertain"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"state": {"const": "queued"}}}, "then": {"properties": {"revision": {"const": 1}, "report": {"type": "null"}, "error_code": {"type": "null"}}}},
+    {"if": {"properties": {"state": {"enum": ["running", "cancelled"]}}}, "then": {"properties": {"revision": {"const": 2}, "report": {"type": "null"}, "error_code": {"type": "null"}}}},
+    {"if": {"properties": {"state": {"const": "interrupted"}}}, "then": {"properties": {"revision": {"const": 2}, "report": {"type": "null"}, "error_code": {"const": "service_restarted"}}}},
+    {"if": {"properties": {"state": {"const": "unknown"}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"type": "null"}, "error_code": {"const": "completion_uncertain"}}}},
+    {"if": {"properties": {"state": {"const": "failed"}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"type": "null"}, "error_code": {"const": "analysis_failed"}}}},
+    {"if": {"properties": {"state": {"enum": ["completed", "budget_limited"]}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"$ref": "#/$defs/report"}, "error_code": {"type": "null"}}}},
+    {"if": {"properties": {"state": {"const": "completed"}}}, "then": {"properties": {"report": {"properties": {"termination": {"enum": ["exhausted", "exhausted:no_verified_lines"]}}}}}},
+    {"if": {"properties": {"state": {"const": "budget_limited"}}}, "then": {"properties": {"report": {"properties": {"termination": {"enum": ["node_budget", "time_budget", "depth_budget", "node_budget:no_verified_lines", "time_budget:no_verified_lines", "depth_budget:no_verified_lines"]}}}}}}
+  ],
+  "$defs": {
+    "u64": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615},
+    "id": {"type": "string", "pattern": "^[0-9a-f]{32}$(?![\\s\\S])"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"},
+    "label": {"type": "string", "maxLength": 128, "pattern": "^[A-Za-z0-9._-]*$(?![\\s\\S])"},
+    "cards": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 4294967295}},
+    "request": {
+      "type": "object", "additionalProperties": false,
+      "required": ["deck", "opening_hand", "seed", "rules", "catalog_id", "banlist_id", "as_of", "search"],
+      "properties": {
+        "deck": {
+          "type": "object", "additionalProperties": false, "required": ["main", "extra", "side"],
+          "properties": {"main": {"$ref": "#/$defs/cards", "minItems": 40, "maxItems": 60}, "extra": {"$ref": "#/$defs/cards", "maxItems": 15}, "side": {"$ref": "#/$defs/cards", "maxItems": 15}}
+        },
+        "opening_hand": {"$ref": "#/$defs/cards", "minItems": 5, "maxItems": 5},
+        "seed": {"$ref": "#/$defs/u64"},
+        "rules": {"const": "ocg-mr5"},
+        "catalog_id": {"type": "string", "pattern": "^catalog-[0-9a-f]{64}$(?![\\s\\S])"},
+        "banlist_id": {"type": "string", "pattern": "^banlist-[0-9a-f]{64}$(?![\\s\\S])"},
+        "as_of": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$(?![\\s\\S])"},
+        "search": {
+          "type": "object", "additionalProperties": false, "required": ["top_k", "node_budget", "beam_width", "max_depth", "time_limit_ms"],
+          "properties": {
+            "top_k": {"type": "integer", "minimum": 1, "maximum": 100},
+            "node_budget": {"type": "integer", "minimum": 1, "maximum": 1000000},
+            "beam_width": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "max_depth": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "time_limit_ms": {"type": "integer", "minimum": 1, "maximum": 3600000}
+          }
+        }
+      }
+    },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["input_sha256", "rules", "catalog_id", "banlist_id", "protocol_version", "engine_sha256", "worker_sha256", "cdb_sha256", "scripts_sha256", "engine_manifest_sha256", "core_commit", "initializer", "catalog_source_sha256", "banlist_source_sha256"],
+      "properties": {
+        "input_sha256": {"$ref": "#/$defs/sha256"}, "rules": {"const": "ocg-mr5"},
+        "catalog_id": {"type": "string", "pattern": "^catalog-[0-9a-f]{64}$(?![\\s\\S])"},
+        "banlist_id": {"type": "string", "pattern": "^banlist-[0-9a-f]{64}$(?![\\s\\S])"},
+        "protocol_version": {"type": "integer", "const": 2},
+        "engine_sha256": {"$ref": "#/$defs/sha256"}, "worker_sha256": {"$ref": "#/$defs/sha256"},
+        "cdb_sha256": {"$ref": "#/$defs/sha256"}, "scripts_sha256": {"$ref": "#/$defs/sha256"},
+        "engine_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "core_commit": {"$ref": "#/$defs/label"}, "initializer": {"$ref": "#/$defs/label"},
+        "catalog_source_sha256": {"$ref": "#/$defs/sha256"}, "banlist_source_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "input": {
+      "type": "object", "additionalProperties": false,
+      "required": ["draft_id", "draft_revision", "request", "identity", "scoring", "binding_sha256"],
+      "properties": {
+        "draft_id": {"$ref": "#/$defs/id"}, "draft_revision": {"$ref": "#/$defs/sha256"},
+        "request": {"$ref": "#/$defs/request"}, "identity": {"$ref": "#/$defs/identity"},
+        "scoring": {
+          "type": "object", "additionalProperties": false, "required": ["board_interaction", "resource_advantage", "follow_up", "complexity"],
+          "properties": {"board_interaction": {"type": "number"}, "resource_advantage": {"type": "number"}, "follow_up": {"type": "number"}, "complexity": {"type": "number"}}
+        },
+        "binding_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "report": {
+      "type": "object", "additionalProperties": false,
+      "required": ["report_id", "sha256", "termination", "verified_lines"],
+      "properties": {
+        "report_id": {"$ref": "#/$defs/id"}, "sha256": {"$ref": "#/$defs/sha256"},
+        "termination": {"enum": ["exhausted", "node_budget", "time_budget", "depth_budget", "exhausted:no_verified_lines", "node_budget:no_verified_lines", "time_budget:no_verified_lines", "depth_budget:no_verified_lines"]},
+        "verified_lines": {"type": "integer", "minimum": 0, "maximum": 100}
+      },
+      "allOf": [
+        {"if": {"properties": {"verified_lines": {"const": 0}}}, "then": {"properties": {"termination": {"pattern": ":no_verified_lines$(?![\\s\\S])"}}}, "else": {"properties": {"termination": {"enum": ["exhausted", "node_budget", "time_budget", "depth_budget"]}}}}
+      ]
+    }
+  }
+}
