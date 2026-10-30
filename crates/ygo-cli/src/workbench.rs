@@ -378,7 +378,7 @@ fn handle_connection(
             json!({"error":{"code":"authorization_required"}}),
         );
     }
-    if matches!(request.method.as_str(), "POST" | "PUT") {
+    if request.method != "GET" {
         let expected_origin = format!("http://127.0.0.1:{port}");
         if request.headers.get("origin").map(String::as_str) != Some(expected_origin.as_str()) {
             return write_json(

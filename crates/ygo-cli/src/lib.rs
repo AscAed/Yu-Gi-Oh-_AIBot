@@ -24,6 +24,7 @@ pub enum Command {
 }
 
 pub mod workbench;
+pub mod workbench_analysis;
 
 impl Command {
     pub fn parse<I, S>(args: I) -> Option<Self>

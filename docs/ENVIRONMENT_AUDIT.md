@@ -48,6 +48,12 @@
 
 最新Ground Collapse离线准备将证据和测试材料保存在独立runtime及target目录；其交付体积清单约7.33GB且记录一项ACL访问失败，不能当作全工作区或所有证据的完整体积。本次未重新统计，也未调整ACL或删除这些材料。
 
+## 2026-10-30 W1设计后工作区复核
+
+当前核对基线为分支`codex/w1-workbench-analysis-design-20261030`、HEAD `8315232`，工作区起始干净。该分支包含W1受限分析接入设计，任务接口尚未实现。普通`dist/ygo-local`的CLI/worker SHA-256与其`build-hashes.json`相符；engine.toml列出的worker、core、catalog、scripts、script manifest及engine manifest六个路径均存在。该核对没有运行包内程序、没有重新检查所有资产内容，也不能证明当前源码已部署或发布包可移植。
+
+历史普通包doctor内部进程行为仍未知。当前源码doctor经worker执行ABI探针，但不将该源码行为推断为旧包行为。W1接口设计不能视为普通包具备分析功能；部署与工作台边界见[DEPLOYMENT](DEPLOYMENT.md)、[WORKBENCH](WORKBENCH.md)及[W1后路线](superpowers/plans/2026-10-30-post-w1-project-route.md)。
+
 ## 2026-10-27 接续容量清点
 
 只读扫描可读取普通文件的逻辑大小：`target/`约106.64 GiB、1,498,674个文件，`data/`约112.86 GiB、307,115个文件，其中`data/runtime/`约112.59 GiB。共有85处访问错误，扫描不跟随reparse点、不去重硬链接，且期间有并发写入；这些是有盲区的时点逻辑大小，不是精确磁盘占用。机器D盘当时可用约95.1 GiB。 恢复后以提升权限对这85个路径逐项执行lstat及直接子项枚举：均可读取，58个当前为空，27个非空项属于隔离Python依赖目录；没有递归复测容量，初次统计仍是有盲区的时点数值。详情见`target/workspace-audit-2026-10-27-codex/capacity-errors-recheck.json`。复核后只非递归移除本轮中断pip留下的5个已确认空目录，逐项核对父目录、名称和非链接状态，记录为`pip-empty-cleanup.json`；其他53个空目录及27个非空目录保持原位。原始范围、分组和错误列表见`target/workspace-audit-2026-10-27-codex/capacity-inventory.json`。
