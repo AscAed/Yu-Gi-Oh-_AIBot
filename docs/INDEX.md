@@ -20,6 +20,7 @@
 | 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
 | 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
 | JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md)、[WORKBENCH.md](WORKBENCH.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md) | schema和解析器为规范性定义；WORKBENCH记录当前本机HTTP界面与安全边界；执行恢复仅描述可恢复进度，不授予成功资格 |
+| 工作台分析接入设计 | [W1受限分析设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md) | 待实现设计；当前工作台仍不提供分析、任务队列或取消接口 |
 | 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
 | 数据来源、版本与许可 | [DATA_SOURCES.md](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
 | 历史计划、交接及故障链 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[任务历史快照](../TASKS_HISTORY.md)、[验证历史快照](TESTING_HISTORY.md) | 原入口保留历史标题锚点；快照是拆分前正文，不替代原报告、源码、账本及固定窗口边界 |
@@ -37,6 +38,10 @@
 ## 最近产品工作台批次：首次失败诊断、草稿基础与本机界面（已完成）
 
 [B2交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)、[工作台运行说明](WORKBENCH.md)、[牌组草稿CLI与合同](DECK_DRAFTS.md)。A1首次结果级错误及查询捕获失败回归通过；B1/B2提供版本化草稿、三分区编辑、本机浏览器操作和YDK/JSON往返，不赋予完整合法性或中文资格。实测范围见[TESTING](TESTING.md)。
+
+## W1工作台受限分析接入设计（待实现）
+
+[设计文档](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)以现有`ComboAnalyzeRequest`和Rabbit样例定义输入冻结、预校验、队列状态和结果展示。该设计没有新增工作台API或运行验收；实现须另开批次。
 
 ## 最近执行恢复批次：P4-R1b离线多动作等价与中断门禁（已通过；真实续跑未认证）
 
