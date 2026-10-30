@@ -2,6 +2,14 @@
 
 本文件记录2026-10-27及后续接续时的自检范围、证据入口和未完成项，便于代理定位下一步；它不替代[TASKS](../TASKS.md)的当前状态、[TESTING](TESTING.md)的具体验证或[部署说明](DEPLOYMENT.md)。工作区和机器状态会变化；实际操作前应重新核查。
 
+## 2026-10-30文档与证据基线补记
+
+- 当前工作区基线为`533bbd9224cc11946812939ca611669444f6bcbf`，分支`codex/ci-language-review-selfcontained-20261029`，本轮开始时工作树干净。此提交与开发源码身份相符，不代表已部署。
+- 2026-10-29 PR #8的干净Windows CI在修复提交`84650f70f7447f4b2282a69447487b34a5a7aaeb`上完成，Python为740 passed、21 skipped、0 failed（761项）；Rust格式、Clippy、workspace测试及样例卡校验通过。该结果不覆盖本机历史Tenki锚点失败。
+- 旧普通包仍为2026-10-19构建。CLI/worker清单哈希匹配、配置主要资产路径存在、旧包doctor ready；旧包不含workbench命令。哈希和路径核对只检查清单对应及路径存在，不代表当前源码发布、引擎smoke或干净环境验收。
+- 当前源码`engine doctor`实现会调用worker执行ABI探针。10-29旧包doctor确已运行，但保存记录没有足够信息判定旧二进制内部是否启动worker；“未单独运行worker/FFI”不能扩写成“doctor未启动worker”。原运行结果仍保留，未知行为不推测。
+- 本轮只做文档、源码路径和历史记录静态交叉核对；没有运行doctor、真实引擎、worker/runner/FFI、研究收费任务、部署或完整测试。详细边界见[TESTING](TESTING.md)和[2026-10-30路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)。
+
 ## 2026-10-29接续自检
 
 - 以D盘项目工作区为源码现场。审计起点的`origin/main`为`3ac88db7d70b0423dc70f02f17fd7fa6004373e3`；本机旧分支当时落后39个提交并有源码、schema、测试和文档修改。2026-10-29已将改动重放至该main并提交为`b20abdc`；此处记录本地整合结果，不表示已推送或创建PR。
@@ -21,7 +29,7 @@
 
 本机完整Python套件最新记录为749 passed、9 skipped、1 failed；失败是Tenki历史保护`codec.rs`锚点与当前字节不匹配。后续R1b批次未运行全套；历史记录不代表当前全绿，也不授权改写固定锚点。普通dist仍是旧包；开发CLI的工作台没有进入该发布目录。
 
-下一批按双轨小任务推进：R1b-1非空多动作逐收费边界恢复等价、R1b-2中断/竞争负例和E1固定哈希历史来源只读诊断；产品线进行W1分析接入设计、W2干净环境发布准备和L1中文候选语义/许可复核。R1b-3真实恢复仅在离线门禁通过后另行设计并授权；P1每批只选一个阻断研究。阶段任务与退出/停止条件见[当前实施路线](superpowers/plans/2026-10-28-project-status-and-next-steps.md)。
+当时的后续安排为R1b-1非空多动作逐收费边界恢复等价、R1b-2中断/竞争负例、E1固定哈希历史来源只读诊断，以及产品线的W1分析接入设计、W2干净环境发布准备和L1中文候选语义/许可复核。R1b-3真实恢复仅在离线门禁通过后另行设计并授权；P1每批只选一个阻断研究。该日期计划只保留历史任务分解；当前状态与后续顺序见[TASKS](../TASKS.md)和[2026-10-30路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)。
 
 ## 对话依据与当前事实
 

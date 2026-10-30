@@ -1,5 +1,14 @@
 # 本机验证记录
 
+## 2026-10-30文档与实现边界静态复核
+
+- 依据TASKS、日期化验证、代码入口和部署清单复核项目位置及计划；源码工作区基线为`533bbd9224cc11946812939ca611669444f6bcbf`，开始时干净。新增路线见[2026-10-30项目现状与后续路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)。
+- 复核R1b历史验证：非空两动作合成路线逐语义调用边界暂停/重开等价及中断/竞争门禁已通过；测试使用合成adapter，不认证真实进程恢复、文件系统崩溃、真实OCG行为或独立原生重放。认证消费40、预留7、规划47，历史实际累计仍未知。
+- 交叉记录部署身份：旧普通包为2026-10-19版本；2026-10-29保存记录中的CLI/worker哈希匹配清单、主要配置资产路径存在、旧包doctor ready；旧包不含workbench命令。哈希和路径不等同于源码构建或干净发布验收。
+- PR #8干净Windows CI的Python完整套件在修复提交`84650f70f7447f4b2282a69447487b34a5a7aaeb`上为**740 passed、21 skipped、0 failed（761项）**，Rust格式、Clippy、workspace测试和样例卡验证通过。本机历史Python套件仍为749 passed、9 skipped、1 failed，失败是Tenki旧保护哈希不匹配；两者环境与输入不同，互不覆盖。CI此前失败的单测依赖Git忽略的本机`data/runtime`，已改为临时合成输入。
+- 当前源码`engine doctor`沿`ProcessEngine::doctor`调用ABI probe，并经worker进程执行；`smoke_ok=null`仅表示未执行决斗smoke。2026-10-29对旧包运行doctor的事实保留，但现存记录不足以确认旧二进制内部是否启动worker；不将“未单独调用worker/FFI”写成“doctor没有启动worker”。
+- 本轮执行的是只读文档、链接与源码静态核对及`git diff --check`；没有运行doctor、测试套件、引擎、worker/runner/FFI、构建、收费实验或部署。检查范围和限制不构成运行能力认证。
+
 ## 2026-10-29 P4-R1b信任边界与恢复发布补检
 
 - 只读代码审阅发现初始`QueryWitness`在独立重放前即可影响语义选择；公开入口现在要求不可伪造的`AuditedQueries`能力，并核对其绑定的初始请求、收费结果和完整见证序列。未匹配时在创建执行检查点前拒绝。合成循环测试通过仅供`cfg(test)`使用的内部分支，不开放生产调用。
@@ -11,7 +20,7 @@
 
 - 检查`dist/ygo-local`现有CLI与worker的SHA-256，分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内`build-hashes.json`一致。文件时间仍为2026-10-19；源码/文档提交`9f527d3`尚未部署到该普通包。
 - 对旧包运行只读`engine doctor`，结果`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。Catalog为`catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`（13,665条）；banlist为`banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`（203条，生效日2026-10-01）。
-- 旧包入口只声明engine/catalog/banlist/deck/combo，`workbench`不是该部署CLI的命令；草稿工作台仍仅存在于当前开发源码。`doctor`不启动决斗，本轮没有运行`engine smoke`、真实runner/worker/FFI或部署脚本。
+- 旧包入口只声明engine/catalog/banlist/deck/combo，`workbench`不是该部署CLI的命令；草稿工作台仍仅存在于当前开发源码。`doctor`不启动决斗，本轮没有另外运行`engine smoke`或真实runner/worker/FFI，也没有运行部署脚本。旧二进制doctor内部是否启动worker做ABI探针，现存记录无法确认；当前源码实现的行为见本节2026-10-30说明。
 - `cargo tree --workspace --offline --locked --duplicates`只报告`hashbrown`因`hashlink`与`indexmap`传递依赖并存的0.14.5/0.17.1两版本；`cargo-machete`未安装，本轮没有联网安装，也未按传递版本差异删除依赖。
 
 ## 2026-10-29 干净checkout的Python回归修复
@@ -61,6 +70,14 @@
 - 工作台增加只读`GET /api/language-status?ids=...`，只返回卡号、固定来源ID、字段状态/原因及候选哈希；不返回候选名称或正文。候选状态缺少哈希的红测失败后，加载器拒绝不完整/损坏材料并降级为未核验。`workbench_http`为**4 passed**，红测日志见[`status-loader-red.log`](../target/c1-language-review-tests/status-loader-red.log)；本机隔离服务HTTP验收确认固定39卡报告可读、样本外ID为unknown、无catalog时仍未核验，并创建、更新、重新读取含重复卡号的草稿成功，摘要在[`http-smoke-summary.json`](../target/c1-language-review-tests/http-smoke-summary.json)。首次尝试连接用户原生浏览器时，Computer Use授权超时，没有执行原生浏览器动作；随后改用隔离的Codex应用内浏览器完成真实界面验收：打开已保存草稿、显示“候选/缺失/未知”与`zh-SC`语言类别未确认、在无catalog状态继续编辑、保存并刷新列表后重新打开，结果摘要见[`browser-smoke-summary.json`](../target/c1-language-review-tests/browser-smoke-summary.json)。候选正文没有进入响应或界面。集成日志见[`workbench-http.log`](../target/c1-language-review-tests/workbench-http.log)。
 - Rust格式`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/c1-language-review -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/c1-language-review -- --test-threads=1`为**353 passed、36 ignored、0 failed**，91条测试结果记录。被忽略项仍是既有本机资产、研究、基准及显式opt-in测试；日志见[`rust-workspace.log`](../target/c1-language-review-tests/rust-workspace.log)、[`rust-clippy.log`](../target/c1-language-review-tests/rust-clippy.log)及[`rust-fmt-check.log`](../target/c1-language-review-tests/rust-fmt-check.log)。
 - 本批新增原生研究/runner/worker/FFI调用0；认证消费子集40、政策预留7、规划47不变；旧confirmation与全部历史实际累计仍未知。语义审阅、zh-SC类别、使用依据、再分发资格和正式中文搜索未通过。Rust隔离CLI使用本机系统分配端口，仅写入`target/c1-workbench-browser/`并已停止；无部署变更。
+
+## 2026-10-30 E1 Tenki历史保护锚点只读诊断
+
+- 本轮只读核对分支/HEAD、当前 `codec.rs` 原始哈希、Git规范化内容、C1既有失败记录、源码pin、指定Tenki与Ground Collapse ZIP/list及对应ZIP成员；最终按诊断表复验8组归档ZIP哈希、清单哈希、文件计数和 `codec.rs` 成员绑定，差异0；未重跑C1全套或任何单元测试。
+- Tenki confirmation原生、文档后和preflight归档，以及Tenki validation、runner-repair、diagnostics所检查的归档，`codec.rs` ZIP成员均为 `224cb3fa…a470a36e`，并与对应清单值相等。Ground Collapse工具包ZIP/list成员为 `e8f97eef…85aad133`。其11成员工具包哈希、清单哈希及Ground Collapse preparation报告绑定一致；报告将602项工作区identity标记为 `historical_capture_metadata_not_reauthenticated`，没有把该工具包绑定到Curry实际执行。
+- 文本规范化差异显示 `224… → e8…` 新增opcode 92/56解析；`e8… → 当前`增加旧 `unparsed` 帧兼容逻辑。当前工作树原始字节SHA-256为 `62339e56…577e68`，按CRLF转LF后与HEAD中codec内容一致。Git记录的相关提交日期为2026-10-28 00:15:12 +08:00；Ground Collapse准备材料位于2026-10-27目录。时间顺序不认证runner使用关系。
+- 结论：Curry测试所需的 `224… → e8…` 专属迁移来源尚未认证；原测试失败、迁移pin及所有历史材料保持原样。此单项失败不自动否定其他独立绑定的历史报告、账本或收据。E1诊断文档SHA-256为 `bc09e78e271968ede10ec0c87ffd3a88a171ce5039d792a0ee1a2d9e98362e9a`；完整哈希表、来源角色及后续方案见[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)。
+- 遍历 `data/runtime` 时遇到访问拒绝，递归清点不完整；未调整ACL、删除或清理目录。只做本地只读哈希、ZIP成员和Git对象检查；未运行pytest、Cargo、构建、runner、worker、FFI、doctor、资产扫描或收费入口。新增原生/runner/worker/FFI/收费调用均为0。`git diff --check`通过；对本轮相关五份Markdown扫描281个本地链接目标，缺失0。该文档检查不替代任何运行时测试。
 
 ## 2026-10-28 B2本机中文牌组工作台
 

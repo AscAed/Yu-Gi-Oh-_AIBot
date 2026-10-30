@@ -6,7 +6,7 @@
 
 当前 `deploy-local.ps1` 只打包 Phantom v1/v2 知识和普通运行资产；不会复制赛事 `tournament-2026` 知识包或其隔离 CDB/Lua/core。赛事规则验真须按 `FIRST_TURN_VERIFICATION.md` 使用独立开发配置，不可通过替换普通包中的 CDB 来混用两套资产。
 
-普通D盘`dist/ygo-local`于2026-10-19按冻结资产重建。2026-10-27自检核对该旧包的CLI/worker与`build-hashes.json`一致，普通包与赛事开发配置的doctor均返回就绪、`smoke_ok=null`；之后旧包的预算受限决斗smoke和独立replay通过，详见[TESTING](TESTING.md)。
+普通D盘`dist/ygo-local`于2026-10-19按冻结资产重建。2026-10-29保存记录再次核对该旧包CLI/worker与`build-hashes.json`一致、主要配置资产路径存在，旧包doctor返回ready且`smoke_ok=null`；旧包没有`workbench`命令。之后旧包的预算受限决斗smoke和独立replay通过，详见[TESTING](TESTING.md)。哈希与路径检查不证明当前源码已经部署。
 
 2026-10-28在隔离worktree以D盘冻结资产副本、干净提交构建的包，doctor返回`ready/abi_ok/assets_ok=true`。预算受限smoke的两次独立运行分别产生318节点/27,288ms和340节点/27,310ms，均以`time_budget`终止且有3条`EngineVerified`线路；独立`combo replay`验证3/3线路。最终文档提交`d1e94b2`的包内`TESTING.md`与源码文档SHA-256相同，CLI哈希仍与此前smoke/replay使用的二进制一致。旧版CLI自身不支持`engine identity`，但当前CLI只读采样器以旧包配置读取资产后，两包均`consistent=true`；CDB、core DLL、engine/script manifest及12,727个脚本哈希一致，CLI和worker哈希不同。旧包catalog/banlist状态及Rabbit合法性检查通过。没有可比研究账本，不代表账本等价或原生研究资格。完整证据和失败/修复经过见[TESTING](TESTING.md)。
 
@@ -63,7 +63,7 @@
 
 重新导入：`catalog import --input <cards.cdb>`；`banlist import --input <OCG.lflist.conf> --commit <40位源码提交>`。指定已有快照可用 status 的 `--id`；所有数据命令支持 `--store`。显式快照 ID 可跳过 active 指针；`--store` 导入的指针保存在该 store 内，不修改其它 store。分析请求字段见 `schemas/combo-request.schema.json`。`latest-ocg` 在请求开始时解析为不晚于 `as_of` 的不可变快照 ID。
 
-JSON 完整报告写入 `--output`，未给输出路径则写 stdout；中文摘要写 stderr。程序失败返回 exit 2 和 JSON 错误。`doctor` 分开检查资产和 ABI，`smoke_ok=null` 表示该次doctor本身没有执行真实smoke；后续独立smoke的结果须另查报告。`engine smoke` 执行小预算搜索与重放；完整 golden 验收还需运行以下 opt-in 测试。
+JSON 完整报告写入 `--output`，未给输出路径则写 stdout；中文摘要写 stderr。程序失败返回 exit 2 和 JSON 错误。当前源码的`doctor`检查资产并通过worker执行ABI探针；`smoke_ok=null`表示doctor没有执行真实决斗smoke，不代表没有启动worker。旧部署包的具体内部行为应按其二进制版本和日志判定。后续独立smoke的结果须另查报告。`engine smoke`执行小预算搜索与重放；完整golden验收还需运行以下opt-in测试。
 
 ## 验证
 
