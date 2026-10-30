@@ -38,6 +38,8 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索，以及`GET /api/language-status?ids=...`只读字段状态。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。中文语义、使用和再分发资格仍未核验。
 
+工作台分析任务接口尚未实现。待实现的W1设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)：它复用`ComboAnalyzeRequest`和现有`prepare`校验，草稿ID/revision仅作为任务层输入绑定；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
+
 ## 其他拟议能力接口
 
 以下仅定义[产品愿景](PRODUCT_VISION.md)所需能力，尚无HTTP地址、wire shape或新增schema；具体小任务设计须先读现有类型，避免复制不兼容结构。

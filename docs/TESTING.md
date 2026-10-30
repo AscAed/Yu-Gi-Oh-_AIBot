@@ -1,5 +1,14 @@
 # 本机验证记录
 
+## 2026-10-30 W1工作台受限分析接入设计
+
+- 新增[W1设计文档](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)，并同步更新TASKS、INDEX、API及WORKBENCH，明确设计与现有功能的边界。
+- 静态对照了`ComboAnalyzeRequest`、`prepare`、`SearchBudget`、Rabbit样例以及工作台现有端点和安全约束。字段映射覆盖牌组、五张起手、seed、`ocg-mr5`、catalog、banlist/date和五项搜索预算；完整校验仍指向现有分析准备路径。
+- 文档场景检查覆盖空/残缺草稿、起手不匹配、资产缺失、revision冲突、预算截断、队列取消和服务重启。它们是设计预期，不是运行测试结果。
+- 额外静态审阅HTTP分派后发现，当前Origin校验只覆盖`POST`和`PUT`。因W1提出`DELETE`取消排队任务，在设计和TASKS中补入“先扩展所有状态变更方法的Origin保护并回归拒绝跨站请求”的实现门槛；未改服务代码或开放新路由。
+- 对照同步`prepare`和无进度回调的`analyze`实现，发现原设计把创建前校验与可轮询`validating`状态、内部分析阶段展示混在一起；现已改为创建请求同步校验、任务只报告持久化的`queued`/`running`及终态，运行中仅显示“分析中”。
+- 基线为`main` / `08f80ec`，工作区开始时干净。本轮只改文档；对6份相关Markdown的295个本地文件链接做静态存在性检查（缺失0），`git diff --check`通过。未运行doctor、真实分析、引擎、runner、worker、FFI或研究调用。W1任务队列与分析API仍未实现，部署状态未改变。
+
 ## 2026-10-30文档与实现边界静态复核
 
 - 依据TASKS、日期化验证、代码入口和部署清单复核项目位置及计划；源码工作区基线为`533bbd9224cc11946812939ca611669444f6bcbf`，开始时干净。新增路线见[2026-10-30项目现状与后续路线](superpowers/plans/2026-10-30-project-status-and-next-steps.md)。
