@@ -1,3 +1,5 @@
+#[path = "workbench/analysis_http.rs"]
+mod analysis_http;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -42,6 +44,7 @@ impl WorkbenchConfig {
 }
 
 pub struct WorkbenchServer {
+    analysis: Option<Arc<analysis_http::AnalysisHttpService>>,
     listener: TcpListener,
     address: SocketAddr,
     token: String,
@@ -78,6 +81,7 @@ impl WorkbenchServer {
             .map_err(|error| format!("workbench_listener_failed: {error}"))?;
         let token = secure_random_hex(32)?;
         Ok(Self {
+            analysis: None,
             listener,
             address,
             token,
@@ -105,6 +109,7 @@ impl WorkbenchServer {
     }
 
     pub fn serve_until(self, stop: &AtomicBool) -> Result<(), String> {
+        let analysis = self.analysis;
         let drafts = self.drafts;
         let catalog = self.catalog;
         let language_status = self.language_status;
@@ -120,6 +125,7 @@ impl WorkbenchServer {
                             write_json(&mut stream, 503, json!({"error":{"code":"server_busy"}}));
                         continue;
                     }
+                    let analysis = analysis.clone();
                     let drafts = drafts.clone();
                     let catalog = catalog.clone();
                     let language_status = language_status.clone();
@@ -135,6 +141,7 @@ impl WorkbenchServer {
                             &drafts,
                             catalog.as_ref(),
                             language_status.as_ref(),
+                            analysis.as_ref(),
                         );
                     });
                 }
@@ -143,6 +150,9 @@ impl WorkbenchServer {
                 }
                 Err(error) => return Err(format!("workbench_accept_failed: {error}")),
             }
+        }
+        if let Some(analysis) = analysis {
+            analysis.shutdown();
         }
         Ok(())
     }
@@ -314,6 +324,7 @@ fn handle_connection(
     drafts: &DeckDraftStore,
     catalog: Option<&(String, Arc<Catalog>)>,
     language_status: Option<&BTreeMap<u32, Value>>,
+    analysis: Option<&Arc<analysis_http::AnalysisHttpService>>,
 ) -> Result<(), String> {
     stream
         .set_write_timeout(Some(Duration::from_secs(5)))
@@ -389,6 +400,13 @@ fn handle_connection(
         }
     }
     let (path, query) = split_target(&request.target);
+    if path == "/api/analysis-operations"
+        || path.starts_with("/api/analysis-operations/")
+        || path == "/api/analysis-jobs"
+        || path.starts_with("/api/analysis-jobs/")
+    {
+        return write_response(&mut stream, analysis_http::route(analysis, &request, path));
+    }
     let response = route_request(&request, path, query, drafts, catalog, language_status);
     match response {
         Ok(response) => write_response(&mut stream, response),
@@ -780,6 +798,9 @@ fn status_text(status: u16) -> &'static str {
     match status {
         200 => "OK",
         201 => "Created",
+        202 => "Accepted",
+        422 => "Unprocessable Entity",
+        503 => "Service Unavailable",
         400 => "Bad Request",
         403 => "Forbidden",
         404 => "Not Found",

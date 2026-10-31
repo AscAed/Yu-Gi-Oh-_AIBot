@@ -13,6 +13,7 @@ use ygo_search::combo::SearchBudget;
 use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
 pub mod durable;
+pub mod http_contract;
 pub mod jobs;
 mod operation_store;
 pub mod operations;
@@ -326,7 +327,7 @@ fn map_prepare_error(error: String) -> AnalysisFreezeError {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use serde::Serialize;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -383,7 +384,7 @@ mod tests {
         format!("{kind}-{}", hash(&provenance))
     }
 
-    pub(super) fn fixtures(
+    pub(crate) fn fixtures(
         root: &Path,
     ) -> (
         DeckDraftStore,

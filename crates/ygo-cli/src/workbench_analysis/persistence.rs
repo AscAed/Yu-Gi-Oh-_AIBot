@@ -443,6 +443,14 @@ impl PersistentAnalysisJobStore {
         record: &AnalysisJobRecordV1,
         reference: &super::jobs::AnalysisJobReportRefV1,
     ) -> Result<(), PersistenceError> {
+        self.read_saved_report(record, reference).map(|_| ())
+    }
+
+    pub(super) fn read_saved_report(
+        &self,
+        record: &AnalysisJobRecordV1,
+        reference: &super::jobs::AnalysisJobReportRefV1,
+    ) -> Result<AnalysisReport, PersistenceError> {
         if !valid_id(&reference.report_id) || reference.sha256.len() != 64 {
             return Err(PersistenceError::ReportBindingMismatch);
         }
@@ -479,7 +487,7 @@ impl PersistentAnalysisJobStore {
         {
             return Err(PersistenceError::ReportBindingMismatch);
         }
-        Ok(())
+        Ok(report)
     }
 
     fn validate_root_layout(&self) -> Result<(), PersistenceError> {

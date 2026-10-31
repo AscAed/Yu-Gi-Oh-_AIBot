@@ -1,12 +1,14 @@
 # 实施任务与验收状态
 
-## 当前状态（2026-11-01）：W1-H2.1内部操作提交合成验收通过；HTTP、H3与真实分析仍开放
+## 当前状态（2026-11-01）：W1-H2.2 HTTP已接入；最终合成验收以本批日志为准
 
-本批续接见[H2.1交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。内部操作合同和持久提交已有实现，HTTP与DTO尚未接入。
+当前续接见[H2.2交接](docs/superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。六端点、异步接受、严格HTTP合同及无路径结果投影已有实现；普通启动分析保持未配置，不提供生产执行器。历史下文“HTTP未接入”描述保留其原时点；当前验收及剩余项见TESTING，本批不自动关闭H3或真实分析门禁。
 
-历史设计见[W1-H1 HTTP合同](docs/WORKBENCH_ANALYSIS_HTTP.md)，续接见[H1交接](docs/superpowers/plans/2026-10-31-w1h1-analysis-http-handoff.md)。H1时点仅设计；H2.1现已实现内部操作ID、双摘要和跨链提交/只读查询。HTTP及公开DTO仍未实现；本批实跑范围见TESTING。
+H2.1内部操作合同和持久提交为H2.2提供核心，见[H2.1交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
 
-当前路线见[W1-H2.1后路线](docs/superpowers/plans/2026-11-01-post-w1h21-project-route.md)；W1-H1及W1-B3路线保留为历史时点。H2.1内部操作存储已实现，H2.2合成HTTP投影和H3跨链故障恢复仍开放；不自动授权真实执行。
+历史设计见[W1-H1 HTTP合同](docs/WORKBENCH_ANALYSIS_HTTP.md)，续接见[H1交接](docs/superpowers/plans/2026-10-31-w1h1-analysis-http-handoff.md)。H1时点仅设计；H2.1实现内部操作ID、双摘要和跨链提交/只读查询；H2.2已有HTTP及公开DTO实现，验收门禁仍开放，本批实跑范围见TESTING。
+
+当前路线见[W1-H2.1后路线](docs/superpowers/plans/2026-11-01-post-w1h21-project-route.md)；W1-H1及W1-B3路线保留为历史时点。H2.2 HTTP实现和合成投影已存在，完整验收仍开放；H3跨链故障恢复也开放，均不自动授权真实执行。
 
 持久化实现见[W1-B3持久化与发布](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。[W1-B2后路线](docs/superpowers/plans/2026-10-31-post-w1b2-project-route.md)及更早路线保留历史时点。
 
@@ -65,7 +67,8 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-B3.3内部持久协调故障矩阵：覆盖submit/claim/cancel/fail/report文件与终态提交前失败、提交后不确定、停派发、孤立报告、重复终态请求、全部冻结资产角色/脚本路径漂移、进程强杀后的queued/interrupted与running/unknown分类。队列锁内持久提交后的状态更新没有可返回的错误分支；Rust操作系统进程强杀覆盖已完成，但文件系统每条syscall间强杀、断电/介质故障未认证。HTTP创建幂等标识与真实执行结果确认另在后续接口/执行器批次定义。
 - [x] W1-H1分析任务HTTP合同设计：操作ID/幂等、提交顺序、状态与结果DTO、安全及失败矩阵完成静态走查和独立只读审阅；无生产修改或运行测试。见[设计](docs/WORKBENCH_ANALYSIS_HTTP.md)。
 - [x] W1-H2.1内部操作存储：严格合同、36例共享语料、容量预占、幂等提交、跨链重开和停止后只读查询已合成验证，HTTP尚未实现；见[交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
-- [ ] W1-H2.2 HTTP投影：复用已实现操作提交与历史只读查询，接严格HTTP和无路径投影；仅合成执行边界，真实分析后置。
+- [x] W1-H2.2 HTTP投影实现：六端点、严格合同及无路径投影已接入；普通生产启动未配置分析后端。实现与定向验收见[交接](docs/superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
+- [ ] W1-H2.2验收关闭：穷尽新增HTTP端点持久故障矩阵和重复并发调度矩阵；当前证据及余项见[TESTING](docs/TESTING.md#2026-11-01-w1-h22-http验收续接)。
 - [ ] W1-H3故障恢复：验证跨链提交缺口、响应丢失、并发重复与停止状态的只读查询；不自动重发。
 - [ ] W1-C本机分析验收设计：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析另行安排并单独记录。
 - [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；未知项不提升为正式数据资格。

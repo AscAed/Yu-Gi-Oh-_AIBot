@@ -1,5 +1,27 @@
 # 本机验证记录
 
+## 2026-11-01 W1-H2.2 HTTP验收续接
+
+- 依据H2.2交接缺口补充：GET拒绝请求体、未配置后端时六端点均有集成检查；增加HTTP取消与队列claim并发竞争、取消后不再领取、operation/job持久写失败的HTTP行为，以及草稿revision变化后异步操作被稳定拒绝/重放的TCP回归。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo --lib workbench::analysis_http::tests:: -- --test-threads=1`：3 passed、0 failed。`cargo fmt --all`已执行并通过格式化（本命令不等于`--check`复核）。
+- 之后完成`cargo test --workspace --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- --test-threads=1`（退出0，全部执行的测试通过，仓库标记的opt-in用例保持ignored）；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- -D warnings`、`cargo fmt --all -- --check`及HTTP/operation/job三个Python schema测试（16 passed）通过。`git diff --check`通过；对134份版本控制Markdown中的1004个本地链接检查，缺失0。
+- 全量复验期间TCP用例重现10054；观测到服务开始返回400响应，但响应头中途被RST截断，未能可靠读取错误码。测试客户端改用`write_all`并在完整发送后半关闭写方向；该核心TCP用例随后连续3次通过，修正后workspace全套复验退出0，全部执行测试通过，opt-in用例仍按标记ignored。
+- H2.2仍未关闭：新增HTTP端点持久故障注入和重复并发调度的完整矩阵未穷尽。未运行真实分析、引擎、runner或部署。
+
+## 2026-11-01 W1-H2.2 合成HTTP接入
+
+- 基线main / 26756c3；保留原三份文档修改。新增六端点、严格HTTP合同/schema、无路径投影、异步接受与完成票据，以及不依赖运行时冻结对象的历史报告读取。普通启动保持analysis_not_configured，没有生产执行器或新CLI参数。
+- routes-red.log实际观察到404而预期503；合同最初是缺接口编译失败。异步核心冷编译期间实现已推进，初次命令最终通过，不能算行为红测。日志均保留，不补造失败。
+- 同一隔离target/w1h22-analysis-http-tests/cargo，offline/locked：workspace.log为426 passed、0 failed、36 ignored；随后最新CLI复跑cli-verified.log为85 passed、0 failed。两次不相加。fmt-verified.log、clippy-verified.log通过；Python新HTTP及既有operation/job schema共16 passed。workspace忽略原因逐项保存在原日志，真实资产opt-in未运行；Unix专用路径未在Windows执行。
+- 实际TCP合成测试覆盖六端点、真实W1-A冻结、屏障阻塞时202、重复提交、容量预占、排队取消、运行中/终态取消拒绝、真实报告发布及停止后历史结果读取。覆盖重复/未知JSON、非法及不存在ID；既有HTTP安全测试通过。没有使用真实分析适配器。
+- 一次CLI复跑出现测试客户端ConnectionReset，cli-latest.log保留62 passed/1 failed。测试读取改为严格Content-Length帧；其后完整CLI通过。原始重置原因未认证，不将偶然重跑成功解释为生产网络可靠性证明。
+- 独立交叉审阅发现错误状态码映射并修正；记录independent-review.json。本轮未逐项新建HTTP层全部故障注入与取消/领取双向并发矩阵；底层既有回归通过不等于这些新增端到端用例已执行，因此H2.2完整验收仍保留此缺口。完整进程崩溃/响应丢失留H3，真实分析留W1-C。
+- 新增原生研究、真实runner/worker/引擎FFI调用均0；无doctor、部署、提交或推送。会计40/7/47保持不变，历史实际累计未知。交接见[H2.2](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
+
+## 2026-11-01 H2.1路线文档静态复核
+
+本轮起始为本地干净`main / 26756c3`，比本地`origin/main`跟踪引用领先3个提交，未访问远端。文档仅依据既有TASKS、代码合同及下列日期化证据交叉复核；未运行doctor、引擎、部署、收费实验或全量测试。普通/赛事候选`e684f4e`诊断与旧普通包身份分别见下文；P4-R5因无可比账本仍开放。
+
 ## 2026-11-01 `e684f4e`隔离候选双资产部署诊断
 
 - 在独立worktree以`deploy-local.ps1 -Offline -FrozenRuntime`从`e684f4e85499e4cc17b746380e536f6cb50195a9`构建Release候选；catalog导入13,665行，banlist 203行（2026-10-01生效），知识包验证12卡。候选二进制SHA-256：CLI `7dc8e5fe9421b6fc93e6e14a88e5035f289b48c946eafa6f0f7150d19b5d6f9b`、worker `cda0a12237b562850bb81227859167ccc14f6cb1b56c6c7f1babb6e31d0be006`。

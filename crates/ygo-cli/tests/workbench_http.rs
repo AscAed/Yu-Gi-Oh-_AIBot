@@ -362,3 +362,60 @@ fn language_status_endpoint_exposes_field_states_without_translation_text_and_de
     invalid_stop.store(true, std::sync::atomic::Ordering::SeqCst);
     invalid_thread.join().unwrap();
 }
+
+#[test]
+fn analysis_routes_are_explicitly_unconfigured_without_changing_drafts() {
+    let root = TempDir(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1h22-analysis-http-tests/fixtures")
+            .join(ygo_storage::secure_random_hex(16).unwrap()),
+    );
+    fs::create_dir_all(&root.0).unwrap();
+    let mut config = WorkbenchConfig::local_default();
+    config.drafts_dir = root.join("drafts");
+    let server = WorkbenchServer::start(config).unwrap();
+    let addr = server.local_addr();
+    let token = server.token().to_owned();
+    let stop = Arc::new(AtomicBool::new(false));
+    let stopped = stop.clone();
+    let server_thread = thread::spawn(move || server.serve_until(&stopped).unwrap());
+    for (method, path, body) in [
+        (
+            "POST",
+            "/api/analysis-operations",
+            r#"{"schema_version":1,"kind":"analysis_operation_allocate"}"#,
+        ),
+        (
+            "PUT",
+            "/api/analysis-operations/11111111111111111111111111111111",
+            r#"{}"#,
+        ),
+        (
+            "GET",
+            "/api/analysis-operations/11111111111111111111111111111111",
+            "",
+        ),
+        (
+            "GET",
+            "/api/analysis-jobs/11111111111111111111111111111111",
+            "",
+        ),
+        (
+            "GET",
+            "/api/analysis-jobs/11111111111111111111111111111111/result",
+            "",
+        ),
+        (
+            "DELETE",
+            "/api/analysis-jobs/11111111111111111111111111111111",
+            r#"{"schema_version":1,"kind":"analysis_cancel","expected_revision":1}"#,
+        ),
+    ] {
+        let response = request(addr, &format!("{method} {path} HTTP/1.1\r\nHost: {addr}\r\nOrigin: http://{addr}\r\nAuthorization: Bearer {token}\r\nContent-Length: {}\r\n\r\n{body}", body.len()));
+        assert!(response.starts_with("HTTP/1.1 503"), "{response}");
+        assert!(response.contains("analysis_not_configured"));
+        assert!(response.contains("Cache-Control: no-store"));
+    }
+    stop.store(true, Ordering::SeqCst);
+    server_thread.join().unwrap();
+}

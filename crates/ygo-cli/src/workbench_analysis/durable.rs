@@ -50,6 +50,18 @@ pub struct DurableAnalysisCoordinator {
     reservation: Mutex<Option<String>>,
 }
 
+/// A durable accepting record and its optional, single-use freeze authority.
+pub struct OperationSubmission {
+    pub record: Operation,
+    pub ticket: Option<OperationFreezeTicket>,
+}
+
+/// Owned authority to finish precisely one saved accepting operation.
+/// Deliberately neither Clone nor serializable.
+pub struct OperationFreezeTicket {
+    operation: Operation,
+}
+
 fn requires_stop(error: PersistenceError) -> bool {
     matches!(
         error,
@@ -74,13 +86,20 @@ impl DurableAnalysisCoordinator {
     }
 
     #[cfg(test)]
-    pub(super) fn inject_uncertain_after_next_publish(&self) {
+    pub(crate) fn inject_uncertain_after_next_publish(&self) {
         self.store.inject_uncertain_after_next_publish();
     }
 
     #[cfg(test)]
-    pub(super) fn inject_failure_before_next_publish(&self) {
+    pub(crate) fn inject_failure_before_next_publish(&self) {
         self.store.inject_failure_before_next_publish();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn inject_operation_failure_before_next_publish(&self) {
+        self.store
+            .operation_failure
+            .store(0, std::sync::atomic::Ordering::SeqCst);
     }
 
     #[cfg(test)]
@@ -463,6 +482,83 @@ impl DurableAnalysisCoordinator {
             .history(id)
             .map_err(DurableCoordinatorError::Persistence)
     }
+    /// Distinguishes an authenticated absence from an unreadable or corrupt chain.
+    pub fn inspect_operation_optional(
+        &self,
+        id: &str,
+    ) -> Result<Option<Operation>, DurableCoordinatorError> {
+        let _guard = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        self.store
+            .authenticate_operation_bindings()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        let mut all = self
+            .store
+            .scan_operations()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        Ok(all.remove(id).and_then(|mut history| history.pop()))
+    }
+
+    pub fn inspect_job_optional(
+        &self,
+        id: &str,
+    ) -> Result<Option<AnalysisJobRecordV1>, DurableCoordinatorError> {
+        let _guard = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        self.store
+            .authenticate_operation_bindings()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        let mut all = self
+            .store
+            .scan()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        Ok(all.remove(id).and_then(|mut history| history.pop()))
+    }
+
+    /// Prevents further dispatch without changing authenticated saved history.
+    pub fn stop_dispatch(&self) -> Result<(), DurableCoordinatorError> {
+        *self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)? = true;
+        Ok(())
+    }
+
+    pub fn is_stopped(&self) -> Result<bool, DurableCoordinatorError> {
+        self.stopped
+            .lock()
+            .map(|guard| *guard)
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)
+    }
+
+    /// Authenticates a historical report without reconstructing runtime assets.
+    pub fn inspect_report(&self, id: &str) -> Result<AnalysisReport, DurableCoordinatorError> {
+        let _guard = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        self.store
+            .authenticate_operation_bindings()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        let history = self
+            .store
+            .history(id)
+            .map_err(DurableCoordinatorError::Persistence)?;
+        let record = history.last().ok_or(DurableCoordinatorError::Persistence(
+            PersistenceError::InvalidChain,
+        ))?;
+        let reference = record.report().ok_or(DurableCoordinatorError::Persistence(
+            PersistenceError::ReportBindingMismatch,
+        ))?;
+        self.store
+            .read_saved_report(record, reference)
+            .map_err(DurableCoordinatorError::Persistence)
+    }
+
     pub fn allocate_operation(
         &self,
         context: OperationContext,
@@ -533,6 +629,26 @@ impl DurableAnalysisCoordinator {
             &OperationContext,
         ) -> Result<FrozenAnalysisInput, super::AnalysisFreezeError>,
     ) -> Result<Operation, DurableCoordinatorError> {
+        let submission = self.begin_operation(id, command, context, now)?;
+        match submission.ticket {
+            None => Ok(submission.record),
+            Some(ticket) => {
+                let frozen = freeze(
+                    ticket.operation.command().expect("accepting command"),
+                    ticket.operation.context(),
+                );
+                self.finish_operation_core(ticket, now, frozen)
+            }
+        }
+    }
+
+    pub fn begin_operation(
+        &self,
+        id: &str,
+        command: OperationCommand,
+        context: &OperationContext,
+        now: u64,
+    ) -> Result<OperationSubmission, DurableCoordinatorError> {
         let mut stopped = self
             .stopped
             .lock()
@@ -563,7 +679,10 @@ impl DurableAnalysisCoordinator {
                     PersistenceError::RevisionConflict,
                 ));
             }
-            return Ok(op);
+            return Ok(OperationSubmission {
+                record: op,
+                ticket: None,
+            });
         }
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
@@ -594,7 +713,10 @@ impl DurableAnalysisCoordinator {
                 *stopped = true;
                 return Err(DurableCoordinatorError::Persistence(e));
             }
-            return Ok(op);
+            return Ok(OperationSubmission {
+                record: op,
+                ticket: None,
+            });
         }
         let job_id = ygo_storage::secure_random_hex(16)
             .map_err(|_| DurableCoordinatorError::Queue(QueueError::IdUnavailable))?;
@@ -625,7 +747,66 @@ impl DurableAnalysisCoordinator {
         *reservation = Some(id.to_owned());
         drop(reservation);
         drop(stopped);
-        let frozen = freeze(&command, op.context());
+        Ok(OperationSubmission {
+            record: op.clone(),
+            ticket: Some(OperationFreezeTicket { operation: op }),
+        })
+    }
+
+    /// Completes freezing outside the coordination lock, then durably commits it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn finish_operation(
+        &self,
+        ticket: OperationFreezeTicket,
+        now: u64,
+        drafts: &ygo_storage::DeckDraftStore,
+        snapshots: &ygo_storage::SnapshotStore,
+        engine: ygo_engine_adapter::ProcessEngineConfig,
+    ) -> Result<Operation, DurableCoordinatorError> {
+        self.finish_operation_with_clock(ticket, || now, drafts, snapshots, engine)
+    }
+
+    /// Samples completion time only after the potentially slow asset scan.
+    pub fn finish_operation_with_clock(
+        &self,
+        ticket: OperationFreezeTicket,
+        now: impl FnOnce() -> u64,
+        drafts: &ygo_storage::DeckDraftStore,
+        snapshots: &ygo_storage::SnapshotStore,
+        engine: ygo_engine_adapter::ProcessEngineConfig,
+    ) -> Result<Operation, DurableCoordinatorError> {
+        let op = &ticket.operation;
+        let cmd = op.command().expect("accepting command");
+        let frozen = super::freeze_analysis_input(
+            drafts,
+            super::AnalysisFreezeSpec {
+                draft_id: cmd.draft_id.clone(),
+                expected_revision: cmd.draft_revision.clone(),
+                opening_hand: cmd.opening_hand.clone(),
+                seed: cmd.seed,
+                rules: cmd.rules.clone(),
+                catalog_id: cmd.catalog_id.clone(),
+                banlist_id: cmd.banlist_id.clone(),
+                as_of: cmd.as_of.clone(),
+                search: cmd.search.clone(),
+            },
+            engine,
+            snapshots,
+            &op.context().default_catalog_id,
+        );
+        self.finish_operation_core(ticket, now(), frozen)
+    }
+
+    fn finish_operation_core(
+        &self,
+        ticket: OperationFreezeTicket,
+        now: u64,
+        frozen: Result<FrozenAnalysisInput, super::AnalysisFreezeError>,
+    ) -> Result<Operation, DurableCoordinatorError> {
+        let mut op = ticket.operation;
+        let id = op.operation_id().to_owned();
+        let command = op.command().expect("accepting command").clone();
+        let job_id = op.job_id().expect("accepting job").to_owned();
         let mut stopped = self
             .stopped
             .lock()
@@ -633,9 +814,31 @@ impl DurableAnalysisCoordinator {
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
         }
+        if now < op.updated_at_ms() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Operation(
+                AnalysisOperationError::TimeInvalid,
+            ));
+        }
+        if self
+            .reservation
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?
+            .as_deref()
+            != Some(id.as_str())
+        {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidChain,
+            ));
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
+        }
         let current = self
             .store
-            .operation_history(id)
+            .operation_history(&id)
             .map_err(|e| {
                 *stopped = true;
                 DurableCoordinatorError::Persistence(e)
@@ -763,6 +966,88 @@ mod operation_tests {
             search: Default::default(),
         };
         (drafts, snapshots, engine, context, command)
+    }
+    #[test]
+    fn split_completion_samples_clock_after_freeze_and_stopped_queries_remain_read_only() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let started = c
+            .begin_operation(op.operation_id(), cmd, &ctx, 101)
+            .unwrap();
+        let accepted = c
+            .finish_operation_with_clock(
+                started.ticket.unwrap(),
+                || 200,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        assert_eq!(accepted.updated_at_ms(), 200);
+        c.stop_dispatch().unwrap();
+        assert!(c.is_stopped().unwrap());
+        assert_eq!(
+            c.inspect_operation(op.operation_id())
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            OperationState::Accepted
+        );
+        assert_eq!(c.inspect_job(accepted.job_id().unwrap()).unwrap().len(), 1);
+        assert_eq!(
+            c.claim_next(201).err(),
+            Some(DurableCoordinatorError::Stopped)
+        );
+    }
+
+    #[test]
+    fn split_completion_time_rollback_stops_without_publishing_task() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let started = c
+            .begin_operation(op.operation_id(), cmd, &ctx, 101)
+            .unwrap();
+        let job_id = started.record.job_id().unwrap().to_owned();
+        assert!(c
+            .finish_operation(started.ticket.unwrap(), 100, &drafts, &snapshots, engine)
+            .is_err());
+        assert!(c.is_stopped().unwrap());
+        assert!(c.inspect_job(&job_id).is_err());
+        assert_eq!(
+            c.inspect_operation(op.operation_id())
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            OperationState::Accepting
+        );
+    }
+
+    #[test]
+    fn split_accepting_is_saved_before_freeze_and_duplicates_have_no_ticket() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let started = c
+            .begin_operation(op.operation_id(), cmd.clone(), &ctx, 101)
+            .unwrap();
+        assert_eq!(started.record.state(), OperationState::Accepting);
+        assert!(c.inspect_job(started.record.job_id().unwrap()).is_err());
+        let repeated = c
+            .begin_operation(op.operation_id(), cmd, &ctx, 102)
+            .unwrap();
+        assert!(repeated.ticket.is_none());
+        let accepted = c
+            .finish_operation(started.ticket.unwrap(), 103, &drafts, &snapshots, engine)
+            .unwrap();
+        assert_eq!(accepted.state(), OperationState::Accepted);
+        assert_eq!(accepted.updated_at_ms(), 103);
     }
     #[test]
     fn operation_actual_freeze_duplicate_and_restart_do_not_resubmit() {

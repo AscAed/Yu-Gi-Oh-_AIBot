@@ -1,5 +1,7 @@
 # 本机牌组草稿工作台
 
+当前分析HTTP v1已实现六端点及无路径DTO，但完整验收仍有门禁开放；普通启动保持`analysis_not_configured`，网页不能据此执行分析。下方“尚未接入”描述较早时点，当前实现和验证以[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)与[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)为准。
+
 W1-H2.1新增内部操作合同及持久幂等提交：操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。HTTP、结果投影及真实分析仍未接入；验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
 
 W1-H1已设计操作ID与重复请求边界，但HTTP任务接口仍未实现，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
@@ -74,3 +76,6 @@ CLI和工作台复用`ygo-storage`的草稿读写能力。草稿目录含服务�
 - 草稿不做禁限、主卡组张数、额外卡组、卡片支持或脚本语义检查。
 - 工作台不启动游戏引擎，不规划线路，不自动构筑，也不写研究账本。
 - B2验收只覆盖本机工作台流程和合成卡表。它不是通用远程服务或发布部署包。
+# H2.2 接入状态（2026-11-01）
+
+分析HTTP与无路径结果投影已有实现，普通`workbench serve`仍不配置分析服务，返回`analysis_not_configured`；草稿界面及CLI参数不变。本批只有合成HTTP验收，不能据此运行真实分析。异步冻结、历史只读结果及后续边界见[交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。

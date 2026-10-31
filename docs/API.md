@@ -1,6 +1,8 @@
 # CLI 与库接口
 
-W1-H2.1已实现内部操作合同及持久幂等提交：`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、真实W1-A冻结与等待槽预占；任务及accepted操作提交后才注册派发。重复指令复用保存结果，`inspect_operation/inspect_job`提供同锁只读查询；旧无操作根仍可用，但拒绝含操作根。H2.2的HTTP路由、公开状态/结果DTO及路径安全边界仍是[拟议合同](WORKBENCH_ANALYSIS_HTTP.md)，分析创建幂等尚未接入既有API；H3恢复验证与真实分析仍开放。实现验收见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+当前分析HTTP v1已实现六个端点及无路径DTO，完整验收门禁仍开放；普通工作台启动没有配置分析后端，故不提供分析执行能力。以下较早段落中的“尚未接入”保留各自历史状态。实现与当前证据见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)、[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)和[测试记录](TESTING.md)。
+
+历史记录：该段描述H2.1交付时点。H2.2现已实现HTTP路由、公开状态/结果DTO及路径安全边界；完整验收仍开放，H3恢复验证与真实分析仍开放。详见本文开头的当前状态说明。
 
 W1-B3内部任务/报告存储与持久协调器已实现，任务HTTP和真实执行器仍未接入。持久提交先于内存更新，报告严格读取、绑定冻结输入、落盘重读后发布；写后不确定时停派发，执行前复核资产。详见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
 
@@ -69,3 +71,6 @@ W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, 
 
 
 P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。
+# W1-H2.2 实施补充（2026-11-01）
+
+分析操作/任务六端点已按[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)接入。普通启动统一返回分析未配置，不新增CLI启用参数；测试编译可装配合成服务。首次提交持久保存accepting后202返回，冻结在后台完成；GET读取认证历史，结果仅返回白名单投影。见[本批交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。以下历史设计描述按原时点保留。

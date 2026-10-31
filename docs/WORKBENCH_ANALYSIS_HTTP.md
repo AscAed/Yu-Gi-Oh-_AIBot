@@ -1,6 +1,6 @@
 # W1-H1 分析任务HTTP合同设计
 
-实现状态补充：H2.1已新增内部操作存储、预分配任务ID、容量预占、幂等提交、跨链重开及同锁只读查询；本文HTTP端点和状态/结果DTO仍未实现。历史H1章节的“拟议”描述保留设计时点；具体实现与验证见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+当前状态：H2.1提供内部操作存储；H2.2已实现本文六个HTTP端点及状态/结果DTO。普通启动未配置分析服务，完整验收关闭仍开放，详见[TASKS](../TASKS.md)和[TESTING](TESTING.md)。本文早期“拟议”描述保留设计时点，不代表当前接口未实现。
 
 日期：2026-10-31；设计基线main / 577924b。本文接口及公开DTO为设计合同；H2.1后来实现了内部操作存储，但当前[工作台](WORKBENCH.md)没有任务HTTP，不能据此声称分析用户流程已接通。
 
@@ -127,3 +127,6 @@ H3覆盖响应丢失、并发重复、所有跨链发布缺口、停派发只读
 静态对照源码：[现有HTTP与安全门禁](../crates/ygo-cli/src/workbench.rs)、[W1-A冻结](../crates/ygo-cli/src/workbench_analysis.rs)、[任务合同](../crates/ygo-cli/src/workbench_analysis/jobs.rs)、[持久协调器](../crates/ygo-cli/src/workbench_analysis/durable.rs)、[存储/报告](../crates/ygo-cli/src/workbench_analysis/persistence.rs)、[分析合同校验](../crates/ygo-api/src/combo.rs)、[预算/评分/线路](../crates/ygo-search/src/combo.rs)、[Rabbit样例](../tests/fixtures/rabbit.request.json)。内部queue位于workbench_analysis/queue.rs（由workbench_analysis模块载入），不据模块声明推断HTTP已实现。
 
 独立只读设计审阅已完成：核对上述实现、任务与持久化文档、Choice及Rabbit参数；未发现核心提交策略阻断。按审阅补齐草稿revision字符串与任务整数revision区别、操作状态边/重复拒绝语义、Evaluation自由文本隔离及固定统计白名单。该结论为静态设计审阅，未构建或运行接口、恢复、引擎测试。
+# H2.2 实施补充（2026-11-01）
+
+本文六端点现已有实现及测试专用合成服务，生产启动保持未配置；并非真实分析后端。接受阶段持久保存accepting后返回202，后续锁外冻结与完成提交复用H2.1核心；历史下文的“尚未实现”属于H1时点。当前测试证据与限制见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。

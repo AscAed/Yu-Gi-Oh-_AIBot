@@ -2,7 +2,9 @@
 
 ## 信息优先级
 
-当前内部操作实现及验收见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)，HTTP仍未接入。当前接口设计见[W1-H1 HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，H1交接仅作设计历史；当前实施顺序见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)，旧路线均保留历史时点。
+最新实施见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)：六个分析HTTP端点和无路径投影已接入；普通启动仍未配置分析后端。最终合成验收状态回到TASKS与TESTING。
+
+H2.1为H2.2提供持久操作提交核心，见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。H2.2已有六端点实现、严格合同和合成测试；完整验收仍有故障矩阵等门禁开放。接口细节见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实施与证据状态以[TASKS](../TASKS.md)、[TESTING](TESTING.md)及[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)为准。当前路线见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)。
 
 实现事实以当前源码、schema和可复现产物为准。按职责读取以下唯一事实源；历史计划和聊天仅作背景。
 
