@@ -2,7 +2,7 @@
 
 ## 当前代码与本机包
 
-2026-10-30本轮文档核对基线为本地`main` / `d3bc212`；W1-A在源码中完成，但旧普通包未刷新。CLI与worker哈希匹配包清单，engine.toml六个主要路径存在；这是静态核对，不是当前源码部署或运行验收。详见[本轮验证](TESTING.md#2026-10-30-w1-a后路线文档复核)。
+2026-10-31当前源码基线为`main / 8c7d4d50b9eee70e381ee3744fbde3cb70f8c9af`（PR #12）。本机普通包仍为2026-10-19构建；本轮实际运行包内`engine doctor`为ready，ABI/assets检查通过，`smoke_ok=null`。CLI/worker哈希与包内清单相符，六项主要资产路径存在；这些结果核验的是旧包自身，不证明当前源码已部署。详见[本轮部署与CI复核](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
 
 当前 Rust 源码包含 v1–v5 正式 Combo 规划分派，以及未开放为正式规划入口的 first-turn 内部预测/局部执行与知识验真。部署脚本会把当前 workspace CLI 和 worker 复制到 `dist/ygo-local`，但不因此使尚未通过完整语义关口的 first-turn 成为正式 v6。部署包绑定当前仓库路径，不能直接搬到另一台机器。
 

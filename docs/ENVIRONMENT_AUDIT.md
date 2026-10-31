@@ -25,6 +25,10 @@
 
 `pyproject.toml` 将默认 `testpaths` 固定为 `tests/`，缓存仍写到忽略的 `target/pytest-cache`。修复前从仓库根目录直接运行 `py -m pytest` 会继续递归扫描忽略的 `data/runtime/`，在受ACL保护的测试临时目录触发512个collection权限错误并停止；不是512个断言失败。修复后默认collect-only只发现`tests/`的767项，未进入runtime。完整用例仍须单独查看[TESTING](TESTING.md)的本轮结果；被保护的历史材料保持原位。
 
+## 2026-10-31 普通包现场诊断
+
+当前源码已推进到`main / 8c7d4d5`，普通`dist/ygo-local`仍是2026-10-19本地包。现场doctor退出0且返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`；包内CLI/worker哈希匹配清单，配置中的worker、ocgcore、catalog、scripts、script manifest和engine manifest六个路径均存在。doctor调用worker的ABI探针；未运行决斗smoke、未重新部署或切换资产。输出和CI复验见[TESTING](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+
 ## 构建与发布状态
 
 - 构建/部署脚本：`scripts/build-engine.ps1`、`scripts/deploy-local.ps1`。支持 `-Offline`；部署使用 `-FrozenRuntime` 时不从 Project Ignis 覆盖已冻结资产。
