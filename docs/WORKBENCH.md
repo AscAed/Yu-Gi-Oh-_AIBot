@@ -1,12 +1,6 @@
 # 本机牌组草稿工作台
 
-当前分析HTTP v1已实现六端点及无路径DTO，但完整验收仍有门禁开放；普通启动保持`analysis_not_configured`，网页尚无任务操作界面。当前实现和验证以[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)与[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)为准。
-
-H2.1交付了内部操作合同、持久幂等提交、容量预占、跨链认证和停止后的只读查询；H2.2随后接入六个HTTP端点及无路径DTO。阶段交接见[H2.1](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)和[H2.2](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
-
-H2.2源码实现已在本地HTTP路由中，但普通`workbench serve`没有分析服务实例，因此分析端点明确返回`analysis_not_configured`；真实分析后端和工作台任务UI均未交付。HTTP合同、当前完整验收缺口及状态码见[分析HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
-
-W1-A冻结、B1任务合同、B2进程内队列与B3持久存储/协调器的职责和限制分别见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)、[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)和[分析HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。合成报告不认证真实来源；逐syscall崩溃、断电和H3响应丢失矩阵未验收。报告与任务不能替代真实分析或规则证明。
+当前HTTP v1源码包含六个分析端点及无路径DTO；普通`workbench serve`未配置分析后端，分析请求返回`analysis_not_configured`，网页也没有任务操作界面。H2.2完整故障/并发验收、H3恢复和真实分析仍开放。接口与状态码见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实现及验证证据见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)和[TESTING](TESTING.md)。
 
 工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。
 
@@ -49,9 +43,9 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 | `GET /api/cards?q=...` | 可选catalog中的卡号或原始名称检索 |
 | `GET /api/language-status?ids=...` | 可选C1报告中的逐字段状态；不返回候选译文 |
 
-文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。网页尚无分析操作界面；普通服务未配置分析后端。自动构筑和已认证中文搜索也未提供。
+文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。自动构筑和已认证中文搜索也未提供。
 
-分析操作和任务端点另见[分析HTTP v1合同](WORKBENCH_ANALYSIS_HTTP.md)：源码实现已接入，普通启动仍返回`analysis_not_configured`，完整合成验收有门禁开放。
+分析端点完整请求/响应合同见[分析HTTP v1合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
 ## 分析 HTTP 接入与运行状态
 
@@ -74,6 +68,3 @@ CLI和工作台复用`ygo-storage`的草稿读写能力。草稿目录含服务�
 - 草稿不做禁限、主卡组张数、额外卡组、卡片支持或脚本语义检查。
 - 工作台不启动游戏引擎，不规划线路，不自动构筑，也不写研究账本。
 - B2验收只覆盖本机工作台流程和合成卡表。它不是通用远程服务或发布部署包。
-# H2.2 接入状态（2026-11-01）
-
-分析HTTP与无路径结果投影已有实现，普通`workbench serve`仍不配置分析服务，返回`analysis_not_configured`；草稿界面及CLI参数不变。本批只有合成HTTP验收，不能据此运行真实分析。异步冻结、历史只读结果及后续边界见[交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。

@@ -1,10 +1,6 @@
 # 项目现状
 
-2026-11-01文档复核基线为本地`main / 26756c3`；此前`e684f4e`为隔离候选功能源码，2026-10-19普通旧包和赛事资产有各自身份。W1-H2.1内部提交已合成验收；H2.2 HTTP/DTO已接入，完整验收关闭、H3及真实分析仍开放；[当前路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)继续为唯一实施入口。
-
-2026-11-01复核源码包含W1-H2.1内部操作链、幂等提交及跨链恢复，以及H2.2六端点/公开DTO；workspace测试、Clippy、fmt和schema定向检查通过。H2.2完整验收关闭、H3强化恢复、真实分析和P4-R5最新源码部署验收仍开放。当前路线见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)；下方基线为历史时点。
-
-本评估以当前能力矩阵为主，源码复验基底为2026-10-31 `main / 8526c1f`及本批历史保护测试更新；部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器、claim资产哈希门禁及内部合成故障矩阵已有验证；HTTP、真实分析、逐syscall崩溃和断电验收仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
+截至2026-11-01，当前项目是具备本机草稿工作台和分析HTTP v1源码实现的有限场景研究原型。普通`workbench serve`未配置分析后端；HTTP完整故障/并发验收、H3恢复、真实分析和P4-R5最新源码部署仍开放。具体进度唯一见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)，实施顺序见[当前路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)。本评估用于汇总能力和差距，不替代这些事实源。
 
 ## 产品目标
 
@@ -23,7 +19,7 @@
 | 工作区/双资产身份、覆盖清点、研究输入和独立响应oracle | 已验证（首批工具） | 独立v1合同；canonical响应匹配不授予完整动作或最优资格，来源/中文及全卡缺口仍保留，见BASELINE_AUDIT与RESEARCH_AUDIT |
 | P1局部终场、公开观察与提示研究 | 局部验证 | Rabbit、Tenki、Curry仅各自冻结案例；Ground Collapse仅离线准备，原生可达/响应接受未知，见[P1候选](P1_MICROCASE.md)及[本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md) |
 | 草稿保存、分区编辑、YDK/JSON往返 | 基础工具和本机浏览器工作台已交付 | `DeckDocumentV1`允许残缺及重复卡；不授予完整合法性，见[草稿CLI](DECK_DRAFTS.md)与[工作台](WORKBENCH.md) |
-| 工作台分析接入 | W1-A输入冻结、W1-B2进程内队列及W1-B3持久协调已合成验收 | 任务/报告存储、claim资产门禁及内部故障恢复矩阵已实现；HTTP、执行器、真实分析、逐syscall崩溃/断电验收仍开放，见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md) |
+| 工作台分析接入 | H2.2六个HTTP端点与无路径DTO已实现，集成检查通过 | 完整HTTP持久故障/并发矩阵仍开放；普通服务未配置分析后端，执行器与真实分析未交付；H3、逐syscall崩溃/断电仍单独开放，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md) |
 | 中文字段来源盘点 | 已完成有限样本离线盘点 | 冻结39卡的字段存在性及来源哈希已登记；语义、zh-SC类别、别名映射及使用/再分发依据未通过，不能开放正式中文检索 |
 | 自动从字段构筑、补全残缺牌组、构筑优化 | 未实现 | 当前不得输出已优化或全局最佳构筑 |
 | 任意手坑/对手策略、后攻、解场和完整对局 | 未实现 | 已有灰流丽固定场景不能外推为通用抗干扰能力 |

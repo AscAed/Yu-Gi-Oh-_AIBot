@@ -34,7 +34,7 @@ E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…`
 
 W1设计后的A阶段已交付：工作台所有API非GET请求在路由前均须通过本机Host、Bearer令牌和同源Origin门禁；Rust库新增内部`freeze_analysis_input`，在同一草稿存储锁内核对ID/revision并复制草稿，再通过现有`prepare`冻结搜索请求、已解析catalog/banlist及引擎资产身份。它不增加HTTP分析入口、队列或任务，也不运行适配器。见[W1-A交接](docs/superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)与[实测记录](docs/TESTING.md#2026-10-30-w1-a工作台同源保护与分析输入冻结)。
 
-W1-B1已完成无路径`AnalysisJobRecordV1`、严格JSON与纯状态核心；W1-B2提供进程内合成队列；W1-B3实现任务revision、报告私有存储、报告引用启动核验、持久协调器及内部合成故障矩阵。领取时先持久化running，再核对冻结期资产哈希；不匹配或提交结果不确定时停止协调器，重开时按已提交revision分类。报告来源和真实执行未认证；任务HTTP、W1-C真实分析、逐syscall崩溃和断电验收仍开放。最新验证见[TESTING](docs/TESTING.md)。
+历史交付（W1-B1至B3）：完成无路径`AnalysisJobRecordV1`、严格JSON、纯状态核心、进程内合成队列、任务revision、报告私有存储、报告引用启动核验、持久协调器及内部合成故障矩阵。领取时先持久化running，再核对冻结期资产哈希；不匹配或提交结果不确定时停止协调器，重开时按已提交revision分类。H2.2随后接入任务HTTP及无路径DTO；当前剩余HTTP验收矩阵列于下方独立任务。报告来源、真实执行、逐syscall崩溃和断电持久性仍未认证。最新验证见[TESTING](docs/TESTING.md)。
 
 C1离线字段核验已完成：冻结39卡逐项记录zh-CN/zh-SC名称、正文、别名及字段状态和候选哈希；候选正文不进入报告或工作台接口。zh-SC继续为`und`，语义审阅、使用依据和再分发资格未通过。报告、统计与限制见[LANGUAGE_REVIEW](docs/LANGUAGE_REVIEW.md)、[DATA_SOURCES](docs/DATA_SOURCES.md)和[TESTING](docs/TESTING.md)。
 
@@ -79,7 +79,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。
-- [ ] P4-R5：已从`e684f4e`离线重建隔离候选；普通/赛事doctor与身份均通过，普通与赛事smoke/replay各3/3通过。smoke均因30秒time_budget截断；账本比较对象仍未找到，故发布验收保持开放。完整哈希和边界见[TESTING](docs/TESTING.md)。
+- [ ] P4-R5：已在隔离目录从`a21d587`重建当前源码候选；普通/赛事doctor、身份均通过，smoke及独立replay各3/3通过。主工作区普通dist未切换。smoke均因30秒`time_budget`截断，且未找到可比研究账本，故发布门禁仍开放；完整哈希、资产身份和边界见[TESTING](docs/TESTING.md)。
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 

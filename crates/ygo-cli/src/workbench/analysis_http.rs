@@ -727,6 +727,141 @@ mod tests {
     }
 
     #[test]
+    fn operation_allocation_store_failure_is_reported_and_stops_acceptance() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1h22-analysis-http-tests/fixtures")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        std::fs::create_dir_all(&root).unwrap();
+        let (drafts, snapshots, engine, catalog, _, _) = fixtures(&root);
+        let coordinator =
+            Arc::new(DurableAnalysisCoordinator::open_operations(root.join("jobs-store")).unwrap());
+        let service = Arc::new(AnalysisHttpService {
+            coordinator: coordinator.clone(),
+            context: AnalysisOperationContext {
+                scoring: Default::default(),
+                default_catalog_id: catalog,
+                configuration_sha256: "a".repeat(64),
+            },
+            drafts: Arc::new(drafts),
+            snapshots,
+            engine,
+            accepting: AtomicBool::new(true),
+            background: Mutex::new(Vec::new()),
+            freeze_gate: None,
+        });
+
+        coordinator.inject_operation_failure_before_next_publish();
+        let body = serde_json::to_vec(
+            &serde_json::json!({"schema_version":1,"kind":"analysis_operation_allocate"}),
+        )
+        .unwrap();
+        let (status, error) = service.route("POST", "/api/analysis-operations", &body);
+        assert_eq!(status, 503);
+        assert_eq!(error["error"]["code"], "analysis_store_unverifiable");
+        assert!(service.background.lock().unwrap().is_empty());
+        assert!(coordinator.is_stopped().unwrap());
+
+        let (status, stopped) = service.route("POST", "/api/analysis-operations", &body);
+        assert_eq!(status, 503);
+        assert_eq!(stopped["error"]["code"], "analysis_coordinator_stopped");
+    }
+
+    #[test]
+    fn uncertain_cancel_commit_is_reported_and_stops_further_dispatch() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1h22-analysis-http-tests/fixtures")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        std::fs::create_dir_all(&root).unwrap();
+        let (drafts, snapshots, engine, catalog, banlist, draft) = fixtures(&root);
+        let saved = drafts.create(draft.clone()).unwrap();
+        let drafts = Arc::new(drafts);
+        let coordinator =
+            Arc::new(DurableAnalysisCoordinator::open_operations(root.join("jobs-store")).unwrap());
+        let service = Arc::new(AnalysisHttpService {
+            coordinator: coordinator.clone(),
+            context: AnalysisOperationContext {
+                scoring: Default::default(),
+                default_catalog_id: catalog,
+                configuration_sha256: "a".repeat(64),
+            },
+            drafts,
+            snapshots,
+            engine,
+            accepting: AtomicBool::new(true),
+            background: Mutex::new(Vec::new()),
+            freeze_gate: None,
+        });
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("http-drafts");
+        let mut server = WorkbenchServer::start(config).unwrap();
+        server.analysis = Some(service.clone());
+        let addr = server.local_addr();
+        let token = server.token().to_owned();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stopping = stop.clone();
+        let server_thread = std::thread::spawn(move || server.serve_until(&stopping).unwrap());
+
+        let operation = request(
+            addr,
+            &token,
+            "POST",
+            "/api/analysis-operations",
+            serde_json::json!({"schema_version":1,"kind":"analysis_operation_allocate"}),
+        )
+        .1;
+        let operation_path = format!(
+            "/api/analysis-operations/{}",
+            operation["operation_id"].as_str().unwrap()
+        );
+        let command = serde_json::json!({"schema_version":1,"kind":"analysis_submit","draft_id":saved.id,"draft_revision":saved.revision,"opening_hand":draft.main[..5],"seed":1,"rules":"ocg-mr5","catalog_id":null,"banlist_id":banlist,"as_of":"2026-10-30","search":ygo_search::combo::SearchBudget::default()});
+        assert_eq!(
+            request(addr, &token, "PUT", &operation_path, command).0,
+            202
+        );
+        for handle in service.background.lock().unwrap().drain(..) {
+            handle.join().unwrap();
+        }
+        let accepted = request(addr, &token, "GET", &operation_path, Value::Null).1;
+        assert_eq!(accepted["state"], "accepted");
+        let job_path = format!(
+            "/api/analysis-jobs/{}",
+            accepted["job_id"].as_str().unwrap()
+        );
+
+        coordinator.inject_uncertain_after_next_publish();
+        let (status, uncertain) = request(
+            addr,
+            &token,
+            "DELETE",
+            &job_path,
+            serde_json::json!({"schema_version":1,"kind":"analysis_cancel","expected_revision":1}),
+        );
+        assert_eq!(status, 503);
+        assert_eq!(uncertain["error"]["code"], "analysis_commit_uncertain");
+
+        let (status, saved_job) = request(addr, &token, "GET", &job_path, Value::Null);
+        assert_eq!(status, 200);
+        assert_eq!(saved_job["state"], "cancelled");
+        assert_eq!(saved_job["service_state"], "stopped");
+        assert!(matches!(
+            coordinator.claim_next(now().unwrap()),
+            Err(DurableCoordinatorError::Stopped)
+        ));
+        let (status, retry) = request(
+            addr,
+            &token,
+            "DELETE",
+            &job_path,
+            serde_json::json!({"schema_version":1,"kind":"analysis_cancel","expected_revision":1}),
+        );
+        assert_eq!(status, 503);
+        assert_eq!(retry["error"]["code"], "analysis_coordinator_stopped");
+
+        stop.store(true, Ordering::SeqCst);
+        server_thread.join().unwrap();
+    }
+
+    #[test]
     fn stale_draft_revision_is_saved_as_a_repeatable_http_rejection() {
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/w1h22-analysis-http-tests/fixtures")

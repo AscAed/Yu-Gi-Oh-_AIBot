@@ -64,7 +64,7 @@ request、identity和scoring的成员顺序分别使用当前Rust类型声明顺
 | 非法边/终态再推进 | job_transition_invalid | 不推进 |
 | 报告ID/hash/原因或空线路配对 | job_report_invalid | 不推进 |
 
-B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1-B2已将冻结输入与状态转换接入进程内队列；W1-B3已增加任务/报告文件存储、基础持久先行协调器及内部故障矩阵。合成矩阵覆盖发布前后不确定、停派发、重开分类、重复终态和资产漂移；不认证文件系统逐syscall崩溃/断电。协调器尚未接入任务HTTP端点、执行器、真实引擎或研究账本。持久化细节见[W1-B3设计与实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)，历史队列交接见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-C另做真实本机分析验收。
+历史交付记录（W1-B1至B3）：B1状态转换不调用adapter、进程或研究账本、不写任务文件；W1-B2接入进程内队列；W1-B3增加任务/报告文件存储、持久先行协调器及内部故障矩阵。合成矩阵覆盖发布前后不确定、停派发、重开分类、重复终态和资产漂移；不认证文件系统逐syscall崩溃/断电。H2.2随后接入任务HTTP端点；普通启动仍未配置分析后端，也未接真实执行器、引擎或研究账本。持久化细节见[W1-B3设计与实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)，历史队列交接见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-C另做真实本机分析验收。
 
 ## W1-B2 内部队列（2026-10-31）
 

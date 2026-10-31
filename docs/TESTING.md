@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-01 H2.2 HTTP提交不确定回归与文档续核
+
+- 在`main / c6faa29`复核TASKS、INDEX、API与工作台分析合同后，发现TASKS的W1-B1至B3总述仍把任务HTTP列为未完成，与H2.2当前实现冲突。已将该段标为历史交付并指向当前H2.2实现和仍开放的验收矩阵。
+- 新增`operation_allocation_store_failure_is_reported_and_stops_acceptance`：模拟POST操作分配的持久写失败，验证503稳定错误、停止后续接入且不创建后台工作。新增`uncertain_cancel_commit_is_reported_and_stops_further_dispatch`：模拟取消修订已发布但存储层返回提交不确定，验证HTTP回503 `analysis_commit_uncertain`、只读查询显示持久终态并标记stopped、停止后领取被拒绝且重试不会继续写入。
+- H2.2 HTTP定向用例5 passed；`cargo test --workspace --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- --test-threads=1`退出0，所有执行用例通过、opt-in用例仍忽略；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- -D warnings`及`cargo fmt --all -- --check`通过。
+- 对134份跟踪Markdown运行本地相对链接目标检查：1,002个本地链接，缺失0；`git diff --check`通过。通过合并重复段落，链接总数减少10。此类检查只验证目标文件存在，不验证页面锚点或运行行为。
+- 本小节记录的H2.2回归与文档复核未运行doctor或部署；随后在隔离目录完成的当前源码候选诊断见下一节，普通dist仍是2026-10-19制品且未改写。H2.2完整故障注入与重复并发调度矩阵仍未关闭。
+
 ## 2026-11-01 整体工作区与部署状态静态自检
 
 - 复核提交后源码为干净`main / a21d587`。`docs/INDEX.md`仍是文档入口，`TASKS.md`维护状态，`TESTING.md`维护有日期的验证；修正README、INDEX、ROADMAP、API、WORKBENCH和HTTP合同中把H2.2实现仍写成“未接入”的当前摘要。阶段历史与handoff留在日期化计划中。
@@ -7,6 +15,13 @@
 - `cargo metadata --offline --no-deps`列出9个workspace crate。`cargo tree --offline --locked -d`确认`hashbrown` 0.14.5经`hashlink/rusqlite`进入，0.17.1经`indexmap/toml_edit`进入；未发现同一直接依赖的重复声明。`cargo-machete`当前不可用，故不声称机器化未用依赖审计通过，也没有删除Rust crate或兼容路径。
 - `configs/engine.toml.legacy`是Git忽略的本地文件，含`C:/ProjectIgnis`机器路径；代码和文档没有发现其路径消费者。因其可能被人工当作回滚配置，保留并列为待确认清理项；没有将它当作部署配置或证据文件。
 - 文件级盘点发现127份docs Markdown。既有历史计划、证据链接和本机资产保留，不按文件年龄清理；用户此前决定历史证据不迁移，只保留SHA-256清单。
+
+## 2026-11-01 `a21d587`当前源码隔离部署候选复验
+
+- 从源码提交`a21d587`（H2.2 HTTP实现）归档到忽略目录`target/p4-r5-current-a21d587/`，使用`deploy-local.ps1 -Offline -FrozenRuntime`完成Release构建、13,665行普通catalog导入、203行（2026-10-01生效）banlist导入及12卡知识验证。冻结运行资产通过stage下的`data/runtime`目录junction只读复用；构建产物、身份配置及诊断报告全部留在隔离target，未覆盖普通`dist/ygo-local`或runtime资产。当前工作区HEAD为文档提交`c6faa29`，候选编译源码基线为其祖先`a21d587`。
+- 普通与赛事配置`engine doctor`均退出0：`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。identity均`consistent=true`：普通身份`90990e275176d381d7de227f2598014351944aa6291e46a658ba73301128881a`，赛事身份`efe981e791c71090bc8469a528e22de5db75bf0be38db64068212da0b0444b3b`；共用core SHA-256为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`，候选CLI/worker分别为`16a942a61ede261b567ede4e048ae99dbd8b6ada759d29df625d7465a4aadd2f`和`c2a2d46dae50254c63c9c428bec8060617e254078a985222e9ed4eec83e39e69`。
+- 普通smoke为326节点/329次引擎调用/27,290ms；赛事smoke为310节点/313次调用/27,316ms。均产生3条报告线路并因30秒`time_budget`终止。两份报告独立`combo replay`均退出0，3/3线路`engine_verified`且`replay_verified=true`。报告SHA-256分别为`37bf74305911bf7dbc8a24a521a58b69a85960ad1b6aeef7542ce97d37578890`和`4e2727adf103b96b9272129f7e0274aec1c8506f4f509b36133f824d4cd0991d`；replay输出分别为`4fa00a480502ab24b09ad7a994eb25312589313b807f7d5aa2f4090985bf6de0`和`bc4617e11e50bc0c848513029461738ec891cc2698b7118eccaf32b0f28b5d41`。两套资产使用各自active snapshot及CDB。
+- doctor的`smoke_ok=null`表示doctor自身未做决斗；独立smoke/replay确实调用了真实本机engine worker，但不是正式研究scope或消费账本，不核验研究预算。没有可比研究账本，smoke也在预算处截断，不代表全搜索、规则覆盖或最优性；因此P4-R5仍开放。主工作区普通dist未切换，赛事与普通配置也未合并。
 
 ## 2026-11-01 W1-H2.2 HTTP验收续接
 
