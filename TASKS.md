@@ -1,10 +1,10 @@
 # 实施任务与验收状态
 
-## 当前状态（2026-10-30）：P4-R1b离线门禁通过、W1-A输入冻结完成；W1任务队列与真实分析未完成
+## 当前状态（2026-10-30）：W1-B1任务合同及纯状态核心通过；任务存储、HTTP队列与真实分析未完成
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
-这是当前状态和开放任务的唯一入口。产品目标、研究定义及阶段依赖分别见[产品愿景](docs/PRODUCT_VISION.md)、[最优性研究](docs/OPTIMALITY_RESEARCH.md)和[路线图](docs/ROADMAP.md)；当前实施顺序见[W1设计完成后的项目路线](docs/superpowers/plans/2026-10-30-post-w1-project-route.md)，[2026-10-30早期路线](docs/superpowers/plans/2026-10-30-project-status-and-next-steps.md)、[2026-10-28路线](docs/superpowers/plans/2026-10-28-project-status-and-next-steps.md)及更早计划均保留各自历史时点。下方各批历史数字仅适用于其日期和范围，不覆盖本节。
+这是当前状态和开放任务的唯一入口。产品目标、研究定义及阶段依赖分别见[产品愿景](docs/PRODUCT_VISION.md)、[最优性研究](docs/OPTIMALITY_RESEARCH.md)和[路线图](docs/ROADMAP.md)；当前实施顺序见[W1-A后项目路线](docs/superpowers/plans/2026-10-30-post-w1a-project-route.md)，[W1设计后路线](docs/superpowers/plans/2026-10-30-post-w1-project-route.md)及更早计划均保留各自历史时点。下方各批历史数字仅适用于其日期和范围，不覆盖本节。
 
 | 阶段 | 当前能力与未完成门禁 |
 |---|---|
@@ -23,6 +23,8 @@ E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…`
 本批A1首次失败诊断、B1牌组草稿基础及B2本机中文浏览器工作台已完成。B2只提供本机草稿编辑、YDK/JSON导入导出和可选本地卡表查询；不表示中文译文、牌组合法性或引擎行为已核验。说明见[工作台文档](docs/WORKBENCH.md)，交接见[B2交接](docs/superpowers/plans/2026-10-28-b2-workbench-handoff.md)，实跑范围见[TESTING](docs/TESTING.md)。
 
 W1设计后的A阶段已交付：工作台所有API非GET请求在路由前均须通过本机Host、Bearer令牌和同源Origin门禁；Rust库新增内部`freeze_analysis_input`，在同一草稿存储锁内核对ID/revision并复制草稿，再通过现有`prepare`冻结搜索请求、已解析catalog/banlist及引擎资产身份。它不增加HTTP分析入口、队列或任务，也不运行适配器。见[W1-A交接](docs/superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)与[实测记录](docs/TESTING.md#2026-10-30-w1-a工作台同源保护与分析输入冻结)。
+
+W1-B1已完成无路径`AnalysisJobRecordV1`、严格JSON与纯状态核心，121项共享语料及完整状态矩阵通过；workspace串行374 passed、36 ignored，相关Python 30 passed、2 skipped。报告引用只核对记录关系，不认证文件或实际执行。当前断点见[W1-B1交接](docs/superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)与[任务合同](docs/WORKBENCH_ANALYSIS_JOBS.md)；本批完成后暂停，下一关口为W1-B2，W1-B3存储/发布/重启及W1-C真实分析仍开放。
 
 C1离线字段核验已完成：冻结39卡逐项记录zh-CN/zh-SC名称、正文、别名及字段状态和候选哈希；候选正文不进入报告或工作台接口。zh-SC继续为`und`，语义审阅、使用依据和再分发资格未通过。报告、统计与限制见[LANGUAGE_REVIEW](docs/LANGUAGE_REVIEW.md)、[DATA_SOURCES](docs/DATA_SOURCES.md)和[TESTING](docs/TESTING.md)。
 
@@ -46,8 +48,11 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1工作台受限分析接入设计：已按Rabbit请求核对输入映射、完整牌组/资产门禁、任务状态、排队取消和有限搜索结果边界；仅为设计，未实现分析接口。见[W1设计](docs/superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)及[本轮静态记录](docs/TESTING.md#2026-10-30-w1工作台受限分析接入设计)。
 - [x] D3：以W1设计分支为文档基线，记录当前定位、部署交叉核对和后续双轨路线；链接、差异及文件范围检查见[2026-10-30 W1后路线文档核对](docs/TESTING.md#2026-10-30-w1设计完成后的路线文档核对)。
 - [x] W1-A工作台同源保护与分析输入冻结：API非GET请求统一执行Host/token/Origin门禁；同锁读取草稿revision，以现有`prepare`验证牌组、手牌、禁限日期、预算及snapshot/CDB身份，并返回拥有独立数据的冻结对象。合成测试未启动adapter、worker或研究账本；不提供分析HTTP端点。见[交接](docs/superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)和[TESTING](docs/TESTING.md#2026-10-30-w1-a工作台同源保护与分析输入冻结)。
-- [ ] W1-B排队与结果边界：实现单运行加单排队、排队取消、持久化顺序、重启未知状态、预算截断和报告展示；持久化任务记录须与含本机路径/完整catalog的进程内冻结对象分离；不伪造实时进度或自动重发。
-- [ ] W1-C本机分析验收：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析验收单独记录。
+- [x] D4：更新W1-A后评估、部署身份及双轨路线；静态核对见[TESTING](docs/TESTING.md#2026-10-30-w1-a后路线文档复核)。
+- [x] W1-B1任务合同及纯状态核心：独立无路径白名单、双摘要、严格JSON、状态矩阵与合成兼容验收通过；不序列化进程内冻结对象，不提供任务存储、HTTP或队列。见[交接](docs/superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
+- [ ] W1-B2合成队列与取消：单运行加单排队、排队取消、容量拒绝和同源保护。
+- [ ] W1-B3发布与重启：持久化顺序、截断、失败和重启未知状态；不伪造进度或自动重发。
+- [ ] W1-C本机分析验收设计：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析另行安排并单独记录。
 - [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；未知项不提升为正式数据资格。
 - [ ] P4-R1b-3真实恢复实验设计：定义固定场景、独立scope、预算、窗口、暂停/重开及独立原生重放标准；设计完成后真实执行另行授权。
 - [ ] W2普通用户发布准备：独立干净环境验证启动、资源路径、草稿、导入导出和升级兼容；分别绑定源码、构建产物及资产身份。
@@ -60,7 +65,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 
-上述排序、依赖和停止条件见[W1后项目路线](docs/superpowers/plans/2026-10-30-post-w1-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
+上述排序、依赖和停止条件见[W1-A后项目路线](docs/superpowers/plans/2026-10-30-post-w1a-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
 
 前次交付后的603项源码归档身份、原生时点身份和普通dist是不同对象；后续文档、pytest配置和Cargo依赖整理已改变工作区，不再声称其与该归档完整逐字一致。实跑与静态核对分别见[TESTING](docs/TESTING.md)，历史导航见[HISTORY_INDEX](docs/HISTORY_INDEX.md)。
 

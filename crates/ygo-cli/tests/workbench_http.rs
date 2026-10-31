@@ -5,7 +5,10 @@ use std::{
     net::TcpStream,
     ops::Deref,
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc,
+    },
     thread,
     time::Duration,
 };
@@ -30,16 +33,17 @@ impl Drop for TempDir {
 }
 
 fn temp_dir() -> TempDir {
-    let path = std::env::temp_dir().join(format!(
-        "ygo-workbench-http-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-    fs::create_dir_all(&path).unwrap();
-    TempDir(path)
+    static NEXT_TEMP_DIR_ID: AtomicU64 = AtomicU64::new(0);
+    loop {
+        let id = NEXT_TEMP_DIR_ID.fetch_add(1, Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("ygo-workbench-http-{}-{id}", std::process::id(),));
+        match fs::create_dir(&path) {
+            Ok(()) => return TempDir(path),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("create test temp directory failed: {error}"),
+        }
+    }
 }
 
 fn request(addr: std::net::SocketAddr, raw: &str) -> String {

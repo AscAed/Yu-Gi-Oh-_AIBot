@@ -1,5 +1,7 @@
 # 本机环境与资产审计
 
+2026-10-30 W1-A后本地核对基线为`main` / `d3bc212`；旧普通包两个可执行文件哈希匹配其清单、配置六个主要资产路径存在。此项未运行程序或核验所有资产内容；赛事开发配置和2026-10-28历史隔离部署仍按各自身份及证据读取，P4-R5开放。此前`8315232`是W1设计阶段历史基线，见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
+
 原目录体积审计日期：2026-10-19；这些数值会随实验和构建变化。2026-10-27自检分别对普通包和赛事开发配置运行doctor，并清理经逐项确认的空测试目录。2026-10-30仅对保存的部署/CI证据及源码实现作静态复核，没有重跑运行时命令。下方日期段落保留各自时点的环境状态；2026-10-28已由开发CLI交付本机loopback草稿工作台，不能再将旧段落的“尚无前端/HTTP”当作当前状态。本页不包含卡库或引擎资产本体，精确证据见[TESTING](TESTING.md)。
 
 后续首批基线实施新增忽略目录`data/runtime/baseline-2026-10-19/`，包含固定上游数据调查、双资产清点、中文候选、原生批账本/blobs和身份/构建记录。这些是证据，不是纯缓存；旧版或损坏的中间报告也保留，当前使用的报告文件由TESTING明确指定。开发构建与原生运行已分开执行，普通dist及active快照不在本批切换范围。上文旧体积不代表新增后的总占用。
@@ -18,6 +20,10 @@
 | `.venv/` | 本地 Python 3.14.7 环境，可启动解释器，但检查时未安装 pip 或 pytest | 保留原位；不能假定该环境可执行完整测试。系统Python及独立3.12测试环境分别记录 |
 
 文件数/体积来自前次本地目录扫描；少数由系统保护的pip临时子目录可能未被递归读取。不要将此处统计当作本轮重新测量或精确配额。
+
+## 2026-10-30 pytest默认收集边界
+
+`pyproject.toml` 将默认 `testpaths` 固定为 `tests/`，缓存仍写到忽略的 `target/pytest-cache`。修复前从仓库根目录直接运行 `py -m pytest` 会继续递归扫描忽略的 `data/runtime/`，在受ACL保护的测试临时目录触发512个collection权限错误并停止；不是512个断言失败。修复后默认collect-only只发现`tests/`的767项，未进入runtime。完整用例仍须单独查看[TESTING](TESTING.md)的本轮结果；被保护的历史材料保持原位。
 
 ## 构建与发布状态
 
@@ -48,9 +54,9 @@
 
 最新Ground Collapse离线准备将证据和测试材料保存在独立runtime及target目录；其交付体积清单约7.33GB且记录一项ACL访问失败，不能当作全工作区或所有证据的完整体积。本次未重新统计，也未调整ACL或删除这些材料。
 
-## 2026-10-30 W1设计后工作区复核
+## 2026-10-30 W1设计后工作区复核（历史时点）
 
-当前核对基线为分支`codex/w1-workbench-analysis-design-20261030`、HEAD `8315232`，工作区起始干净。该分支包含W1受限分析接入设计，任务接口尚未实现。普通`dist/ygo-local`的CLI/worker SHA-256与其`build-hashes.json`相符；engine.toml列出的worker、core、catalog、scripts、script manifest及engine manifest六个路径均存在。该核对没有运行包内程序、没有重新检查所有资产内容，也不能证明当前源码已部署或发布包可移植。
+当次核对基线为分支`codex/w1-workbench-analysis-design-20261030`、HEAD `8315232`，工作区起始干净。该分支包含W1受限分析接入设计，任务接口尚未实现。普通`dist/ygo-local`的CLI/worker SHA-256与其`build-hashes.json`相符；engine.toml列出的worker、core、catalog、scripts、script manifest及engine manifest六个路径均存在。该核对没有运行包内程序、没有重新检查所有资产内容，也不能证明后续源码已部署或发布包可移植。
 
 历史普通包doctor内部进程行为仍未知。当前源码doctor经worker执行ABI探针，但不将该源码行为推断为旧包行为。W1接口设计不能视为普通包具备分析功能；部署与工作台边界见[DEPLOYMENT](DEPLOYMENT.md)、[WORKBENCH](WORKBENCH.md)及[W1后路线](superpowers/plans/2026-10-30-post-w1-project-route.md)。
 

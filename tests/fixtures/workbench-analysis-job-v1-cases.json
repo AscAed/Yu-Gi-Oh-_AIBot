@@ -1,0 +1,1811 @@
+{
+  "description": "Independent synthetic typed-encoding golden; Python hashlib, no engine/data sources. Schema expectations isolate structural limits from Rust digest/relational checks. Empty version labels intentionally preserve current prepare behavior.",
+  "golden": {
+    "schema_version": 1,
+    "kind": "workbench_analysis_job",
+    "job_id": "11111111111111111111111111111111",
+    "revision": 1,
+    "created_at_ms": 100,
+    "updated_at_ms": 100,
+    "input": {
+      "draft_id": "33333333333333333333333333333333",
+      "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+      "request": {
+        "deck": {
+          "main": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "extra": [],
+          "side": []
+        },
+        "opening_hand": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "seed": 1,
+        "rules": "ocg-mr5",
+        "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+        "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+        "as_of": "2026-10-30",
+        "search": {
+          "top_k": 5,
+          "node_budget": 10000,
+          "beam_width": 32,
+          "max_depth": 64,
+          "time_limit_ms": 60000
+        }
+      },
+      "identity": {
+        "input_sha256": "03f1466acc8d6e14ec323e64e1a138c309e763863859aefebeac33391b803e37",
+        "rules": "ocg-mr5",
+        "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+        "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+        "protocol_version": 2,
+        "engine_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "worker_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "cdb_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "scripts_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "core_commit": "",
+        "initializer": "",
+        "catalog_source_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "banlist_source_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "scoring": {
+        "board_interaction": 5.0,
+        "resource_advantage": 3.0,
+        "follow_up": 2.0,
+        "complexity": -0.25
+      },
+      "binding_sha256": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+    },
+    "state": "queued",
+    "report": null,
+    "error_code": null
+  },
+  "cases": [
+    {
+      "name": "queued",
+      "patches": [],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "running",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "running"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        },
+        {
+          "pointer": "/updated_at_ms",
+          "value": 101
+        },
+        {
+          "pointer": "/error_code",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "cancelled",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "cancelled"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        },
+        {
+          "pointer": "/updated_at_ms",
+          "value": 101
+        },
+        {
+          "pointer": "/error_code",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "interrupted",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "interrupted"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        },
+        {
+          "pointer": "/updated_at_ms",
+          "value": 101
+        },
+        {
+          "pointer": "/error_code",
+          "value": "service_restarted"
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "unknown",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "unknown"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/updated_at_ms",
+          "value": 101
+        },
+        {
+          "pointer": "/error_code",
+          "value": "completion_uncertain"
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "failed",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "failed"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/updated_at_ms",
+          "value": 101
+        },
+        {
+          "pointer": "/error_code",
+          "value": "analysis_failed"
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "exhausted:no_verified_lines",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "completed"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "exhausted:no_verified_lines",
+            "verified_lines": 0
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "exhausted",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "completed"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "exhausted",
+            "verified_lines": 2
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "node_budget:no_verified_lines",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "budget_limited"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "node_budget:no_verified_lines",
+            "verified_lines": 0
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "node_budget",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "budget_limited"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "node_budget",
+            "verified_lines": 2
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "time_budget:no_verified_lines",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "budget_limited"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "time_budget:no_verified_lines",
+            "verified_lines": 0
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "time_budget",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "budget_limited"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "time_budget",
+            "verified_lines": 2
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "depth_budget:no_verified_lines",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "budget_limited"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "depth_budget:no_verified_lines",
+            "verified_lines": 0
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "depth_budget",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "budget_limited"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "depth_budget",
+            "verified_lines": 2
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
+      "name": "/schema_version-bool",
+      "patches": [
+        {
+          "pointer": "/schema_version",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/schema_version-float",
+      "patches": [
+        {
+          "pointer": "/schema_version",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/schema_version-negative",
+      "patches": [
+        {
+          "pointer": "/schema_version",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/schema_version-null",
+      "patches": [
+        {
+          "pointer": "/schema_version",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/schema_version-overflow",
+      "patches": [
+        {
+          "pointer": "/schema_version",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/revision-bool",
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/revision-float",
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/revision-negative",
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/revision-null",
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/revision-overflow",
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/created_at_ms-bool",
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/created_at_ms-float",
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/created_at_ms-negative",
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/created_at_ms-null",
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/created_at_ms-overflow",
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/updated_at_ms-bool",
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/updated_at_ms-float",
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/updated_at_ms-negative",
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/updated_at_ms-null",
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/updated_at_ms-overflow",
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/seed-bool",
+      "patches": [
+        {
+          "pointer": "/input/request/seed",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/seed-float",
+      "patches": [
+        {
+          "pointer": "/input/request/seed",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/seed-negative",
+      "patches": [
+        {
+          "pointer": "/input/request/seed",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/seed-null",
+      "patches": [
+        {
+          "pointer": "/input/request/seed",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/seed-overflow",
+      "patches": [
+        {
+          "pointer": "/input/request/seed",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/protocol_version-bool",
+      "patches": [
+        {
+          "pointer": "/input/identity/protocol_version",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/protocol_version-float",
+      "patches": [
+        {
+          "pointer": "/input/identity/protocol_version",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/protocol_version-negative",
+      "patches": [
+        {
+          "pointer": "/input/identity/protocol_version",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/protocol_version-null",
+      "patches": [
+        {
+          "pointer": "/input/identity/protocol_version",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/protocol_version-overflow",
+      "patches": [
+        {
+          "pointer": "/input/identity/protocol_version",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-bool",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-float",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-negative",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-null",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-overflow",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/node_budget-bool",
+      "patches": [
+        {
+          "pointer": "/input/request/search/node_budget",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/node_budget-float",
+      "patches": [
+        {
+          "pointer": "/input/request/search/node_budget",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/node_budget-negative",
+      "patches": [
+        {
+          "pointer": "/input/request/search/node_budget",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/node_budget-null",
+      "patches": [
+        {
+          "pointer": "/input/request/search/node_budget",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/node_budget-overflow",
+      "patches": [
+        {
+          "pointer": "/input/request/search/node_budget",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/beam_width-bool",
+      "patches": [
+        {
+          "pointer": "/input/request/search/beam_width",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/beam_width-float",
+      "patches": [
+        {
+          "pointer": "/input/request/search/beam_width",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/beam_width-negative",
+      "patches": [
+        {
+          "pointer": "/input/request/search/beam_width",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/beam_width-null",
+      "patches": [
+        {
+          "pointer": "/input/request/search/beam_width",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/beam_width-overflow",
+      "patches": [
+        {
+          "pointer": "/input/request/search/beam_width",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/max_depth-bool",
+      "patches": [
+        {
+          "pointer": "/input/request/search/max_depth",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/max_depth-float",
+      "patches": [
+        {
+          "pointer": "/input/request/search/max_depth",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/max_depth-negative",
+      "patches": [
+        {
+          "pointer": "/input/request/search/max_depth",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/max_depth-null",
+      "patches": [
+        {
+          "pointer": "/input/request/search/max_depth",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/max_depth-overflow",
+      "patches": [
+        {
+          "pointer": "/input/request/search/max_depth",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/time_limit_ms-bool",
+      "patches": [
+        {
+          "pointer": "/input/request/search/time_limit_ms",
+          "value": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/time_limit_ms-float",
+      "patches": [
+        {
+          "pointer": "/input/request/search/time_limit_ms",
+          "value": 1.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/time_limit_ms-negative",
+      "patches": [
+        {
+          "pointer": "/input/request/search/time_limit_ms",
+          "value": -1
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/time_limit_ms-null",
+      "patches": [
+        {
+          "pointer": "/input/request/search/time_limit_ms",
+          "value": null
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/time_limit_ms-overflow",
+      "patches": [
+        {
+          "pointer": "/input/request/search/time_limit_ms",
+          "value": 18446744073709551616
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/kind-invalid",
+      "patches": [
+        {
+          "pointer": "/kind",
+          "value": "other"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/job_id-invalid",
+      "patches": [
+        {
+          "pointer": "/job_id",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/catalog_id-invalid",
+      "patches": [
+        {
+          "pointer": "/input/request/catalog_id",
+          "value": "latest"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/banlist_id-invalid",
+      "patches": [
+        {
+          "pointer": "/input/request/banlist_id",
+          "value": "latest-ocg"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/core_commit-invalid",
+      "patches": [
+        {
+          "pointer": "/input/identity/core_commit",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/initializer-invalid",
+      "patches": [
+        {
+          "pointer": "/input/identity/initializer",
+          "value": "../config"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/node_budget-invalid",
+      "patches": [
+        {
+          "pointer": "/input/request/search/node_budget",
+          "value": 0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-invalid",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "value": 101
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/deck/main-invalid",
+      "patches": [
+        {
+          "pointer": "/input/request/deck/main",
+          "value": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/opening_hand-invalid",
+      "patches": [
+        {
+          "pointer": "/input/request/opening_hand",
+          "value": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/report-invalid",
+      "patches": [
+        {
+          "pointer": "/report",
+          "value": {}
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/state-invalid",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "completed"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/error_code-invalid",
+      "patches": [
+        {
+          "pointer": "/error_code",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/protocol_version-invalid",
+      "patches": [
+        {
+          "pointer": "/input/identity/protocol_version",
+          "value": 3
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/seed-semantic",
+      "patches": [
+        {
+          "pointer": "/input/request/seed",
+          "value": 2
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "/input/binding_sha256-semantic",
+      "patches": [
+        {
+          "pointer": "/input/binding_sha256",
+          "value": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "/input/identity/worker_sha256-semantic",
+      "patches": [
+        {
+          "pointer": "/input/identity/worker_sha256",
+          "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "/input/scoring/complexity-semantic",
+      "patches": [
+        {
+          "pointer": "/input/scoring/complexity",
+          "value": -7.0
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "/updated_at_ms-semantic",
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "value": 99
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "/input/request/as_of-semantic",
+      "patches": [
+        {
+          "pointer": "/input/request/as_of",
+          "value": "2026-02-30"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "/report-missing",
+      "patches": [
+        {
+          "pointer": "/report",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/error_code-missing",
+      "patches": [
+        {
+          "pointer": "/error_code",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/rules-missing",
+      "patches": [
+        {
+          "pointer": "/input/request/rules",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/catalog_id-missing",
+      "patches": [
+        {
+          "pointer": "/input/request/catalog_id",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search-missing",
+      "patches": [
+        {
+          "pointer": "/input/request/search",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/top_k-missing",
+      "patches": [
+        {
+          "pointer": "/input/request/search/top_k",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/deck/side-missing",
+      "patches": [
+        {
+          "pointer": "/input/request/deck/side",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/scoring/complexity-missing",
+      "patches": [
+        {
+          "pointer": "/input/scoring/complexity",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/initializer-missing",
+      "patches": [
+        {
+          "pointer": "/input/identity/initializer",
+          "remove": true
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/path-unknown",
+      "patches": [
+        {
+          "pointer": "/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/path-unknown",
+      "patches": [
+        {
+          "pointer": "/input/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/path-unknown",
+      "patches": [
+        {
+          "pointer": "/input/request/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/deck/path-unknown",
+      "patches": [
+        {
+          "pointer": "/input/request/deck/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/path-unknown",
+      "patches": [
+        {
+          "pointer": "/input/identity/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/scoring/path-unknown",
+      "patches": [
+        {
+          "pointer": "/input/scoring/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/request/search/path-unknown",
+      "patches": [
+        {
+          "pointer": "/input/request/search/path",
+          "value": "C:/private"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "duplicate-nested",
+      "patches": [],
+      "replace": [
+        [
+          "\"seed\":1",
+          "\"seed\":1,\"seed\":1"
+        ]
+      ],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "trailing-document",
+      "patches": [],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false,
+      "suffix": "{}"
+    },
+    {
+      "name": "non-finite-NaN",
+      "patches": [],
+      "replace": [
+        [
+          "\"complexity\":-0.25",
+          "\"complexity\":NaN"
+        ]
+      ],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "non-finite-Infinity",
+      "patches": [],
+      "replace": [
+        [
+          "\"complexity\":-0.25",
+          "\"complexity\":Infinity"
+        ]
+      ],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "non-finite--Infinity",
+      "patches": [],
+      "replace": [
+        [
+          "\"complexity\":-0.25",
+          "\"complexity\":-Infinity"
+        ]
+      ],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "non-finite-1e999",
+      "patches": [],
+      "replace": [
+        [
+          "\"complexity\":-0.25",
+          "\"complexity\":1e999"
+        ]
+      ],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "report-lines-over-top-k",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "completed"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/report",
+          "value": {
+            "report_id": "22222222222222222222222222222222",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "termination": "exhausted",
+            "verified_lines": 6
+          }
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": true
+    },
+    {
+      "name": "queued-wrong-revision",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "queued"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "running-wrong-revision",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "running"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "failed-wrong-revision",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "failed"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        },
+        {
+          "pointer": "/error_code",
+          "value": "analysis_failed"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "cancelled-wrong-revision",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "cancelled"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "interrupted-wrong-revision",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "interrupted"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/error_code",
+          "value": "service_restarted"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "unknown-wrong-revision",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "unknown"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        },
+        {
+          "pointer": "/error_code",
+          "value": "completion_uncertain"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/job_id-trailing-newline",
+      "patches": [
+        {
+          "pointer": "/job_id",
+          "value": "11111111111111111111111111111111\n"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/identity/core_commit-trailing-newline",
+      "patches": [
+        {
+          "pointer": "/input/identity/core_commit",
+          "value": "abc\n"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    },
+    {
+      "name": "/input/draft_revision-trailing-newline",
+      "patches": [
+        {
+          "pointer": "/input/draft_revision",
+          "value": "4444444444444444444444444444444444444444444444444444444444444444\n"
+        }
+      ],
+      "replace": [],
+      "rust_valid": false,
+      "schema_valid": false
+    }
+  ]
+}

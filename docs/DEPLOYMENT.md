@@ -2,6 +2,8 @@
 
 ## 当前代码与本机包
 
+2026-10-30本轮文档核对基线为本地`main` / `d3bc212`；W1-A在源码中完成，但旧普通包未刷新。CLI与worker哈希匹配包清单，engine.toml六个主要路径存在；这是静态核对，不是当前源码部署或运行验收。详见[本轮验证](TESTING.md#2026-10-30-w1-a后路线文档复核)。
+
 当前 Rust 源码包含 v1–v5 正式 Combo 规划分派，以及未开放为正式规划入口的 first-turn 内部预测/局部执行与知识验真。部署脚本会把当前 workspace CLI 和 worker 复制到 `dist/ygo-local`，但不因此使尚未通过完整语义关口的 first-turn 成为正式 v6。部署包绑定当前仓库路径，不能直接搬到另一台机器。
 
 当前 `deploy-local.ps1` 只打包 Phantom v1/v2 知识和普通运行资产；不会复制赛事 `tournament-2026` 知识包或其隔离 CDB/Lua/core。赛事规则验真须按 `FIRST_TURN_VERIFICATION.md` 使用独立开发配置，不可通过替换普通包中的 CDB 来混用两套资产。
