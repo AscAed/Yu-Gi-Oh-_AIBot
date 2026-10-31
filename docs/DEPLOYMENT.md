@@ -2,11 +2,11 @@
 
 2026-10-31本地审计快照基于`main / 8526c1f`。普通旧包和赛事配置doctor在本轮重新运行均ready；检查对象仍是2026-10-19的`dist/ygo-local`，不是当前源码构建。没有重建、切换部署包或运行smoke；P4-R5仍开放。详见[验证记录](TESTING.md)。
 
-本轮完成W1-B3.3内部合成故障矩阵并通过离线Rust验证；未重建或切换部署包，也未在当前源码上运行doctor、smoke或研究流程。部署状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
+本轮完成W1-B3.3内部合成故障矩阵并通过Rust/Python离线验证；未重建或切换部署包，也未在当前源码构建上运行doctor、smoke或研究流程。旧dist doctor属于对既有二进制的单独检查。部署状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
 
 ## 当前代码与本机包
 
-当前源码为`main / d202b08`；普通包仍是2026-10-19构建，CLI/worker哈希匹配自身清单。普通包及赛事配置doctor的最近一次复验绑定`main / 735d247`时点，返回ready不证明当前源码已部署。赛事配置中的`worker_path`指向普通包worker，同时使用赛事冻结CDB/Lua/core。详见[部署与CI证据](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+当前源码复验基底为`main / 8526c1f`，普通包仍是2026-10-19构建，CLI/worker哈希匹配自身清单。本轮对旧包分别运行普通配置与赛事配置doctor均返回ready；它验证旧二进制和当前所指资产，不证明当前源码已部署。赛事配置中的`worker_path`指向普通包worker，同时使用赛事冻结CDB/Lua/core。详见[部署与CI证据](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
 
 当前 Rust 源码包含 v1–v5 正式 Combo 规划分派，以及未开放为正式规划入口的 first-turn 内部预测/局部执行与知识验真。部署脚本会把当前 workspace CLI 和 worker 复制到 `dist/ygo-local`，但不因此使尚未通过完整语义关口的 first-turn 成为正式 v6。部署包绑定当前仓库路径，不能直接搬到另一台机器。
 

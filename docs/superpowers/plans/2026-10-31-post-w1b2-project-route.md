@@ -8,7 +8,7 @@
 
 W1-B2提供进程内单运行、单排队、取消和票据结算；W1-B3提供任务revision/报告存储及持久先行协调器。W1-B3.3内部合成故障矩阵覆盖提交前失败、提交后不确定、重开分类、报告孤立、重复终态、冻结资产漂移及已提交revision后的操作系统子进程强杀。矩阵不验证逐syscall强杀、断电/介质故障、HTTP或真实执行；提交后锁内内存应用没有可返回错误分支。B2容量/领取/取消/结算在线程锁内线性化，执行票据在锁外使用；运行中不可取消，终态不重复结算，unknown不自动重发。报告校验绑定冻结请求并认证文件字节完整性，不认证报告来源或真实执行。B3验证见[持久化记录](../../WORKBENCH_ANALYSIS_PERSISTENCE.md)及[TESTING](../../TESTING.md)顶部。HTTP创建幂等、随机源故障和锁中毒注入仍待对应批次定义/验证。详见[W1-B2交接](2026-10-31-w1b2-analysis-queue-handoff.md)。
 
-规划阶段静态核对旧普通包CLI/worker哈希与清单一致、六个主要配置路径存在；旧包是2026-10-19构建，不能证明当前源码部署。普通包与赛事配置历史doctor、历史smoke/replay及CI各自按日期和身份读取[TESTING](../../TESTING.md)。W1-B2本机Rust 377 passed/36 ignored、相关Python 30 passed/2 skipped属于历史合成验证；引用对话记录PR #16 CI通过，本轮未重跑。历史证据的SHA-256清单不是备份；符号链接策略限制和P4-R5仍开放。Tenki历史pin和失败保留，Curry来源链未知。
+规划阶段静态核对旧普通包CLI/worker哈希与清单一致、六个主要配置路径存在；旧包是2026-10-19构建，不能证明当前源码部署。普通包与赛事配置历史doctor、历史smoke/replay及CI各自按日期和身份读取[TESTING](../../TESTING.md)。W1-B2本机Rust 377 passed/36 ignored、相关Python 30 passed/2 skipped属于历史合成验证；引用对话记录PR #16 CI通过，本轮未重跑。历史证据的SHA-256清单不是备份；符号链接策略限制和P4-R5仍开放。Tenki历史pin按用户决定保留不迁移，保护测试已覆盖来源不匹配时失败关闭；Curry来源链及七份ledger成功重审仍未知。
 
 ## 小步路线
 
