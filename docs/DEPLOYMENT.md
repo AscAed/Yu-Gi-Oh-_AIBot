@@ -1,12 +1,12 @@
 # Windows 本机部署与验收
 
-2026-10-31本轮部署复核时HEAD为`main / 7800d95`、工作区干净，本地有3个未推送提交（W1-B3实现提交`8091362`及两项审计文档提交）。提交后重新运行旧普通包和赛事配置doctor均ready；旧包CLI/worker哈希与自身清单一致。doctor记录早于部署源码更新，`dist/ygo-local`仍为2026-10-19包；本次未重建或切换部署。P4-R5仍开放。详见[验证记录](TESTING.md)。
+2026-10-31本地审计快照为`main / d202b08`，工作区干净，本地领先`origin/main`五个提交。旧普通包和赛事配置doctor曾在`main / 735d247`时点复验ready，旧包CLI/worker哈希与自身清单一致；此后源码又有W1-B3.3更新。`dist/ygo-local`仍为2026-10-19包，本次未重建、切换或在`d202b08`源码上重跑doctor。P4-R5仍开放。详见[验证记录](TESTING.md)。
 
-本轮继续实现W1-B3持久协调及资产哈希门禁并运行离线测试；未重建或切换部署包，也未运行doctor、smoke或研究流程。发布状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
+本轮完成W1-B3.3内部合成故障矩阵并通过离线Rust验证；未重建或切换部署包，也未在当前源码上运行doctor、smoke或研究流程。部署状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
 
 ## 当前代码与本机包
 
-源码核对基线为`main / 7800d95`；实现代码在`8091362`提交。普通包仍是2026-10-19构建，CLI/worker哈希匹配自身清单；doctor通过不证明当前源码已部署。赛事配置中的`worker_path`指向普通包worker，同时使用赛事冻结CDB/Lua/core；本轮重新运行了两种配置的doctor。详见[部署与CI证据](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+当前源码为`main / d202b08`；普通包仍是2026-10-19构建，CLI/worker哈希匹配自身清单。普通包及赛事配置doctor的最近一次复验绑定`main / 735d247`时点，返回ready不证明当前源码已部署。赛事配置中的`worker_path`指向普通包worker，同时使用赛事冻结CDB/Lua/core。详见[部署与CI证据](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
 
 当前 Rust 源码包含 v1–v5 正式 Combo 规划分派，以及未开放为正式规划入口的 first-turn 内部预测/局部执行与知识验真。部署脚本会把当前 workspace CLI 和 worker 复制到 `dist/ygo-local`，但不因此使尚未通过完整语义关口的 first-turn 成为正式 v6。部署包绑定当前仓库路径，不能直接搬到另一台机器。
 

@@ -1,8 +1,8 @@
 # 本机环境与资产审计
 
-2026-10-31本轮环境复核时本地HEAD为`main / 7800d95`，工作区干净，本地3个提交未推送。旧普通包和赛事资产配置doctor在提交后复验均ready；未运行smoke，`dist/ygo-local`仍为旧包。这些记录不能替代P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
+2026-10-31本地环境审计快照为`main / d202b08`，工作区干净，本地领先`origin/main`五个提交。普通旧包和赛事配置doctor最近在`main / 735d247`时点复验ready；之后源码更新未部署，`dist/ygo-local`仍为旧包且本轮未运行smoke。上述记录不能替代P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
 
-2026-10-31 W1-B3内部任务/报告存储协调及claim资产哈希门禁仅在当前开发工作区验证；未部署、未运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
+2026-10-31 W1-B3内部持久协调、claim资产哈希门禁及故障矩阵仅在当前开发工作区验证；未部署、未在最新源码上运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
 
 2026-10-30静态核对的历史基线为`main / d3bc212`；旧普通包CLI/worker哈希与清单一致、主要配置路径存在，当时未运行程序。2026-10-31普通包及赛事资产配置doctor在较早的`main / a8d6356`源码时点分别返回ready；随后文档与CI触发范围更新随PR #14合入`main / 4869393`，合并检查全绿。PR #14未重建或切换部署资产，因此这些doctor结果不代表当前源码已部署。P4-R5最新源码双资产发布验收仍开放。此前`8315232`为W1设计阶段历史基线，见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
 
