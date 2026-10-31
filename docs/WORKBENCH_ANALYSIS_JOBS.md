@@ -1,8 +1,8 @@
 # 工作台分析任务合同 v1
 
-W1-H2.1新增内部操作合同及持久幂等提交：操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。HTTP、结果投影及真实分析仍未接入；验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+历史交付记录（H2.1）：内部操作合同及持久幂等提交由`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。H2.2随后接入HTTP与结果投影；普通启动未配置分析后端，真实分析未交付。验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)及[当前HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
-[W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义拟议操作合同与公开DTO，不修改本v1任务合同。H2.1已实现内部操作存储；操作ID与任务ID分开，草稿revision为内容摘要字符串、任务revision为整数，操作链不套用任务1/2/3状态图。HTTP及结果投影尚未实现。
+[W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义操作合同与公开DTO，不修改本v1任务合同。H2.1已实现内部操作存储；操作ID与任务ID分开，草稿revision为内容摘要字符串、任务revision为整数，操作链不套用任务1/2/3状态图。H2.2已接入HTTP及结果投影；完整验收状态见[当前任务](../TASKS.md)。
 
 W1-B1只实现Rust库中的无路径记录、严格JSON读取及纯状态转换，没有任务文件存储、HTTP任务接口、队列或界面。源码入口为`ygo_cli::workbench_analysis::jobs`，结构合同见[workbench-analysis-job-v1](../schemas/workbench-analysis-job-v1.schema.json)。原[W1-A冻结接口](WORKBENCH.md#分析接入设计状态)、分析请求和分析报告保持可用。
 
@@ -72,4 +72,4 @@ B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1
 
 ## W1-B3 持久化与报告文件存储
 
-不可变JSON修订、记录严格链校验、排他锁、独占发布和queued/interrupted、running/unknown重启分类已实现。B3报告严格读取、冻结输入绑定、私有原始字节存储和SHA-256重读校验；基础持久协调器按先提交后改内存运行。资产漂移后的failed终态、以及报告已落盘后的终态提交失败均会停止协调器，重开时按持久revision分类。内部合成故障矩阵覆盖提交前失败/提交后不确定、操作系统子进程强杀后的重开、重复终态请求和冻结资产各角色/路径漂移；不认证报告来源/真实执行、逐syscall崩溃或断电持久性。schema投影、任务HTTP和真实分析仍未实现。详见[持久化与报告发布设计](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+历史交付记录（B3）：不可变JSON修订、记录严格链校验、排他锁、独占发布和queued/interrupted、running/unknown重启分类已实现。B3报告严格读取、冻结输入绑定、私有原始字节存储和SHA-256重读校验；基础持久协调器按先提交后改内存运行。资产漂移后的failed终态、以及报告已落盘后的终态提交失败均会停止协调器，重开时按持久revision分类。内部合成故障矩阵覆盖提交前失败/提交后不确定、操作系统子进程强杀后的重开、重复终态请求和冻结资产各角色/路径漂移；不认证报告来源/真实执行、逐syscall崩溃或断电持久性。H2.2随后接入schema投影与任务HTTP；普通启动未配置分析后端，真实分析仍未实现。详见[持久化与报告发布设计](WORKBENCH_ANALYSIS_PERSISTENCE.md)。

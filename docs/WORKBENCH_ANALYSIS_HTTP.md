@@ -6,7 +6,7 @@
 
 ## 1. 请求与端点 v1
 
-所有JSON均UTF-8，固定schema_version=1及各端点的kind；递归拒绝重复键、未知/缺失字段及错误数字类型。整数拒绝bool、浮点和指数形式；评分仅接受服务配置的有限数值。路径ID为服务生成的32位小写十六进制，不接受路径片段、编码斜线或浏览器自选输出位置。以下端点全部为拟议内容，不修改旧草稿API。
+所有JSON均UTF-8，固定schema_version=1及各端点的kind；递归拒绝重复键、未知/缺失字段及错误数字类型。整数拒绝bool、浮点和指数形式；评分仅接受服务配置的有限数值。路径ID为服务生成的32位小写十六进制，不接受路径片段、编码斜线或浏览器自选输出位置。下列六端点和无路径DTO是H2.2已实现的v1合同，不修改旧草稿API。
 
 统一错误体为schema_version=1、kind=analysis_api_error、error对象；error含code、可空operation_id/job_id及可空field（固定字段定位符），不含原始异常。非JSON协议拒绝可沿用现有安全门禁错误体；业务错误使用此新合同。所有业务响应Cache-Control:no-store，不提供CORS放行。
 
@@ -21,7 +21,7 @@
 
 命令字段映射：draft_id/revision由草稿保存响应取得；牌组由服务在同锁revision快照读取。其余分析参数映射AnalysisFreezeSpec，再由现有prepare验证五张起手、完整牌组、日期、预算及catalog/CDB。请求catalog_id必须显式存在，可为null；banlist_id可为latest-ocg。服务评分、本机引擎配置和快照根不由浏览器提交。
 
-### 字段类型及错误映射（拟议）
+### 字段类型及错误映射（v1实现合同）
 
 | 字段 | 类型/约束 | 当前映射 |
 |---|---|---|
@@ -41,7 +41,7 @@ analysis_operation响应固定含schema_version、kind、operation_id、revision
 
 ## 2. 创建幂等与跨文件提交
 
-H1设计时提出新增独立AnalysisOperationRecordV1及严格schema、不可变操作修订链，保存在服务任务根operations/<operation_id>/revisions/。H2.1已实现该内部布局、根白名单和统一目录锁；不能通过另开第二写者访问同一任务根。旧任务封装与状态合同不改。本文其余HTTP端点和公开投影仍是待实现合同。
+H1设计时提出新增独立AnalysisOperationRecordV1及严格schema、不可变操作修订链，保存在服务任务根operations/<operation_id>/revisions/。H2.1已实现该内部布局、根白名单和统一目录锁；不能通过另开第二写者访问同一任务根。旧任务封装与状态合同不改。本段后续HTTP与公开投影描述为H1设计时点，H2.2实现状态见本文开头。
 
 操作记录内部必含schema_version/kind、operation_id、revision、created_at_ms/updated_at_ms、state、service_context（评分/默认catalog ID/配置摘要）、command及command_sha256、预分配job_id、可空frozen_input及frozen_binding_sha256、可空rejection（http_status/error_code）及可空error_code（unknown固定analysis_commit_uncertain）。未产生值显式null；frozen_input仅用B1无路径白名单，不序列化runtime。封装另含record_sha256和previous_sha256，采用B3同目录同步/独占发布/写后复读原语；操作修订与任务修订分别编号，不套用任务1/2/3上限。
 
@@ -59,7 +59,7 @@ H1设计时提出新增独立AnalysisOperationRecordV1及严格schema、不可�
 
 指令摘要使用固定域workbench-analysis-command-v1与固定顺序的类型化紧凑JSON元组，依次含draft_id/revision、起手（保序）、seed、rules、catalog选择、banlist选择、as_of、search、分配时服务评分和默认catalog ID。JSON成员输入顺序不影响摘要。保存客户端选择（包括null和latest-ocg），不能先重新解析可变别名再判断重复。冻结后另存B1 binding_sha256及实际解析身份，不混用两种摘要。
 
-提交流程（均拟议）：严格解码 → 读取同一操作原记录与上下文 → 比较指令摘要 → 已accepted/rejected/unknown直接返回保存结果，不冻结、不扫描、不入队 → 同一协调锁下检查容量并预占唯一待入队槽 → 保存accepting（含指令、摘要及预分配job_id）→ 锁外执行W1-A冻结 → 锁内复核操作与预占 → 保存已冻结输入绑定的操作修订 → 以预分配job_id持久提交queued任务 → 保存accepted操作修订 → 更新内存并返回202。
+提交流程：严格解码 → 读取同一操作原记录与上下文 → 比较指令摘要 → 已accepted/rejected/unknown直接返回保存结果，不冻结、不扫描、不入队 → 同一协调锁下检查容量并预占唯一待入队槽 → 保存accepting（含指令、摘要及预分配job_id）→ 锁外执行W1-A冻结 → 锁内复核操作与预占 → 保存已冻结输入绑定的操作修订 → 以预分配job_id持久提交queued任务 → 保存accepted操作修订 → 更新内存并返回202。
 
 预占不是queued或running，不产生可执行票据；冻结期间仍可查询/取消其他任务，其他创建不能抢该预占。本机请求线程断开不撤销已保存accepting。并发同ID：相同指令返回202 accepting或保存结果，不重复冻结；不同指令409 analysis_operation_conflict。不同ID继续受一运行一排队限制。容量拒绝和准备拒绝均保存rejected；同ID重试返回同一拒绝，用户调整后须明确新建操作。
 
@@ -116,7 +116,7 @@ Rabbit走查采用tests/fixtures/rabbit.request.json：40/3/0、五张起手8513
 
 ## 5. H2/H3实施前置与本批验收
 
-H2.1已完成操作记录/schema、预分配任务ID的私有提交、容量预占、跨链认证和停止后的只读查询。H2.2再接严格版本化HTTP和白名单DTO；使用测试编译专用合成执行边界，生产CLI不暴露合成后端或默认真实执行回退。HTTP尚未启用时草稿功能正常。
+H2.1交付时状态（历史）：操作记录/schema、预分配任务ID的私有提交、容量预占、跨链认证和停止后的只读查询已完成。H2.2随后接入严格版本化HTTP和白名单DTO；测试使用专用合成执行边界，普通生产CLI不配置分析后端。完整验收剩余门禁见本文开头和[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
 
 H3覆盖响应丢失、并发重复、所有跨链发布缺口、停派发只读边界、报告损坏和重启分类；注入故障时断言后继执行为零。保留W1-A/B1/B2/B3合同回归。W1-C另定真实资产、输入、预算、调用及停止边界；运行中取消、细粒度进度和自动恢复不在首版。
 

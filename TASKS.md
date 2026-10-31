@@ -66,7 +66,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-B3.1/B3.2存储基础：不可变任务修订、严格链校验、排他锁、重启分类，以及报告严格读取/冻结输入绑定/私有落盘/哈希重读已实现；定向测试为合成合同测试，不认证报告来源。见[持久化设计与实现状态](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。
 - [x] W1-B3.3内部持久协调故障矩阵：覆盖submit/claim/cancel/fail/report文件与终态提交前失败、提交后不确定、停派发、孤立报告、重复终态请求、全部冻结资产角色/脚本路径漂移、进程强杀后的queued/interrupted与running/unknown分类。队列锁内持久提交后的状态更新没有可返回的错误分支；Rust操作系统进程强杀覆盖已完成，但文件系统每条syscall间强杀、断电/介质故障未认证。HTTP创建幂等标识与真实执行结果确认另在后续接口/执行器批次定义。
 - [x] W1-H1分析任务HTTP合同设计：操作ID/幂等、提交顺序、状态与结果DTO、安全及失败矩阵完成静态走查和独立只读审阅；无生产修改或运行测试。见[设计](docs/WORKBENCH_ANALYSIS_HTTP.md)。
-- [x] W1-H2.1内部操作存储：严格合同、36例共享语料、容量预占、幂等提交、跨链重开和停止后只读查询已合成验证，HTTP尚未实现；见[交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+- [x] W1-H2.1内部操作存储：严格合同、36例共享语料、容量预占、幂等提交、跨链重开和停止后只读查询已合成验证；在H2.1交付时HTTP尚未实现。见[交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
 - [x] W1-H2.2 HTTP投影实现：六端点、严格合同及无路径投影已接入；普通生产启动未配置分析后端。实现与定向验收见[交接](docs/superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
 - [ ] W1-H2.2验收关闭：穷尽新增HTTP端点持久故障矩阵和重复并发调度矩阵；当前证据及余项见[TESTING](docs/TESTING.md#2026-11-01-w1-h22-http验收续接)。
 - [ ] W1-H3故障恢复：验证跨链提交缺口、响应丢失、并发重复与停止状态的只读查询；不自动重发。

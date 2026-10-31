@@ -4,9 +4,9 @@
 
 历史记录：该段描述H2.1交付时点。H2.2现已实现HTTP路由、公开状态/结果DTO及路径安全边界；完整验收仍开放，H3恢复验证与真实分析仍开放。详见本文开头的当前状态说明。
 
-W1-B3内部任务/报告存储与持久协调器已实现，任务HTTP和真实执行器仍未接入。持久提交先于内存更新，报告严格读取、绑定冻结输入、落盘重读后发布；写后不确定时停派发，执行前复核资产。详见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+历史状态：W1-B3交付时内部任务/报告存储与持久协调器已实现，任务HTTP和真实执行器尚未接入。H2.2随后接入HTTP与无路径DTO；真实执行器仍未配置。持久提交先于内存更新，报告严格读取、绑定冻结输入、落盘重读后发布；写后不确定时停派发，执行前复核资产。详见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
 
-当前已实现W1-B1无路径任务合同、W1-B2进程内队列及W1-B3内部持久任务/报告存储协调器；领取时校验冻结资产哈希，提交结果不确定时停止协调器。内部合成故障矩阵覆盖提交边界、终态重开分类、重复终态请求和冻结资产漂移；不认证报告来源、真实执行、逐syscall崩溃或断电持久性。内部能力尚未连接工作台分析HTTP或真实执行器。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
+当前已实现W1-B1无路径任务合同、W1-B2进程内队列、W1-B3内部持久任务/报告存储协调器，以及H2.2分析HTTP与DTO；领取时校验冻结资产哈希，提交结果不确定时停止协调器。内部合成故障矩阵覆盖提交边界、终态重开分类、重复终态请求和冻结资产漂移；不认证报告来源、真实执行、逐syscall崩溃或断电持久性。普通启动仍未配置分析后端。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 
 当前交付面包括本机 CLI/Rust库，以及仅绑定`127.0.0.1`的本机草稿工作台。解析器与JSON schema是规范性合同；工作台接口只用于本机草稿，不是通用远程API。
 
@@ -44,11 +44,11 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 ## 工作台边界
 
-当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索，以及`GET /api/language-status?ids=...`只读字段状态。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。中文语义、使用和再分发资格仍未核验。
+当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索、`GET /api/language-status?ids=...`只读字段状态，以及H2.2分析任务路由。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。普通工作台启动未配置分析后端，不执行分析、shell、worker、FFI或研究入口。中文语义、使用和再分发资格仍未核验。
 
-工作台分析任务HTTP接口尚未实现。W1-A已增加Rust库内部能力`ygo_cli::workbench_analysis::freeze_analysis_input`：它只接受服务管理的草稿ID/revision与结构化分析参数，在同一草稿存储互斥锁内读取并核对revision，将草稿内容复制进拥有自身的`ComboAnalyzeRequest`，解析固定catalog和banlist ID，再复用现有`prepare`校验牌组、五张起手、规则、日期/禁限、搜索预算和catalog/CDB身份。返回对象记录请求及资产版本身份并使用稳定错误码，不包括HTTP路由、队列或运行执行；失败不会创建任务或启动adapter。进程内对象含runtime asset路径与完整本地catalog，不可serde或直接持久化。独立任务记录合同和W1-B3任务/报告文件存储另见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[存储设计/状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)；持久存储已接入内部协调器，但尚未接入HTTP服务。领取时会复核冻结资产哈希；实际调用前仍须针对当前资产重新核对，降低检查后的漂移风险；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
+历史记录（W1-A交付时）：工作台分析任务HTTP接口尚未实现。W1-A增加Rust库内部能力`ygo_cli::workbench_analysis::freeze_analysis_input`：它只接受服务管理的草稿ID/revision与结构化分析参数，在同一草稿存储互斥锁内读取并核对revision，将草稿内容复制进拥有自身的`ComboAnalyzeRequest`，解析固定catalog和banlist ID，再复用现有`prepare`校验牌组、五张起手、规则、日期/禁限、搜索预算和catalog/CDB身份。返回对象记录请求及资产版本身份并使用稳定错误码，不包括HTTP路由、队列或运行执行；失败不会创建任务或启动adapter。进程内对象含runtime asset路径与完整本地catalog，不可serde或直接持久化。独立任务记录合同和W1-B3任务/报告文件存储另见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[存储设计/状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)；持久存储在当时只接入内部协调器。H2.2已接入HTTP路由，但普通启动未配置分析后端；完整验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。领取时会复核冻结资产哈希；实际调用前仍须针对当前资产重新核对，降低检查后的漂移风险；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
 
-W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, &frozen, scoring, now_ms)`复制无路径白名单；`validate/read_json/encode_json`校验和严格编解码；`transition(expected_revision, event, now_ms)`纯函数返回新记录。必须显式保留所有nullable字段，拒绝重复/未知/缺失字段、错误整数、无效身份/预算和摘要失配。完成事件只接受报告ID/hash、原始终止原因及验证线路数，不检查报告文件存在或授予执行资格。完整字段、摘要顺序和状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[schema](../schemas/workbench-analysis-job-v1.schema.json)。W1-B2进程内队列与W1-B3持久存储/报告发布/重启分类已接入内部DurableAnalysisCoordinator；尚未接入HTTP服务，没有新增任务HTTP路由。
+历史记录（W1-B3交付时）：`workbench_analysis::jobs::AnalysisJobRecordV1`的`new(job_id, &frozen, scoring, now_ms)`复制无路径白名单；`validate/read_json/encode_json`执行严格编解码；`transition(expected_revision, event, now_ms)`纯函数返回新记录。合同显式保留nullable字段，拒绝重复/未知/缺失字段、错误整数、无效身份/预算和摘要失配。完成事件只接受报告ID/hash、原始终止原因及验证线路数，不检查报告文件存在或授予执行资格。完整字段、摘要顺序和状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[schema](../schemas/workbench-analysis-job-v1.schema.json)。W1-B2进程内队列与W1-B3持久存储/报告发布/重启分类已接入内部`DurableAnalysisCoordinator`；当时尚未接HTTP。H2.2 HTTP实现及当前普通服务边界见本文开头和[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
 ## 其他拟议能力接口
 

@@ -1,16 +1,12 @@
 # 本机牌组草稿工作台
 
-当前分析HTTP v1已实现六端点及无路径DTO，但完整验收仍有门禁开放；普通启动保持`analysis_not_configured`，网页不能据此执行分析。下方“尚未接入”描述较早时点，当前实现和验证以[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)与[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)为准。
+当前分析HTTP v1已实现六端点及无路径DTO，但完整验收仍有门禁开放；普通启动保持`analysis_not_configured`，网页尚无任务操作界面。当前实现和验证以[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)与[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)为准。
 
-W1-H2.1新增内部操作合同及持久幂等提交：操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。HTTP、结果投影及真实分析仍未接入；验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+H2.1交付了内部操作合同、持久幂等提交、容量预占、跨链认证和停止后的只读查询；H2.2随后接入六个HTTP端点及无路径DTO。阶段交接见[H2.1](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)和[H2.2](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
 
-W1-H1已设计操作ID与重复请求边界，但HTTP任务接口仍未实现，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
+H2.2源码实现已在本地HTTP路由中，但普通`workbench serve`没有分析服务实例，因此分析端点明确返回`analysis_not_configured`；真实分析后端和工作台任务UI均未交付。HTTP合同、当前完整验收缺口及状态码见[分析HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
-W1-H1的[分析HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)已完成静态走查与只读审阅；页面尚无任务入口。拟议操作ID、任务历史查询、取消及无路径结果DTO均未实现，不能访问文档中的/api/analysis-*取得能力。H2合成接入、H3故障恢复和W1-C真实分析分别后置；旧草稿功能不变。
-
-W1-B3内部存储、报告绑定及协调器已有合成故障验证；界面尚无分析任务HTTP入口或真实执行。子进程强杀发生在revision提交后，不代表逐syscall中断或断电验收。见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
-
-W1-B2进程内队列与W1-B3任务/报告持久存储、DurableAnalysisCoordinator及内部合成故障矩阵已实现；这些Rust内部能力未接入工作台分析HTTP，当前网页仍只管理草稿、卡片查询和字段状态。矩阵不认证真实执行、逐syscall崩溃或断电持久性。任务和报告合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+W1-A冻结、B1任务合同、B2进程内队列与B3持久存储/协调器的职责和限制分别见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)、[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)和[分析HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。合成报告不认证真实来源；逐syscall崩溃、断电和H3响应丢失矩阵未验收。报告与任务不能替代真实分析或规则证明。
 
 工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。
 
@@ -40,7 +36,7 @@ cargo run -p ygo-cli --offline --locked -- workbench serve
 
 ## HTTP接口
 
-API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌访问API；所有API非GET请求（包含当前未注册的DELETE）在路由分派前还要求精确同源Origin。服务检查Host为当前`127.0.0.1:port`，不设置跨域许可。请求体上限1 MiB，头部上限16 KiB，读写超时5秒，最多并发处理32个连接。不接受chunked请求。草稿由生成的随机标识寻址，浏览器不能指定本机路径。
+API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌访问API；所有API非GET请求（包括分析任务DELETE）在路由分派前都要求精确同源Origin。服务检查Host为当前`127.0.0.1:port`，不设置跨域许可。请求体上限1 MiB，头部上限16 KiB，读写超时5秒，最多并发处理32个连接。不接受chunked请求。草稿和分析任务由服务生成的随机标识寻址，浏览器不能指定本机路径。
 
 | 方法与路径 | 用途 |
 |---|---|
@@ -53,13 +49,15 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 | `GET /api/cards?q=...` | 可选catalog中的卡号或原始名称检索 |
 | `GET /api/language-status?ids=...` | 可选C1报告中的逐字段状态；不返回候选译文 |
 
-文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。工作台不提供分析、自动构筑或已认证中文搜索。
+文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。网页尚无分析操作界面；普通服务未配置分析后端。自动构筑和已认证中文搜索也未提供。
 
-## 分析接入设计状态
+分析操作和任务端点另见[分析HTTP v1合同](WORKBENCH_ANALYSIS_HTTP.md)：源码实现已接入，普通启动仍返回`analysis_not_configured`，完整合成验收有门禁开放。
 
-工作台目前没有分析任务端点，也不调用`combo analyze`。W1-A已提供Rust库内部`ygo_cli::workbench_analysis::freeze_analysis_input`：以草稿ID和revision在同一存储锁内读取牌组，然后调用现有`prepare`验证完整牌组、五张起手、规则、禁限日期、预算及catalog/CDB一致性。它返回自有输入和版本身份，错误只暴露稳定代码；该函数不创建任务、不构造adapter、不启动worker。保留的总体设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)，本阶段交接见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)。
+## 分析 HTTP 接入与运行状态
 
-W1-B1的Rust内部记录从revision 1/queued开始，定义队列启动/取消、重启分类和运行结果终态。W1-B2实现进程内队列；W1-B3提供持久先行协调器及报告文件绑定/验证。内部合成故障矩阵覆盖发布前后失败、协调器停派发、重开恢复、重复终态、资产角色和脚本路径漂移及进程强杀。协调器claim对冻结worker/DLL/CDB/script/manifest执行实时一致性检查；不匹配时先持久记录failed/asset_mismatch，再返回错误且不下发执行票据。详情见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)和[持久化设计/实现状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)。之后若执行冻结输入，必须在实际运行前重新核验引擎资产；持有冻结对象不表示实时资产仍与冻结身份相同。逐syscall崩溃/断电、HTTP及真实分析尚未验收。Rabbit走查和任务场景不是本批真实分析结果。
+H2.2源码实现六个端点：分配/提交/查询操作、查询任务、读取结果及取消排队任务。提交先持久保存`accepting`再返回202，后台锁外完成W1-A冻结；结果经无路径白名单投影，历史读取使用已认证的持久记录。完整请求/响应合同见[WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)。
+
+当前普通启动没有配置分析协调器，以上端点返回`analysis_not_configured`；测试专用合成服务不构成生产分析后端。真实分析、报告来源认证、H2.2未穷尽的HTTP故障/并发矩阵及H3恢复门禁仍开放。任务进程内冻结对象含本机路径与完整catalog，不可直接序列化；报告引用和合成状态也不表示真实执行。部署包状态见[DEPLOYMENT.md](DEPLOYMENT.md)。
 
 ## 保存与本机数据
 

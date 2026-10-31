@@ -1,5 +1,11 @@
 # 本机环境与资产审计
 
+## 2026-11-01 H2.2源码与普通dist核对
+
+本轮源码位于本机`main / a21d587`，仓库提交后干净；普通`dist/ygo-local`中的`ygo.exe`、`ygo-engine-worker.exe`、`ygo.cmd`、`build-hashes.json`及包内测试/配置文档时间均为2026-10-19。H2.2源码提交晚于该包且没有部署重建，因此当前checkout包含的HTTP源码不能推断为已部署能力。未运行旧包doctor、smoke或真实分析，也未改写dist；既有旧包诊断和候选部署证据按其历史提交/资产身份保留在下文和[TESTING](TESTING.md)。
+
+依赖复查仍未证明存在可安全删除的重复直接依赖或未用crate：9个workspace成员保留，两个`hashbrown`版本属于不同传递链；本机没有`cargo-machete`。忽略的`configs/engine.toml.legacy`不是运行配置，含机器路径且没有代码/文档消费者；因其可能承担人工回滚用途，暂保留并在[TESTING](TESTING.md)记录。没有删除crate、兼容解析或历史证据。
+
 2026-11-01提交`e684f4e`已在隔离worktree离线构建并完成普通/赛事资产doctor、身份和诊断smoke/replay；smoke受30秒预算限制，P4-R5发布验收仍开放。普通主工作区dist仍为2026-10-19旧包，未切换。历史证据按用户决定不迁移，仅保留原哈希清单；清单不等于备份。当前候选证据见[TESTING](TESTING.md)。
 
 早期2026-10-31本地环境审计快照基于`main / 8526c1f`：普通旧包和赛事配置doctor均ready；`dist/ygo-local`仍为2026-10-19包。之后的候选源码部署复核见本页补记及[TESTING](TESTING.md)。赛事配置worker路径复用普通dist worker。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。

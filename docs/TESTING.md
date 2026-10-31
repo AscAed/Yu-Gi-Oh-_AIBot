@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-01 整体工作区与部署状态静态自检
+
+- 复核提交后源码为干净`main / a21d587`。`docs/INDEX.md`仍是文档入口，`TASKS.md`维护状态，`TESTING.md`维护有日期的验证；修正README、INDEX、ROADMAP、API、WORKBENCH和HTTP合同中把H2.2实现仍写成“未接入”的当前摘要。阶段历史与handoff留在日期化计划中。
+- 普通`dist/ygo-local`清单和二进制文件时间为2026-10-19；当前H2.2源码提交晚于该包，未重建或覆盖dist。因此当前HTTP实现未部署到普通dist。此为文件/提交时间静态比较；本轮没有运行doctor、smoke或真实分析。
+- `cargo metadata --offline --no-deps`列出9个workspace crate。`cargo tree --offline --locked -d`确认`hashbrown` 0.14.5经`hashlink/rusqlite`进入，0.17.1经`indexmap/toml_edit`进入；未发现同一直接依赖的重复声明。`cargo-machete`当前不可用，故不声称机器化未用依赖审计通过，也没有删除Rust crate或兼容路径。
+- `configs/engine.toml.legacy`是Git忽略的本地文件，含`C:/ProjectIgnis`机器路径；代码和文档没有发现其路径消费者。因其可能被人工当作回滚配置，保留并列为待确认清理项；没有将它当作部署配置或证据文件。
+- 文件级盘点发现127份docs Markdown。既有历史计划、证据链接和本机资产保留，不按文件年龄清理；用户此前决定历史证据不迁移，只保留SHA-256清单。
+
 ## 2026-11-01 W1-H2.2 HTTP验收续接
 
 - 依据H2.2交接缺口补充：GET拒绝请求体、未配置后端时六端点均有集成检查；增加HTTP取消与队列claim并发竞争、取消后不再领取、operation/job持久写失败的HTTP行为，以及草稿revision变化后异步操作被稳定拒绝/重放的TCP回归。

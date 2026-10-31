@@ -1,6 +1,6 @@
 # W1-B3 任务持久化、报告保存与队列协调设计
 
-W1-H2.1新增内部操作合同及持久幂等提交：操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。HTTP、结果投影及真实分析仍未接入；验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+历史交付记录（H2.1）：新增内部操作合同及持久幂等提交；操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。H2.2随后接入HTTP与结果投影；普通启动未配置分析后端，真实分析未交付。验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)及[当前HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
 [W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义了操作修订链与任务链的提交顺序、容量预占、只读历史查询和回复丢失处理。H2.1已实现内部预分配ID提交、同锁只读查询及跨链认证；H2.2仍需接入严格HTTP和公开DTO。原B3任务合同不变；不能把内部存储能力表述为HTTP已交付或真实分析。
 
