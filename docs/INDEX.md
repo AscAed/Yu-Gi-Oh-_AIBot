@@ -2,6 +2,8 @@
 
 ## 当前事实源
 
+当前实施交接见[W1-B2内部队列](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。当前路线见[W1-B1后路线](superpowers/plans/2026-10-31-post-w1b1-project-route.md)；下方W1-A后路线为历史时点。
+
 实现事实以代码、schema与可复现产物为准。当前状态、验证证据、产品目标和研究定义分别按下表读取；历史计划与对话只作背景。
 
 | 问题 | 事实源 | 阅读边界 |
@@ -20,7 +22,7 @@
 | 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
 | 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
 | JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md)、[WORKBENCH.md](WORKBENCH.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md) | schema和解析器为规范性定义；WORKBENCH记录当前本机HTTP界面与安全边界；执行恢复仅描述可恢复进度，不授予成功资格 |
-| 工作台分析接入 | [W1受限分析设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)、[无路径任务合同](WORKBENCH_ANALYSIS_JOBS.md)、[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md) | W1-A冻结与W1-B1记录/纯状态核心已实现；任务存储、HTTP队列及真实分析未实现 |
+| 工作台分析接入 | [W1受限分析设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)、[无路径任务合同](WORKBENCH_ANALYSIS_JOBS.md)、[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md) | W1-A冻结、W1-B1任务合同和W1-B2进程内合成队列已实现；持久化、HTTP队列、报告发布及真实分析未实现 |
 | 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
 | 数据来源、版本与许可 | [DATA_SOURCES.md](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
 | 历史计划、交接及故障链 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[任务历史快照](../TASKS_HISTORY.md)、[验证历史快照](TESTING_HISTORY.md) | 原入口保留历史标题锚点；快照是拆分前正文，不替代原报告、源码、账本及固定窗口边界 |
@@ -39,9 +41,9 @@
 
 [B2交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)、[工作台运行说明](WORKBENCH.md)、[牌组草稿CLI与合同](DECK_DRAFTS.md)。A1首次结果级错误及查询捕获失败回归通过；B1/B2提供版本化草稿、三分区编辑、本机浏览器操作和YDK/JSON往返，不赋予完整合法性或中文资格。实测范围见[TESTING](TESTING.md)。
 
-## W1工作台受限分析接入（W1-B1合同及状态核心已实现，存储与HTTP队列待实施）
+## W1工作台受限分析接入（W1-B2内部队列已实现）
 
-[设计文档](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)以现有`ComboAnalyzeRequest`和Rabbit样例定义输入冻结、预校验、队列状态和结果展示。W1-A提供非GET同源门禁和revision绑定冻结；W1-B1新增无路径任务记录、严格JSON及纯状态转换，没有任务存储、HTTP端点、队列或引擎调用。合同与实测入口见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)和[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。后续W1-B2/B3和W1-C分别实施；当前任务以[TASKS](../TASKS.md)为准，原[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)保留为规划背景。
+[设计文档](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)以现有`ComboAnalyzeRequest`和Rabbit样例定义输入冻结、预校验、队列状态和结果展示。W1-A提供非GET同源门禁和revision绑定冻结；W1-B1提供无路径任务记录、严格JSON及纯状态转换；W1-B2提供进程内单运行/单排队合成队列。尚无任务存储、HTTP端点、报告发布或引擎调用。合同与验证入口见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)和[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。后续W1-B3与W1-C按[TASKS](../TASKS.md)分别实施；原[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)保留为规划背景。
 
 ## 最近执行恢复批次：P4-R1b离线多动作等价与中断门禁（已通过；真实续跑未认证）
 
