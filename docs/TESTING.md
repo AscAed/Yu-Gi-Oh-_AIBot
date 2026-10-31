@@ -11,6 +11,7 @@
 - 源码基线`main / 6191011fa6cd29734594a70a57025a417077e1e7`。`cargo fmt --all -- --check`、workspace全目标Clippy（offline/locked、`-D warnings`）、`cargo test --workspace --offline --locked`均通过；默认opt-in引擎/人工研究用例继续ignored。
 - workspace测试首次执行时`ygo-cli/tests/deck_draft.rs::creates_edits_shows_and_exports_an_incomplete_draft`报告一次临时输入文件缺失；单测重跑通过，整个`deck_draft`文件以3个线程重复5次均通过，随后workspace全套复跑通过。未能稳定复现，保留为一次性临时文件异常记录。
 - `py -m pytest -q`完整运行1803.76秒：**757 passed、9 skipped、1 failed、208 subtests passed**。唯一失败是`tests/test_native_tenki_placement_confirmation.py::TenkiPlacementConfirmationTests::test_seven_historical_ledgers_reaudit_read_only_without_runner`，仍因`protected_source_change_hash_mismatch`拒绝Curry历史源码迁移。与之前同一已知历史锚点问题；未修改pin、源码档案或证据。故Python全套不通过，不能表述为全项目全绿。
+- 2026-10-31在提交`8091362`后再次单独运行上述Python用例，仍于迁移前校验`codec.rs`来源哈希时以`protected_source_change_hash_mismatch`失败。失败发生在迁移产物写入前；本轮保持pin、源码档案及证据不变。该项需来源链或明确不适用的合同处置，见[TASKS](../TASKS.md)的E1开放项。
 - 源码默认普通引擎配置、赛事配置及旧`dist/ygo-local`分别运行`engine doctor`均返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。旧包CLI/worker哈希与其build-hashes.json相符；未运行smoke、未重建或切换部署包。doctor使用worker ABI探针，不证明对局或当前源码已部署。
 - 对121份Markdown执行相对链接目标检查，缺失0；`git diff --check`通过。未迁移历史证据（按用户决定仅保留哈希清单），未清理运行数据或改动active/部署资产。
 
