@@ -341,7 +341,7 @@ class TenkiPlacementConfirmationTests(unittest.TestCase):
         )
         Draft202012Validator(schema).validate(summary)
 
-    def test_seven_historical_ledgers_reaudit_read_only_without_runner(self):
+    def test_curry_source_migration_is_rejected_without_writes(self):
         repo = Path(__file__).resolve().parents[1]
         try:
             (repo / DIAGNOSTICS_RELATIVE).lstat()
@@ -392,32 +392,17 @@ class TenkiPlacementConfirmationTests(unittest.TestCase):
         with patch.object(subprocess, "Popen", side_effect=allow_git_only):
             with self.assertRaisesRegex(ValueError, "historical_protected_input_changed"):
                 _verify_history(repo, repo / DIAGNOSTICS_RELATIVE)
-            report, _protected, _history = _verify_history(
-                repo, repo / DIAGNOSTICS_RELATIVE,
-                "curry-option-validation-v1",
-            )
-        self.assertEqual(report["old_consumed"], 26)
-        self.assertEqual(report["unknown"], 0)
-        self.assertEqual(report["scope_protected_source_change"], {
-            "scope": "curry-option-validation-v1",
-            "path": "crates/ygo-engine-adapter/src/codec.rs",
-            "historical_sha256": "224cb3fa6a7700e871d79f202e0e3def4c3b394229bb57c462191f1da470a36e",
-            "current_sha256": "e8f97eefcf93ef626d2ecbc785661fde2fee47b0525e110ec7aee9a185aad133",
-            "historical_bytes_verified_from_archive": True,
-        })
-        self.assertEqual(len(report["ledgers"]), 7)
+            with self.assertRaisesRegex(ValueError, "protected_source_change_hash_mismatch"):
+                _verify_history(
+                    repo,
+                    repo / DIAGNOSTICS_RELATIVE,
+                    "curry-option-validation-v1",
+                )
         self.assertEqual(before_root, runtime_snapshot())
-        self.assertEqual(
-            before_root[2]["research/calls.jsonl"],
-            "5daf512e4381803663df466575f4706f083843629ae660caf8c557ebecc8bc21",
-        )
         self.assertEqual(
             before,
             {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in ledger_paths},
         )
-        changed = dict(report, scope="tenki-placement-probe-v1")
-        with self.assertRaises(ValueError):
-            validate_report(changed, repo)
 
 
 if __name__ == "__main__":

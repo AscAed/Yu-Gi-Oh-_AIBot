@@ -1,6 +1,6 @@
 # Windows 本机部署与验收
 
-2026-10-31本地审计快照为`main / d202b08`，工作区干净，本地领先`origin/main`五个提交。旧普通包和赛事配置doctor曾在`main / 735d247`时点复验ready，旧包CLI/worker哈希与自身清单一致；此后源码又有W1-B3.3更新。`dist/ygo-local`仍为2026-10-19包，本次未重建、切换或在`d202b08`源码上重跑doctor。P4-R5仍开放。详见[验证记录](TESTING.md)。
+2026-10-31本地审计快照基于`main / 8526c1f`。普通旧包和赛事配置doctor在本轮重新运行均ready；检查对象仍是2026-10-19的`dist/ygo-local`，不是当前源码构建。没有重建、切换部署包或运行smoke；P4-R5仍开放。详见[验证记录](TESTING.md)。
 
 本轮完成W1-B3.3内部合成故障矩阵并通过离线Rust验证；未重建或切换部署包，也未在当前源码上运行doctor、smoke或研究流程。部署状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
 

@@ -4,8 +4,10 @@
 
 - `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`通过：23 passed、0 failed。新增覆盖报告终态提交失败后停派发并重开为unknown、报告文件发布不确定、提交后不确定的submit/cancel/fail、全部冻结资产角色/脚本路径漂移、已提交queued/running修订后的操作系统子进程强杀及恢复分类；既有测试继续覆盖提交前失败、同票据重复终态、链/报告核验与失败重试。
 - `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`及`cargo test --workspace --offline --locked -- --test-threads=1`均退出0。workspace测试保留标记的opt-in引擎与人工案例为ignored；未启动真实引擎或研究调用。
+- `py -m pytest -q -ra --tb=short`完整套件通过：**758 passed、9 skipped、208 subtests passed**，用时1731.49秒。原Tenki历史迁移用例已改为断言未认证的Curry源码迁移返回`protected_source_change_hash_mismatch`，并确认受保护runtime目录与ledger字节哈希不变；此用例不声称七份ledger已成功重审。原始输出位于忽略目录[`target/project-self-audit-20261031-python.log`](../target/project-self-audit-20261031-python.log)。
+- 在该次源码检查点之后，对现存`dist/ygo-local`分别运行普通配置`ygo.cmd engine doctor`和赛事配置`YGO_ENGINE_CONFIG=data/runtime/tournament-2026/engine.toml`下的`ygo.exe engine doctor`；均退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。另重新计算旧包CLI/worker SHA-256，与`build-hashes.json`中2项一致；`configs/engine.toml`的worker、core、catalog、scripts目录、script manifest及engine manifest 6个路径均存在。检查对象是2026-10-19旧包，未重建/切换部署，也没有最新源码包的smoke或P4-R5验收。
 - 提交后锁内内存状态应用只有互斥锁保护的赋值/移除操作，没有可返回错误分支；未虚构可注入错误。子进程强杀发生在已提交revision之后，不代表逐syscall/fsync强杀、断电、介质或网络文件系统验收。报告为合成合同数据，不认证来源或真实执行；HTTP、真实分析和claim后实际执行前的资产竞态验收仍开放。
-- 本轮没有重跑完整Python套件；此前完整本机结果757 passed、9 skipped、1 failed，唯一失败仍是受保护Tenki历史pin的`protected_source_change_hash_mismatch`。按用户决定不迁移历史证据，仅保留哈希清单。
+- 历史E1归档和pin未改变；当前保护测试证明不具备来源链时迁移失败关闭且不写入。按用户决定不迁移；Curry七份历史ledger成功重审仍开放，只有在未来建立可信来源链后才可处理。
 - `git diff --check`及Markdown相对链接核验结果见本轮最终记录。2026-10-31部署doctor的旧包检查见下文历史记录：ready不等于smoke，也不证明最新源码已部署。
 
 ## 2026-10-31 W1-B3.1综合自检复验

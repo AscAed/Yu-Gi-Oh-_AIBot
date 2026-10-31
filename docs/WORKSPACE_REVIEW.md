@@ -1,6 +1,6 @@
 # 工作区自检与维护矩阵
 
-2026-10-31审计续跑基线为`main / d202b08`，工作区干净，本地领先`origin/main`五个提交；本轮Rust格式、Clippy、workspace测试及23项持久协调定向测试通过。内部合成故障矩阵已覆盖提交边界、重开分类、子进程强杀和资产漂移；Python完整套件仍有Tenki历史pin失败，历史证据按用户决定不迁移。旧包与赛事配置doctor是在前一源码时点复验ready，当前包smoke及最新源码部署验收未做。当前路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)及[验证记录](TESTING.md)。
+2026-10-31审计续跑基线为`main / 8526c1f`；本轮Rust格式、Clippy、workspace测试、23项持久协调定向测试及Python全套均通过。Python结果为758 passed、9 skipped、208 subtests；E1测试验证来源不匹配时拒绝迁移且不写历史材料，七份ledger成功重审仍开放。旧包与赛事配置doctor本轮复验ready，CLI/worker哈希和六个配置路径复核通过；当前包smoke及最新源码部署验收未做。当前路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)及[验证记录](TESTING.md)。
 
 2026-10-31 W1-B2内部队列在本地隔离target完成Rust workspace复验（377 passed、36 ignored、0 failed），相关Python/schema检查30 passed、2 skipped、4 subtests通过；格式与Clippy检查通过。此为源码测试，不包含部署、doctor、smoke或真实分析。交接见[W1-B2记录](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)，逐项命令见[TESTING](TESTING.md)。
 

@@ -1,6 +1,6 @@
 # 项目现状
 
-本评估以当前能力矩阵为主，源码基线为2026-10-31 `main / d202b08`；部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器、claim资产哈希门禁及内部合成故障矩阵已有验证；HTTP、真实分析、逐syscall崩溃和断电验收仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
+本评估以当前能力矩阵为主，源码复验基底为2026-10-31 `main / 8526c1f`及本批历史保护测试更新；部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器、claim资产哈希门禁及内部合成故障矩阵已有验证；HTTP、真实分析、逐syscall崩溃和断电验收仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
 
 ## 产品目标
 

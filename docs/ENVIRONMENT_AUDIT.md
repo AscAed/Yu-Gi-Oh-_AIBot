@@ -1,6 +1,6 @@
 # 本机环境与资产审计
 
-2026-10-31本地环境审计快照为`main / d202b08`，工作区干净，本地领先`origin/main`五个提交。普通旧包和赛事配置doctor最近在`main / 735d247`时点复验ready；之后源码更新未部署，`dist/ygo-local`仍为旧包且本轮未运行smoke。上述记录不能替代P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
+2026-10-31本地环境审计快照基于`main / 8526c1f`。普通旧包和赛事配置doctor本轮均ready；`dist/ygo-local`仍为2026-10-19包，未运行smoke，也未做P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
 
 2026-10-31 W1-B3内部持久协调、claim资产哈希门禁及故障矩阵仅在当前开发工作区验证；未部署、未在最新源码上运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
 
