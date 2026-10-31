@@ -1,5 +1,13 @@
 # 本机牌组草稿工作台
 
+W1-H2.1新增内部操作合同及持久幂等提交：操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。HTTP、结果投影及真实分析仍未接入；验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+
+W1-H1已设计操作ID与重复请求边界，但HTTP任务接口仍未实现，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
+
+W1-H1的[分析HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)已完成静态走查与只读审阅；页面尚无任务入口。拟议操作ID、任务历史查询、取消及无路径结果DTO均未实现，不能访问文档中的/api/analysis-*取得能力。H2合成接入、H3故障恢复和W1-C真实分析分别后置；旧草稿功能不变。
+
+W1-B3内部存储、报告绑定及协调器已有合成故障验证；界面尚无分析任务HTTP入口或真实执行。子进程强杀发生在revision提交后，不代表逐syscall中断或断电验收。见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+
 W1-B2进程内队列与W1-B3任务/报告持久存储、DurableAnalysisCoordinator及内部合成故障矩阵已实现；这些Rust内部能力未接入工作台分析HTTP，当前网页仍只管理草稿、卡片查询和字段状态。矩阵不认证真实执行、逐syscall崩溃或断电持久性。任务和报告合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
 
 工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。

@@ -1,5 +1,9 @@
 # CLI 与库接口
 
+W1-H2.1已实现内部操作合同及持久幂等提交：`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、真实W1-A冻结与等待槽预占；任务及accepted操作提交后才注册派发。重复指令复用保存结果，`inspect_operation/inspect_job`提供同锁只读查询；旧无操作根仍可用，但拒绝含操作根。H2.2的HTTP路由、公开状态/结果DTO及路径安全边界仍是[拟议合同](WORKBENCH_ANALYSIS_HTTP.md)，分析创建幂等尚未接入既有API；H3恢复验证与真实分析仍开放。实现验收见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+
+W1-B3内部任务/报告存储与持久协调器已实现，任务HTTP和真实执行器仍未接入。持久提交先于内存更新，报告严格读取、绑定冻结输入、落盘重读后发布；写后不确定时停派发，执行前复核资产。详见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+
 当前已实现W1-B1无路径任务合同、W1-B2进程内队列及W1-B3内部持久任务/报告存储协调器；领取时校验冻结资产哈希，提交结果不确定时停止协调器。内部合成故障矩阵覆盖提交边界、终态重开分类、重复终态请求和冻结资产漂移；不认证报告来源、真实执行、逐syscall崩溃或断电持久性。内部能力尚未连接工作台分析HTTP或真实执行器。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 
 当前交付面包括本机 CLI/Rust库，以及仅绑定`127.0.0.1`的本机草稿工作台。解析器与JSON schema是规范性合同；工作台接口只用于本机草稿，不是通用远程API。

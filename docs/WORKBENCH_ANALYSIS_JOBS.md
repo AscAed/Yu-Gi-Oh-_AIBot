@@ -1,5 +1,9 @@
 # 工作台分析任务合同 v1
 
+W1-H2.1新增内部操作合同及持久幂等提交：操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。HTTP、结果投影及真实分析仍未接入；验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+
+[W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义拟议操作合同与公开DTO，不修改本v1任务合同。H2.1已实现内部操作存储；操作ID与任务ID分开，草稿revision为内容摘要字符串、任务revision为整数，操作链不套用任务1/2/3状态图。HTTP及结果投影尚未实现。
+
 W1-B1只实现Rust库中的无路径记录、严格JSON读取及纯状态转换，没有任务文件存储、HTTP任务接口、队列或界面。源码入口为`ygo_cli::workbench_analysis::jobs`，结构合同见[workbench-analysis-job-v1](../schemas/workbench-analysis-job-v1.schema.json)。原[W1-A冻结接口](WORKBENCH.md#分析接入设计状态)、分析请求和分析报告保持可用。
 
 ## 记录与输入

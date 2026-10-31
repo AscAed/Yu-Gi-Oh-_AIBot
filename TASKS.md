@@ -1,12 +1,18 @@
 # 实施任务与验收状态
 
-## 当前状态（2026-10-31）：W1-B3任务/报告存储、基础持久协调器及内部故障矩阵已实现；HTTP接口与真实分析仍开放
+## 当前状态（2026-10-31）：W1-H2.1内部操作提交合成验收通过；HTTP、H3与真实分析仍开放
 
-当前设计见[W1-B3.1持久化与发布](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。当前路线见[W1-B2后路线](docs/superpowers/plans/2026-10-31-post-w1b2-project-route.md)；下方W1-B1和W1-A后路线保留历史时点。
+本批续接见[H2.1交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。内部操作合同和持久提交已有实现，HTTP与DTO尚未接入。
+
+历史设计见[W1-H1 HTTP合同](docs/WORKBENCH_ANALYSIS_HTTP.md)，续接见[H1交接](docs/superpowers/plans/2026-10-31-w1h1-analysis-http-handoff.md)。H1时点仅设计；H2.1现已实现内部操作ID、双摘要和跨链提交/只读查询。HTTP及公开DTO仍未实现；本批实跑范围见TESTING。
+
+当前路线见[W1-H2.1后路线](docs/superpowers/plans/2026-11-01-post-w1h21-project-route.md)；W1-H1及W1-B3路线保留为历史时点。H2.1内部操作存储已实现，H2.2合成HTTP投影和H3跨链故障恢复仍开放；不自动授权真实执行。
+
+持久化实现见[W1-B3持久化与发布](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。[W1-B2后路线](docs/superpowers/plans/2026-10-31-post-w1b2-project-route.md)及更早路线保留历史时点。
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
-这是当前状态和开放任务的唯一入口。产品目标、研究定义及阶段依赖分别见[产品愿景](docs/PRODUCT_VISION.md)、[最优性研究](docs/OPTIMALITY_RESEARCH.md)和[路线图](docs/ROADMAP.md)；当前实施顺序见[W1-B1后项目路线](docs/superpowers/plans/2026-10-31-post-w1b1-project-route.md)、[W1-A后项目路线](docs/superpowers/plans/2026-10-30-post-w1a-project-route.md)，[W1设计后路线](docs/superpowers/plans/2026-10-30-post-w1-project-route.md)及更早计划均保留各自历史时点。下方各批历史数字仅适用于其日期和范围，不覆盖本节。
+这是当前状态和开放任务的唯一入口。产品目标、研究定义及阶段依赖分别见[产品愿景](docs/PRODUCT_VISION.md)、[最优性研究](docs/OPTIMALITY_RESEARCH.md)和[路线图](docs/ROADMAP.md)；当前实施顺序以[W1-H2.1后路线](docs/superpowers/plans/2026-11-01-post-w1h21-project-route.md)为准，其他路线保留各自历史时点。下方各批历史数字仅适用于其日期和范围，不覆盖本节。
 
 | 阶段 | 当前能力与未完成门禁 |
 |---|---|
@@ -57,6 +63,10 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-B2内部合成队列与取消：单运行加单排队、排队取消、容量拒绝及票据结算；无HTTP、持久化或真实执行。见[交接](docs/superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 - [x] W1-B3.1/B3.2存储基础：不可变任务修订、严格链校验、排他锁、重启分类，以及报告严格读取/冻结输入绑定/私有落盘/哈希重读已实现；定向测试为合成合同测试，不认证报告来源。见[持久化设计与实现状态](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。
 - [x] W1-B3.3内部持久协调故障矩阵：覆盖submit/claim/cancel/fail/report文件与终态提交前失败、提交后不确定、停派发、孤立报告、重复终态请求、全部冻结资产角色/脚本路径漂移、进程强杀后的queued/interrupted与running/unknown分类。队列锁内持久提交后的状态更新没有可返回的错误分支；Rust操作系统进程强杀覆盖已完成，但文件系统每条syscall间强杀、断电/介质故障未认证。HTTP创建幂等标识与真实执行结果确认另在后续接口/执行器批次定义。
+- [x] W1-H1分析任务HTTP合同设计：操作ID/幂等、提交顺序、状态与结果DTO、安全及失败矩阵完成静态走查和独立只读审阅；无生产修改或运行测试。见[设计](docs/WORKBENCH_ANALYSIS_HTTP.md)。
+- [x] W1-H2.1内部操作存储：严格合同、36例共享语料、容量预占、幂等提交、跨链重开和停止后只读查询已合成验证，HTTP尚未实现；见[交接](docs/superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+- [ ] W1-H2.2 HTTP投影：复用已实现操作提交与历史只读查询，接严格HTTP和无路径投影；仅合成执行边界，真实分析后置。
+- [ ] W1-H3故障恢复：验证跨链提交缺口、响应丢失、并发重复与停止状态的只读查询；不自动重发。
 - [ ] W1-C本机分析验收设计：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析另行安排并单独记录。
 - [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；未知项不提升为正式数据资格。
 - [ ] P4-R1b-3真实恢复实验设计：定义固定场景、独立scope、预算、窗口、暂停/重开及独立原生重放标准；设计完成后真实执行另行授权。
@@ -66,11 +76,11 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。
-- [ ] P4-R5：2026-10-31在独立干净worktree以最新功能源码（`6800bf2`；之后`main`仅有文档提交）构建候选包，普通/赛事配置doctor和身份采样通过；普通资产smoke因时间预算终止，独立replay 3/3通过。仍缺赛事候选smoke/replay及有可比对象的身份/账本比较，故门禁未通过，见[TESTING](docs/TESTING.md)和[DEPLOYMENT](docs/DEPLOYMENT.md)。
+- [ ] P4-R5：`6800bf2`候选早于当前W1-H2.1源码，不能证明当前源码已部署。须在本批源码提交后重建，再完成普通/赛事资产doctor、身份、适用的smoke/replay及明确比较对象的账本核验；缺少账本对象时保持未知。旧候选结果见[TESTING](docs/TESTING.md)。
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 
-上述排序、依赖和停止条件见[W1-A后项目路线](docs/superpowers/plans/2026-10-30-post-w1a-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
+上述排序、依赖和停止条件见[W1-H2.1后路线](docs/superpowers/plans/2026-11-01-post-w1h21-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
 
 前次交付后的603项源码归档身份、原生时点身份和普通dist是不同对象；后续文档、pytest配置和Cargo依赖整理已改变工作区，不再声称其与该归档完整逐字一致。实跑与静态核对分别见[TESTING](docs/TESTING.md)，历史导航见[HISTORY_INDEX](docs/HISTORY_INDEX.md)。
 

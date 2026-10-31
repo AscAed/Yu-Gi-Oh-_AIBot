@@ -1,5 +1,7 @@
 # 项目现状
 
+2026-11-01复核源码包含W1-H2.1内部操作链、幂等提交及跨链恢复；workspace测试、Clippy、fmt和schema定向检查通过。H2.2 HTTP/公开DTO、H3强化恢复、真实分析和P4-R5最新源码部署验收仍开放。当前路线见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)；下方基线为历史时点。
+
 本评估以当前能力矩阵为主，源码复验基底为2026-10-31 `main / 8526c1f`及本批历史保护测试更新；部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器、claim资产哈希门禁及内部合成故障矩阵已有验证；HTTP、真实分析、逐syscall崩溃和断电验收仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
 
 ## 产品目标

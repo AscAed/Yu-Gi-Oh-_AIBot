@@ -5,6 +5,11 @@
 
 use super::{
     jobs::{AnalysisJobEvent, AnalysisJobFailure, AnalysisJobRecordV1},
+    operations::{
+        AnalysisOperationCommand as OperationCommand, AnalysisOperationContext as OperationContext,
+        AnalysisOperationError, AnalysisOperationRecordV1 as Operation,
+        AnalysisOperationState as OperationState,
+    },
     persistence::{PersistenceError, PersistentAnalysisJobStore},
     queue::{AnalysisJobQueue, DispatchTicket, QueueError, QueueSnapshot},
     FrozenAnalysisInput,
@@ -20,6 +25,7 @@ pub enum DurableCoordinatorError {
     AssetMismatch,
     Persistence(PersistenceError),
     Queue(QueueError),
+    Operation(AnalysisOperationError),
 }
 
 impl DurableCoordinatorError {
@@ -30,6 +36,7 @@ impl DurableCoordinatorError {
             Self::AssetMismatch => "analysis_asset_mismatch",
             Self::Persistence(error) => error.code(),
             Self::Queue(error) => error.code(),
+            Self::Operation(error) => error.code(),
         }
     }
 }
@@ -40,6 +47,18 @@ pub struct DurableAnalysisCoordinator {
     store: PersistentAnalysisJobStore,
     queue: AnalysisJobQueue,
     stopped: Mutex<bool>,
+    reservation: Mutex<Option<String>>,
+}
+
+fn requires_stop(error: PersistenceError) -> bool {
+    matches!(
+        error,
+        PersistenceError::CommitUncertain
+            | PersistenceError::InvalidChain
+            | PersistenceError::RevisionConflict
+            | PersistenceError::RecordInvalid
+            | PersistenceError::InvalidPath
+    )
 }
 
 impl DurableAnalysisCoordinator {
@@ -50,6 +69,7 @@ impl DurableAnalysisCoordinator {
             store,
             queue: AnalysisJobQueue::default(),
             stopped: Mutex::new(false),
+            reservation: Mutex::new(None),
         })
     }
 
@@ -93,12 +113,24 @@ impl DurableAnalysisCoordinator {
         scoring: ScoringConfig,
         now_ms: u64,
     ) -> Result<AnalysisJobRecordV1, DurableCoordinatorError> {
-        let stopped = self
+        let mut stopped = self
             .stopped
             .lock()
             .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
+        }
+        if self
+            .reservation
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?
+            .is_some()
+        {
+            return Err(DurableCoordinatorError::Queue(QueueError::Full));
         }
         match self
             .queue
@@ -120,6 +152,10 @@ impl DurableAnalysisCoordinator {
             .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
         }
         let claimed = match self.queue.claim_next_with_persist(now_ms, |record| {
             self.store
@@ -167,12 +203,16 @@ impl DurableAnalysisCoordinator {
         revision: u64,
         now_ms: u64,
     ) -> Result<AnalysisJobRecordV1, DurableCoordinatorError> {
-        let stopped = self
+        let mut stopped = self
             .stopped
             .lock()
             .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
         }
         match self
             .queue
@@ -200,6 +240,10 @@ impl DurableAnalysisCoordinator {
             .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
         }
         let snapshot = self
             .queue
@@ -257,12 +301,16 @@ impl DurableAnalysisCoordinator {
         ticket: &DispatchTicket,
         now_ms: u64,
     ) -> Result<AnalysisJobRecordV1, DurableCoordinatorError> {
-        let stopped = self
+        let mut stopped = self
             .stopped
             .lock()
             .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
         if *stopped {
             return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
         }
         match self.queue.settle_with_persist(
             ticket,
@@ -301,7 +349,7 @@ impl DurableAnalysisCoordinator {
         mut stopped: std::sync::MutexGuard<'_, bool>,
     ) -> Result<T, DurableCoordinatorError> {
         if let QueueError::Persistence(persistence) = error {
-            if persistence == PersistenceError::CommitUncertain {
+            if requires_stop(persistence) {
                 *stopped = true;
             }
             Err(DurableCoordinatorError::Persistence(persistence))
@@ -315,9 +363,818 @@ impl DurableAnalysisCoordinator {
         error: PersistenceError,
         mut stopped: std::sync::MutexGuard<'_, bool>,
     ) -> Result<T, DurableCoordinatorError> {
-        if error == PersistenceError::CommitUncertain {
+        if requires_stop(error) {
             *stopped = true;
         }
         Err(DurableCoordinatorError::Persistence(error))
+    }
+}
+
+impl DurableAnalysisCoordinator {
+    /// Opens operation-aware storage. Authentication precedes restart writes.
+    pub fn open_operations(root: PathBuf) -> Result<Self, DurableCoordinatorError> {
+        let store = PersistentAnalysisJobStore::open_unclassified(root)
+            .map_err(DurableCoordinatorError::Persistence)?;
+        let operations = store
+            .scan_operations()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        let jobs = store.scan().map_err(DurableCoordinatorError::Persistence)?;
+        let mut bound = std::collections::BTreeSet::new();
+        let mut repairs = Vec::new();
+        for history in operations.values() {
+            let op = history.last().ok_or(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidChain,
+            ))?;
+            if let Some(id) = op.job_id() {
+                if !bound.insert(id.to_owned()) {
+                    return Err(DurableCoordinatorError::Persistence(
+                        PersistenceError::InvalidChain,
+                    ));
+                }
+                if let Some(job) = jobs.get(id).and_then(|h| h.first()) {
+                    if !matches!(
+                        op.state(),
+                        OperationState::Accepting | OperationState::Accepted
+                    ) || op.frozen_input().and_then(|x| serde_json::to_vec(x).ok())
+                        != serde_json::to_vec(job.input()).ok()
+                    {
+                        return Err(DurableCoordinatorError::Persistence(
+                            PersistenceError::InvalidChain,
+                        ));
+                    }
+                } else if op.state() == OperationState::Accepted {
+                    return Err(DurableCoordinatorError::Persistence(
+                        PersistenceError::InvalidChain,
+                    ));
+                }
+            }
+            if op.state() == OperationState::Accepting {
+                let now = op.updated_at_ms();
+                let next = if op.job_id().is_some_and(|id| jobs.contains_key(id)) {
+                    op.accept(now)
+                } else {
+                    op.mark_unknown(now)
+                }
+                .map_err(DurableCoordinatorError::Operation)?;
+                repairs.push(next);
+            }
+        }
+        // Every chain was authenticated before the first recovery append.
+        for repair in repairs {
+            store
+                .append_operation(&repair)
+                .map_err(DurableCoordinatorError::Persistence)?;
+        }
+        store
+            .classify_restart()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        Ok(Self {
+            store,
+            queue: AnalysisJobQueue::default(),
+            stopped: Mutex::new(false),
+            reservation: Mutex::new(None),
+        })
+    }
+    /// Pure inspection under the existing store lock, including when stopped.
+    pub fn inspect_operation(&self, id: &str) -> Result<Vec<Operation>, DurableCoordinatorError> {
+        let _guard = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        self.store
+            .authenticate_operation_bindings()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        self.store
+            .operation_history(id)
+            .map_err(DurableCoordinatorError::Persistence)
+    }
+    pub fn inspect_job(
+        &self,
+        id: &str,
+    ) -> Result<Vec<AnalysisJobRecordV1>, DurableCoordinatorError> {
+        let _guard = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        self.store
+            .authenticate_operation_bindings()
+            .map_err(DurableCoordinatorError::Persistence)?;
+        self.store
+            .history(id)
+            .map_err(DurableCoordinatorError::Persistence)
+    }
+    pub fn allocate_operation(
+        &self,
+        context: OperationContext,
+        now: u64,
+    ) -> Result<Operation, DurableCoordinatorError> {
+        let mut stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
+        }
+        let id = ygo_storage::secure_random_hex(16)
+            .map_err(|_| DurableCoordinatorError::Queue(QueueError::IdUnavailable))?;
+        let op =
+            Operation::allocate(id, context, now).map_err(DurableCoordinatorError::Operation)?;
+        if let Err(e) = self.store.append_operation(&op) {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(e));
+        }
+        Ok(op)
+    }
+    /// Resolves a new operation through the actual W1-A freeze gate. Repeated
+    /// commands return saved metadata without touching drafts or assets.
+    #[allow(clippy::too_many_arguments)]
+    pub fn submit_operation(
+        &self,
+        id: &str,
+        command: OperationCommand,
+        context: &OperationContext,
+        now: u64,
+        drafts: &ygo_storage::DeckDraftStore,
+        snapshots: &ygo_storage::SnapshotStore,
+        engine: ygo_engine_adapter::ProcessEngineConfig,
+    ) -> Result<Operation, DurableCoordinatorError> {
+        self.submit_operation_core(id, command, context, now, |cmd, ctx| {
+            super::freeze_analysis_input(
+                drafts,
+                super::AnalysisFreezeSpec {
+                    draft_id: cmd.draft_id.clone(),
+                    expected_revision: cmd.draft_revision.clone(),
+                    opening_hand: cmd.opening_hand.clone(),
+                    seed: cmd.seed,
+                    rules: cmd.rules.clone(),
+                    catalog_id: cmd.catalog_id.clone(),
+                    banlist_id: cmd.banlist_id.clone(),
+                    as_of: cmd.as_of.clone(),
+                    search: cmd.search.clone(),
+                },
+                engine,
+                snapshots,
+                &ctx.default_catalog_id,
+            )
+        })
+    }
+    fn submit_operation_core(
+        &self,
+        id: &str,
+        command: OperationCommand,
+        context: &OperationContext,
+        now: u64,
+        freeze: impl FnOnce(
+            &OperationCommand,
+            &OperationContext,
+        ) -> Result<FrozenAnalysisInput, super::AnalysisFreezeError>,
+    ) -> Result<Operation, DurableCoordinatorError> {
+        let mut stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if let Err(e) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(e));
+        }
+        let mut op = self
+            .store
+            .operation_history(id)
+            .map_err(DurableCoordinatorError::Persistence)?
+            .pop()
+            .ok_or(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidChain,
+            ))?;
+        let digest = command
+            .checksum(op.context())
+            .map_err(DurableCoordinatorError::Operation)?;
+        if now < op.updated_at_ms() {
+            return Err(DurableCoordinatorError::Operation(
+                AnalysisOperationError::TimeInvalid,
+            ));
+        }
+        if let Some(saved) = op.command_sha256() {
+            if saved != digest {
+                return Err(DurableCoordinatorError::Persistence(
+                    PersistenceError::RevisionConflict,
+                ));
+            }
+            return Ok(op);
+        }
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        let context_changed =
+            serde_json::to_vec(context).ok() != serde_json::to_vec(op.context()).ok();
+        let mut reservation = self
+            .reservation
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        let full = reservation.is_some()
+            || self
+                .queue
+                .snapshot()
+                .map_err(DurableCoordinatorError::Queue)?
+                .queued
+                .is_some();
+        if context_changed || full {
+            let code = if context_changed {
+                "analysis_operation_context_changed"
+            } else {
+                "analysis_queue_full"
+            };
+            op = op
+                .reject(command, 409, code, now)
+                .map_err(DurableCoordinatorError::Operation)?;
+            if let Err(e) = self.store.append_operation(&op) {
+                *stopped = true;
+                return Err(DurableCoordinatorError::Persistence(e));
+            }
+            return Ok(op);
+        }
+        let job_id = ygo_storage::secure_random_hex(16)
+            .map_err(|_| DurableCoordinatorError::Queue(QueueError::IdUnavailable))?;
+        if self
+            .store
+            .scan()
+            .map_err(DurableCoordinatorError::Persistence)?
+            .contains_key(&job_id)
+            || self
+                .store
+                .scan_operations()
+                .map_err(DurableCoordinatorError::Persistence)?
+                .values()
+                .any(|h| {
+                    h.last()
+                        .is_some_and(|o| o.job_id() == Some(job_id.as_str()))
+                })
+        {
+            return Err(DurableCoordinatorError::Queue(QueueError::IdUnavailable));
+        }
+        op = op
+            .begin(command.clone(), job_id.clone(), now)
+            .map_err(DurableCoordinatorError::Operation)?;
+        if let Err(e) = self.store.append_operation(&op) {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(e));
+        }
+        *reservation = Some(id.to_owned());
+        drop(reservation);
+        drop(stopped);
+        let frozen = freeze(&command, op.context());
+        let mut stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        let current = self
+            .store
+            .operation_history(id)
+            .map_err(|e| {
+                *stopped = true;
+                DurableCoordinatorError::Persistence(e)
+            })?
+            .pop()
+            .ok_or(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidChain,
+            ))?;
+        if current.encode_json().ok() != op.encode_json().ok() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidChain,
+            ));
+        }
+        let input = match frozen {
+            Ok(frozen) => frozen,
+            Err(error) => {
+                op = op
+                    .reject(
+                        command,
+                        if error == super::AnalysisFreezeError::RevisionConflict {
+                            409
+                        } else {
+                            422
+                        },
+                        error.code(),
+                        now,
+                    )
+                    .map_err(DurableCoordinatorError::Operation)?;
+                if let Err(e) = self.store.append_operation(&op) {
+                    *stopped = true;
+                    return Err(DurableCoordinatorError::Persistence(e));
+                }
+                *self
+                    .reservation
+                    .lock()
+                    .map_err(|_| DurableCoordinatorError::LockUnavailable)? = None;
+                return Ok(op);
+            }
+        };
+        let job =
+            AnalysisJobRecordV1::new(job_id.clone(), &input, op.context().scoring.clone(), now)
+                .map_err(|e| {
+                    *stopped = true;
+                    DurableCoordinatorError::Queue(QueueError::Job(e))
+                })?;
+        op = op.bind_input(job.input().clone(), now).map_err(|e| {
+            *stopped = true;
+            DurableCoordinatorError::Operation(e)
+        })?;
+        if let Err(e) = self.store.append_operation(&op) {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(e));
+        }
+        let accepted = op.accept(now).map_err(DurableCoordinatorError::Operation)?;
+        let outcome = self.queue.enqueue_identified_with_persist(
+            job_id,
+            input,
+            op.context().scoring.clone(),
+            now,
+            |record| {
+                self.store.append_initial(record.clone())?;
+                self.store.append_operation(&accepted)
+            },
+        );
+        match outcome {
+            Ok(_) => {
+                *self
+                    .reservation
+                    .lock()
+                    .map_err(|_| DurableCoordinatorError::LockUnavailable)? = None;
+                Ok(accepted)
+            }
+            Err(error) => {
+                *stopped = true;
+                Err(DurableCoordinatorError::Queue(error))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod operation_tests {
+    use super::*;
+    use crate::workbench_analysis::{operations::*, tests::fixtures};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Barrier,
+    };
+    fn root() -> PathBuf {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1h21-analysis-operation-tests")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+    fn setup(
+        root: &std::path::Path,
+    ) -> (
+        ygo_storage::DeckDraftStore,
+        ygo_storage::SnapshotStore,
+        ygo_engine_adapter::ProcessEngineConfig,
+        AnalysisOperationContext,
+        AnalysisOperationCommand,
+    ) {
+        let f = root.join("fixture");
+        std::fs::create_dir_all(&f).unwrap();
+        let (drafts, snapshots, engine, catalog, banlist, draft) = fixtures(&f);
+        std::fs::write(&engine.script_manifest_path, b"{}").unwrap();
+        let saved = drafts.create(draft.clone()).unwrap();
+        let context = AnalysisOperationContext {
+            scoring: ScoringConfig::default(),
+            default_catalog_id: catalog,
+            configuration_sha256: "a".repeat(64),
+        };
+        let command = AnalysisOperationCommand {
+            draft_id: saved.id,
+            draft_revision: saved.revision,
+            opening_hand: draft.main[..5].to_vec(),
+            seed: 1,
+            rules: "ocg-mr5".into(),
+            catalog_id: None,
+            banlist_id: banlist,
+            as_of: "2026-10-30".into(),
+            search: Default::default(),
+        };
+        (drafts, snapshots, engine, context, command)
+    }
+    #[test]
+    fn operation_actual_freeze_duplicate_and_restart_do_not_resubmit() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let saved = c
+            .submit_operation(
+                op.operation_id(),
+                cmd.clone(),
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        assert_eq!(saved.state(), AnalysisOperationState::Accepted);
+        let job_id = saved.job_id().unwrap().to_owned();
+        let again = c
+            .submit_operation_core(op.operation_id(), cmd.clone(), &ctx, 102, |_, _| {
+                panic!("duplicate froze")
+            })
+            .unwrap();
+        assert_eq!(again.encode_json().unwrap(), saved.encode_json().unwrap());
+        let mut changed = cmd.clone();
+        changed.seed = 9;
+        assert!(c
+            .submit_operation_core(op.operation_id(), changed, &ctx, 102, |_, _| panic!(
+                "conflict froze"
+            ))
+            .is_err());
+        assert_eq!(c.inspect_job(&job_id).unwrap().len(), 1);
+        drop(c);
+        assert!(PersistentAnalysisJobStore::open(root.join("store")).is_err());
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        assert_eq!(
+            c.inspect_job(&job_id).unwrap().last().unwrap().state(),
+            super::super::jobs::AnalysisJobState::Interrupted
+        );
+        assert_eq!(
+            c.submit_operation_core(op.operation_id(), cmd, &ctx, 103, |_, _| panic!(
+                "restart froze"
+            ))
+            .unwrap()
+            .state(),
+            AnalysisOperationState::Accepted
+        );
+        assert!(c.snapshot().unwrap().queued.is_none());
+    }
+    #[test]
+    fn reservation_blocks_old_submit_and_parallel_duplicates_freeze_once() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let frozen = crate::workbench_analysis::freeze_analysis_input(
+            &drafts,
+            crate::workbench_analysis::AnalysisFreezeSpec {
+                draft_id: cmd.draft_id.clone(),
+                expected_revision: cmd.draft_revision.clone(),
+                opening_hand: cmd.opening_hand.clone(),
+                seed: cmd.seed,
+                rules: cmd.rules.clone(),
+                catalog_id: cmd.catalog_id.clone(),
+                banlist_id: cmd.banlist_id.clone(),
+                as_of: cmd.as_of.clone(),
+                search: cmd.search.clone(),
+            },
+            engine,
+            &snapshots,
+            &ctx.default_catalog_id,
+        )
+        .unwrap();
+        let c = Arc::new(DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap());
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let gate = Arc::new(Barrier::new(2));
+        let count = Arc::new(AtomicUsize::new(0));
+        let (c2, ctx2, cmd2, gate2, count2, input) = (
+            c.clone(),
+            ctx.clone(),
+            cmd.clone(),
+            gate.clone(),
+            count.clone(),
+            frozen.clone(),
+        );
+        let id = op.operation_id().to_owned();
+        let thread = std::thread::spawn(move || {
+            c2.submit_operation_core(&id, cmd2, &ctx2, 101, |_, _| {
+                count2.fetch_add(1, Ordering::SeqCst);
+                gate2.wait();
+                gate2.wait();
+                Ok(input)
+            })
+        });
+        gate.wait();
+        let other = c.allocate_operation(ctx.clone(), 101).unwrap();
+        let capacity = c
+            .submit_operation_core(other.operation_id(), cmd.clone(), &ctx, 101, |_, _| {
+                panic!("other operation stole reservation")
+            })
+            .unwrap();
+        assert_eq!(capacity.error_code(), Some("analysis_queue_full"));
+        assert_eq!(
+            c.submit_operation_core(op.operation_id(), cmd, &ctx, 101, |_, _| panic!(
+                "duplicate"
+            ))
+            .unwrap()
+            .state(),
+            AnalysisOperationState::Accepting
+        );
+        assert!(matches!(
+            c.submit(frozen, ctx.scoring.clone(), 101),
+            Err(DurableCoordinatorError::Queue(QueueError::Full))
+        ));
+        gate.wait();
+        assert_eq!(
+            thread.join().unwrap().unwrap().state(),
+            AnalysisOperationState::Accepted
+        );
+        assert_eq!(count.load(Ordering::SeqCst), 1);
+    }
+    #[test]
+    fn task_commit_before_accepted_is_repaired_without_requeue() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        c.store.operation_failure.store(2, Ordering::SeqCst);
+        assert!(c
+            .submit_operation(
+                op.operation_id(),
+                cmd.clone(),
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine
+            )
+            .is_err());
+        assert!(matches!(
+            c.snapshot(),
+            Err(DurableCoordinatorError::Stopped)
+        ));
+        let current = c
+            .inspect_operation(op.operation_id())
+            .unwrap()
+            .pop()
+            .unwrap();
+        assert_eq!(current.state(), AnalysisOperationState::Accepting);
+        let id = current.job_id().unwrap().to_owned();
+        assert_eq!(c.inspect_job(&id).unwrap().len(), 1);
+        drop(c);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        assert_eq!(
+            c.inspect_operation(op.operation_id())
+                .unwrap()
+                .pop()
+                .unwrap()
+                .state(),
+            AnalysisOperationState::Accepted
+        );
+        assert_eq!(c.inspect_job(&id).unwrap().len(), 2);
+        assert!(c.snapshot().unwrap().queued.is_none());
+        assert_eq!(
+            c.submit_operation_core(op.operation_id(), cmd, &ctx, 102, |_, _| panic!(
+                "recovery froze"
+            ))
+            .unwrap()
+            .job_id(),
+            Some(id.as_str())
+        );
+    }
+
+    #[test]
+    fn preparation_rejection_and_changed_context_never_refreeze() {
+        let root = root();
+        let (_, _, _, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let rejected = c
+            .submit_operation_core(op.operation_id(), cmd.clone(), &ctx, 101, |_, _| {
+                Err(super::super::AnalysisFreezeError::OpeningHandInvalid)
+            })
+            .unwrap();
+        assert_eq!(rejected.state(), AnalysisOperationState::Rejected);
+        assert_eq!(rejected.rejection().unwrap().http_status, 422);
+        assert_eq!(
+            c.submit_operation_core(op.operation_id(), cmd.clone(), &ctx, 102, |_, _| panic!(
+                "rejected refroze"
+            ))
+            .unwrap()
+            .state(),
+            AnalysisOperationState::Rejected
+        );
+        let op = c.allocate_operation(ctx.clone(), 103).unwrap();
+        let mut changed = ctx.clone();
+        changed.configuration_sha256 = "f".repeat(64);
+        assert_eq!(
+            c.submit_operation_core(op.operation_id(), cmd, &changed, 104, |_, _| panic!(
+                "changed context froze"
+            ))
+            .unwrap()
+            .error_code(),
+            Some("analysis_operation_context_changed")
+        );
+        assert!(c.snapshot().unwrap().queued.is_none());
+    }
+    #[test]
+    fn beforewrite_failure_stops_dispatch() {
+        let root = root();
+        let (_, _, _, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        c.store.operation_failure.store(0, Ordering::SeqCst);
+        assert!(c
+            .submit_operation_core(op.operation_id(), cmd, &ctx, 101, |_, _| panic!(
+                "write failed but froze"
+            ))
+            .is_err());
+        assert!(matches!(
+            c.claim_next(102),
+            Err(DurableCoordinatorError::Stopped)
+        ));
+        assert_eq!(
+            c.inspect_operation(op.operation_id())
+                .unwrap()
+                .pop()
+                .unwrap()
+                .state(),
+            AnalysisOperationState::Allocated
+        );
+    }
+    #[test]
+    fn accepting_without_job_becomes_unknown_without_adapter() {
+        let root = root();
+        let (_, _, _, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepting = op.begin(cmd.clone(), "1".repeat(32), 101).unwrap();
+        c.store.append_operation(&accepting).unwrap();
+        drop(c);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let unknown = c
+            .submit_operation_core(op.operation_id(), cmd, &ctx, 102, |_, _| {
+                panic!("unknown refroze")
+            })
+            .unwrap();
+        assert_eq!(unknown.state(), AnalysisOperationState::Unknown);
+        assert!(c.snapshot().unwrap().queued.is_none());
+        assert!(c.inspect_job("11111111111111111111111111111111").is_err());
+    }
+    #[test]
+    fn corrupt_operation_binding_blocks_claim_before_running_revision() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepted = c
+            .submit_operation(
+                op.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let id = accepted.job_id().unwrap();
+        let path = c
+            .store
+            .root
+            .join("operations")
+            .join(op.operation_id())
+            .join("revisions/4.json");
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        value["record"]["frozen_input"]["request"]["seed"] = serde_json::json!(9);
+        std::fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(c.claim_next(102).is_err());
+        assert!(matches!(
+            c.snapshot(),
+            Err(DurableCoordinatorError::Stopped)
+        ));
+        assert_eq!(c.store.history(id).unwrap().len(), 1);
+    }
+    #[test]
+    fn post_freeze_missing_intent_stops_without_task() {
+        let root = root();
+        let (_, _, _, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let result = c.submit_operation_core(op.operation_id(), cmd, &ctx, 101, |_, _| {
+            let path = c
+                .store
+                .root
+                .join("operations")
+                .join(op.operation_id())
+                .join("revisions/2.json");
+            std::fs::write(path, b"{}").unwrap();
+            Err(super::super::AnalysisFreezeError::OpeningHandInvalid)
+        });
+        assert!(result.is_err());
+        assert!(matches!(
+            c.snapshot(),
+            Err(DurableCoordinatorError::Stopped)
+        ));
+        assert_eq!(
+            std::fs::read_dir(c.store.root.join("jobs"))
+                .unwrap()
+                .count(),
+            0
+        );
+    }
+    #[test]
+    fn duplicate_job_binding_is_rejected_before_dispatch() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepted = c
+            .submit_operation(
+                op.operation_id(),
+                cmd.clone(),
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let duplicate = c.allocate_operation(ctx, 102).unwrap();
+        let begin = duplicate
+            .begin(cmd, accepted.job_id().unwrap().into(), 103)
+            .unwrap();
+        c.store.append_operation(&begin).unwrap();
+        let bind = begin
+            .bind_input(accepted.frozen_input().unwrap().clone(), 104)
+            .unwrap();
+        c.store.append_operation(&bind).unwrap();
+        c.store
+            .append_operation(&bind.accept(105).unwrap())
+            .unwrap();
+        assert!(c.inspect_operation(op.operation_id()).is_err());
+        assert!(c.claim_next(106).is_err());
+        assert_eq!(
+            c.store.history(accepted.job_id().unwrap()).unwrap().len(),
+            1
+        );
+    }
+    #[test]
+    fn operation_predecessor_and_output_collision_are_rejected() {
+        let root = root();
+        let (_, _, _, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx, 100).unwrap();
+        let first = c
+            .store
+            .root
+            .join("operations")
+            .join(op.operation_id())
+            .join("revisions/1.json");
+        let bytes = std::fs::read(&first).unwrap();
+        assert!(c.store.append_operation(&op).is_err());
+        assert_eq!(std::fs::read(&first).unwrap(), bytes);
+        c.store
+            .append_operation(&op.begin(cmd, "1".repeat(32), 101).unwrap())
+            .unwrap();
+        let second = first.with_file_name("2.json");
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&second).unwrap()).unwrap();
+        value["previous_sha256"] = serde_json::json!("f".repeat(64));
+        std::fs::write(second, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(c.inspect_operation(op.operation_id()).is_err());
+        drop(c);
+        assert!(DurableAnalysisCoordinator::open_operations(root.join("store")).is_err());
+    }
+    #[test]
+    fn disk_revision_conflict_stops_but_caller_revision_conflict_does_not() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepted = c
+            .submit_operation(
+                op.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let id = accepted.job_id().unwrap();
+        assert!(c.cancel(id, 2, 102).is_err());
+        assert!(c.snapshot().is_ok());
+        let queued = c.store.history(id).unwrap().pop().unwrap();
+        let changed = queued.transition(1, AnalysisJobEvent::Start, 103).unwrap();
+        // Model a durable change between the queue's accepted state and its
+        // next expected-revision commit, without bypassing chain parsing.
+        c.store.append_expected(id, 1, changed).unwrap();
+        assert!(matches!(
+            c.claim_next(104),
+            Err(DurableCoordinatorError::Persistence(
+                PersistenceError::RevisionConflict
+            ))
+        ));
+        assert!(matches!(
+            c.claim_next(105),
+            Err(DurableCoordinatorError::Stopped)
+        ));
+        assert_eq!(c.inspect_job(id).unwrap().len(), 2);
     }
 }

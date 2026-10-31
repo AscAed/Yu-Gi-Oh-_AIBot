@@ -74,7 +74,9 @@ struct RevisionEnvelope {
 }
 
 pub struct PersistentAnalysisJobStore {
-    root: PathBuf,
+    pub(super) root: PathBuf,
+    #[cfg(test)]
+    pub(super) operation_failure: AtomicUsize,
     // Kept alive for the entire store lifetime; dropping releases the OS lock.
     _lock: ygo_storage::ExclusiveStoreLock,
     #[cfg(test)]
@@ -99,6 +101,15 @@ impl std::fmt::Debug for PersistentAnalysisJobStore {
 
 impl PersistentAnalysisJobStore {
     pub fn open(root: PathBuf) -> Result<Self, PersistenceError> {
+        let store = Self::open_unclassified(root)?;
+        if store.root.join("operations").exists() {
+            return Err(PersistenceError::InvalidPath);
+        }
+        store.classify_restart()?;
+        Ok(store)
+    }
+
+    pub(super) fn open_unclassified(root: PathBuf) -> Result<Self, PersistenceError> {
         let root = ygo_storage::prepare_store_directory(&root)
             .map_err(|_| PersistenceError::InvalidPath)?;
         for dir in [root.join("jobs"), root.join("reports")] {
@@ -115,6 +126,8 @@ impl PersistentAnalysisJobStore {
         })?;
         let store = Self {
             root,
+            #[cfg(test)]
+            operation_failure: AtomicUsize::new(usize::MAX),
             _lock: lock,
             #[cfg(test)]
             fail_before_next_publish: AtomicBool::new(false),
@@ -127,25 +140,29 @@ impl PersistentAnalysisJobStore {
             #[cfg(test)]
             fail_after_next_report_publish: AtomicBool::new(false),
         };
-        let histories = store.scan()?;
-        for (_, history) in histories {
+        store.scan()?;
+        Ok(store)
+    }
+
+    pub(super) fn classify_restart(&self) -> Result<(), PersistenceError> {
+        for (_, history) in self.scan()? {
             if let Some(last) = history.last() {
-                let event = match last.state() {
-                    AnalysisJobState::Queued | AnalysisJobState::Running => {
-                        Some(AnalysisJobEvent::ClassifyRestart)
-                    }
-                    _ => None,
-                };
-                if let Some(event) = event {
-                    let now = now_ms()?;
+                if matches!(
+                    last.state(),
+                    AnalysisJobState::Queued | AnalysisJobState::Running
+                ) {
                     let next = last
-                        .transition(last.revision(), event, now)
+                        .transition(
+                            last.revision(),
+                            AnalysisJobEvent::ClassifyRestart,
+                            now_ms()?,
+                        )
                         .map_err(|_| PersistenceError::InvalidChain)?;
-                    store.publish_next(last, next)?;
+                    self.publish_next(last, next)?;
                 }
             }
         }
-        Ok(store)
+        Ok(())
     }
 
     pub fn append_initial(&self, record: AnalysisJobRecordV1) -> Result<(), PersistenceError> {
@@ -391,7 +408,9 @@ impl PersistentAnalysisJobStore {
         }
     }
 
-    fn scan(&self) -> Result<BTreeMap<String, Vec<AnalysisJobRecordV1>>, PersistenceError> {
+    pub(super) fn scan(
+        &self,
+    ) -> Result<BTreeMap<String, Vec<AnalysisJobRecordV1>>, PersistenceError> {
         self.validate_root_layout()?;
         let jobs = self.root.join("jobs");
         let mut result = BTreeMap::new();
@@ -473,6 +492,9 @@ impl PersistentAnalysisJobStore {
             match name.as_str() {
                 STORE_LOCK if metadata.is_file() => {}
                 "jobs" | "reports" if metadata.is_dir() => {}
+                "operations" if metadata.is_dir() => {
+                    self.scan_operations()?;
+                }
                 _ => return Err(PersistenceError::InvalidPath),
             }
             names.insert(name);

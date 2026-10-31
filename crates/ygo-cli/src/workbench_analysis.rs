@@ -14,11 +14,17 @@ use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
 pub mod durable;
 pub mod jobs;
+mod operation_store;
+pub mod operations;
 pub mod persistence;
 
 #[cfg(test)]
 #[path = "workbench_analysis/jobs_tests.rs"]
 mod jobs_tests;
+
+#[cfg(test)]
+#[path = "workbench_analysis/operation_storage_tests.rs"]
+mod operation_storage_tests;
 
 #[derive(Clone, Debug)]
 pub struct AnalysisFreezeSpec {

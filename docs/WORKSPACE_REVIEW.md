@@ -1,6 +1,6 @@
 # 工作区自检与维护矩阵
 
-2026-10-31审计续跑基线为`main / 8526c1f`；本轮Rust格式、Clippy、workspace测试、23项持久协调定向测试及Python全套均通过。Python结果为758 passed、9 skipped、208 subtests；E1测试验证来源不匹配时拒绝迁移且不写历史材料，七份ledger成功重审仍开放。旧包与赛事配置doctor本轮复验ready，CLI/worker哈希和六个配置路径复核通过；当前包smoke及最新源码部署验收未做。当前路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)及[验证记录](TESTING.md)。
+2026-11-01复核当前main源码含W1-H2.1操作存储改动，workspace测试、Clippy、fmt和schema定向检查通过；主工作区部署包仍为2026-10-19旧包。`6800bf2`候选不是H2.1源码，P4-R5需对新提交重新部署验证。当前路线见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)。
 
 2026-10-31 W1-B2内部队列在本地隔离target完成Rust workspace复验（377 passed、36 ignored、0 failed），相关Python/schema检查30 passed、2 skipped、4 subtests通过；格式与Clippy检查通过。此为源码测试，不包含部署、doctor、smoke或真实分析。交接见[W1-B2记录](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)，逐项命令见[TESTING](TESTING.md)。
 
@@ -67,7 +67,7 @@
 | 方面 | 已取得证据 | 尚缺或限制 | 下一步 |
 |---|---|---|---|
 | 源码和工作区 | 本轮Git状态可枚举，旧修改和未跟踪文件保留；初始Ground归档603成员及15个引用已核对 | HEAD不代表完整工作区；归档不再等于当前源码，部分必要源码、schema和测试未跟踪 | 保留原改动；交付或提交前按消费者、许可和生成物归属审阅完整状态 |
-| 部署与资产 | 2026-10-31独立干净worktree从`6800bf2`构建当前功能源码候选；普通/赛事doctor和资产identity通过，普通预算smoke和独立replay 3/3通过；主工作区dist未覆盖 | 普通smoke因时间预算终止；赛事候选未单独smoke/replay；无可比研究账本；候选输出不在干净checkout中。P4-R5未完成 | 保留候选路径或按记录重建；赛事候选专项重放及身份/账本比较仍待完成 |
+| 部署与资产 | 2026-10-31候选基于`6800bf2`，普通/赛事doctor和身份通过，普通smoke及独立replay 3/3通过；主工作区dist未覆盖 | 候选早于W1-H2.1源码；普通smoke因时间预算终止；无可比研究账本。该候选不证明当前源码部署，P4-R5仍开放 | 以本轮提交源码重建隔离候选，再按双资产记录doctor、身份、smoke/replay和可比账本边界 |
 | Rust | 2026-10-31 `cargo fmt --all -- --check`、全目标Clippy及串行workspace测试通过；W1-B3.3持久化定向矩阵23 passed | 默认workspace仍忽略opt-in引擎/人工案例；合成合同测试不认证真实报告来源、系统级断电或完整引擎规则 | 以[TESTING](TESTING.md)对应日期记录为准；任何原生研究另遵守scope与预算 |
 | Python和CI | Python 3.12.13完整套件758 passed、9 skipped、208 subtests passed；语言审计边界聚焦13 passed/4拒绝子测试 | 9项跳过及本机历史材料/显式资产opt-in边界见TESTING；忽略的本机证据不会出现在干净checkout | 保留跳过原因及所需本机证据说明；不把合成或静态结果升级为运行资格 |
 | 清理和兼容 | 删除229个空临时目录和本轮隔离Cargo缓存；两项冗余直接依赖移除；交付前复核修复语言审计schema输入边界和v1–v5事件兼容 | 有85处访问错误、未去重硬链接，扫描时存在并发写入；crate内历史测试ledger保留待迁移清单；`.venv`缺少pip/pytest | 对后续候选先查引用、内容和保留用途；完善证据保留清单和临时产物生命周期 |

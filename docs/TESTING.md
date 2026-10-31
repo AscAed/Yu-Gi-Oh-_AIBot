@@ -1,8 +1,33 @@
 # 本机验证记录
 
+## 2026-10-31 W1-H2.1 内部操作持久化与幂等提交
+
+- 基线main / 577924b，保留既有13份tracked及4份untracked文档。新增操作合同/schema、同根同锁修订链、真实W1-A合成冻结、容量预占、先任务/accepted提交再注册派发、跨链重开及停止后只读查询。无新增HTTP、界面或真实分析。
+- 真实红测记录：unknown未绑定却接受revision4，修复后拒绝；持久竞争修订错误后未停止派发，修复后停止。contract-behavior-red.log、integrity-stop-red.log为行为红测；早期contract-red/coordinator-red只是接口缺失/并行开发编译阻断，不冒充行为红测。
+- 最终合同4项、协调器11项、独立存储负例2项聚焦通过；共享36例由Rust/Python检查。Python新schema测试3 passed；相关既有回归30 passed、2 skipped、4 subtests passed，跳过为真实报告/本机快照opt-in，未运行Python全套。
+- 同一隔离CARGO_TARGET_DIR和显式--target-dir：target/w1h21-analysis-operation-tests/cargo；全部编译offline/locked。workspace串行测试415 passed、0 failed、36 ignored。其执行期间最终完整性错误停止修复仅影响CLI，之后再跑最终CLI串行77 passed、0 failed；不将两次数量相加。最终fmt --check和workspace全目标Clippy -D warnings均退出0。初次fmt模块排序及Clippy范围模式失败保留，修正后复验通过。
+- 独立只读审阅发现并修复派发前认证缺口、封装nullable缺字段及冻结后读取错误不停止；最终未发现剩余必须修复项。日志、independent-review.json及逐项exclusions.json在忽略目录target/w1h21-analysis-operation-tests。Unix链接负例在本Windows主机cfg排除；完整进程崩溃/响应丢失矩阵留H3，未宣称已验收。
+- 本批测试时未调用真实runner/worker/引擎FFI、doctor、研究账本或真实资产opt-in，也未部署；提交状态由之后的交付记录说明。认证子集40、政策预留7、规划47不变，全部历史实际累计未知。实现与下一步见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+
+## 2026-10-31 W1-H1后路线文档复核
+
+历史记录：该轮基线HEAD `577924b`，起始有13份已跟踪Markdown修改和3份未跟踪文档，均保留。规划阶段只读重算旧普通包CLI/worker哈希与清单一致；当轮未运行doctor、引擎、收费实验、部署或全量测试。H1为静态设计；W1-B3合成测试、历史Python全套和候选普通smoke/replay按下文原范围读取，P4-R5仍开放。对应历史路线见[W1-H1后路线](superpowers/plans/2026-10-31-post-w1h1-project-route.md)。
+
+## 2026-10-31 W1-H1分析任务HTTP合同设计（仅静态）
+
+- 基线main / 577924b；保留此前未提交文档。本批只增加/更新设计和导航，未修改生产代码或schema。
+- 对照workbench路由/安全门禁、W1-A冻结、jobs/queue/durable/persistence、报告校验器及SearchBudget/SearchStats/Choice，核对Rabbit的40/3/0、五张起手、seed1、ocg-mr5、日期及5/10000/32/64/60000预算。设计及完整失败矩阵见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。这些是静态走查，不记为HTTP、幂等或恢复测试通过。
+- 完成独立只读设计审阅；补齐草稿/任务revision类型区别、操作状态图、重复拒绝响应和固定结果白名单。现有submit没有创建幂等，history停用时不能直接作为HTTP历史查询；H2前置项已单列。
+- 本地链接/事实源核对及git diff --check结果见[H1交接](superpowers/plans/2026-10-31-w1h1-analysis-http-handoff.md)。本批不构建、不运行测试/doctor/引擎/runner/worker/FFI，不部署、提交或推送；不将历史测试和候选部署数字算作复验。
+- 新增研究调用0；认证消费子集40、政策预留7、规划47不变，旧confirmation与全部历史实际累计未知；候选部署诊断不并入认证子集。
+
+## 2026-10-31 W1-B3后路线文档复核
+
+历史记录：当轮文档基线为干净`main / 577924b`；规划阶段核对旧包CLI/worker与包内清单一致。候选源码`6800bf2`、普通smoke预算截断及独立replay 3/3、赛事专项和可比账本缺口见下文；不构成P4-R5完成。对应历史路线见[W1-B3后路线](superpowers/plans/2026-10-31-post-w1b3-project-route.md)。
+
 ## 2026-10-31 P4-R5源码候选部署审计（未完成）
 
-- 在独立干净worktree `C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot` 从源码提交`6800bf2`执行`deploy-local.ps1 -Offline -FrozenRuntime`；D盘主工作区`data/runtime`只读共享，候选构建产物和配置留在隔离worktree。该源码包含W1-B3.3实现；当前`main / a1542c2`比候选多出的提交仅为文档。Release构建、普通资产catalog导入（13,665行）、banlist导入（203行，2026-10-01生效）和知识验证（12卡）成功；doctor对候选普通包和赛事配置均返回`ready/abi_ok/assets_ok=true`、`issues=[]`。doctor的`smoke_ok=null`仍表示doctor本身未运行决斗。
+- 在独立干净worktree（标识`p4-r5-audit`）从源码提交`6800bf2`执行`deploy-local.ps1 -Offline -FrozenRuntime`；主工作区`data/runtime`以只读方式共享，候选构建产物和配置留在隔离worktree。该源码包含W1-B3.3实现，但早于当前`main / 577924b`中的W1-H2.1源码改动，因此以下构建、doctor、身份、smoke和replay结果只适用于该较早候选，不证明当前工作区源码已部署。Release构建、普通资产catalog导入（13,665行）、banlist导入（203行，2026-10-01生效）和知识验证（12卡）成功；doctor对候选普通包和赛事配置均返回`ready/abi_ok/assets_ok=true`、`issues=[]`。doctor的`smoke_ok=null`仍表示doctor本身未运行决斗。
 - 使用候选CLI对普通及赛事资产分别运行`engine identity`，均`consistent=true`，`actual`脚本清单完整且无missing/mismatch/extra。普通CDB SHA-256为`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`，赛事CDB为`3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632`；两套资产core DLL相同，均为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`。普通身份检查使用资产直达路径；经目录junction的配置被identity安全检查拒绝，未把该拒绝误记为资产不一致。
 - 普通包Rabbit smoke报告位于候选worktree的`target/p4r5-audit/ordinary-smoke.json`，SHA-256 `b889bcb0787f3e42db555d3962105751a3ca6d7caa0bb6ce4171354dd8f65a5c`；退出0，352节点、355次引擎调用、27,239ms、41条完成线路，top-3报告线路均`engine_verified`且报告内重放标记为true。运行因30秒time budget终止，不代表全搜索或最优性。候选包对该报告另行执行`combo replay`退出0，3/3线路`engine_verified`且`replay_verified=true`。回放输出写stdout，未保存独立输出文件。
 - 候选构建/运行仅用于本机部署诊断，未绑定或更新正式研究scope、账本、原生消费记录；独立replay引擎调用数未计量。赛事候选包尚未单独smoke/replay；未找到可比的独立研究账本，不能据此宣称账本等价。因此P4-R5仍开放。候选checkout及本机运行输出在干净checkout中不可用，须另行保留或重建；本轮没有将其迁入主工作区。

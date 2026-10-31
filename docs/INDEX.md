@@ -2,6 +2,8 @@
 
 ## 信息优先级
 
+当前内部操作实现及验收见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)，HTTP仍未接入。当前接口设计见[W1-H1 HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，H1交接仅作设计历史；当前实施顺序见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)，旧路线均保留历史时点。
+
 实现事实以当前源码、schema和可复现产物为准。按职责读取以下唯一事实源；历史计划和聊天仅作背景。
 
 | 需要回答 | 权威入口 | 使用规则 |
@@ -30,7 +32,7 @@
 | 子系统 | 设计与合同 | 当前界面/操作边界 |
 |---|---|---|
 | 工作台草稿 | [DECK_DRAFTS.md](DECK_DRAFTS.md)、[WORKBENCH.md](WORKBENCH.md)、[schemas](../schemas/) | 仅本机草稿编辑/导入导出；中文候选仍按其证据状态展示 |
-| 受限分析接入 | [WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | B3内部协调器未连接工作台分析HTTP；真实分析未交付 |
+| 受限分析接入 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | B3内部协调器未连接工作台分析HTTP；真实分析未交付 |
 | 引擎与报告 | [ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | ocgcore为效果执行权威；证据等级不能互相替代 |
 | 数据与语言 | [DATA_SOURCES.md](DATA_SOURCES.md)、[LANGUAGE_REVIEW.md](LANGUAGE_REVIEW.md) | 来源、语义、许可及字段覆盖分别核验 |
 | 研究工作流 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md)、[P1_MICROCASE.md](P1_MICROCASE.md) | 使用单独scope与预算；保存的准备材料不自动启动实验 |
