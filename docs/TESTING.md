@@ -1,5 +1,15 @@
 # 本机验证记录
 
+## 2026-10-31 W1-B2内部合成队列
+
+- 在隔离target目录以offline/locked运行workspace Rust套件：377 passed、36 ignored、0 failed；队列专项CLI回归：37 passed、0 failed。
+- `cargo fmt --all -- --check`及workspace全目标Clippy（`-D warnings`）通过。相关Python/schema检查为30 passed、2 skipped、4 subtests通过；跳过项是本机snapshot/report及实际v2报告opt-in。
+- `git diff --check`和本批文档本地链接核对通过。临时target中的原始日志和汇总属于忽略产物，没有纳入版本控制。
+- 本批没有部署、doctor、smoke、adapter/worker/engine FFI、研究收费或真实分析调用；系统随机ID使用操作系统随机源。历史证据未迁移，按用户决定仅保留SHA-256清单。
+- 结果证明当前合成队列实现和所列本地检查通过，不认证工作台HTTP、持久化、重启恢复、报告发布或生产分析。完整交接见[W1-B2队列交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
+
+
+
 ## 2026-10-31 合并、CI与普通包现场复核
 
 - PR #12在2026-10-31 03:51:46 UTC squash合并为`main / 8c7d4d50b9eee70e381ee3744fbde3cb70f8c9af`。修复临时目录竞争后的两次Windows `contracts`工作流均成功：workspace **374 passed、36 ignored、0 failed**；adapter examples **52 passed、1 ignored、0 failed**；Python **746 passed、21 skipped、0 failed**，样例卡校验2张通过。Python两次分别为1171.69秒和1157.36秒。CI日志副本保存在忽略目录[`target/project-self-audit-2026-10-31-ci-41064527582.log`](../target/project-self-audit-2026-10-31-ci-41064527582.log)和[`target/project-self-audit-2026-10-31-ci-41064537860.log`](../target/project-self-audit-2026-10-31-ci-41064537860.log)。
