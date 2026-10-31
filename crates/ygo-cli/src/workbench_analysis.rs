@@ -692,3 +692,8 @@ mod tests {
         assert!(!error.to_string().contains(root.to_string_lossy().as_ref()));
     }
 }
+
+pub mod queue;
+#[cfg(test)]
+#[path = "workbench_analysis/queue_tests.rs"]
+mod queue_tests;
