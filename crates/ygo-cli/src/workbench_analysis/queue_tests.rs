@@ -248,4 +248,3 @@ fn cancelled_tasks_never_execute_and_settlement_does_not_dispatch() {
         q.cancel(waiting.job_id(), 1, 8).unwrap();
     }
 }
-
