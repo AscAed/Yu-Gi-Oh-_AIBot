@@ -1,5 +1,7 @@
 # 工作区自检与维护矩阵
 
+2026-10-31 W1-B2内部队列在本地隔离target完成Rust workspace复验（377 passed、36 ignored、0 failed），相关Python/schema检查30 passed、2 skipped、4 subtests通过；格式与Clippy检查通过。此为源码测试，不包含部署、doctor、smoke或真实分析。交接见[W1-B2记录](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)，逐项命令见[TESTING](TESTING.md)。
+
 2026-10-31当前远端源码基线为`main / 4869393`（PR #14合并）；W1-B1已合并，W1-B2/B3及W1-C开放。普通旧包和赛事冻结配置doctor本轮均实跑ready；普通包哈希和六项配置路径通过，但包仍是2026-10-19构建且未包含当前源码。PR #12、#13、#14的检查结果及本机Python历史pin失败见[TESTING](TESTING.md)。下述`8315232`、`d3bc212`及未提交工作区描述属于各自历史时点。当前路线见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
 
 2026-10-31 CI审计发现push与pull_request会为同一功能分支提交执行重复完整套件；工作流已限定自动push为`main`、保留PR与手动触发。PR #14唯一PR检查及合并后的main push均已全绿，确认功能分支不再因push事件重复执行完整套件；详情见[TESTING](TESTING.md#2026-10-31-pr-14审计文档合并与主分支复验)。
