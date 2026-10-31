@@ -5,6 +5,7 @@
 - `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`定向复验通过：14 passed、0 failed。新增回归先复现“资产漂移后的failed终态写入确定失败，协调器仍暴露running槽位”，修复后确认协调器停止、释放后重开将running分类为unknown。既有覆盖revision链/重启分类/陈旧写入/锁/损坏链、报告严格绑定/保存重读/篡改拒绝、终态引用完整性、协调器持久状态转换、冻结后资产漂移拒派及其他提交失败场景。
 - 报告样例为合成合同数据；不认证报告来源或真实引擎执行。故障注入尚未覆盖操作系统崩溃、全部报告提交边界、网络文件系统/断电及更广资产漂移场景；未接HTTP或执行器。claim时实时核验不证明之后实际执行与身份间无竞态。定向运行本身不覆盖全workspace；全workspace/fmt/Clippy最新复验结果见下方本轮记录。完整Python套件没有在本轮重跑，之前审计记录的Tenki历史pin失败仍未处理。
 - 该补丁后的 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings` 和 `cargo test --workspace --offline --locked -- --test-threads=1` 均以退出码0完成。全workspace保留项目标记的 opt-in 引擎及人工案例为 ignored；未启用真实引擎或研究调用。另检查121份Markdown，本地相对链接目标缺失0；`git diff --check`通过。
+- 2026-10-31提交后重新检查已部署旧包：普通配置运行`dist/ygo-local/ygo.cmd engine doctor`；赛事配置通过设置`YGO_ENGINE_CONFIG=data/runtime/tournament-2026/engine.toml`并调用同包`ygo.exe engine doctor`。两次均退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。仅验证2026-10-19旧包及当前冻结资产组合的ABI/资源可用性；没有执行决斗smoke，也不证明新源码已部署。
 
 ## 2026-10-31 W1-B3.1综合自检复验
 
