@@ -4,12 +4,12 @@
 
 - PR #12在2026-10-31 03:51:46 UTC squash合并为`main / 8c7d4d50b9eee70e381ee3744fbde3cb70f8c9af`。修复临时目录竞争后的两次Windows `contracts`工作流均成功：workspace **374 passed、36 ignored、0 failed**；adapter examples **52 passed、1 ignored、0 failed**；Python **746 passed、21 skipped、0 failed**，样例卡校验2张通过。Python两次分别为1171.69秒和1157.36秒。CI日志副本保存在忽略目录[`target/project-self-audit-2026-10-31-ci-41064527582.log`](../target/project-self-audit-2026-10-31-ci-41064527582.log)和[`target/project-self-audit-2026-10-31-ci-41064537860.log`](../target/project-self-audit-2026-10-31-ci-41064537860.log)。
 - 同日分别对本机普通包运行`dist/ygo-local/ygo.cmd engine doctor`、以该旧CLI读取赛事冻结配置`data/runtime/tournament-2026/engine.toml`运行`engine doctor`，均退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通包CLI/worker SHA-256均与包内清单匹配，`engine.toml`六个主要路径存在。doctor通过worker ABI探针，不等于运行决斗smoke。
-- 包内CLI/worker最后修改时间为2026-10-18 UTC（本地日期10月19日），旧包不含workbench命令；它仍绑定本机绝对路径。此次没有重建、部署、smoke或切换资产，P4-R5最新源码双资产干净部署验收仍开放。doctor原始输出见[`dist-doctor.log`](../target/project-self-audit-2026-10-31-dist-doctor.log)。
+- 包内CLI/worker最后修改时间为2026-10-18 UTC（本地日期10月19日），旧包不含workbench命令；它仍绑定本机绝对路径。此次没有重建、部署、smoke或切换资产，P4-R5最新源码双资产干净部署验收仍开放。普通包与赛事配置doctor原始输出分别见[`dist-doctor.log`](../target/project-self-audit-2026-10-31-dist-doctor.log)和[`tournament-doctor.log`](../target/project-self-audit-2026-10-31-tournament-doctor.log)。
 - 本机默认Python完整套件此前为757 passed、9 skipped、1 failed，失败限于忽略目录内受保护Tenki历史pin；干净CI不包含该本机历史证据，因而该用例按条件跳过。两项结果作用范围不同，均按原样保留。
 
 ## 2026-10-31 CI触发去重
 
-- 近期PR #12–#14中，每次功能分支push与pull_request都触发相同Windows合同工作流，单个提交并行执行两份workspace/示例/Python全套。前两份PR各出现两条成功检查；PR #13/#14当前检查状态见各自GitHub页面。
+- 近期PR #12–#14中，每次功能分支push与pull_request都触发相同Windows合同工作流，单个提交并行执行两份workspace/示例/Python全套。前两份PR各出现两条成功检查；本轮初始的PR #13/#14检查当时正在运行，最终结论以各自GitHub页面为准。
 - 将自动push触发限定为`main`，保留pull_request和workflow_dispatch。功能分支由PR检查验证，合并后的main push继续跑完整工作流；本地检查与CI责任不变。CI文件变更须由当前PR #14的唯一PR触发检查确认。
 
 ## 2026-10-30 pytest默认收集范围修复与完整自检
