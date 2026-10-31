@@ -1,5 +1,7 @@
 # 技术路线
 
+当前路线见[W1-B1后路线](superpowers/plans/2026-10-31-post-w1b1-project-route.md)，W1-B2进程内合成队列已完成；下一产品关口为W1-B3持久化/报告发布/重启。以下W1-A后计划保留历史时点。
+
 本文件只说明阶段依赖和退出条件。目标以[PRODUCT_VISION](PRODUCT_VISION.md)为准，当前状态和认证数字只维护在[TASKS](../TASKS.md)，实跑证据见[TESTING](TESTING.md)，当前小批见[W1-A后项目路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。[W1设计后路线](superpowers/plans/2026-10-30-post-w1-project-route.md)及更早计划保留各自时点，不作为当前进度表。
 
 ## 产品基础与研究基础
