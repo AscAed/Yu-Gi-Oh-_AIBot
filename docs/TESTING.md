@@ -7,6 +7,11 @@
 - 包内CLI/worker最后修改时间为2026-10-18 UTC（本地日期10月19日），旧包不含workbench命令；它仍绑定本机绝对路径。此次没有重建、部署、smoke或切换资产，P4-R5最新源码双资产干净部署验收仍开放。doctor原始输出见[`dist-doctor.log`](../target/project-self-audit-2026-10-31-dist-doctor.log)。
 - 本机默认Python完整套件此前为757 passed、9 skipped、1 failed，失败限于忽略目录内受保护Tenki历史pin；干净CI不包含该本机历史证据，因而该用例按条件跳过。两项结果作用范围不同，均按原样保留。
 
+## 2026-10-31 CI触发去重
+
+- 近期PR #12–#14中，每次功能分支push与pull_request都触发相同Windows合同工作流，单个提交并行执行两份workspace/示例/Python全套。前两份PR各出现两条成功检查；PR #13/#14当前检查状态见各自GitHub页面。
+- 将自动push触发限定为`main`，保留pull_request和workflow_dispatch。功能分支由PR检查验证，合并后的main push继续跑完整工作流；本地检查与CI责任不变。CI文件变更须由当前PR #14的唯一PR触发检查确认。
+
 ## 2026-10-30 pytest默认收集范围修复与完整自检
 
 - 首次从仓库根目录运行`py -m pytest -ra --tb=short`时，pytest递归进入被Git忽略的`data/runtime`，在收集期产生512个`PermissionError: [WinError 5]`；这是本机受保护目录的收集错误，不是512个断言失败。原始日志见[`python-full-self-audit.log`](../target/w1b1-analysis-job-tests/python-full-self-audit.log)。
