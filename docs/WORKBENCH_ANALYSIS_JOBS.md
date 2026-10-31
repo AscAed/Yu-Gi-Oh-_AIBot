@@ -59,4 +59,8 @@ request、identity和scoring的成员顺序分别使用当前Rust类型声明顺
 | 非法边/终态再推进 | job_transition_invalid | 不推进 |
 | 报告ID/hash/原因或空线路配对 | job_report_invalid | 不推进 |
 
-所有路径不调用adapter、进程或研究账本，不写任务文件。W1-B2另接单运行加单排队、取消和容量；W1-B3另接持久化、报告发布及重启；W1-C另做真实本机分析验收。验收与当前断点见[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
+B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1-B2已将冻结输入与状态转换接入进程内队列；实现及边界见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-B3另接持久化、报告发布及重启；W1-C另做真实本机分析验收。
+
+## W1-B2 内部队列（2026-10-31）
+
+新增 Rust 内部 `workbench_analysis::queue::AnalysisJobQueue`，复用W1-A冻结输入及W1-B1状态转换，实现单运行加单排队、容量拒绝、revision取消及票据结算。尚未接入工作台服务；没有任务HTTP、持久化或真实执行。报告引用不认证文件发布。见[本批交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
