@@ -1,5 +1,12 @@
 # 本机验证记录
 
+## 2026-10-31 合并、CI与普通包现场复核
+
+- PR #12在2026-10-31 03:51:46 UTC squash合并为`main / 8c7d4d50b9eee70e381ee3744fbde3cb70f8c9af`。修复临时目录竞争后的两次Windows `contracts`工作流均成功：workspace **374 passed、36 ignored、0 failed**；adapter examples **52 passed、1 ignored、0 failed**；Python **746 passed、21 skipped、0 failed**，样例卡校验2张通过。Python两次分别为1171.69秒和1157.36秒。CI日志副本保存在忽略目录[`target/project-self-audit-2026-10-31-ci-41064527582.log`](../target/project-self-audit-2026-10-31-ci-41064527582.log)和[`target/project-self-audit-2026-10-31-ci-41064537860.log`](../target/project-self-audit-2026-10-31-ci-41064537860.log)。
+- 同日对本机普通包运行`dist/ygo-local/ygo.cmd engine doctor`，退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。CLI/worker SHA-256均与包内清单匹配，`engine.toml`六个主要路径存在。doctor通过worker ABI探针，不等于运行决斗smoke。
+- 包内CLI/worker最后修改时间为2026-10-18 UTC（本地日期10月19日），旧包不含workbench命令；它仍绑定本机绝对路径。此次没有重建、部署、smoke或切换资产，P4-R5最新源码双资产干净部署验收仍开放。doctor原始输出见[`dist-doctor.log`](../target/project-self-audit-2026-10-31-dist-doctor.log)。
+- 本机默认Python完整套件此前为757 passed、9 skipped、1 failed，失败限于忽略目录内受保护Tenki历史pin；干净CI不包含该本机历史证据，因而该用例按条件跳过。两项结果作用范围不同，均按原样保留。
+
 ## 2026-10-30 pytest默认收集范围修复与完整自检
 
 - 首次从仓库根目录运行`py -m pytest -ra --tb=short`时，pytest递归进入被Git忽略的`data/runtime`，在收集期产生512个`PermissionError: [WinError 5]`；这是本机受保护目录的收集错误，不是512个断言失败。原始日志见[`python-full-self-audit.log`](../target/w1b1-analysis-job-tests/python-full-self-audit.log)。
@@ -11,7 +18,7 @@
 
 - PR #12首轮Windows CI的`cargo test --workspace --locked`失败于`selected_snapshot_is_verified_and_card_results_disclose_name_source_and_translation_state`；`WorkbenchServer::start`报告`draft_store_already_locked`（Windows错误33）。格式与Clippy步骤通过；失败日志来自GitHub Actions run `41062674776`。
 - 该集成测试文件中的临时目录曾以进程ID和系统时间纳秒拼名；Windows时钟精度下，并行调用不能保证目录名唯一。改为进程内原子序号并以`create_dir`确认独占，碰到已存在名称就继续分配。
-- 修复后本机默认并行重复运行`cargo test -p ygo-cli --test workbench_http --offline --locked`五次，均为**4 passed、0 failed**。记录见[`workbench-http-unique-tempdirs.log`](../target/w1b1-analysis-job-tests/workbench-http-unique-tempdirs.log)。新的PR检查结果待提交修复后确认。
+- 修复后本机默认并行重复运行`cargo test -p ygo-cli --test workbench_http --offline --locked`五次，均为**4 passed、0 failed**。记录见[`workbench-http-unique-tempdirs.log`](../target/w1b1-analysis-job-tests/workbench-http-unique-tempdirs.log)。PR #12修复版CI后续全绿并已合并，最终结果见本文件顶部。
 
 ## 2026-10-30 W1-B1无路径任务合同与纯状态机
 

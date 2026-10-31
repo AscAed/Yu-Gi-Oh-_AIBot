@@ -1,6 +1,6 @@
 # 实施任务与验收状态
 
-## 当前状态（2026-10-30）：W1-B1任务合同及纯状态核心通过；任务存储、HTTP队列与真实分析未完成
+## 当前状态（2026-10-31）：W1-B1任务合同及纯状态核心通过；任务存储、HTTP队列与真实分析未完成
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
