@@ -35,7 +35,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] D2：更新项目定位、双轨计划、研究经验与文档导航；交叉核对记录见[TESTING](docs/TESTING.md)顶部。
 - [x] 2026-10-27环境自检：区分部署包与开发资产，清理229个已确认空测试目录和本轮隔离Cargo缓存，整理pytest缓存及冗余直接依赖；范围和验证见[TESTING](docs/TESTING.md)。
 - [x] 本轮环境自检：Python 3.12干净快照、隔离部署文档复制、普通部署smoke与replay、离线验真及文档检查；覆盖、跳过项和后续保留边界见[工作区自检](docs/WORKSPACE_REVIEW.md)及[验证记录](docs/TESTING.md)。
-- [x] 环境后续：历史证据保留清单与SHA-256清点已建立；按用户决定暂不迁移，仅保留现有哈希清单，不表示证据已有备份。Windows链接权限、旧目录写入测试和最新源码双资产发布验收仍待处理；当前未授予任何研究scope。
+- [x] 环境后续：历史证据保留清单与SHA-256清点已建立；按用户决定暂不迁移，仅保留现有哈希清单，不表示证据已有备份。旧目录写入测试已改为target隔离仓库并验证不触碰原D盘证据；Windows目录符号链接实测仍受系统策略限制（对应用例跳过），最新源码双资产发布验收P4-R5仍开放；当前未授予任何研究scope。
 - [x] A1 / P4-R1a：首次`DuelResult.error`与`QueryWitness::capture`失败均先由合成收费账本红测复现，再修复诊断验证器；没有可信查询、成功资格、收据或可恢复前缀。测试证据见[TESTING](docs/TESTING.md)与[交接](docs/superpowers/plans/2026-10-28-first-failure-and-deck-draft-handoff.md)。
 - [x] B1 / P3.1：完成空/部分草稿、主/额外/Side编辑及YDK/JSON导入导出；草稿不等于完整合法牌组。CLI说明见[DECK_DRAFTS](docs/DECK_DRAFTS.md)。
 - [x] B2 / P3：交付本机中文单页工作台，支持草稿新建/编辑/保存/重开、YDK/JSON往返及可选本地卡表查询；名称/译文仍明确标为未核验。服务与边界见[WORKBENCH](docs/WORKBENCH.md)，验收见[TESTING](docs/TESTING.md)。

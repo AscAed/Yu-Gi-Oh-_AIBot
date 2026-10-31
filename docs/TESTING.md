@@ -11,7 +11,14 @@
 ## 2026-10-31 CI触发去重
 
 - 近期PR #12–#14中，每次功能分支push与pull_request都触发相同Windows合同工作流，单个提交并行执行两份workspace/示例/Python全套。前两份PR各出现两条成功检查；本轮初始的PR #13/#14检查当时正在运行，最终结论以各自GitHub页面为准。
-- 将自动push触发限定为`main`，保留pull_request和workflow_dispatch。功能分支由PR检查验证，合并后的main push继续跑完整工作流；本地检查与CI责任不变。CI文件变更须由当前PR #14的唯一PR触发检查确认。
+- 将自动push触发限定为`main`，保留pull_request和workflow_dispatch。功能分支由PR检查验证，合并后的main push继续跑完整工作流；本地检查与CI责任不变。PR #14唯一PR检查及合并后的main push均已确认成功，具体见下节。
+## 2026-10-31 PR #14审计文档合并与主分支复验
+
+- [PR #14](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/pull/14)将部署现场自检记录、catalog/banlist身份、证据链接及CI触发去重合入`main / 4869393d7cca47e155cc5173d18419a5bde56ecb`。远端`main`当前指向该提交。
+- 唯一PR工作流[run 41167768508](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/41167768508)于2026-10-31 04:27 UTC成功；格式、workspace Clippy、workspace测试和adapter示例均通过，Python为**746 passed、21 skipped、0 failed**，样例卡校验2张通过。
+- 合并后的`main` push工作流[run 41168744298](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/41168744298)于2026-10-31 04:46 UTC成功；格式、workspace Clippy、workspace测试和adapter示例均通过，Python为**746 passed、21 skipped、0 failed**，样例卡校验2张通过。两次CI范围相同，分别验证PR提交和合并提交。
+- 干净Windows CI中依赖本机历史证据的用例按缺少baseline条件跳过；它没有修复或覆盖本机Tenki历史pin的`protected_source_change_hash_mismatch`。两者结果分开记录。CI通过也不表示旧`dist/ygo-local`已重建，P4-R5双资产部署验收仍开放。
+
 
 ## 2026-10-30 pytest默认收集范围修复与完整自检
 
