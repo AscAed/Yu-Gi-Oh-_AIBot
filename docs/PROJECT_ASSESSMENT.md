@@ -1,6 +1,6 @@
 # 项目现状
 
-本评估以当前能力矩阵为主，核对基线为2026-10-31 `main / 7800d95`；工作区干净，部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器及claim资产哈希门禁已有合成验证；完整故障矩阵、扩展资产漂移覆盖、分析HTTP和真实分析仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
+本评估以当前能力矩阵为主，代码复验基底为2026-10-31 `main / 735d247`并纳入本批W1-B3.3实现；部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器、claim资产哈希门禁及内部合成故障矩阵已有验证；HTTP、真实分析、逐syscall崩溃和断电验收仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
 
 ## 产品目标
 
@@ -19,7 +19,7 @@
 | 工作区/双资产身份、覆盖清点、研究输入和独立响应oracle | 已验证（首批工具） | 独立v1合同；canonical响应匹配不授予完整动作或最优资格，来源/中文及全卡缺口仍保留，见BASELINE_AUDIT与RESEARCH_AUDIT |
 | P1局部终场、公开观察与提示研究 | 局部验证 | Rabbit、Tenki、Curry仅各自冻结案例；Ground Collapse仅离线准备，原生可达/响应接受未知，见[P1候选](P1_MICROCASE.md)及[本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md) |
 | 草稿保存、分区编辑、YDK/JSON往返 | 基础工具和本机浏览器工作台已交付 | `DeckDocumentV1`允许残缺及重复卡；不授予完整合法性，见[草稿CLI](DECK_DRAFTS.md)与[工作台](WORKBENCH.md) |
-| 工作台分析接入 | W1-A输入冻结、W1-B2进程内队列及W1-B3内部持久协调器已合成验收 | 任务/报告存储和claim冻结资产哈希门禁已实现；任务HTTP、执行器、真实分析和完整故障矩阵仍未交付，见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md) |
+| 工作台分析接入 | W1-A输入冻结、W1-B2进程内队列及W1-B3持久协调已合成验收 | 任务/报告存储、claim资产门禁及内部故障恢复矩阵已实现；HTTP、执行器、真实分析、逐syscall崩溃/断电验收仍开放，见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md) |
 | 中文字段来源盘点 | 已完成有限样本离线盘点 | 冻结39卡的字段存在性及来源哈希已登记；语义、zh-SC类别、别名映射及使用/再分发依据未通过，不能开放正式中文检索 |
 | 自动从字段构筑、补全残缺牌组、构筑优化 | 未实现 | 当前不得输出已优化或全局最佳构筑 |
 | 任意手坑/对手策略、后攻、解场和完整对局 | 未实现 | 已有灰流丽固定场景不能外推为通用抗干扰能力 |

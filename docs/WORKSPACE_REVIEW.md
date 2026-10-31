@@ -1,6 +1,6 @@
 # 工作区自检与维护矩阵
 
-2026-10-31本轮审计快照HEAD为`main / 7800d95`，工作区干净，本地有3个未推送提交；W1-B3实现提交为`8091362`。完整故障注入/恢复矩阵、扩展资产漂移覆盖、HTTP及真实分析仍开放。最新Rust格式、Clippy和workspace测试均通过；Python完整套件仍有同一Tenki历史pin失败，见[TESTING](TESTING.md)顶部。普通旧包与赛事配置doctor已复验ready，但smoke及最新源码部署验收未做。当前路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。
+2026-10-31审计续跑基线为`main / 735d247`，工作区含W1-B3.3实现和文档更新；本轮Rust格式、Clippy、workspace测试及23项持久协调定向测试通过。内部合成故障矩阵已覆盖提交边界、重开分类、子进程强杀和资产漂移；Python完整套件仍有Tenki历史pin失败，历史证据按用户决定不迁移。旧包与赛事配置doctor为ready，但smoke及最新源码部署验收未做。当前路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)及[验证记录](TESTING.md)。
 
 2026-10-31 W1-B2内部队列在本地隔离target完成Rust workspace复验（377 passed、36 ignored、0 failed），相关Python/schema检查30 passed、2 skipped、4 subtests通过；格式与Clippy检查通过。此为源码测试，不包含部署、doctor、smoke或真实分析。交接见[W1-B2记录](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)，逐项命令见[TESTING](TESTING.md)。
 

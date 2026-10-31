@@ -60,7 +60,7 @@ request、identity和scoring的成员顺序分别使用当前Rust类型声明顺
 | 非法边/终态再推进 | job_transition_invalid | 不推进 |
 | 报告ID/hash/原因或空线路配对 | job_report_invalid | 不推进 |
 
-B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1-B2已将冻结输入与状态转换接入进程内队列；W1-B3已增加任务/报告文件存储及基础持久先行协调器。协调器尚未接入任务HTTP端点、执行器、真实引擎或研究账本；提交点故障矩阵及扩展资产漂移覆盖仍开放。持久化细节见[W1-B3设计与实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)，历史队列交接见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-C另做真实本机分析验收。
+B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1-B2已将冻结输入与状态转换接入进程内队列；W1-B3已增加任务/报告文件存储、基础持久先行协调器及内部故障矩阵。合成矩阵覆盖发布前后不确定、停派发、重开分类、重复终态和资产漂移；不认证文件系统逐syscall崩溃/断电。协调器尚未接入任务HTTP端点、执行器、真实引擎或研究账本。持久化细节见[W1-B3设计与实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)，历史队列交接见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-C另做真实本机分析验收。
 
 ## W1-B2 内部队列（2026-10-31）
 
@@ -68,4 +68,4 @@ B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1
 
 ## W1-B3 持久化与报告文件存储
 
-不可变JSON修订、记录严格链校验、排他锁、独占发布和queued/interrupted、running/unknown重启分类已实现。B3报告严格读取、冻结输入绑定、私有原始字节存储和SHA-256重读校验；基础持久协调器按先提交后改内存运行。资产漂移后若failed终态无法提交，协调器停止，重开时running转unknown。报告测试是合成数据，不认证来源/真实执行；剩余故障矩阵、扩展资产漂移覆盖、schema投影及任务HTTP仍未实现，当前无真实分析。详见[持久化与报告发布设计](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+不可变JSON修订、记录严格链校验、排他锁、独占发布和queued/interrupted、running/unknown重启分类已实现。B3报告严格读取、冻结输入绑定、私有原始字节存储和SHA-256重读校验；基础持久协调器按先提交后改内存运行。资产漂移后的failed终态、以及报告已落盘后的终态提交失败均会停止协调器，重开时按持久revision分类。内部合成故障矩阵覆盖提交前失败/提交后不确定、操作系统子进程强杀后的重开、重复终态请求和冻结资产各角色/路径漂移；不认证报告来源/真实执行、逐syscall崩溃或断电持久性。schema投影、任务HTTP和真实分析仍未实现。详见[持久化与报告发布设计](WORKBENCH_ANALYSIS_PERSISTENCE.md)。

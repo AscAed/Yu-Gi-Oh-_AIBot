@@ -83,6 +83,10 @@ pub struct PersistentAnalysisJobStore {
     fail_after_next_publish: AtomicBool,
     #[cfg(test)]
     fail_before_publish_after: AtomicUsize,
+    #[cfg(test)]
+    fail_before_next_report_publish: AtomicBool,
+    #[cfg(test)]
+    fail_after_next_report_publish: AtomicBool,
 }
 
 impl std::fmt::Debug for PersistentAnalysisJobStore {
@@ -118,6 +122,10 @@ impl PersistentAnalysisJobStore {
             fail_after_next_publish: AtomicBool::new(false),
             #[cfg(test)]
             fail_before_publish_after: AtomicUsize::new(usize::MAX),
+            #[cfg(test)]
+            fail_before_next_report_publish: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_after_next_report_publish: AtomicBool::new(false),
         };
         let histories = store.scan()?;
         for (_, history) in histories {
@@ -209,6 +217,13 @@ impl PersistentAnalysisJobStore {
         let report_id = ygo_storage::secure_random_hex(16).map_err(|_| PersistenceError::Io)?;
         let report_sha256 = ygo_storage::hash(bytes);
         let path = self.report_path(&report_id);
+        #[cfg(test)]
+        if self
+            .fail_before_next_report_publish
+            .swap(false, Ordering::SeqCst)
+        {
+            return Err(PersistenceError::Io);
+        }
         ygo_storage::publish_exclusive_file(&path, bytes).map_err(|error| {
             if error.starts_with("store_commit_uncertain:") {
                 PersistenceError::CommitUncertain
@@ -218,6 +233,13 @@ impl PersistentAnalysisJobStore {
                 PersistenceError::Io
             }
         })?;
+        #[cfg(test)]
+        if self
+            .fail_after_next_report_publish
+            .swap(false, Ordering::SeqCst)
+        {
+            return Err(PersistenceError::CommitUncertain);
+        }
         let reread = fs::read(&path).map_err(|_| PersistenceError::CommitUncertain)?;
         if ygo_storage::hash(&reread) != report_sha256 || strict_report(&reread).is_err() {
             return Err(PersistenceError::CommitUncertain);
@@ -356,6 +378,17 @@ impl PersistentAnalysisJobStore {
     pub(super) fn inject_failure_before_publish_after(&self, successful_publishes: usize) {
         self.fail_before_publish_after
             .store(successful_publishes, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    pub(super) fn inject_report_publish_failure(&self, after_publish: bool) {
+        if after_publish {
+            self.fail_after_next_report_publish
+                .store(true, Ordering::SeqCst);
+        } else {
+            self.fail_before_next_report_publish
+                .store(true, Ordering::SeqCst);
+        }
     }
 
     fn scan(&self) -> Result<BTreeMap<String, Vec<AnalysisJobRecordV1>>, PersistenceError> {

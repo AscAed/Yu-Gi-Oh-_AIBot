@@ -1,11 +1,12 @@
 # 本机验证记录
 
-## 2026-10-31 W1-B3持久协调与报告恢复定向验证
+## 2026-10-31 W1-B3.3内部故障矩阵与workspace复验
 
-- `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`定向复验通过：14 passed、0 failed。新增回归先复现“资产漂移后的failed终态写入确定失败，协调器仍暴露running槽位”，修复后确认协调器停止、释放后重开将running分类为unknown。既有覆盖revision链/重启分类/陈旧写入/锁/损坏链、报告严格绑定/保存重读/篡改拒绝、终态引用完整性、协调器持久状态转换、冻结后资产漂移拒派及其他提交失败场景。
-- 报告样例为合成合同数据；不认证报告来源或真实引擎执行。故障注入尚未覆盖操作系统崩溃、全部报告提交边界、网络文件系统/断电及更广资产漂移场景；未接HTTP或执行器。claim时实时核验不证明之后实际执行与身份间无竞态。定向运行本身不覆盖全workspace；全workspace/fmt/Clippy最新复验结果见下方本轮记录。完整Python套件没有在本轮重跑，之前审计记录的Tenki历史pin失败仍未处理。
-- 该补丁后的 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings` 和 `cargo test --workspace --offline --locked -- --test-threads=1` 均以退出码0完成。全workspace保留项目标记的 opt-in 引擎及人工案例为 ignored；未启用真实引擎或研究调用。另检查121份Markdown，本地相对链接目标缺失0；`git diff --check`通过。
-- 2026-10-31提交后重新检查已部署旧包：普通配置运行`dist/ygo-local/ygo.cmd engine doctor`；赛事配置通过设置`YGO_ENGINE_CONFIG=data/runtime/tournament-2026/engine.toml`并调用同包`ygo.exe engine doctor`。两次均退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。仅验证2026-10-19旧包及当前冻结资产组合的ABI/资源可用性；没有执行决斗smoke，也不证明新源码已部署。
+- `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`通过：23 passed、0 failed。新增覆盖报告终态提交失败后停派发并重开为unknown、报告文件发布不确定、提交后不确定的submit/cancel/fail、全部冻结资产角色/脚本路径漂移、已提交queued/running修订后的操作系统子进程强杀及恢复分类；既有测试继续覆盖提交前失败、同票据重复终态、链/报告核验与失败重试。
+- `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`及`cargo test --workspace --offline --locked -- --test-threads=1`均退出0。workspace测试保留标记的opt-in引擎与人工案例为ignored；未启动真实引擎或研究调用。
+- 提交后锁内内存状态应用只有互斥锁保护的赋值/移除操作，没有可返回错误分支；未虚构可注入错误。子进程强杀发生在已提交revision之后，不代表逐syscall/fsync强杀、断电、介质或网络文件系统验收。报告为合成合同数据，不认证来源或真实执行；HTTP、真实分析和claim后实际执行前的资产竞态验收仍开放。
+- 本轮没有重跑完整Python套件；此前完整本机结果757 passed、9 skipped、1 failed，唯一失败仍是受保护Tenki历史pin的`protected_source_change_hash_mismatch`。按用户决定不迁移历史证据，仅保留哈希清单。
+- `git diff --check`及Markdown相对链接核验结果见本轮最终记录。2026-10-31部署doctor的旧包检查见下文历史记录：ready不等于smoke，也不证明最新源码已部署。
 
 ## 2026-10-31 W1-B3.1综合自检复验
 

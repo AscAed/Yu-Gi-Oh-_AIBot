@@ -69,6 +69,11 @@ impl DurableAnalysisCoordinator {
             .inject_failure_before_publish_after(successful_publishes);
     }
 
+    #[cfg(test)]
+    pub(super) fn inject_report_publish_failure(&self, after_publish: bool) {
+        self.store.inject_report_publish_failure(after_publish);
+    }
+
     pub fn snapshot(&self) -> Result<QueueSnapshot, DurableCoordinatorError> {
         let stopped = self
             .stopped
@@ -189,7 +194,7 @@ impl DurableAnalysisCoordinator {
         bytes: &[u8],
         now_ms: u64,
     ) -> Result<(AnalysisJobRecordV1, AnalysisReport), DurableCoordinatorError> {
-        let stopped = self
+        let mut stopped = self
             .stopped
             .lock()
             .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
@@ -232,12 +237,18 @@ impl DurableAnalysisCoordinator {
             });
         match outcome {
             Ok(record) => Ok((record, report)),
-            Err(error) => match error {
-                QueueError::Persistence(persistence) => {
-                    self.map_persistence_error(persistence, stopped)
+            Err(error) => {
+                // The report is already durable. Retrying this ticket with
+                // another payload could publish a conflicting result for the
+                // same execution, so require restart classification as unknown.
+                *stopped = true;
+                match error {
+                    QueueError::Persistence(persistence) => {
+                        self.map_persistence_error(persistence, stopped)
+                    }
+                    other => Err(DurableCoordinatorError::Queue(other)),
                 }
-                other => Err(DurableCoordinatorError::Queue(other)),
-            },
+            }
         }
     }
 

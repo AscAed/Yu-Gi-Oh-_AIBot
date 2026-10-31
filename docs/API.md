@@ -1,6 +1,6 @@
 # CLI 与库接口
 
-当前已实现W1-B1无路径任务合同、W1-B2进程内队列及W1-B3内部持久任务/报告存储协调器；领取时校验冻结资产哈希，提交不确定时停止协调器。内部能力尚未连接工作台分析HTTP或真实执行器；报告字节与冻结输入绑定，但不认证报告来源。完整故障矩阵和扩展资产漂移覆盖仍开放。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
+当前已实现W1-B1无路径任务合同、W1-B2进程内队列及W1-B3内部持久任务/报告存储协调器；领取时校验冻结资产哈希，提交结果不确定时停止协调器。内部合成故障矩阵覆盖提交边界、终态重开分类、重复终态请求和冻结资产漂移；不认证报告来源、真实执行、逐syscall崩溃或断电持久性。内部能力尚未连接工作台分析HTTP或真实执行器。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 
 当前交付面包括本机 CLI/Rust库，以及仅绑定`127.0.0.1`的本机草稿工作台。解析器与JSON schema是规范性合同；工作台接口只用于本机草稿，不是通用远程API。
 

@@ -13,6 +13,79 @@ fn root() -> PathBuf {
     root
 }
 
+#[test]
+fn killed_store_process_reopens_queued_as_interrupted_and_running_as_unknown() {
+    const CHILD_ROOT: &str = "YGO_PERSISTENCE_CRASH_CHILD_ROOT";
+    if let Some(root) = std::env::var_os(CHILD_ROOT) {
+        let root = PathBuf::from(root);
+        let store = PersistentAnalysisJobStore::open(root.clone()).unwrap();
+        let queued_id = "11111111111111111111111111111111";
+        let queued_record = queued(queued_id.into());
+        store.append_initial(queued_record).unwrap();
+
+        let running_id = "22222222222222222222222222222222";
+        let running_queued = queued(running_id.into());
+        store.append_initial(running_queued.clone()).unwrap();
+        let running = running_queued
+            .transition(1, AnalysisJobEvent::Start, 101)
+            .unwrap();
+        store.append_expected(running_id, 1, running).unwrap();
+
+        let ready = root.with_extension("child-ready.json");
+        std::fs::write(
+            ready,
+            serde_json::json!({"queued_id": queued_id, "running_id": running_id}).to_string(),
+        )
+        .unwrap();
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    }
+
+    let root = root();
+    let ready = root.with_extension("child-ready.json");
+    let executable = std::env::current_exe().unwrap();
+    let mut child = std::process::Command::new(executable)
+        .arg("--exact")
+        .arg("workbench_analysis::persistence_tests::killed_store_process_reopens_queued_as_interrupted_and_running_as_unknown")
+        .env(CHILD_ROOT, &root)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !ready.is_file() && std::time::Instant::now() < deadline {
+        if child.try_wait().unwrap().is_some() {
+            panic!("persistence child exited before writing its ready marker");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    if !ready.is_file() {
+        let _ = child.kill();
+        let _ = child.wait();
+        panic!("persistence child did not reach the committed state");
+    }
+    let marker: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&ready).unwrap()).unwrap();
+    child.kill().unwrap();
+    child.wait().unwrap();
+
+    let store = PersistentAnalysisJobStore::open(root).unwrap();
+    let queued = store
+        .history(marker["queued_id"].as_str().unwrap())
+        .unwrap();
+    assert_eq!(
+        queued.last().unwrap().state(),
+        AnalysisJobState::Interrupted
+    );
+    let running = store
+        .history(marker["running_id"].as_str().unwrap())
+        .unwrap();
+    assert_eq!(running.len(), 3);
+    assert_eq!(running[1].state(), AnalysisJobState::Running);
+    assert_eq!(running[2].state(), AnalysisJobState::Unknown);
+}
+
 fn frozen() -> FrozenAnalysisInput {
     let fixture_root = root().join("fixtures");
     std::fs::create_dir_all(&fixture_root).unwrap();
@@ -367,6 +440,16 @@ fn durable_coordinator_publishes_report_before_terminal_revision() {
             .state(),
         AnalysisJobState::Completed
     );
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
+    assert_eq!(
+        coordinator
+            .publish_report(&ticket, &bytes, 103)
+            .unwrap_err()
+            .code(),
+        "analysis_ticket_mismatch"
+    );
+    assert_eq!(coordinator.history(queued.job_id()).unwrap().len(), 3);
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
     drop(coordinator);
 
     let reopened = PersistentAnalysisJobStore::open(root).unwrap();
@@ -379,6 +462,219 @@ fn durable_coordinator_publishes_report_before_terminal_revision() {
             .state(),
         AnalysisJobState::Completed
     );
+}
+
+#[test]
+fn uncertain_report_terminal_publish_stops_coordinator_and_reopens_completed() {
+    let root = root();
+    let input = frozen();
+    let bytes = report_bytes(&input, ScoringConfig::default());
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    let queued = coordinator
+        .submit(input, ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = coordinator.claim_next(101).unwrap().unwrap();
+    coordinator.inject_uncertain_after_next_publish();
+
+    let error = coordinator
+        .publish_report(&ticket, &bytes, 102)
+        .unwrap_err();
+    assert_eq!(error.code(), "job_store_commit_uncertain");
+    assert_eq!(
+        coordinator.snapshot().unwrap_err().code(),
+        "job_coordinator_stopped"
+    );
+    drop(coordinator);
+
+    let reopened = PersistentAnalysisJobStore::open(root.clone()).unwrap();
+    let history = reopened.history(queued.job_id()).unwrap();
+    assert_eq!(history.len(), 3);
+    assert_eq!(history.last().unwrap().state(), AnalysisJobState::Completed);
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
+}
+
+#[test]
+fn uncertain_cancel_and_failure_settlements_stop_and_reopen_committed_terminals() {
+    let cancel_root = root();
+    let canceller = super::durable::DurableAnalysisCoordinator::open(cancel_root.clone()).unwrap();
+    let queued = canceller
+        .submit(frozen(), ScoringConfig::default(), 100)
+        .unwrap();
+    canceller.inject_uncertain_after_next_publish();
+    assert_eq!(
+        canceller
+            .cancel(queued.job_id(), queued.revision(), 101)
+            .unwrap_err()
+            .code(),
+        "job_store_commit_uncertain"
+    );
+    assert_eq!(
+        canceller.snapshot().unwrap_err().code(),
+        "job_coordinator_stopped"
+    );
+    drop(canceller);
+    let reopened = PersistentAnalysisJobStore::open(cancel_root).unwrap();
+    assert_eq!(
+        reopened
+            .history(queued.job_id())
+            .unwrap()
+            .last()
+            .unwrap()
+            .state(),
+        AnalysisJobState::Cancelled
+    );
+
+    let fail_root = root();
+    let failing = super::durable::DurableAnalysisCoordinator::open(fail_root.clone()).unwrap();
+    let queued = failing
+        .submit(frozen(), ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = failing.claim_next(101).unwrap().unwrap();
+    failing.inject_uncertain_after_next_publish();
+    assert_eq!(
+        failing.fail(&ticket, 102).unwrap_err().code(),
+        "job_store_commit_uncertain"
+    );
+    assert_eq!(
+        failing.snapshot().unwrap_err().code(),
+        "job_coordinator_stopped"
+    );
+    drop(failing);
+    let reopened = PersistentAnalysisJobStore::open(fail_root).unwrap();
+    assert_eq!(
+        reopened
+            .history(queued.job_id())
+            .unwrap()
+            .last()
+            .unwrap()
+            .state(),
+        AnalysisJobState::Failed
+    );
+}
+
+#[test]
+fn uncertain_submit_stops_and_reopens_the_committed_job_interrupted() {
+    let root = root();
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    coordinator.inject_uncertain_after_next_publish();
+
+    assert_eq!(
+        coordinator
+            .submit(frozen(), ScoringConfig::default(), 100)
+            .unwrap_err()
+            .code(),
+        "job_store_commit_uncertain"
+    );
+    assert_eq!(
+        coordinator.snapshot().unwrap_err().code(),
+        "job_coordinator_stopped"
+    );
+    drop(coordinator);
+
+    let reopened = PersistentAnalysisJobStore::open(root.clone()).unwrap();
+    let job_dirs: Vec<_> = std::fs::read_dir(root.join("jobs"))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(job_dirs.len(), 1);
+    let id = job_dirs[0].file_name().to_string_lossy().into_owned();
+    let history = reopened.history(&id).unwrap();
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[0].state(), AnalysisJobState::Queued);
+    assert_eq!(history[1].state(), AnalysisJobState::Interrupted);
+}
+
+#[test]
+fn report_publish_failure_before_file_creation_keeps_running_retryable() {
+    let root = root();
+    let input = frozen();
+    let bytes = report_bytes(&input, ScoringConfig::default());
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    let queued = coordinator
+        .submit(input, ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = coordinator.claim_next(101).unwrap().unwrap();
+    coordinator.inject_report_publish_failure(false);
+
+    assert_eq!(
+        coordinator
+            .publish_report(&ticket, &bytes, 102)
+            .unwrap_err()
+            .code(),
+        "job_store_io_failed"
+    );
+    assert_eq!(
+        coordinator.snapshot().unwrap().running.unwrap().job_id(),
+        queued.job_id()
+    );
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 0);
+
+    let completed = coordinator.publish_report(&ticket, &bytes, 103).unwrap().0;
+    assert_eq!(completed.state(), AnalysisJobState::Completed);
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
+}
+
+#[test]
+fn uncertain_report_file_publish_stops_coordinator_and_reopens_as_unknown() {
+    let root = root();
+    let input = frozen();
+    let bytes = report_bytes(&input, ScoringConfig::default());
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    let queued = coordinator
+        .submit(input, ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = coordinator.claim_next(101).unwrap().unwrap();
+    coordinator.inject_report_publish_failure(true);
+
+    assert_eq!(
+        coordinator
+            .publish_report(&ticket, &bytes, 102)
+            .unwrap_err()
+            .code(),
+        "job_store_commit_uncertain"
+    );
+    assert_eq!(
+        coordinator.snapshot().unwrap_err().code(),
+        "job_coordinator_stopped"
+    );
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
+    drop(coordinator);
+
+    let reopened = PersistentAnalysisJobStore::open(root.clone()).unwrap();
+    let history = reopened.history(queued.job_id()).unwrap();
+    assert_eq!(history.len(), 3);
+    assert_eq!(history.last().unwrap().state(), AnalysisJobState::Unknown);
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
+}
+
+#[test]
+fn failed_report_terminal_publish_stops_coordinator_and_reopens_as_unknown() {
+    let root = root();
+    let input = frozen();
+    let bytes = report_bytes(&input, ScoringConfig::default());
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    let queued = coordinator
+        .submit(input, ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = coordinator.claim_next(101).unwrap().unwrap();
+    coordinator.inject_failure_before_next_publish();
+
+    let error = coordinator
+        .publish_report(&ticket, &bytes, 102)
+        .unwrap_err();
+    assert_eq!(error.code(), "job_store_io_failed");
+    assert_eq!(
+        coordinator.snapshot().unwrap_err().code(),
+        "job_coordinator_stopped"
+    );
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
+    drop(coordinator);
+
+    let reopened = PersistentAnalysisJobStore::open(root.clone()).unwrap();
+    let history = reopened.history(queued.job_id()).unwrap();
+    assert_eq!(history.last().unwrap().state(), AnalysisJobState::Unknown);
+    assert_eq!(history.len(), 3);
+    assert_eq!(std::fs::read_dir(root.join("reports")).unwrap().count(), 1);
 }
 
 #[test]
@@ -426,6 +722,77 @@ fn prepublication_failure_keeps_queued_memory_and_disk_state_retryable() {
 }
 
 #[test]
+fn prepublication_failures_leave_submit_cancel_and_fail_states_unchanged() {
+    let submit_root = root();
+    let submitter = super::durable::DurableAnalysisCoordinator::open(submit_root.clone()).unwrap();
+    submitter.inject_failure_before_next_publish();
+    assert_eq!(
+        submitter
+            .submit(frozen(), ScoringConfig::default(), 100)
+            .unwrap_err()
+            .code(),
+        "job_store_io_failed"
+    );
+    assert!(submitter.snapshot().unwrap().queued.is_none());
+    assert_eq!(
+        std::fs::read_dir(submit_root.join("jobs")).unwrap().count(),
+        0
+    );
+    let submitted = submitter
+        .submit(frozen(), ScoringConfig::default(), 101)
+        .unwrap();
+
+    let cancel_root = root();
+    let canceller = super::durable::DurableAnalysisCoordinator::open(cancel_root.clone()).unwrap();
+    let queued = canceller
+        .submit(frozen(), ScoringConfig::default(), 100)
+        .unwrap();
+    canceller.inject_failure_before_next_publish();
+    assert_eq!(
+        canceller
+            .cancel(queued.job_id(), queued.revision(), 101)
+            .unwrap_err()
+            .code(),
+        "job_store_io_failed"
+    );
+    assert_eq!(
+        canceller.snapshot().unwrap().queued.unwrap().state(),
+        AnalysisJobState::Queued
+    );
+    assert_eq!(canceller.history(queued.job_id()).unwrap().len(), 1);
+    assert_eq!(
+        canceller
+            .cancel(queued.job_id(), queued.revision(), 102)
+            .unwrap()
+            .state(),
+        AnalysisJobState::Cancelled
+    );
+
+    let fail_root = root();
+    let failing = super::durable::DurableAnalysisCoordinator::open(fail_root).unwrap();
+    let queued = failing
+        .submit(frozen(), ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = failing.claim_next(101).unwrap().unwrap();
+    failing.inject_failure_before_next_publish();
+    assert_eq!(
+        failing.fail(&ticket, 102).unwrap_err().code(),
+        "job_store_io_failed"
+    );
+    assert_eq!(
+        failing.snapshot().unwrap().running.unwrap().state(),
+        AnalysisJobState::Running
+    );
+    assert_eq!(failing.history(queued.job_id()).unwrap().len(), 2);
+    assert_eq!(
+        failing.fail(&ticket, 103).unwrap().state(),
+        AnalysisJobState::Failed
+    );
+    assert_eq!(failing.history(queued.job_id()).unwrap().len(), 3);
+    assert_eq!(submitter.history(submitted.job_id()).unwrap().len(), 1);
+}
+
+#[test]
 fn durable_claim_rejects_assets_changed_after_input_freeze() {
     let root = root();
     let input = frozen();
@@ -447,6 +814,52 @@ fn durable_claim_rejects_assets_changed_after_input_freeze() {
         serde_json::json!("asset_mismatch")
     );
     assert!(coordinator.snapshot().unwrap().running.is_none());
+}
+
+#[test]
+fn durable_claim_rejects_drift_in_each_asset_role_and_runtime_path() {
+    for drift in 0..7 {
+        let root = root();
+        let mut input = frozen();
+        let engine = &input.runtime_request.engine;
+        let role_paths = [
+            engine.worker_path.clone(),
+            engine.ocgcore_path.clone(),
+            engine.catalog_path.clone(),
+            engine.script_manifest_path.clone(),
+            engine.engine_manifest_path.clone(),
+        ];
+        if drift < role_paths.len() {
+            std::fs::write(&role_paths[drift], b"changed after freeze").unwrap();
+        } else if drift == role_paths.len() {
+            std::fs::write(engine.scripts_path.join("unexpected.lua"), b"changed").unwrap();
+        } else {
+            let replacement = input
+                .runtime_request
+                .engine
+                .ocgcore_path
+                .with_file_name("replacement-core.bin");
+            std::fs::write(&replacement, b"different core at replacement path").unwrap();
+            input.runtime_request.engine.ocgcore_path = replacement;
+        }
+
+        let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+        let queued = coordinator
+            .submit(input, ScoringConfig::default(), 100)
+            .unwrap();
+        assert_eq!(
+            coordinator.claim_next(101).unwrap_err().code(),
+            "analysis_asset_mismatch",
+            "asset drift case {drift} must be rejected before dispatch"
+        );
+        let history = coordinator.history(queued.job_id()).unwrap();
+        assert_eq!(history.len(), 3);
+        assert_eq!(history[2].state(), AnalysisJobState::Failed);
+        assert_eq!(
+            history[2].error_code(),
+            Some(AnalysisJobFailure::AssetMismatch)
+        );
+    }
 }
 
 #[test]
