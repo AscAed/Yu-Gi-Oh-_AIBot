@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-01 `e684f4e`隔离候选双资产部署诊断
+
+- 在独立worktree以`deploy-local.ps1 -Offline -FrozenRuntime`从`e684f4e85499e4cc17b746380e536f6cb50195a9`构建Release候选；catalog导入13,665行，banlist 203行（2026-10-01生效），知识包验证12卡。候选二进制SHA-256：CLI `7dc8e5fe9421b6fc93e6e14a88e5035f289b48c946eafa6f0f7150d19b5d6f9b`、worker `cda0a12237b562850bb81227859167ccc14f6cb1b56c6c7f1babb6e31d0be006`。
+- 普通及赛事资产的`engine doctor`均ready、ABI/assets检查通过且issues为空；`engine identity`均consistent、脚本清单missing/mismatch/extra均为0。两套身份分别为`d76888a07069b54c6cfdf2ac50eaf7fb3e196908a23c0ce4fef50cd7da443394`及`24b2a95a6e78525625daecdf46363b95ea46acf7481c5a05d5305c74a52116a7`。普通/赛事CDB SHA-256分别为`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`、`3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632`；共用core SHA-256为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`。
+- 普通smoke为136节点/139次引擎调用/27,900ms，赛事smoke为139节点/142次引擎调用/28,318ms；均3条报告线路、`time_budget`终止。普通报告SHA-256 `92172eb9a029cf704ea6dbcd6b0ac0be2f5e3a71460a0fc9cf204f7e01c1d737`，赛事报告`3a8df9e107d59edcf6ffe9291781190bf9606f290eab148ee8356f55ac1de2ad`。各自独立replay均3/3 `engine_verified`且`replay_verified=true`；输出SHA-256分别`4ef988c69382eecf6cdc2b8f9082d8b57eb1eb46fe3559bb1e22bcf1e16ba886`、`00c9efcd473d4e5fe39fff9293ba55258e40295c286b47076e4dbd70332bbe7e`。诊断产物在忽略目录`target/p4r5-audit/`，未迁入受保护历史区。
+- 首次赛事smoke因误用普通snapshot被拒绝，错误为`catalog snapshot does not match engine CDB`；随后显式使用赛事snapshot及其active catalog/banlist重跑成功。普通runtime通过目录junction共享，identity因此采用指向既有资产的直达路径配置；没有改写普通/赛事资产或snapshot。
+- 这些是候选部署诊断，不是正式研究scope、账本更新、规则资格或最优性证据。两次smoke都在时间预算处停止；没有可比研究账本，P4-R5发布门禁仍开放。主工作区`dist/ygo-local`保持2026-10-19旧包，未被替换。
+
 ## 2026-10-31 W1-H2.1 内部操作持久化与幂等提交
 
 - 基线main / 577924b，保留既有13份tracked及4份untracked文档。新增操作合同/schema、同根同锁修订链、真实W1-A合成冻结、容量预占、先任务/accepted提交再注册派发、跨链重开及停止后只读查询。无新增HTTP、界面或真实分析。
