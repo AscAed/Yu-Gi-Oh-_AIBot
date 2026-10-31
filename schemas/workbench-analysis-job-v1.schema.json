@@ -16,14 +16,14 @@
     "input": {"$ref": "#/$defs/input"},
     "state": {"enum": ["queued", "running", "completed", "budget_limited", "failed", "cancelled", "interrupted", "unknown"]},
     "report": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/report"}]},
-    "error_code": {"enum": [null, "analysis_failed", "service_restarted", "completion_uncertain"]}
+    "error_code": {"enum": [null, "analysis_failed", "asset_mismatch", "service_restarted", "completion_uncertain"]}
   },
   "allOf": [
     {"if": {"properties": {"state": {"const": "queued"}}}, "then": {"properties": {"revision": {"const": 1}, "report": {"type": "null"}, "error_code": {"type": "null"}}}},
     {"if": {"properties": {"state": {"enum": ["running", "cancelled"]}}}, "then": {"properties": {"revision": {"const": 2}, "report": {"type": "null"}, "error_code": {"type": "null"}}}},
     {"if": {"properties": {"state": {"const": "interrupted"}}}, "then": {"properties": {"revision": {"const": 2}, "report": {"type": "null"}, "error_code": {"const": "service_restarted"}}}},
     {"if": {"properties": {"state": {"const": "unknown"}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"type": "null"}, "error_code": {"const": "completion_uncertain"}}}},
-    {"if": {"properties": {"state": {"const": "failed"}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"type": "null"}, "error_code": {"const": "analysis_failed"}}}},
+    {"if": {"properties": {"state": {"const": "failed"}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"type": "null"}, "error_code": {"enum": ["analysis_failed", "asset_mismatch"]}}}},
     {"if": {"properties": {"state": {"enum": ["completed", "budget_limited"]}}}, "then": {"properties": {"revision": {"const": 3}, "report": {"$ref": "#/$defs/report"}, "error_code": {"type": "null"}}}},
     {"if": {"properties": {"state": {"const": "completed"}}}, "then": {"properties": {"report": {"properties": {"termination": {"enum": ["exhausted", "exhausted:no_verified_lines"]}}}}}},
     {"if": {"properties": {"state": {"const": "budget_limited"}}}, "then": {"properties": {"report": {"properties": {"termination": {"enum": ["node_budget", "time_budget", "depth_budget", "node_budget:no_verified_lines", "time_budget:no_verified_lines", "depth_budget:no_verified_lines"]}}}}}}

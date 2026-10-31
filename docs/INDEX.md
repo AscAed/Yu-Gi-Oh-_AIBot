@@ -1,69 +1,38 @@
-# 文档入口
+# 文档导航
 
-## 当前事实源
+## 信息优先级
 
-当前实施交接见[W1-B2内部队列](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。当前路线见[W1-B1后路线](superpowers/plans/2026-10-31-post-w1b1-project-route.md)；下方W1-A后路线为历史时点。
+实现事实以当前源码、schema和可复现产物为准。按职责读取以下唯一事实源；历史计划和聊天仅作背景。
 
-实现事实以代码、schema与可复现产物为准。当前状态、验证证据、产品目标和研究定义分别按下表读取；历史计划与对话只作背景。
-
-| 问题 | 事实源 | 阅读边界 |
+| 需要回答 | 权威入口 | 使用规则 |
 |---|---|---|
-| 产品目标与完成门槛 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 用户全卡与全局最优目标的唯一事实源；局部预览不替代验收 |
-| 全局最优的定义与证明关口 | [OPTIMALITY_RESEARCH.md](OPTIMALITY_RESEARCH.md) | 研究定义与可行性门禁，不代表现有能力或接口 |
-| 当前状态与开放任务 | [TASKS.md](../TASKS.md) | 当前状态的唯一入口；各批次历史数字不覆盖顶部 |
-| 验证结果与限制 | [TESTING.md](TESTING.md) | 按日期、源码与范围读取；旧结果不代表当前源码已复验 |
-| 历史忽略目录证据的清点与处置决定 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 保留SHA-256身份清单；按用户决定暂不迁移，不能把哈希视为备份 |
-| 能力与差距 | [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 区分已验证、局部验证、未验证、未实现 |
-| 依赖顺序与当前任务 | [ROADMAP.md](ROADMAP.md)、[W1-A后实施路线](superpowers/plans/2026-10-30-post-w1a-project-route.md) | 研究与产品工作台双轨推进；完成状态仍只维护于TASKS |
-| 研究运行、scope、预算、窗口及停止条件 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md) | 研究操作规范；旧批次准备不构成新执行授权 |
-| 报告、来源、会计和资格绑定 | [EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 证据合同；来源身份、实际消费和资格分别核验 |
-| 基线及研究工具用法 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md) | 工具及合同说明；实跑状态和限制仍见TASKS/TESTING |
-| 模块边界与数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | 以crate依赖和调用路径为准 |
-| 环境自检范围、证据及未完成项 | [WORKSPACE_REVIEW.md](WORKSPACE_REVIEW.md) | 按方面记录检查范围、限制和后续工作，不覆盖TASKS或TESTING |
-| 本机准备、构建、部署与诊断 | [DEPLOYMENT.md](DEPLOYMENT.md)、[scripts/](../scripts/) | 资产版本以manifest与部署配置为准；不由导航授予运行权限 |
-| JSON、CLI与worker合同 | [schemas/](../schemas/)、[ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[API.md](API.md)、[WORKBENCH.md](WORKBENCH.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md) | schema和解析器为规范性定义；WORKBENCH记录当前本机HTTP界面与安全边界；执行恢复仅描述可恢复进度，不授予成功资格 |
-| 工作台分析接入 | [W1受限分析设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)、[无路径任务合同](WORKBENCH_ANALYSIS_JOBS.md)、[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md) | W1-A冻结、W1-B1任务合同和W1-B2进程内合成队列已实现；持久化、HTTP队列、报告发布及真实分析未实现 |
-| 规则分类与认证 | [RULES_SCOPE.md](RULES_SCOPE.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | 规则资格只能由独立原生案例提升 |
-| 数据来源、版本与许可 | [DATA_SOURCES.md](DATA_SOURCES.md) | 不提交外部卡库、脚本、图像或个人资产 |
-| 历史计划、交接及故障链 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[任务历史快照](../TASKS_HISTORY.md)、[验证历史快照](TESTING_HISTORY.md) | 原入口保留历史标题锚点；快照是拆分前正文，不替代原报告、源码、账本及固定窗口边界 |
+| 当前状态、开放项、提交/部署门槛 | [TASKS.md](../TASKS.md) | 唯一当前状态入口 |
+| 某次验证做了什么、结果与限制 | [TESTING.md](TESTING.md) | 按日期、commit、资产和运行范围判读；旧记录不等于当前复验 |
+| 产品目标和验收愿景 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 目标唯一来源；局部样例不代表达成 |
+| 全局最优定义与证明门槛 | [OPTIMALITY_RESEARCH.md](OPTIMALITY_RESEARCH.md) | 研究定义，不代表当前能力或可行性已证 |
+| 阶段依赖及退出条件 | [ROADMAP.md](ROADMAP.md) | 不维护阶段完成状态；进度回到TASKS |
+| 已有能力及差距矩阵 | [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 引用TASKS/TESTING，不覆盖其状态 |
+| 模块边界和数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | crate依赖与调用路径为准 |
+| 环境清点、证据保留和清理约束 | [ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md)、[EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 哈希清单不等于备份；保留策略优先于清理便利 |
+| 研究scope、预算、窗口和副作用 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md)、[EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 准备文档不授予执行权限 |
+| 本机构建、包身份和部署边界 | [DEPLOYMENT.md](DEPLOYMENT.md) | 区分当前checkout、构建产物、冻结资产和历史记录 |
+| 历史文档/批次定位 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[TASKS_HISTORY.md](../TASKS_HISTORY.md)、[TESTING_HISTORY.md](TESTING_HISTORY.md) | 保留原证据和来源，不视作当前状态 |
 
-## 最近只读诊断：E1 Tenki 历史保护锚点
+## 推荐阅读顺序
 
-[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)已核实 Tenki 归档中的 `codec.rs` 为 `224…`，Ground Collapse 工具包成员为 `e8…`，并比对了两者与当前文件的代码差异。Ground Collapse 工具包没有绑定为 Curry scope 实际执行源码的证据；Curry 迁移适用性仍未知。原失败及 pin 未改。范围和限制见[TESTING](TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
+1. 新任务先读仓库根目录的`AGENTS.md`、本页和[TASKS.md](../TASKS.md)。
+2. 涉及能力判断时再读[PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md)和[ROADMAP.md](ROADMAP.md)。
+3. 根据模块进入对应接口/合同文档；运行或部署主张必须回到[TESTING.md](TESTING.md)的具体证据。
+4. 需要历史上下文时用[HISTORY_INDEX.md](HISTORY_INDEX.md)定位原记录；不要把旧计划当作当前命令或授权。
 
-## 最近研究批次：Ground Collapse离线准备（已完成并暂停）
+## 子系统入口
 
-[本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)、[验证记录](TESTING.md)、[准备报告](../data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json)。本批完成FIELD_DISABLED56解析、独立opcode24/HINT_ZONE oracle、固定公开选区和合成来源链准备；准备及verify通过，新增native/runner/worker/FFI均为0。`execution_ready=false`，实际opcode24提示、掩码、原生可达、响应接受及完整性/概率/最优性资格仍未获得。
+| 子系统 | 设计与合同 | 当前界面/操作边界 |
+|---|---|---|
+| 工作台草稿 | [DECK_DRAFTS.md](DECK_DRAFTS.md)、[WORKBENCH.md](WORKBENCH.md)、[schemas](../schemas/) | 仅本机草稿编辑/导入导出；中文候选仍按其证据状态展示 |
+| 受限分析接入 | [WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | B3内部协调器未连接工作台分析HTTP；真实分析未交付 |
+| 引擎与报告 | [ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | ocgcore为效果执行权威；证据等级不能互相替代 |
+| 数据与语言 | [DATA_SOURCES.md](DATA_SOURCES.md)、[LANGUAGE_REVIEW.md](LANGUAGE_REVIEW.md) | 来源、语义、许可及字段覆盖分别核验 |
+| 研究工作流 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md)、[P1_MICROCASE.md](P1_MICROCASE.md) | 使用单独scope与预算；保存的准备材料不自动启动实验 |
 
-下一研究实验由TASKS开放项决定，须另定scope、预算和窗口；本准备报告不能直接启动原生实验。当前会计口径及未知值以TASKS顶部与对应TESTING证据为准，不在导航中复制累计数字。
-
-## 最近产品工作台批次：首次失败诊断、草稿基础与本机界面（已完成）
-
-[B2交接](superpowers/plans/2026-10-28-b2-workbench-handoff.md)、[工作台运行说明](WORKBENCH.md)、[牌组草稿CLI与合同](DECK_DRAFTS.md)。A1首次结果级错误及查询捕获失败回归通过；B1/B2提供版本化草稿、三分区编辑、本机浏览器操作和YDK/JSON往返，不赋予完整合法性或中文资格。实测范围见[TESTING](TESTING.md)。
-
-## W1工作台受限分析接入（W1-B2内部队列已实现）
-
-[设计文档](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)以现有`ComboAnalyzeRequest`和Rabbit样例定义输入冻结、预校验、队列状态和结果展示。W1-A提供非GET同源门禁和revision绑定冻结；W1-B1提供无路径任务记录、严格JSON及纯状态转换；W1-B2提供进程内单运行/单排队合成队列。尚无任务存储、HTTP端点、报告发布或引擎调用。合同与验证入口见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)和[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。后续W1-B3与W1-C按[TASKS](../TASKS.md)分别实施；原[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)保留为规划背景。
-
-## 最近执行恢复批次：P4-R1b离线多动作等价与中断门禁（已通过；真实续跑未认证）
-
-[执行恢复合同](EXECUTION_RECOVERY.md)、[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)、[验证记录](TESTING.md)。非空两动作语义路线通过连续执行与每个调用边界暂停/重开对照；完成尾调用复用、持久化失败前收费门禁和只读检查后账本竞争也有合成验证。完整串行workspace为362 passed、36 ignored。真实进程崩溃恢复、操作系统级故障注入及独立原生重放仍未认证；本批原生调用为0。
-
-## 最近语言数据批次：39卡中文字段离线核验（完成并暂停）
-
-[字段核验说明](LANGUAGE_REVIEW.md)、[数据来源说明](DATA_SOURCES.md)、[C1交接](superpowers/plans/2026-10-28-c1-language-review-handoff.md)。固定39卡样本与两份本地CDB完成只读字段存在性/来源核对；报告不含候选正文，工作台只读接口显示状态。语义、zh-SC类别、使用与再分发依据仍未知，未授予中文资格。实跑和限制见[TESTING](TESTING.md)。
-
-## 最近执行器批次：A3离线执行检查点（已实现；真实运行未认证）
-
-[执行恢复合同](EXECUTION_RECOVERY.md)、[A3交接](superpowers/plans/2026-10-28-a3-execution-recovery-handoff.md)和[验证记录](TESTING.md)。planner提供绑定输入的版本化检查点、调用前意图保存、单步推进及只读后重开；合成适配器证明暂停/重开与连续调用一致，并证明已完成尾部调用可复用、未决消费会阻断。本批没有原生、runner、worker或FFI调用。真实引擎持久化、暂停/重开和独立重放仍开放。
-
-## 阅读路径
-
-1. 新加入的代理：本文件 → [AGENTS.md](../AGENTS.md) → [TASKS](../TASKS.md) → [PROJECT_ASSESSMENT](PROJECT_ASSESSMENT.md) → 相关模块文档。
-2. 产品与双轨任务：[PRODUCT_VISION](PRODUCT_VISION.md) → [ROADMAP](ROADMAP.md) → [W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。[W1设计后路线](superpowers/plans/2026-10-30-post-w1-project-route.md)及更早计划是历史时点记录。最优性工作先读[OPTIMALITY_RESEARCH](OPTIMALITY_RESEARCH.md)。
-3. 研究与证据：[RESEARCH_OPERATIONS](RESEARCH_OPERATIONS.md) → [EVIDENCE_CONTRACTS](EVIDENCE_CONTRACTS.md) → 对应工具文档、当前交接与TESTING；具体运行须遵守该次授权和停止条件。
-4. 运行与来源：[DEPLOYMENT](DEPLOYMENT.md) → [ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)、[DATA_SOURCES](DATA_SOURCES.md)、[TOURNAMENT_RESELECTION](TOURNAMENT_RESELECTION.md)、[TOURNAMENT_SOURCE_GATE](TOURNAMENT_SOURCE_GATE.md) → 对应日期验证和实际报告。
-5. 实现设计：[ARCHITECTURE](ARCHITECTURE.md) → [DOMAIN_MODEL](DOMAIN_MODEL.md)、[ENGINE_ADAPTERS](ENGINE_ADAPTERS.md)、[ENGINE_PROTOCOL](ENGINE_PROTOCOL.md)、[SEARCH_AND_SCORING](SEARCH_AND_SCORING.md)、[API](API.md)。规则与规划另见[FIRST_TURN_PILOT](FIRST_TURN_PILOT.md)、[SEMANTIC_PLANNING](SEMANTIC_PLANNING.md)、[GOAL_PLANNING](GOAL_PLANNING.md)、[BREAK_SWORD_VERIFICATION](BREAK_SWORD_VERIFICATION.md)、[RECOVERY_PLANNING](RECOVERY_PLANNING.md)、[ASH_STRATEGY_PLANNING](ASH_STRATEGY_PLANNING.md)及对应Rust测试。
-6. 历史追溯：[HISTORY_INDEX](HISTORY_INDEX.md) → 指定日期交接、TESTING及[IMPLEMENTATION_NOTES](IMPLEMENTATION_NOTES.md)。历史命令和待办不能直接作为当前执行指令。
-
-维护时只在TASKS更新当前状态，在TESTING追加对应范围的验证；ROADMAP保留依赖顺序。目标变化先改PRODUCT_VISION，再同步研究定义和计划。每份文档应独立说明范围，使用仓库相对链接；历史资料保留其来源、未知值与资格边界。
+历史快照、交接及故障链的清单见[历史索引](HISTORY_INDEX.md)。本页只负责导航，不复制任务状态、验证数字或阶段历史。

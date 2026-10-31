@@ -12,6 +12,7 @@ pub enum QueueError {
     LockUnavailable,
     IdUnavailable,
     Job(AnalysisJobError),
+    Persistence(super::persistence::PersistenceError),
 }
 impl QueueError {
     pub fn code(self) -> &'static str {
@@ -23,6 +24,7 @@ impl QueueError {
             Self::LockUnavailable => "analysis_queue_unavailable",
             Self::IdUnavailable => "analysis_job_id_unavailable",
             Self::Job(e) => e.code(),
+            Self::Persistence(e) => e.code(),
         }
     }
 }
@@ -75,6 +77,15 @@ impl AnalysisJobQueue {
         scoring: ScoringConfig,
         now_ms: u64,
     ) -> Result<AnalysisJobRecordV1, QueueError> {
+        self.enqueue_with_persist(input, scoring, now_ms, |_| Ok(()))
+    }
+    pub(super) fn enqueue_with_persist(
+        &self,
+        input: FrozenAnalysisInput,
+        scoring: ScoringConfig,
+        now_ms: u64,
+        persist: impl FnOnce(&AnalysisJobRecordV1) -> Result<(), super::persistence::PersistenceError>,
+    ) -> Result<AnalysisJobRecordV1, QueueError> {
         let mut s = self.state.lock().map_err(|_| QueueError::LockUnavailable)?;
         if s.queued.is_some() {
             return Err(QueueError::Full);
@@ -84,12 +95,20 @@ impl AnalysisJobQueue {
             return Err(QueueError::IdUnavailable);
         }
         let r = AnalysisJobRecordV1::new(id.clone(), &input, scoring, now_ms)?;
+        persist(&r).map_err(QueueError::Persistence)?;
         s.used_ids.insert(id);
         s.queued = Some((r.clone(), input));
         Ok(r)
     }
     /// Claim does not invoke an executor. Callers execute outside this lock.
     pub fn claim_next(&self, now_ms: u64) -> Result<Option<DispatchTicket>, QueueError> {
+        self.claim_next_with_persist(now_ms, |_| Ok(()))
+    }
+    pub(super) fn claim_next_with_persist(
+        &self,
+        now_ms: u64,
+        persist: impl FnOnce(&AnalysisJobRecordV1) -> Result<(), super::persistence::PersistenceError>,
+    ) -> Result<Option<DispatchTicket>, QueueError> {
         let mut s = self.state.lock().map_err(|_| QueueError::LockUnavailable)?;
         if s.running.is_some() {
             return Ok(None);
@@ -98,6 +117,7 @@ impl AnalysisJobQueue {
             return Ok(None);
         };
         let next = r.transition(r.revision(), AnalysisJobEvent::Start, now_ms)?;
+        persist(&next).map_err(QueueError::Persistence)?;
         let (_, input) = s.queued.take().expect("queued under lock");
         s.running = Some(next.clone());
         Ok(Some(DispatchTicket {
@@ -111,6 +131,15 @@ impl AnalysisJobQueue {
         revision: u64,
         now_ms: u64,
     ) -> Result<AnalysisJobRecordV1, QueueError> {
+        self.cancel_with_persist(id, revision, now_ms, |_| Ok(()))
+    }
+    pub(super) fn cancel_with_persist(
+        &self,
+        id: &str,
+        revision: u64,
+        now_ms: u64,
+        persist: impl FnOnce(&AnalysisJobRecordV1) -> Result<(), super::persistence::PersistenceError>,
+    ) -> Result<AnalysisJobRecordV1, QueueError> {
         let mut s = self.state.lock().map_err(|_| QueueError::LockUnavailable)?;
         if s.running.as_ref().is_some_and(|r| r.job_id() == id) {
             return Err(QueueError::CannotCancelRunning);
@@ -121,6 +150,7 @@ impl AnalysisJobQueue {
             .filter(|(r, _)| r.job_id() == id)
             .ok_or(QueueError::NotFound)?;
         let next = r.transition(revision, AnalysisJobEvent::Cancel, now_ms)?;
+        persist(&next).map_err(QueueError::Persistence)?;
         s.queued = None;
         Ok(next)
     }
@@ -131,6 +161,15 @@ impl AnalysisJobQueue {
         ticket: &DispatchTicket,
         event: AnalysisJobEvent,
         now_ms: u64,
+    ) -> Result<AnalysisJobRecordV1, QueueError> {
+        self.settle_with_persist(ticket, event, now_ms, |_| Ok(()))
+    }
+    pub(super) fn settle_with_persist(
+        &self,
+        ticket: &DispatchTicket,
+        event: AnalysisJobEvent,
+        now_ms: u64,
+        persist: impl FnOnce(&AnalysisJobRecordV1) -> Result<(), super::persistence::PersistenceError>,
     ) -> Result<AnalysisJobRecordV1, QueueError> {
         let mut s = self.state.lock().map_err(|_| QueueError::LockUnavailable)?;
         let r = s.running.as_ref().ok_or(QueueError::TicketMismatch)?;
@@ -148,6 +187,7 @@ impl AnalysisJobQueue {
             return Err(QueueError::TicketMismatch);
         }
         let next = r.transition(ticket.record.revision(), event, now_ms)?;
+        persist(&next).map_err(QueueError::Persistence)?;
         s.running = None;
         Ok(next)
     }

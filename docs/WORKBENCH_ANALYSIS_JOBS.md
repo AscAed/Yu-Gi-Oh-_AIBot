@@ -37,13 +37,14 @@ request、identity和scoring的成员顺序分别使用当前Rust类型声明顺
 | running (2) | ReportPublished，exhausted | completed (3) | 报告引用 |
 | running (2) | ReportPublished，node/time/depth_budget | budget_limited (3) | 报告引用 |
 | running (2) | Fail(AnalysisFailed) | failed (3) | analysis_failed |
+| running (2) | Fail(AssetMismatch) | failed (3) | asset_mismatch |
 | running (2) | ClassifyRestart | unknown (3) | completion_uncertain |
 
 这是当前无中间更新事件的完整v1图，因此记录校验也限制相应revision为1/2/3，不接受任意高revision跳转。queued创建/更新时间必须相同。`unknown`不说明调用或消费为0，重启分类不自动重发。
 
 报告引用仅含`report_id/sha256/termination/verified_lines`，不含路径或报告正文。`termination`原文必须是四种既有原因之一；已验证线路数为0时必须保留`:no_verified_lines`，非0时不得带该后缀，并且不得超过冻结的top_k。`exhausted:no_verified_lines`仍可表示completed，但不表示找到解；预算截断、启发式或任务完成均不表示搜索完整或全局最优。
 
-`ReportPublished`只检查记录关系，**不认证报告存在、哈希真实、线路可信或落盘成功**。W1-B3必须在报告校验、输入绑定及实际持久化成功后才发此事件。这里的任务revision也不替代后续存储的并发控制。
+`ReportPublished`纯状态转换只检查记录关系，**不认证报告存在、哈希真实、线路可信或落盘成功**。DurableAnalysisCoordinator会先验证报告、绑定冻结输入并持久保存/复读，再调用该状态转换；不要绕过协调器将纯事件当作报告发布凭证。
 
 ## 失败边界与下一关口
 
@@ -59,8 +60,12 @@ request、identity和scoring的成员顺序分别使用当前Rust类型声明顺
 | 非法边/终态再推进 | job_transition_invalid | 不推进 |
 | 报告ID/hash/原因或空线路配对 | job_report_invalid | 不推进 |
 
-B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1-B2已将冻结输入与状态转换接入进程内队列；实现及边界见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-B3另接持久化、报告发布及重启；W1-C另做真实本机分析验收。
+B1状态转换不调用adapter、进程或研究账本、不写任务文件。W1-B2已将冻结输入与状态转换接入进程内队列；W1-B3已增加任务/报告文件存储及基础持久先行协调器。协调器尚未接入任务HTTP端点、执行器、真实引擎或研究账本；提交点故障矩阵及扩展资产漂移覆盖仍开放。持久化细节见[W1-B3设计与实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)，历史队列交接见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。W1-C另做真实本机分析验收。
 
 ## W1-B2 内部队列（2026-10-31）
 
 新增 Rust 内部 `workbench_analysis::queue::AnalysisJobQueue`，复用W1-A冻结输入及W1-B1状态转换，实现单运行加单排队、容量拒绝、revision取消及票据结算。尚未接入工作台服务；没有任务HTTP、持久化或真实执行。报告引用不认证文件发布。见[本批交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
+
+## W1-B3 持久化与报告文件存储
+
+不可变JSON修订、记录严格链校验、排他锁、独占发布和queued/interrupted、running/unknown重启分类已实现。B3报告严格读取、冻结输入绑定、私有原始字节存储和SHA-256重读校验；基础持久协调器按先提交后改内存运行。资产漂移后若failed终态无法提交，协调器停止，重开时running转unknown。报告测试是合成数据，不认证来源/真实执行；剩余故障矩阵、扩展资产漂移覆盖、schema投影及任务HTTP仍未实现，当前无真实分析。详见[持久化与报告发布设计](WORKBENCH_ANALYSIS_PERSISTENCE.md)。

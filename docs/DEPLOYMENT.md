@@ -1,10 +1,12 @@
 # Windows 本机部署与验收
 
-W1-B2本批只新增Rust库内进程队列与合成测试；没有重建或切换部署包，也没有运行doctor、smoke或研究流程。发布状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
+2026-10-31源码核对基线为`main / 6191011`；工作区含未提交修改。已保存的现场诊断显示旧普通包及赛事资产配置的doctor就绪，旧包CLI/worker哈希与自身清单一致，普通配置列出的六项路径存在。该诊断早于当前未提交的W1-B3改动，本轮未重跑doctor。`dist/ygo-local`仍为2026-10-19包，没有因本轮源码变更而重建；P4-R5仍开放。详见[验证记录](TESTING.md)。
+
+本轮继续实现W1-B3持久协调及资产哈希门禁并运行离线测试；未重建或切换部署包，也未运行doctor、smoke或研究流程。发布状态仍以[TASKS](../TASKS.md)中的P4-R5门禁为准。
 
 ## 当前代码与本机包
 
-2026-10-31当前源码基线为`main / a8d6356`。本机普通包仍为2026-10-19构建；本轮普通包与赛事冻结配置的`engine doctor`均为ready，ABI/assets检查通过，`smoke_ok=null`。普通包CLI/worker哈希与包内清单相符，六项主要资产路径存在；这些结果核验既有包和赛事配置，不证明当前源码已部署。详见[本轮部署与CI复核](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+源码核对基线为`main / 6191011`；保存的普通包/赛事配置doctor记录属于早先现场检查。普通包仍是2026-10-19构建，CLI/worker哈希匹配自身清单；该证据不证明当前未提交源码已部署。赛事配置中的`worker_path`指向普通包worker，同时使用赛事冻结CDB/Lua/core；本轮只读确认路径，没有重新运行doctor。详见[部署与CI证据](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
 
 当前 Rust 源码包含 v1–v5 正式 Combo 规划分派，以及未开放为正式规划入口的 first-turn 内部预测/局部执行与知识验真。部署脚本会把当前 workspace CLI 和 worker 复制到 `dist/ygo-local`，但不因此使尚未通过完整语义关口的 first-turn 成为正式 v6。部署包绑定当前仓库路径，不能直接搬到另一台机器。
 
@@ -16,7 +18,7 @@ W1-B2本批只新增Rust库内进程队列与合成测试；没有重建或切�
 
 本次隔离部署包已在干净提交上复建并完成smoke/replay；原D盘旧包没有覆盖。当前采样器已用旧包配置比较两代资产身份。逐文件盘点显示新旧包分别含127和67个文件，均无`.jsonl`研究账本文件；新包ledger相关文件仅为schema。P4-R5不从包内样本推断包外正式scope账本等价，资产身份验收范围见[TESTING](TESTING.md)。
 
-普通发布包、赛事开发配置和最终干净双资产包是三种不同状态：赛事当前引用独立冻结资产及debug worker；固定案例及独立重放通过本轮独立账本的两次请求，不是正式v6发布包。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
+普通发布包、赛事资产配置和最终干净双资产包是不同状态：赛事配置引用独立冻结CDB/Lua/core，但当前`worker_path`复用普通`dist/ygo-local` worker；固定案例及独立重放属于各自历史账本，不是正式v6发布包或P4-R5验收。环境资产和保留/清理边界见 [`ENVIRONMENT_AUDIT.md`](ENVIRONMENT_AUDIT.md)。
 
 后续研究使用独立开发构建或冻结runner，并分别记录构建/原生时点/文档后源码身份；没有因此刷新dist。新增`engine identity`须使用包含该功能的开发CLI，旧dist不能自动获得新命令。研究期间使用独立 `CARGO_TARGET_DIR` 与匹配的 `--target-dir`，构建与实验分时；从资产冻结到后检不得并行构建或覆盖被绑定worker。相同哈希及构建记录不单独证明可复现构建。预算、证据和副作用见[研究运行规范](RESEARCH_OPERATIONS.md)与[证据合同](EVIDENCE_CONTRACTS.md)。
 

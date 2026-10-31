@@ -5,7 +5,9 @@ mod import;
 pub use import::*;
 mod deck_drafts;
 pub use deck_drafts::{
-    publish_deck_document, read_deck_document, secure_random_hex, DeckDraftStore, StoredDeckDraft,
+    acquire_store_lock, prepare_store_directory, publish_deck_document, publish_exclusive_file,
+    read_deck_document, safe_store_metadata, secure_random_hex, DeckDraftStore, ExclusiveStoreLock,
+    StoredDeckDraft,
 };
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

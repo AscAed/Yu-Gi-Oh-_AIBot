@@ -1,5 +1,43 @@
 # 本机验证记录
 
+## 2026-10-31 W1-B3持久协调与报告恢复定向验证
+
+- `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`定向复验通过：14 passed、0 failed。新增回归先复现“资产漂移后的failed终态写入确定失败，协调器仍暴露running槽位”，修复后确认协调器停止、释放后重开将running分类为unknown。既有覆盖revision链/重启分类/陈旧写入/锁/损坏链、报告严格绑定/保存重读/篡改拒绝、终态引用完整性、协调器持久状态转换、冻结后资产漂移拒派及其他提交失败场景。
+- 报告样例为合成合同数据；不认证报告来源或真实引擎执行。故障注入尚未覆盖操作系统崩溃、全部报告提交边界、网络文件系统/断电及更广资产漂移场景；未接HTTP或执行器。claim时实时核验不证明之后实际执行与身份间无竞态。定向运行本身不覆盖全workspace；全workspace/fmt/Clippy最新复验结果见下方本轮记录。完整Python套件没有在本轮重跑，之前审计记录的Tenki历史pin失败仍未处理。
+- 该补丁后的 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings` 和 `cargo test --workspace --offline --locked -- --test-threads=1` 均以退出码0完成。全workspace保留项目标记的 opt-in 引擎及人工案例为 ignored；未启用真实引擎或研究调用。另检查121份Markdown，本地相对链接目标缺失0；`git diff --check`通过。
+
+## 2026-10-31 W1-B3.1综合自检复验
+
+- 源码基线`main / 6191011fa6cd29734594a70a57025a417077e1e7`。`cargo fmt --all -- --check`、workspace全目标Clippy（offline/locked、`-D warnings`）、`cargo test --workspace --offline --locked`均通过；默认opt-in引擎/人工研究用例继续ignored。
+- workspace测试首次执行时`ygo-cli/tests/deck_draft.rs::creates_edits_shows_and_exports_an_incomplete_draft`报告一次临时输入文件缺失；单测重跑通过，整个`deck_draft`文件以3个线程重复5次均通过，随后workspace全套复跑通过。未能稳定复现，保留为一次性临时文件异常记录。
+- `py -m pytest -q`完整运行1803.76秒：**757 passed、9 skipped、1 failed、208 subtests passed**。唯一失败是`tests/test_native_tenki_placement_confirmation.py::TenkiPlacementConfirmationTests::test_seven_historical_ledgers_reaudit_read_only_without_runner`，仍因`protected_source_change_hash_mismatch`拒绝Curry历史源码迁移。与之前同一已知历史锚点问题；未修改pin、源码档案或证据。故Python全套不通过，不能表述为全项目全绿。
+- 源码默认普通引擎配置、赛事配置及旧`dist/ygo-local`分别运行`engine doctor`均返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。旧包CLI/worker哈希与其build-hashes.json相符；未运行smoke、未重建或切换部署包。doctor使用worker ABI探针，不证明对局或当前源码已部署。
+- 对121份Markdown执行相对链接目标检查，缺失0；`git diff --check`通过。未迁移历史证据（按用户决定仅保留哈希清单），未清理运行数据或改动active/部署资产。
+
+## 2026-10-31 W1-B3.1持久化与报告发布设计
+
+- main / 6191011，保留开始时已有未提交文档。仅新增设计及交接，同步任务/接口/工作台/合同/导航；未修改Rust、Cargo、Python或schema。
+- 静态走查workbench_analysis冻结、jobs严格编解码/状态转换、queue直接内存修改、combo报告校验/读取及deck_drafts独占发布/平台锁。设计确定不可变JSON修订、先提交后内存更新、报告先落盘再引用及保守重启分类；均尚未实现，不作为运行验收。
+- 独立只读审阅确认核心设计与现有合同一致；采纳启动扫描失败阻断整个根、领取后执行前复核实时资产、封装原始字节递归严格读取的补充。审阅未修改代码或运行测试。
+- 对当前全部15份未提交Markdown（包含此前路线修改）检查537个本地链接目标，缺失0；git diff --check通过。Git提示已有IMPLEMENTATION_NOTES行尾可能转CRLF，未改写该文件。链接检查只验证目标存在。
+- 本批未运行Cargo/pytest、构建、doctor、真实分析、runner、worker或引擎FFI；未部署、提交或推送。此前W1-B2测试数字只属原批次。认证消费40、预留7、规划47不变，历史实际累计未知。完成设计交付后暂停。
+
+## 2026-10-31 W1-B3.1任务记录持久化
+
+- 在上述设计后实现`PersistentAnalysisJobStore`及storage共享原语：操作系统排他锁、拒绝链接/reparse路径、不可变revision封装、前驱原始字节哈希、typed record摘要、完整链和合法转换验证、独占发布后重读、陈旧revision拒绝；启动时queued追加interrupted、running追加unknown，终态保持不变。
+- `cargo fmt --all -- --check`通过；`cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`通过（5项）。测试通过drop/reopen模拟服务恢复，没有启动第二个独立服务进程。
+- 本机Windows定向证据不验证Unix锁分支、断电持久性、报告内容认证/发布、持久队列协调器、HTTP、真实分析或部署。未经全workspace测试和Clippy，不能称全局自检完成。
+
+## 2026-10-31 W1-B3.1 workspace回归复验
+
+- `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`及`cargo test --workspace --offline --locked`均通过。全workspace测试保留既有opt-in原生/人工案例的ignored状态；没有启用、收费或运行它们。
+- 测试验证的是当前Windows工作区的源码回归。没有运行Python数据导入/评估、部署包重建、engine doctor、真实分析、网络数据刷新或生产部署；不据此声称跨平台、部署产物或真实引擎合格。
+
+
+## 2026-10-31 W1-B2后路线文档复核
+
+本轮以干净`main / 6191011`为文档基线。规划阶段`Get-FileHash -Algorithm SHA256`核对旧包CLI和worker与`build-hashes.json`一致，`Test-Path -LiteralPath`确认engine.toml六个主要路径存在；本轮未运行doctor、引擎、部署或全量测试。引用对话记录PR #16 CI通过；历史W1-B2 Rust 377 passed/36 ignored及Python 30 passed/2 skipped见下文，不是本轮新运行。路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。
+
 ## 2026-10-31 W1-B2内部合成队列
 
 - 在隔离target目录以offline/locked运行workspace Rust套件：377 passed、36 ignored、0 failed；队列专项CLI回归：37 passed、0 failed。

@@ -1,10 +1,10 @@
 # 本机牌组草稿工作台
 
-W1-B2已有内部合成队列，复用W1-B1无路径任务记录和纯状态机；界面尚无任务队列或分析入口。进程内冻结对象包含本机路径和完整catalog，不能直接持久化；真实执行前须重新核验资产。见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)。
+W1-B2进程内队列与W1-B3任务/报告持久存储及基础DurableAnalysisCoordinator已实现；这些Rust内部能力未接入工作台分析HTTP，当前网页仍只管理草稿、卡片查询和字段状态。任务和报告合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
 
 工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。
 
-W1-A已在开发源码中提供内部输入冻结与非GET同源门禁；W1-B1新增无路径任务合同及纯状态核心，W1-B2新增进程内合成队列；尚无任务文件存储或分析任务HTTP接口。进程内冻结对象含本机路径和完整catalog，不实现序列化；任务白名单与状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)。真实执行前仍须重新核验资产，阶段交接见[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
+W1-A冻结对象仍仅驻留内存，包含本机路径及完整catalog，不实现序列化；B1持久化的是独立无路径任务记录。B3另有内部任务revision存储、私有报告文件和持久先行协调器，并在claim时核对冻结资产角色哈希。草稿目录存储与分析任务存储是不同子系统；实际执行接入仍需在调用边界再次核验资产。
 
 ## 启动与停止
 
@@ -49,7 +49,7 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 
 工作台目前没有分析任务端点，也不调用`combo analyze`。W1-A已提供Rust库内部`ygo_cli::workbench_analysis::freeze_analysis_input`：以草稿ID和revision在同一存储锁内读取牌组，然后调用现有`prepare`验证完整牌组、五张起手、规则、禁限日期、预算及catalog/CDB一致性。它返回自有输入和版本身份，错误只暴露稳定代码；该函数不创建任务、不构造adapter、不启动worker。保留的总体设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)，本阶段交接见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)。
 
-W1-B1的Rust内部记录从revision 1/queued开始，允许排队启动或取消、重启分类，以及运行结束/预算截断/失败/未知分类。终态不再推进；严格JSON、输入完整性及报告引用关系已实现，但没有实际取消任务或处理服务重启。W1-B2仅实现进程内队列；工作台端点及W1-B3文件存储/发布/重启处理仍须实施，不能把队列状态或纯转换当作真实运行或报告落盘。详情见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)。之后若执行冻结输入，必须在实际运行前重新核验引擎资产；持有冻结对象不表示实时资产仍与冻结身份相同。W1-C本机分析仍需单独验收。Rabbit走查和任务场景是设计资料，不是本批真实分析结果。
+W1-B1的Rust内部记录从revision 1/queued开始，定义队列启动/取消、重启分类和运行结果终态。W1-B2实现进程内队列；W1-B3提供持久先行协调器及报告文件绑定/验证，CommitUncertain时停止协调器。故障注入/恢复矩阵、扩展资产漂移覆盖和工作台任务端点尚未实现；持久协调器claim已对冻结期worker/DLL/CDB/script/manifest哈希执行实时一致性检查；不匹配时先持久记录failed/asset_mismatch，再返回错误且不下发执行票据。详情见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)和[持久化设计/实现状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)。之后若执行冻结输入，必须在实际运行前重新核验引擎资产；持有冻结对象不表示实时资产仍与冻结身份相同。W1-C本机分析仍需单独验收。Rabbit走查和任务场景不是本批真实分析结果。
 
 ## 保存与本机数据
 
@@ -66,7 +66,3 @@ CLI和工作台复用`ygo-storage`的草稿读写能力。草稿目录含服务�
 - 草稿不做禁限、主卡组张数、额外卡组、卡片支持或脚本语义检查。
 - 工作台不启动游戏引擎，不规划线路，不自动构筑，也不写研究账本。
 - B2验收只覆盖本机工作台流程和合成卡表。它不是通用远程服务或发布部署包。
-
-## W1-B2 内部队列（2026-10-31）
-
-新增 Rust 内部 `workbench_analysis::queue::AnalysisJobQueue`，复用W1-A冻结输入及W1-B1状态转换，实现单运行加单排队、容量拒绝、revision取消及票据结算。尚未接入工作台服务；没有任务HTTP、持久化或真实执行。报告引用不认证文件发布。见[本批交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。

@@ -234,6 +234,30 @@
       "schema_valid": true
     },
     {
+      "name": "failed-asset-mismatch",
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "failed"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/updated_at_ms",
+          "value": 101
+        },
+        {
+          "pointer": "/error_code",
+          "value": "asset_mismatch"
+        }
+      ],
+      "replace": [],
+      "rust_valid": true,
+      "schema_valid": true
+    },
+    {
       "name": "exhausted:no_verified_lines",
       "patches": [
         {

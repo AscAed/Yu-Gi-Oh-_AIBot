@@ -1,6 +1,8 @@
 # 实施任务与验收状态
 
-## 当前状态（2026-10-31）：W1-B2内部合成队列已实现；任务存储、HTTP接口与真实分析未完成
+## 当前状态（2026-10-31）：W1-B3任务/报告存储与基础持久协调器已实现；故障矩阵、HTTP接口与真实分析仍开放
+
+当前设计见[W1-B3.1持久化与发布](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。当前路线见[W1-B2后路线](docs/superpowers/plans/2026-10-31-post-w1b2-project-route.md)；下方W1-B1和W1-A后路线保留历史时点。
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
@@ -24,7 +26,7 @@ E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…`
 
 W1设计后的A阶段已交付：工作台所有API非GET请求在路由前均须通过本机Host、Bearer令牌和同源Origin门禁；Rust库新增内部`freeze_analysis_input`，在同一草稿存储锁内核对ID/revision并复制草稿，再通过现有`prepare`冻结搜索请求、已解析catalog/banlist及引擎资产身份。它不增加HTTP分析入口、队列或任务，也不运行适配器。见[W1-A交接](docs/superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)与[实测记录](docs/TESTING.md#2026-10-30-w1-a工作台同源保护与分析输入冻结)。
 
-W1-B1已完成无路径`AnalysisJobRecordV1`、严格JSON与纯状态核心，121项共享语料及完整状态矩阵通过；workspace串行374 passed、36 ignored，相关Python 30 passed、2 skipped。报告引用只核对记录关系，不认证文件或实际执行。当前队列实现见[W1-B2交接](docs/superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)与[任务合同](docs/WORKBENCH_ANALYSIS_JOBS.md)。单运行/单排队与取消仅为进程内合成能力；W1-B3存储/发布/重启及W1-C真实分析仍开放。
+W1-B1已完成无路径`AnalysisJobRecordV1`、严格JSON与纯状态核心；W1-B2提供进程内合成队列；W1-B3实现任务revision、报告私有存储、报告引用启动核验及基础持久协调器。领取时先持久化running，再核对冻结期资产哈希；不匹配时尝试持久化failed/asset_mismatch且不返回派发票据。若failed提交失败则停止协调器，重开时running归类unknown。报告来源和真实执行未认证，完整故障注入/崩溃矩阵、HTTP端点及W1-C真实分析仍开放。最新验证见[TESTING](docs/TESTING.md)。
 
 C1离线字段核验已完成：冻结39卡逐项记录zh-CN/zh-SC名称、正文、别名及字段状态和候选哈希；候选正文不进入报告或工作台接口。zh-SC继续为`und`，语义审阅、使用依据和再分发资格未通过。报告、统计与限制见[LANGUAGE_REVIEW](docs/LANGUAGE_REVIEW.md)、[DATA_SOURCES](docs/DATA_SOURCES.md)和[TESTING](docs/TESTING.md)。
 
@@ -51,7 +53,8 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] D4：更新W1-A后评估、部署身份及双轨路线；静态核对见[TESTING](docs/TESTING.md#2026-10-30-w1-a后路线文档复核)。
 - [x] W1-B1任务合同及纯状态核心：独立无路径白名单、双摘要、严格JSON、状态矩阵与合成兼容验收通过；不序列化进程内冻结对象，不提供任务存储、HTTP或队列。见[交接](docs/superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
 - [x] W1-B2内部合成队列与取消：单运行加单排队、排队取消、容量拒绝及票据结算；无HTTP、持久化或真实执行。见[交接](docs/superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
-- [ ] W1-B3发布与重启：持久化顺序、截断、失败和重启未知状态；不伪造进度或自动重发。
+- [x] W1-B3.1/B3.2存储基础：不可变任务修订、严格链校验、排他锁、重启分类，以及报告严格读取/冻结输入绑定/私有落盘/哈希重读已实现；定向测试为合成合同测试，不认证报告来源。见[持久化设计与实现状态](docs/WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+- [ ] W1-B3.3持久协调器故障矩阵：已覆盖revision提交前确定失败、提交后不确定、资产漂移终态提交失败后停派发/重开归类；剩余报告各提交边界、内存应用失败、重复请求语义、扩展资产角色/路径漂移和进程崩溃覆盖。当前不含HTTP、执行器或真实分析。
 - [ ] W1-C本机分析验收设计：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析另行安排并单独记录。
 - [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；未知项不提升为正式数据资格。
 - [ ] P4-R1b-3真实恢复实验设计：定义固定场景、独立scope、预算、窗口、暂停/重开及独立原生重放标准；设计完成后真实执行另行授权。

@@ -1,8 +1,10 @@
 # 本机环境与资产审计
 
-2026-10-31 W1-B2源码修改和测试仅在当前开发工作区验证；未部署、未运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
+2026-10-31本地源码核对基线为`main / 6191011`；保存的较早doctor记录显示普通包和赛事资产配置ready，旧包哈希与其清单一致。本轮未运行doctor或smoke，`dist/ygo-local`仍为旧包；这些记录不能替代P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
 
-2026-10-30静态核对的历史基线为`main / d3bc212`；旧普通包CLI/worker哈希与清单一致、主要配置路径存在，当时未运行程序。2026-10-31普通包及赛事冻结配置doctor在`main / a8d6356`源码时点分别返回ready；随后文档与CI触发范围更新随PR #14合入`main / 4869393`，合并检查全绿。PR #14未重建或切换部署资产，因此这些doctor结果不代表当前源码已部署。P4-R5最新源码双资产发布验收仍开放。此前`8315232`为W1设计阶段历史基线，见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
+2026-10-31 W1-B3内部任务/报告存储协调及claim资产哈希门禁仅在当前开发工作区验证；未部署、未运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
+
+2026-10-30静态核对的历史基线为`main / d3bc212`；旧普通包CLI/worker哈希与清单一致、主要配置路径存在，当时未运行程序。2026-10-31普通包及赛事资产配置doctor在较早的`main / a8d6356`源码时点分别返回ready；随后文档与CI触发范围更新随PR #14合入`main / 4869393`，合并检查全绿。PR #14未重建或切换部署资产，因此这些doctor结果不代表当前源码已部署。P4-R5最新源码双资产发布验收仍开放。此前`8315232`为W1设计阶段历史基线，见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
 
 原目录体积审计日期：2026-10-19；这些数值会随实验和构建变化。2026-10-27自检分别对普通包和赛事开发配置运行doctor，并清理经逐项确认的空测试目录。2026-10-30仅对保存的部署/CI证据及源码实现作静态复核，没有重跑运行时命令。下方日期段落保留各自时点的环境状态；2026-10-28已由开发CLI交付本机loopback草稿工作台，不能再将旧段落的“尚无前端/HTTP”当作当前状态。本页不包含卡库或引擎资产本体，精确证据见[TESTING](TESTING.md)。
 
@@ -29,7 +31,7 @@
 
 ## 2026-10-31 普通包现场诊断
 
-当前源码已推进到`main / a8d6356`，普通`dist/ygo-local`仍是2026-10-19本地包。普通包及`data/runtime/tournament-2026/engine.toml`赛事配置的现场doctor均退出0并返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通包CLI/worker哈希匹配清单，六项路径存在。两次doctor调用worker的ABI探针；未运行决斗smoke、未重新部署或切换资产。输出和CI复验见[TESTING](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+当时源码基线为`main / a8d6356`，普通`dist/ygo-local`仍是2026-10-19本地包。普通包及`data/runtime/tournament-2026/engine.toml`赛事配置的现场doctor均退出0并返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通包CLI/worker哈希匹配清单，六项路径存在。两次doctor调用worker的ABI探针；未运行决斗smoke、未重新部署或切换资产。输出和CI复验见[TESTING](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
 
 ## 2026-10-31 依赖与工具清点
 
@@ -44,7 +46,7 @@ Rust workspace依赖树存在两个`hashbrown`版本：0.14.5由`hashlink/rusqli
 
 ### 两套运行资产与后续产品前提
 
-- 普通发布wrapper引用普通runtime、普通快照和Phantom知识。赛事开发配置另引用 `data/runtime/tournament-2026/frozen` 与debug worker；2026-10-27两套配置的doctor均就绪，`smoke_ok=null`；随后普通包单独smoke和replay通过，赛事开发配置的固定案例和重放也在独立账本通过；这仍不是统一双资产发布验收。
+- 普通发布wrapper引用普通runtime、普通快照和Phantom知识。赛事开发配置引用 `data/runtime/tournament-2026/frozen` 下的CDB/Lua/core，但其`worker_path`复用普通`dist/ygo-local/ygo-engine-worker.exe`；2026-10-27两套配置的doctor均就绪，`smoke_ok=null`；随后普通包单独smoke和replay通过，赛事开发配置的固定案例和重放也在独立账本通过；这仍不是统一双资产发布验收。
 - 2026-10-19赛事知识来源校验通过但完整语义覆盖仍false；静态包的灰响应声明与运行时独立认证不是同一状态，详见[首回合验真](FIRST_TURN_VERIFICATION.md)。2026-10-27没有重复该业务校验。
 - （截至2026-10-27自检）Rust/Python和现有离线资产可用于继续迭代；Node/npm入口存在，但当时尚无前端工程/HTTP服务。已抽查英文卡名，尚未落实中文名称/正文的完整可信来源；不把WindBot中文对白当中文卡库。
 - 硬件CIM读取在规划调研时权限受限，未取得全卡求解的资源容量证据。完整证明、前端依赖、中文数据与干净机器部署均须各自验证；不能由doctor推出足够算力或可分发性。

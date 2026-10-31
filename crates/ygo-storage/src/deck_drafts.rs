@@ -219,6 +219,109 @@ pub fn secure_random_hex(count: usize) -> Result<String, String> {
     random_hex(count)
 }
 
+/// Prepares a directory after rejecting links and Windows reparse points
+/// in its existing path, then returns its canonical path.
+pub fn prepare_store_directory(path: &Path) -> Result<PathBuf, String> {
+    reject_links(path)?;
+    fs::create_dir_all(path).map_err(|error| format!("store_directory_create_failed: {error}"))?;
+    reject_links(path)?;
+    let canonical = path
+        .canonicalize()
+        .map_err(|error| format!("store_directory_resolve_failed: {error}"))?;
+    let metadata = safe_store_metadata(&canonical)?;
+    if !metadata.is_dir() {
+        return Err("store_directory_invalid".into());
+    }
+    Ok(canonical)
+}
+
+/// Reads metadata only after rejecting linked/reparse path components.
+pub fn safe_store_metadata(path: &Path) -> Result<std::fs::Metadata, String> {
+    reject_links(path)?;
+    fs::symlink_metadata(path).map_err(|error| format!("store_path_unavailable: {error}"))
+}
+
+fn reject_links(path: &Path) -> Result<(), String> {
+    use std::path::Component;
+    let mut current = PathBuf::new();
+    for component in path.components() {
+        current.push(component);
+        if matches!(component, Component::Prefix(_)) {
+            continue;
+        }
+        let metadata = match fs::symlink_metadata(&current) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(format!("store_path_unavailable: {error}")),
+        };
+        if metadata.file_type().is_symlink() {
+            return Err("store_path_link_rejected".into());
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+            if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+                return Err("store_path_reparse_point_rejected".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Holds a nonblocking OS-level exclusive lock on a store lock file.
+pub struct ExclusiveStoreLock {
+    _guard: DirectoryLock,
+}
+
+/// Opens and locks a store lock file without treating its mere presence as busy.
+pub fn acquire_store_lock(path: &Path) -> Result<ExclusiveStoreLock, String> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => Some(metadata),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => return Err(format!("store_lock_open_failed: {error}")),
+    };
+    if let Some(metadata) = metadata {
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err("store_lock_path_invalid".into());
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            if metadata.file_attributes() & 0x400 != 0 {
+                return Err("store_lock_path_invalid".into());
+            }
+        }
+    }
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(path)
+        .map_err(|error| format!("store_lock_open_failed: {error}"))?;
+    let lock =
+        DirectoryLock::try_acquire(file).map_err(|error| format!("store_lock_busy: {error}"))?;
+    Ok(ExclusiveStoreLock { _guard: lock })
+}
+
+/// Writes and syncs a new file, publishing it without replacing any existing path.
+/// Unix also syncs the parent directory; a post-publication sync failure is uncertain.
+pub fn publish_exclusive_file(destination: &Path, bytes: &[u8]) -> Result<(), String> {
+    publish_file_with(destination, bytes, false, |from, to| fs::rename(from, to))?;
+    #[cfg(unix)]
+    {
+        let parent = destination
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        File::open(parent)
+            .and_then(|directory| directory.sync_all())
+            .map_err(|error| format!("store_commit_uncertain: {error}"))?;
+    }
+    Ok(())
+}
+
 fn os_random(bytes: &mut [u8]) -> Result<(), String> {
     #[cfg(unix)]
     {

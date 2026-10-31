@@ -70,6 +70,7 @@ pub enum AnalysisJobState {
 #[serde(rename_all = "snake_case")]
 pub enum AnalysisJobFailure {
     AnalysisFailed,
+    AssetMismatch,
     ServiceRestarted,
     CompletionUncertain,
 }
@@ -306,6 +307,12 @@ impl AnalysisJobRecordV1 {
     pub fn job_id(&self) -> &str {
         &self.0.job_id
     }
+    pub fn created_at_ms(&self) -> u64 {
+        self.0.created_at_ms
+    }
+    pub fn updated_at_ms(&self) -> u64 {
+        self.0.updated_at_ms
+    }
     pub fn report(&self) -> Option<&AnalysisJobReportRefV1> {
         self.0.report.as_ref()
     }
@@ -347,7 +354,12 @@ impl AnalysisJobRecordV1 {
             AnalysisJobState::Failed => {
                 w.revision == 3
                     && w.report.is_none()
-                    && w.error_code == Some(AnalysisJobFailure::AnalysisFailed)
+                    && matches!(
+                        w.error_code,
+                        Some(
+                            AnalysisJobFailure::AnalysisFailed | AnalysisJobFailure::AssetMismatch
+                        )
+                    )
             }
             AnalysisJobState::Unknown => {
                 w.revision == 3
@@ -401,10 +413,13 @@ impl AnalysisJobRecordV1 {
             }
             (
                 AnalysisJobState::Running,
-                AnalysisJobEvent::Fail(AnalysisJobFailure::AnalysisFailed),
+                AnalysisJobEvent::Fail(
+                    failure @ (AnalysisJobFailure::AnalysisFailed
+                    | AnalysisJobFailure::AssetMismatch),
+                ),
             ) => {
                 w.state = AnalysisJobState::Failed;
-                w.error_code = Some(AnalysisJobFailure::AnalysisFailed);
+                w.error_code = Some(failure);
             }
             (AnalysisJobState::Running, AnalysisJobEvent::ReportPublished(report)) => {
                 w.state = report.outcome()?;
@@ -427,13 +442,7 @@ impl AnalysisJobRecordV1 {
     }
 
     pub fn read_json(bytes: &[u8]) -> Result<Self, AnalysisJobError> {
-        let mut parser = serde_json::Deserializer::from_slice(bytes);
-        Unique
-            .deserialize(&mut parser)
-            .map_err(|_| AnalysisJobError::JsonInvalid)?;
-        parser.end().map_err(|_| AnalysisJobError::JsonInvalid)?;
-        let raw: Value =
-            serde_json::from_slice(bytes).map_err(|_| AnalysisJobError::JsonInvalid)?;
+        let raw = strict_json_value(bytes)?;
         let wire: RecordWire =
             serde_json::from_value(raw.clone()).map_err(|_| AnalysisJobError::JsonInvalid)?;
         let canonical = serde_json::to_value(&wire).map_err(|_| AnalysisJobError::JsonInvalid)?;
@@ -445,6 +454,29 @@ impl AnalysisJobRecordV1 {
         let record = Self(wire);
         record.validate()?;
         Ok(record)
+    }
+}
+
+pub(crate) fn strict_json_value(bytes: &[u8]) -> Result<Value, AnalysisJobError> {
+    let mut parser = serde_json::Deserializer::from_slice(bytes);
+    Unique
+        .deserialize(&mut parser)
+        .map_err(|_| AnalysisJobError::JsonInvalid)?;
+    parser.end().map_err(|_| AnalysisJobError::JsonInvalid)?;
+    serde_json::from_slice(bytes).map_err(|_| AnalysisJobError::JsonInvalid)
+}
+
+pub(crate) fn same_shape(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(k, v)| b.get(k).is_some_and(|w| same_shape(v, w)))
+        }
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(v, w)| same_shape(v, w))
+        }
+        _ => true,
     }
 }
 
@@ -463,20 +495,6 @@ fn label(value: &str) -> bool {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
 }
-fn same_shape(a: &Value, b: &Value) -> bool {
-    match (a, b) {
-        (Value::Object(a), Value::Object(b)) => {
-            a.len() == b.len()
-                && a.iter()
-                    .all(|(k, v)| b.get(k).is_some_and(|w| same_shape(v, w)))
-        }
-        (Value::Array(a), Value::Array(b)) => {
-            a.len() == b.len() && a.iter().zip(b).all(|(v, w)| same_shape(v, w))
-        }
-        _ => true,
-    }
-}
-
 // Check duplicates before serde can discard them, including nested legacy
 // request types. Messages from this parser never escape as public errors.
 struct Unique;

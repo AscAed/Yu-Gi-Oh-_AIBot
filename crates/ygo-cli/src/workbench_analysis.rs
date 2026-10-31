@@ -12,7 +12,9 @@ use ygo_engine_adapter::{ProcessEngineConfig, RunDuelRequest};
 use ygo_search::combo::SearchBudget;
 use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
+pub mod durable;
 pub mod jobs;
+pub mod persistence;
 
 #[cfg(test)]
 #[path = "workbench_analysis/jobs_tests.rs"]
@@ -252,6 +254,30 @@ fn asset_hashes(engine: &ProcessEngineConfig) -> Result<AssetHashes, AnalysisFre
         script_manifest: hash_asset(&engine.script_manifest_path)?,
         engine_manifest: hash_asset(&engine.engine_manifest_path)?,
     })
+}
+
+/// Rechecks the frozen engine asset set immediately before a job can be
+/// dispatched. It performs read-only hashing and never starts a worker.
+pub(crate) fn verify_frozen_asset_identity(
+    frozen: &FrozenAnalysisInput,
+) -> Result<(), AnalysisFreezeError> {
+    let sampled = ygo_engine_adapter::capture_engine_identity(&frozen.runtime_request.engine)
+        .map_err(|_| AnalysisFreezeError::AssetChanged)?;
+    let role_hash = |role: &str| sampled.get("roles")?.get(role)?.get("sha256")?.as_str();
+    let identity = &frozen.identity;
+    if sampled
+        .get("consistent")
+        .and_then(serde_json::Value::as_bool)
+        != Some(true)
+        || role_hash("worker") != Some(identity.worker_sha256.as_str())
+        || role_hash("dll") != Some(identity.engine_sha256.as_str())
+        || role_hash("cdb") != Some(identity.cdb_sha256.as_str())
+        || role_hash("script_manifest") != Some(identity.scripts_sha256.as_str())
+        || role_hash("engine_manifest") != Some(identity.engine_manifest_sha256.as_str())
+    {
+        return Err(AnalysisFreezeError::AssetChanged);
+    }
+    Ok(())
 }
 
 fn map_draft_error(error: String) -> AnalysisFreezeError {
@@ -697,3 +723,7 @@ pub mod queue;
 #[cfg(test)]
 #[path = "workbench_analysis/queue_tests.rs"]
 mod queue_tests;
+
+#[cfg(test)]
+#[path = "workbench_analysis/persistence_tests.rs"]
+mod persistence_tests;
