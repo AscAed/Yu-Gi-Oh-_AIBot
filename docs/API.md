@@ -1,5 +1,7 @@
 # CLI 与库接口
 
+W1-B1无路径任务合同、W1-B2进程内合成队列已实现；任务存储、HTTP队列及报告发布尚未接入。报告引用只校验记录关系，实际发布前须验证报告、绑定冻结输入并完成落盘；见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)。
+
 当前交付面包括本机 CLI/Rust库，以及仅绑定`127.0.0.1`的本机草稿工作台。解析器与JSON schema是规范性合同；工作台接口只用于本机草稿，不是通用远程API。
 
 ## CLI
@@ -40,7 +42,7 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 工作台分析任务HTTP接口尚未实现。W1-A已增加Rust库内部能力`ygo_cli::workbench_analysis::freeze_analysis_input`：它只接受服务管理的草稿ID/revision与结构化分析参数，在同一草稿存储互斥锁内读取并核对revision，将草稿内容复制进拥有自身的`ComboAnalyzeRequest`，解析固定catalog和banlist ID，再复用现有`prepare`校验牌组、五张起手、规则、日期/禁限、搜索预算和catalog/CDB身份。返回对象记录请求及资产版本身份并使用稳定错误码，不包括HTTP路由、任务持久化、队列或运行执行；失败不会创建任务或启动adapter。该进程内对象还包含runtime asset路径与完整本地catalog，因此没有serde wire/persistence实现。保留[W1设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)、[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)和[工作台说明](WORKBENCH.md)。未来执行前仍须重新核对实时资产；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
 
-W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, &frozen, scoring, now_ms)`复制无路径白名单；`validate/read_json/encode_json`校验和严格编解码；`transition(expected_revision, event, now_ms)`纯函数返回新记录。必须显式保留所有nullable字段，拒绝重复/未知/缺失字段、错误整数、无效身份/预算和摘要失配。完成事件只接受报告ID/hash、原始终止原因及验证线路数，不检查报告文件存在或授予执行资格。完整字段、摘要顺序和状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[schema](../schemas/workbench-analysis-job-v1.schema.json)。W1-B2队列与W1-B3存储/发布/重启尚未接入，没有新增HTTP路由。
+W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, &frozen, scoring, now_ms)`复制无路径白名单；`validate/read_json/encode_json`校验和严格编解码；`transition(expected_revision, event, now_ms)`纯函数返回新记录。必须显式保留所有nullable字段，拒绝重复/未知/缺失字段、错误整数、无效身份/预算和摘要失配。完成事件只接受报告ID/hash、原始终止原因及验证线路数，不检查报告文件存在或授予执行资格。完整字段、摘要顺序和状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[schema](../schemas/workbench-analysis-job-v1.schema.json)。W1-B2进程内队列已实现；W1-B3存储/发布/重启尚未接入，没有新增HTTP路由。
 
 ## 其他拟议能力接口
 
@@ -63,3 +65,7 @@ W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, 
 
 
 P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。
+
+## W1-B2 内部队列（2026-10-31）
+
+新增 Rust 内部 `workbench_analysis::queue::AnalysisJobQueue`，复用W1-A冻结输入及W1-B1状态转换，实现单运行加单排队、容量拒绝、revision取消及票据结算。尚未接入工作台服务；没有任务HTTP、持久化或真实执行。报告引用不认证文件发布。见[本批交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
