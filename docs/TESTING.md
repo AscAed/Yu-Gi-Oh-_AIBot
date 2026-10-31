@@ -1,5 +1,12 @@
 # 本机验证记录
 
+## 2026-10-31 P4-R5源码候选部署审计（未完成）
+
+- 在独立干净worktree `C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot` 从源码提交`6800bf2`执行`deploy-local.ps1 -Offline -FrozenRuntime`；D盘主工作区`data/runtime`只读共享，候选构建产物和配置留在隔离worktree。该源码包含W1-B3.3实现；当前`main / a1542c2`比候选多出的提交仅为文档。Release构建、普通资产catalog导入（13,665行）、banlist导入（203行，2026-10-01生效）和知识验证（12卡）成功；doctor对候选普通包和赛事配置均返回`ready/abi_ok/assets_ok=true`、`issues=[]`。doctor的`smoke_ok=null`仍表示doctor本身未运行决斗。
+- 使用候选CLI对普通及赛事资产分别运行`engine identity`，均`consistent=true`，`actual`脚本清单完整且无missing/mismatch/extra。普通CDB SHA-256为`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`，赛事CDB为`3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632`；两套资产core DLL相同，均为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`。普通身份检查使用资产直达路径；经目录junction的配置被identity安全检查拒绝，未把该拒绝误记为资产不一致。
+- 普通包Rabbit smoke报告位于候选worktree的`target/p4r5-audit/ordinary-smoke.json`，SHA-256 `b889bcb0787f3e42db555d3962105751a3ca6d7caa0bb6ce4171354dd8f65a5c`；退出0，352节点、355次引擎调用、27,239ms、41条完成线路，top-3报告线路均`engine_verified`且报告内重放标记为true。运行因30秒time budget终止，不代表全搜索或最优性。候选包对该报告另行执行`combo replay`退出0，3/3线路`engine_verified`且`replay_verified=true`。回放输出写stdout，未保存独立输出文件。
+- 候选构建/运行仅用于本机部署诊断，未绑定或更新正式研究scope、账本、原生消费记录；独立replay引擎调用数未计量。赛事候选包尚未单独smoke/replay；未找到可比的独立研究账本，不能据此宣称账本等价。因此P4-R5仍开放。候选checkout及本机运行输出在干净checkout中不可用，须另行保留或重建；本轮没有将其迁入主工作区。
+
 ## 2026-10-31 W1-B3.3内部故障矩阵与workspace复验
 
 - `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`通过：23 passed、0 failed。新增覆盖报告终态提交失败后停派发并重开为unknown、报告文件发布不确定、提交后不确定的submit/cancel/fail、全部冻结资产角色/脚本路径漂移、已提交queued/running修订后的操作系统子进程强杀及恢复分类；既有测试继续覆盖提交前失败、同票据重复终态、链/报告核验与失败重试。

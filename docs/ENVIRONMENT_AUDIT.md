@@ -1,6 +1,8 @@
 # 本机环境与资产审计
 
-2026-10-31本地环境审计快照基于`main / 8526c1f`。普通旧包和赛事配置doctor本轮均ready；`dist/ygo-local`仍为2026-10-19包，未运行smoke，也未做P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
+2026-10-31补充：独立worktree `p4-r5-audit` 从`6800bf2`构建当前功能源码候选，普通/赛事配置doctor和身份均通过；普通smoke在预算内产出3条可独立重放线路，独立replay 3/3通过。主工作区普通`dist/ygo-local`仍未覆盖，候选不在主仓库中；赛事候选未单独smoke/replay，且无可比研究账本，故P4-R5仍开放。完整命令、哈希和限制见[TESTING](TESTING.md#2026-10-31-p4-r5源码候选部署审计未完成)。
+
+早期2026-10-31本地环境审计快照基于`main / 8526c1f`：普通旧包和赛事配置doctor均ready；`dist/ygo-local`仍为2026-10-19包。之后的候选源码部署复核见本页补记及[TESTING](TESTING.md)。赛事配置worker路径复用普通dist worker。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
 
 2026-10-31 W1-B3内部持久协调、claim资产哈希门禁及故障矩阵仅在当前开发工作区验证；未部署、未在最新源码上运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
 
