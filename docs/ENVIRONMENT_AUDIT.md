@@ -1,6 +1,6 @@
 # 本机环境与资产审计
 
-2026-10-30 W1-A后本地核对基线为`main` / `d3bc212`；旧普通包两个可执行文件哈希匹配其清单、配置六个主要资产路径存在。此项未运行程序或核验所有资产内容；赛事开发配置和2026-10-28历史隔离部署仍按各自身份及证据读取，P4-R5开放。此前`8315232`是W1设计阶段历史基线，见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
+2026-10-30静态核对的历史基线为`main / d3bc212`；旧普通包CLI/worker哈希与清单一致、主要配置路径存在，当时未运行程序。2026-10-31当前源码基线为`main / a8d6356`，普通包及赛事冻结配置已各自通过只读doctor；不代表当前源码已部署。P4-R5最新源码双资产发布验收仍开放。此前`8315232`为W1设计阶段历史基线，见[W1-A后路线](superpowers/plans/2026-10-30-post-w1a-project-route.md)。
 
 原目录体积审计日期：2026-10-19；这些数值会随实验和构建变化。2026-10-27自检分别对普通包和赛事开发配置运行doctor，并清理经逐项确认的空测试目录。2026-10-30仅对保存的部署/CI证据及源码实现作静态复核，没有重跑运行时命令。下方日期段落保留各自时点的环境状态；2026-10-28已由开发CLI交付本机loopback草稿工作台，不能再将旧段落的“尚无前端/HTTP”当作当前状态。本页不包含卡库或引擎资产本体，精确证据见[TESTING](TESTING.md)。
 
@@ -27,7 +27,11 @@
 
 ## 2026-10-31 普通包现场诊断
 
-当前源码已推进到`main / 8c7d4d5`，普通`dist/ygo-local`仍是2026-10-19本地包。现场doctor退出0且返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`；包内CLI/worker哈希匹配清单，配置中的worker、ocgcore、catalog、scripts、script manifest和engine manifest六个路径均存在。doctor调用worker的ABI探针；未运行决斗smoke、未重新部署或切换资产。输出和CI复验见[TESTING](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+当前源码已推进到`main / a8d6356`，普通`dist/ygo-local`仍是2026-10-19本地包。普通包及`data/runtime/tournament-2026/engine.toml`赛事配置的现场doctor均退出0并返回`ready=true`、`abi_ok=true`、`assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通包CLI/worker哈希匹配清单，六项路径存在。两次doctor调用worker的ABI探针；未运行决斗smoke、未重新部署或切换资产。输出和CI复验见[TESTING](TESTING.md#2026-10-31-合并ci与普通包现场复核)。
+
+## 2026-10-31 依赖与工具清点
+
+Rust workspace依赖树存在两个`hashbrown`版本：0.14.5由`hashlink/rusqlite`路径使用，0.17.1由`indexmap/toml_edit`路径使用；是不同的传递依赖链，没有从当前图证明可安全统一或删除。`cargo-machete`未安装，因此本轮没有声称完成机器化未用依赖扫描。仓库没有Node/npm、Go或独立requirements/poetry/pipenv清单；Rust以workspace Cargo清单为准，Python依赖集中在`pyproject.toml`。未发现可由包清单安全确认的弃用模块，故保留兼容路径和历史证据。
 
 ## 构建与发布状态
 
