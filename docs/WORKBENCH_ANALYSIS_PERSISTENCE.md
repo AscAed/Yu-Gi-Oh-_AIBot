@@ -1,6 +1,6 @@
 # W1-B3 任务持久化、报告保存与队列协调设计
 
-日期：2026-10-31；代码基线：main / 6191011。任务revision格式、严格链校验、重启分类、严格报告合同/冻结输入绑定/私有落盘/摘要重读和基础持久先行协调器已实现并通过合成定向测试。claim在返回票据前重新采集worker、DLL、CDB、脚本和引擎manifest身份；不匹配时提交failed/asset_mismatch，不调用执行器。若该失败终态无法提交，协调器现在停止，重开时running保守归类unknown。完整故障注入/恢复矩阵、扩展资产漂移覆盖及HTTP接口仍未实现。报告来源/真实执行仍未认证。已有记录合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)，队列现状见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
+日期：2026-10-31；实现提交：main / 8091362。任务revision格式、严格链校验、重启分类、严格报告合同/冻结输入绑定/私有落盘/摘要重读和基础持久先行协调器已实现并通过合成定向测试。claim在返回票据前重新采集worker、DLL、CDB、脚本和引擎manifest身份；不匹配时提交failed/asset_mismatch，不调用执行器。若该失败终态无法提交，协调器现在停止，重开时running保守归类unknown。完整故障注入/恢复矩阵、扩展资产漂移覆盖及HTTP接口仍未实现。报告来源/真实执行仍未认证。已有记录合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)，队列现状见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 
 ## 1. 存储合同和提交点
 

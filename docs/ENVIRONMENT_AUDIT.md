@@ -1,6 +1,6 @@
 # 本机环境与资产审计
 
-2026-10-31本地源码核对基线为`main / 6191011`；保存的较早doctor记录显示普通包和赛事资产配置ready，旧包哈希与其清单一致。本轮未运行doctor或smoke，`dist/ygo-local`仍为旧包；这些记录不能替代P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
+2026-10-31当前本地源码为`main / 8091362`，工作区干净。保存的较早doctor记录显示普通包和赛事资产配置ready，旧包哈希与其清单一致。本轮未运行doctor或smoke，`dist/ygo-local`仍为旧包；这些记录不能替代P4-R5最新源码双资产干净部署验收。当前赛事配置worker路径复用普通dist worker，见[DEPLOYMENT](DEPLOYMENT.md)。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
 
 2026-10-31 W1-B3内部任务/报告存储协调及claim资产哈希门禁仅在当前开发工作区验证；未部署、未运行doctor或smoke，也未改变环境资产。最新源码双资产验收仍按P4-R5开放项跟踪，见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。
 
