@@ -1,5 +1,27 @@
 # 本机验证记录
 
+## 2026-11-01 无效忽略配置清理
+
+只删除被Git忽略的`configs/engine.toml.legacy`，不触碰当前`configs/engine.toml`、dist或运行资产。删除前确认目标是仓库内普通文件、大小258 bytes、修改时间2026-09-09，SHA-256为`D2F51D7C826A35F8A2B595C063045500C903F69B7DE25E2B82FF2BC9BFB0876D`；Git忽略规则为`/configs/engine.toml.*`。文件中的`engine_path`、`working_directory`、`protocol`、`temp_directory`与当前严格`ProcessEngineConfig`不兼容，且无代码/脚本消费者。验证`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/w1h322b-process-kill/cargo --test doctor config_round_trip_and_legacy_gui_config_rejected -- --exact`：**1 passed**，并确认原文件已不存在。历史SHA仅用于说明被移除文件身份，不是可恢复副本。
+
+## 2026-11-01 W1-H3.2-2b-1 跨链关键窗口进程终止
+
+基线本地`main / 2f690d5`；保留已有的两处文档修改。使用真实修订存储、目录锁、跨链认证和报告校验，以测试二进制子进程覆盖四个逻辑提交窗口：冻结输入保存后/job前、queued job保存后/accepted关联前、报告保存后/终态job修订前、恢复关联修复后/job分类前。每个窗口由父进程在握手点核对原始材料后终止子进程；握手通过临时文件写入并`sync_all`后原子改名，父进程仅观察完整标记，等待上限20秒。
+
+强杀后用新协调器取得目录锁并认证所有材料再恢复。四例均检查活动队列为空、没有可claim任务、第二次重开不追加修订，并逐字节比较operations/jobs/reports。新增有效但跨链不匹配的冻结绑定负例，确认完整认证失败且修订文件不变。已有用例另覆盖损坏修订、非法任务转换和损坏/错误引用报告；这些没有被表述为新子进程窗口。
+
+验证命令与结果（全部Cargo构建使用隔离`target/w1h322b-process-kill/cargo`及`--offline --locked`）：
+
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h322b-process-kill/cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture`：最终握手修复后 **1 passed**。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h322b-process-kill/cargo -- --test-threads=1`：**103 passed、0 failed**。
+- `cargo test --workspace --offline --locked --target-dir target/w1h322b-process-kill/cargo -- --test-threads=1`：**444 passed、0 failed、36 ignored**，91个结果组；完整日志位于忽略目录`target/w1h322b-process-kill/workspace.log`。
+- `py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`：**16 passed**。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h322b-process-kill/cargo -- -D warnings`和`cargo fmt --all -- --check`通过。最终标记修复后重新通过强杀聚焦测试；格式命令先执行`cargo fmt --all`再复核。
+
+独立只读审阅指出初版握手标记先创建再写入会有空/部分读取竞态，已改为同步临时文件后原子发布并重跑聚焦矩阵。该批新增原生研究、真实runner/worker、引擎FFI调用均为0；未启动worker、真实服务或引擎。普通工作台仍`analysis_not_configured`。仅关闭上述四个逻辑窗口；其他H3.2-2b窗口/调度、逐syscall故障、断电/介质故障、报告来源与W1-C真实分析仍开放。未知收费/调用状态不推定为零。
+
+**2026-11-01 路线静态复核：**`git status --short --branch`显示本地main在`2f690d5`、工作区干净、本地跟踪引用领先8；未访问远端。`Get-FileHash -Algorithm SHA256`复核旧普通包CLI `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`及worker `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与包内`build-hashes.json`一致。仅证明文件身份；未运行doctor、引擎、部署或测试，不证明当前源码已部署。
+
 ## 2026-11-01 W1-H3.2-2a HTTP响应丢失与幂等查询
 
 基线main / 6b523f2，保留已有未提交源码和文档。关闭本批限定合成关口后暂停，见[交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)。真实本机TCP在路由完成后分别零字节关闭和保留Content-Length截断正文；每种模式13份原始传输捕获、11项逻辑断言。覆盖allocated、accepting幂等及容量预占、后台accepted/rejected、取消、操作/任务/结果GET、completed及budget_limited空线路、健康停止后读取、报告字节损坏和独立引用错误、正常停服释放锁后重开及重复重开。没有自动重试请求，没有用未知状态推定零调用。
@@ -87,7 +109,7 @@ H3.2-2完整响应丢失及目标窗口强杀未验收，普通工作台仍未�
 - 复核提交后源码为干净`main / a21d587`。`docs/INDEX.md`仍是文档入口，`TASKS.md`维护状态，`TESTING.md`维护有日期的验证；修正README、INDEX、ROADMAP、API、WORKBENCH和HTTP合同中把H2.2实现仍写成“未接入”的当前摘要。阶段历史与handoff留在日期化计划中。
 - 普通`dist/ygo-local`清单和二进制文件时间为2026-10-19；当前H2.2源码提交晚于该包，未重建或覆盖dist。因此当前HTTP实现未部署到普通dist。此为文件/提交时间静态比较；本轮没有运行doctor、smoke或真实分析。
 - `cargo metadata --offline --no-deps`列出9个workspace crate。`cargo tree --offline --locked -d`确认`hashbrown` 0.14.5经`hashlink/rusqlite`进入，0.17.1经`indexmap/toml_edit`进入；未发现同一直接依赖的重复声明。`cargo-machete`当前不可用，故不声称机器化未用依赖审计通过，也没有删除Rust crate或兼容路径。
-- `configs/engine.toml.legacy`是Git忽略的本地文件，含`C:/ProjectIgnis`机器路径；代码和文档没有发现其路径消费者。因其可能被人工当作回滚配置，保留并列为待确认清理项；没有将它当作部署配置或证据文件。
+- 在该历史审计时点，`configs/engine.toml.legacy`是Git忽略的本地文件，含`C:/ProjectIgnis`机器路径；未发现代码/文档消费者。它当时被临时保留以待回滚用途核对，后续处置见本文件顶部2026-11-01清理记录；不得把本历史状态当作当前存在性。
 - 文件级盘点发现127份docs Markdown。既有历史计划、证据链接和本机资产保留，不按文件年龄清理；用户此前决定历史证据不迁移，只保留SHA-256清单。
 
 ## 2026-11-01 `a21d587`当前源码隔离部署候选复验

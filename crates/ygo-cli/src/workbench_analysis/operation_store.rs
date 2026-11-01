@@ -173,6 +173,8 @@ impl PersistentAnalysisJobStore {
             }
             self.append_operation(&next)?;
         }
+        #[cfg(test)]
+        super::durable::crash_checkpoint("recovery_operation_repaired_before_task_classified");
         for (path, bytes, revision, next) in jobs {
             if fs::read(path).map_err(|_| Error::Io)? != bytes {
                 return Err(Error::RevisionConflict);

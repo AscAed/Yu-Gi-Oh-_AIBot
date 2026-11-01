@@ -1,6 +1,6 @@
 # 项目现状
 
-当前路线：[H3.2-2a 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。截至2026-11-01，H2.2-A/B、H3.2-1和H3.2-2a各自限定的合成验收已通过；H3.2-2b目标窗口强杀、W1-C真实分析、报告来源认证及P4-R5仍开放。普通`workbench serve`未配置分析后端。具体进度唯一见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。本评估用于汇总能力和差距，不替代这些事实源。
+当前路线：[H3.2-2a 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。截至2026-11-01，H2.2-A/B、H3.2-1/2a及H3.2-2b-1四个限定窗口的合成验收已通过；H3.2-2b其余窗口/调度、逐syscall/断电/介质故障、W1-C真实分析、报告来源认证及P4-R5仍开放。普通`workbench serve`未配置分析后端。具体进度唯一见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。本评估用于汇总能力和差距，不替代这些事实源。
 
 ## 产品目标
 
@@ -19,7 +19,7 @@
 | 工作区/双资产身份、覆盖清点、研究输入和独立响应oracle | 已验证（首批工具） | 独立v1合同；canonical响应匹配不授予完整动作或最优资格，来源/中文及全卡缺口仍保留，见BASELINE_AUDIT与RESEARCH_AUDIT |
 | P1局部终场、公开观察与提示研究 | 局部验证 | Rabbit、Tenki、Curry仅各自冻结案例；Ground Collapse仅离线准备，原生可达/响应接受未知，见[P1候选](P1_MICROCASE.md)及[本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md) |
 | 草稿保存、分区编辑、YDK/JSON往返 | 基础工具和本机浏览器工作台已交付 | `DeckDocumentV1`允许残缺及重复卡；不授予完整合法性，见[草稿CLI](DECK_DRAFTS.md)与[工作台](WORKBENCH.md) |
-| 工作台分析接入 | H2.2六个HTTP端点、无路径DTO及H2.2-A/B、H3.2-1、H3.2-2a限定合成验收已完成 | 普通服务未配置分析后端，执行器与真实分析未交付；H3.2-2b目标窗口强杀、报告来源认证、逐syscall崩溃和断电仍开放，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md) |
+| 工作台分析接入 | H2.2六个HTTP端点、无路径DTO及H2.2-A/B、H3.2-1、H3.2-2a/2b-1限定合成验收已完成 | 普通服务未配置分析后端，执行器与真实分析未交付；H3.2-2b余下窗口/调度、报告来源认证、逐syscall崩溃和断电仍开放，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md) |
 | 中文字段来源盘点 | 已完成有限样本离线盘点 | 冻结39卡的字段存在性及来源哈希已登记；语义、zh-SC类别、别名映射及使用/再分发依据未通过，不能开放正式中文检索 |
 | 自动从字段构筑、补全残缺牌组、构筑优化 | 未实现 | 当前不得输出已优化或全局最佳构筑 |
 | 任意手坑/对手策略、后攻、解场和完整对局 | 未实现 | 已有灰流丽固定场景不能外推为通用抗干扰能力 |

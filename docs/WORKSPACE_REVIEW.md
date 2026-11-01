@@ -1,6 +1,6 @@
 # 工作区自检与维护矩阵
 
-2026-11-01本轮基线为`main / 6b523f2`，其后工作区包含H3.2-2a实现、测试和文档改动。H2.2-A/B、H3.2-1及H3.2-2a限定合成验收完成；H3.2-2b、真实分析和报告来源认证仍开放。当前路线见[H3.2-2a后路线](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)，验证证据见[TESTING](TESTING.md)。
+当前状态（2026-11-01）：H2.2-A/B、H3.2-1/2a及H3.2-2b-1四个限定窗口验收已完成；H3.2-2b其余窗口/调度、逐syscall/断电/介质故障、真实分析和报告来源认证仍开放。详细状态以[TASKS](../TASKS.md)为准，验证证据见[TESTING](TESTING.md)。以下基线记录保留各自历史时点。
 
 2026-11-01本轮起始于`main / 8d8c492`；其后完成H2.2-A/B合成故障与并发验收。H3跨链恢复、W1-C真实分析和P4-R5部署/账本门禁仍开放；当前状态与证据见[TASKS](../TASKS.md)、[TESTING](TESTING.md)和[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)。
 

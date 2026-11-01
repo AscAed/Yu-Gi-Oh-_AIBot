@@ -76,6 +76,30 @@ fn requires_stop(error: PersistenceError) -> bool {
     )
 }
 
+#[cfg(test)]
+pub(super) fn crash_checkpoint(point: &str) {
+    const STAGE: &str = "YGO_H3_CRASH_CHECKPOINT";
+    const MARKER: &str = "YGO_H3_CRASH_MARKER";
+    if std::env::var(STAGE).as_deref() != Ok(point) {
+        return;
+    }
+    let marker = PathBuf::from(std::env::var_os(MARKER).expect("crash test marker path"));
+    let temporary_marker = marker.with_extension(format!("{}.tmp", std::process::id()));
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary_marker)
+        .expect("create temporary crash checkpoint marker");
+    use std::io::Write;
+    writeln!(file, "{point}").expect("write crash checkpoint marker");
+    file.sync_all().expect("flush crash checkpoint marker");
+    drop(file);
+    std::fs::rename(temporary_marker, marker).expect("publish crash checkpoint marker");
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+}
+
 impl DurableAnalysisCoordinator {
     #[cfg(test)]
     pub(crate) fn inject_logical_fault(
@@ -324,6 +348,8 @@ impl DurableAnalysisCoordinator {
                     return self.map_persistence_error(PersistenceError::CommitUncertain, stopped)
                 }
             };
+        #[cfg(test)]
+        crash_checkpoint("report_persisted_before_terminal");
         let event = AnalysisJobEvent::ReportPublished(reference);
         let outcome = self
             .queue
@@ -905,6 +931,8 @@ impl DurableAnalysisCoordinator {
             *stopped = true;
             return Err(DurableCoordinatorError::Persistence(e));
         }
+        #[cfg(test)]
+        crash_checkpoint("frozen_input_persisted_before_task");
         let accepted = op.accept(now).map_err(DurableCoordinatorError::Operation)?;
         let outcome = self.queue.enqueue_identified_with_persist(
             job_id,
@@ -913,6 +941,8 @@ impl DurableAnalysisCoordinator {
             now,
             |record| {
                 self.store.append_initial(record.clone())?;
+                #[cfg(test)]
+                crash_checkpoint("task_persisted_before_acceptance");
                 self.store.append_operation(&accepted)
             },
         );
@@ -1632,4 +1662,6 @@ mod operation_tests {
         ));
         assert_eq!(c.inspect_job(id).unwrap().len(), 2);
     }
+
+    include!("durable_crash_window_tests.rs");
 }

@@ -87,7 +87,7 @@
 
 ## 2026-11-01：工作台分析接入与H3恢复验收
 
-以下交接记录限定范围的内部/合成实现与测试。每项真实分析、原生调用及进程故障资格仍以对应TESTING证据与TASKS开放门禁为准；不要把H3.2-1受控重开或H3.2-2a响应丢失结果解释为H3.2-2b目标进程强杀验收。
+以下交接记录限定范围的内部/合成实现与测试。每项真实分析、原生调用及进程故障资格仍以对应TESTING证据与TASKS开放门禁为准；H3.2-2b-1只关闭其声明的四个子进程终止窗口，不覆盖其余窗口、全部调度或系统级故障。
 
 | 历史条目 | 原链接 | 当时状态与范围 |
 |---|---|---|
@@ -96,6 +96,7 @@
 | 历史：H3.1跨链恢复与响应丢失设计 | [设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md) | 静态设计，未证明完整H3运行恢复 |
 | 历史：H3.2-1认证恢复 | [交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)、[H3.2-1后路线](superpowers/plans/2026-11-01-post-w1h321-project-route.md) | 跨链认证、全候选验证后提交及受控重开合成验收；不替代强杀 |
 | 历史：H3.2-2a响应丢失与受控重开 | [交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)、[H3.2-2a后路线](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)、[验证记录](TESTING.md) | TCP零字节/正文截断、幂等查询和受控重开；H3.2-2b、W1-C和P4-R5仍开放 |
+| 历史：H3.2-2b-1跨链窗口进程终止 | [H3.2-2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)、[验证记录](TESTING.md) | 四个提交窗口、跨链认证恢复、重复重开稳定及绑定冲突负例；H3.2-2b余项仍开放 |
 
 ## 更早设计与验证的追溯
 

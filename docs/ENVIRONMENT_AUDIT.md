@@ -1,12 +1,18 @@
 # 本机环境与资产审计
 
-2026-11-01提交基线`main / 6b523f2`；当前工作区含H3.2-2a测试与Windows accepted-socket修复，普通`dist/ygo-local`未重建，仍为2026-10-19包。历史候选功能源码`a21d587`不等同当前HEAD。历史哈希清单不等于备份，证据不迁移；P4-R5因smoke预算截断和缺可比账本仍开放。详情见[TESTING](TESTING.md)与[当前路线](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。
+## 当前现场（2026-11-01）
 
-2026-11-01本轮基线`8d8c492`，隔离候选功能源码`a21d587`；主工作区旧普通包未替换。历史证据哈希清单不等于备份，Windows目录符号链接实测受策略限制；P4-R5因缺可比账本开放。
+当前checkout为本机`main / 2f690d5`，工作区有未提交修改；本批没有部署。普通`dist/ygo-local`仍是2026-10-19旧包；`target/release`对应CLI/worker与dist二进制为相同哈希的Windows硬链接，不证明当前HEAD已构建。隔离候选`a21d587`及更早`e684f4e`各自的验收不等同当前部署；smoke受预算截断且缺少可比账本，P4-R5仍开放。历史证据按用户决定不迁移，仅保留哈希清单，不代表已有备份。现场和历史证据见[TESTING](TESTING.md)、[DEPLOYMENT](DEPLOYMENT.md)和[TASKS](../TASKS.md)。
 
-当前主工作区为`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\Yu-Gi-Oh!_AIBot`本地`main`；`C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot`是仍保留的`e684f4e`隔离候选worktree，PR审查worktree也单独保留。两者不应当作当前主源码。GitHub连接器在2026-11-01确认远端`main`为`577924b`；当时本地主分支基线`8d8c492`领先6个提交。历史证据不迁移，原SHA-256清单保留且不代表已有备份。
+2026-11-01清理：删除被忽略的`configs/engine.toml.legacy`（258 bytes，SHA-256 `D2F51D7C826A35F8A2B595C063045500C903F69B7DE25E2B82FF2BC9BFB0876D`）。它使用旧EDOPro进程字段；当前`ProcessEngineConfig`启用`deny_unknown_fields`且要求worker/ocgcore等字段，既有`config_round_trip_and_legacy_gui_config_rejected`测试确认旧`engine_path`配置会被拒绝。源码与脚本中无消费者，文件命中忽略规则`/configs/engine.toml.*`。当前`configs/engine.toml`保留不变。此为本机失效配置清理，不涉及运行资产、兼容协议或历史研究证据。
 
-## 2026-11-01 H2.2源码与普通dist核对
+以下段落记录各日期/提交的审计快照；其中的“当前”“本轮”均指原记录时点，不覆盖上面的现场摘要。
+
+### 历史快照（2026-11-01，main / 8d8c492）
+
+当时主工作区为`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\Yu-Gi-Oh!_AIBot`本地`main`；`C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot`是仍保留的`e684f4e`隔离候选worktree，PR审查worktree也单独保留。两者不应当作当时主源码。GitHub连接器在2026-11-01确认远端`main`为`577924b`；当时本地主分支基线`8d8c492`领先6个提交。历史证据不迁移，原SHA-256清单保留且不代表已有备份。
+
+### 历史快照（2026-11-01，main / a21d587源码与普通dist核对）
 
 本轮源码位于本机`main / a21d587`，仓库提交后干净；普通`dist/ygo-local`中的`ygo.exe`、`ygo-engine-worker.exe`、`ygo.cmd`、`build-hashes.json`及包内测试/配置文档时间均为2026-10-19。H2.2源码提交晚于该包且没有部署重建，因此当前checkout包含的HTTP源码不能推断为已部署能力。未运行旧包doctor、smoke或真实分析，也未改写dist；既有旧包诊断和候选部署证据按其历史提交/资产身份保留在下文和[TESTING](TESTING.md)。
 
