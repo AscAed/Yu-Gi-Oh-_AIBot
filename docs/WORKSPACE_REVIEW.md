@@ -1,5 +1,7 @@
 # 工作区自检与维护矩阵
 
+2026-11-01本轮起始于`main / 8d8c492`；其后完成H2.2-A/B合成故障与并发验收。H3跨链恢复、W1-C真实分析和P4-R5部署/账本门禁仍开放；当前状态与证据见[TASKS](../TASKS.md)、[TESTING](TESTING.md)和[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)。
+
 2026-11-01 `e684f4e`完成workspace测试、Clippy、fmt、schema定向检查及隔离候选双资产部署诊断；普通/赛事doctor、identity和smoke/replay记录见[TESTING](TESTING.md)。主工作区部署包仍为2026-10-19旧包，P4-R5因smoke预算截断及缺少可比账本仍开放。当前路线见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)。
 
 2026-10-31 W1-B2内部队列在本地隔离target完成Rust workspace复验（377 passed、36 ignored、0 failed），相关Python/schema检查30 passed、2 skipped、4 subtests通过；格式与Clippy检查通过。此为源码测试，不包含部署、doctor、smoke或真实分析。交接见[W1-B2记录](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)，逐项命令见[TESTING](TESTING.md)。

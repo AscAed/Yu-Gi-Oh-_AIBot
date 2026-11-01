@@ -1,5 +1,31 @@
 # 本机验证记录
 
+## 2026-11-01 W1-H2.2-B并发验收及审计收尾
+
+- 本轮从本地`main / 8d8c492`继续；针对分析HTTP补充并发重复提交与取消/领取竞争回归，逻辑故障矩阵及证据仅写入忽略的`target/w1h22a-persistence-fault-tests/`和`target/w1h22b-concurrency-tests/`。新增注入点和计数器均受`#[cfg(test)]`限制。
+- H2.2定向HTTP组12 passed；`py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`为16 passed，日志见`target/w1h22a-persistence-fault-tests/python-h2.2b-final.log`。全workspace命令`cargo test --workspace --offline --locked --target-dir target/w1h22a-persistence-fault-tests/cargo -- --test-threads=1`退出0：437 passed、0 failed、36 ignored（91个结果组）。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h22a-persistence-fault-tests/cargo -- -D warnings`与`cargo fmt --all -- --check`通过；Markdown本地链接检查137份跟踪及新增文档、1,043个目标、缺失0；`git diff --check`通过。提交前源码与文档差异已逐项审阅。
+- 同ID重复提交16次均重放同一`accepting`响应，只产生1个后台任务和1次输入冻结；并发取消/领取实测16轮全部由claim获胜，随后显式fail任务并确认持久状态。取消先完成后claim为空由既有TCP用例覆盖。不能据此声称已观察到两个竞争胜者或所有线程调度。
+- 日志与并发结果保存在上列忽略目录；关键SHA-256：workspace日志`DDCE9F50879C5D4DD5D3C7C933F79EBC08C9B564392EB454A604EBFB1A41BDDD`；重复提交结果`7BF6AAD072820ABCEB365042364D126233726FB0C141BD1931D9F7129CA25E24`；取消/claim结果`F260F60D650F466C0A078D94827869CE096B518AC907C6EA44BF862A7045F1E3`。详细范围见[H2.2-B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+- H2.2合成HTTP门禁关闭。H3跨链恢复/响应丢失、W1-C真实分析、报告来源认证及P4-R5可比账本/部署门禁仍开放；普通服务继续`analysis_not_configured`。本轮无真实分析、engine、runner、worker、FFI或研究账本调用，旧历史证据按用户决定不迁移，仅保留哈希清单。
+- 工作区定位：主修改位于`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\Yu-Gi-Oh!_AIBot`的本地`main`；`C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot`仍是`e684f4e`隔离旧候选，另有PR审查worktree。它们不是当前主源码基线，均未被本轮清理或重置。GitHub远端`main`已由连接器确认在`577924b`；本地基线较该远端领先6个提交，提交前仍须检查提交内容与推送范围。
+
+## 2026-11-01 W1-H2.2-A持久故障与停止后只读验收
+
+- 基线`main / 8d8c492`，保留既有11份跟踪文档修改及路线文档。本批增加测试专用精确故障注入、矩阵与证据；新用例未复现需修复的生产缺陷。重启入口仅抽取相同的认证/分类核心供测试装配，未增加生产放行参数或HTTP接口。
+- 逻辑矩阵为13个提交点×3类故障共39项，另有unknown真实重启分类3项；精确断言目标命中、发布前后修订字节/state/revision、报告数量、保留槽位及停派发策略。实际TCP另覆盖同步503共15项、已返回202后的后台故障12项；同步故障未安排冻结，后台屏障前冻结计数0、完成后1，GET与被阻断领取后仍为1。计数只观察真实`finish_operation_with_clock`中的W1-A冻结调用，不冒充原生执行数。
+- 停止后9类TCP查询覆盖健康历史/404、报告缺失与哈希错误、请求/身份/评分/预算绑定，以及操作/任务链损坏。语义负例重新绑定原始哈希以准确进入语义门禁。状态和结果GET拒绝无法认证材料；前后文件/目录快照相同。Windows持有锁文件无法读字节，记录其存在与长度，查询矩阵另记录修改时间；其他证据比较字节或哈希，未释放锁。
+- 先行用例记录了测试夹具锁读取失败、语义负例自身报告无效及临时缺少测试导入；日志保留，不称为生产红测。曾怀疑状态GET不认证报告引用，新增预期失败用例实际通过（`query-status-red.log`），现有scan已验证引用，因此保留反证且不修改该生产逻辑。首次`analysis_query`过滤未命中测试（0项），不计为通过；后续使用正确过滤与全量回归。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h22a-persistence-fault-tests/cargo --lib -- --test-threads=1`最终72 passed、0 failed（`cli-counter-final.log`）。workspace默认串行435 passed、0 failed、36 ignored（`workspace-final.log`）；全量启动后补了仅测试编译的冻结计数，随后重新运行全部CLI、fmt和全目标Clippy，其他crate未改。忽略项及原始原因逐项保存于`test-summary.json`，未启用任何opt-in。
+- fmt `--check`及workspace全目标Clippy `-D warnings`通过；编译命令均设置同一隔离`CARGO_TARGET_DIR`并显式使用相同`--target-dir`，offline/locked。Python相关HTTP/operation/job三个schema测试16 passed（`python.log`）；未重跑全套Python，也未改Tenki历史pin或原失败记录。
+- 独立只读审阅检查实际命中、停止与只读断言、无校验替换、生产cfg边界及TCP Content-Length读取。`review.md`区分hook作者自审与交叉审阅；故障核心由另一agent独立审阅。TCP错误保留方法、路径、响应阶段和已收字节，不自动重试。此次通过不认证Windows历史RST根因。
+- 机器入口`target/w1h22a-persistence-fault-tests/coverage-matrix.json`，含42个逻辑组合、27个TCP提交组合及9类查询；原始各组JSON、失败/最终日志和审阅均保留该新目录，不覆盖H2.2旧日志。详见[交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)。文档本地链接及diff检查另存同目录。
+- 仅关闭H2.2-A逻辑持久故障关口；H2.2-B重复并发、H3崩溃/回复丢失/跨链恢复及W1-C真实分析仍开放。不声称每条文件系统调用、断电或介质故障通过。普通服务分析保持未配置；真实native/runner/worker/FFI调用0，不运行doctor，不部署、提交或推送。认证子集40、预留7、规划47；旧confirmation与全部实际历史累计未知。
+
+## 2026-11-01 W1-H2.2后路线文档复核
+
+本轮起始为干净`main / 8d8c492`；规划阶段只读核对旧普通包CLI/worker哈希与清单相符。本轮未运行doctor、引擎、收费实验、部署或全量测试。H2.2早期workspace 426 passed/36 ignored、后续HTTP 5 passed、其后workspace复验及候选双资产诊断按下文原范围读取，不相加测试数，不代表真实工作台分析或P4-R5通过。路线见[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)。
+
 ## 2026-11-01 H2.2 HTTP提交不确定回归与文档续核
 
 - 在`main / c6faa29`复核TASKS、INDEX、API与工作台分析合同后，发现TASKS的W1-B1至B3总述仍把任务HTTP列为未完成，与H2.2当前实现冲突。已将该段标为历史交付并指向当前H2.2实现和仍开放的验收矩阵。

@@ -14,7 +14,7 @@
 
 初次实现验收workspace为426通过/36忽略；最新CLI为85通过，Python schema为16通过，fmt及Clippy通过。2026-11-01续接新增HTTP层检查后，定向HTTP用例3通过（含草稿revision冲突稳定拒绝、HTTP取消与claim竞争、operation/job写入失败行为）；详见[TESTING](../../TESTING.md)。两次Rust数量不相加；本次新增测试后需以续接复验取代旧workspace数字。
 
-H2.2完整验收尚不关闭：本续接补了operation/job预写失败映射及保守状态行为、取消后领取和一个HTTP取消/claim并发竞态；新增HTTP端点全部持久故障点及重复并发调度的完整矩阵仍未穷尽。全量测试曾复现Windows 10054，并观测服务开始返回400但响应头被RST截断，错误码未认证；测试端改用完整写入与半关闭后，关键TCP回归连续3次通过。需以修复后的workspace结果作为最终复验。当前复验见[TESTING](../../TESTING.md)；不进入真实分析。
+此handoff记录的时点尚未关闭H2.2完整验收：当时新增HTTP端点故障注入和重复并发调度矩阵尚未完成。之后已由H2.2-A/B交接覆盖并复验，当前结果见[TESTING](../../TESTING.md)及[H2.2-A](2026-11-01-w1h22a-persistence-fault-handoff.md)/[H2.2-B](2026-11-01-w1h22b-concurrency-handoff.md)。全量测试曾复现Windows 10054，并观测服务开始返回400但响应头被RST截断，错误码未认证；测试端改用完整写入与半关闭后，关键TCP回归通过，但不能据此认证早期根因。该工作未进入真实分析。
 
 ## 后续边界
 

@@ -1,5 +1,7 @@
 # 实施取舍与交付边界
 
+2026-11-01 H2.2经验：异步提交先持久保存accepting，操作ID用于幂等；历史报告按保存字节和冻结身份校验，无路径投影不暴露内部配置。A/B合成故障与并发门禁已通过；此前TCP重置原因未认证，测试端完整写入和半关闭后复验通过不等于根因已查明。进程崩溃、响应丢失与逐syscall故障仍属于H3开放范围，见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)和[B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+
 ## 2026-11-01 H2.1与候选部署经验
 
 - **问题与原因：**并发请求可能在冻结期间争夺唯一排队槽，操作链和任务链又不能假定跨文件原子提交。

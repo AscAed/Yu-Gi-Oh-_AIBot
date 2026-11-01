@@ -44,6 +44,8 @@ impl DurableCoordinatorError {
 /// A persistence-first coordinator. The OS store lock is acquired before any
 /// queue operation and held for the coordinator lifetime.
 pub struct DurableAnalysisCoordinator {
+    #[cfg(test)]
+    freeze_attempts: std::sync::atomic::AtomicUsize,
     store: PersistentAnalysisJobStore,
     queue: AnalysisJobQueue,
     stopped: Mutex<bool>,
@@ -74,10 +76,40 @@ fn requires_stop(error: PersistenceError) -> bool {
 }
 
 impl DurableAnalysisCoordinator {
+    #[cfg(test)]
+    pub(crate) fn inject_logical_fault(
+        &self,
+        chain: &str,
+        state: &str,
+        revision: u64,
+        phase: super::persistence::FaultPhase,
+    ) {
+        self.store
+            .inject_logical_fault(chain, state, revision, phase);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn logical_fault_hits(&self) -> usize {
+        self.store.logical_fault_hits()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn active_snapshot_for_test(&self) -> Result<QueueSnapshot, QueueError> {
+        self.queue.snapshot()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn freeze_attempts_for_test(&self) -> usize {
+        self.freeze_attempts
+            .load(std::sync::atomic::Ordering::SeqCst)
+    }
+
     pub fn open(root: PathBuf) -> Result<Self, DurableCoordinatorError> {
         let store =
             PersistentAnalysisJobStore::open(root).map_err(DurableCoordinatorError::Persistence)?;
         Ok(Self {
+            #[cfg(test)]
+            freeze_attempts: std::sync::atomic::AtomicUsize::new(0),
             store,
             queue: AnalysisJobQueue::default(),
             stopped: Mutex::new(false),
@@ -394,6 +426,30 @@ impl DurableAnalysisCoordinator {
     pub fn open_operations(root: PathBuf) -> Result<Self, DurableCoordinatorError> {
         let store = PersistentAnalysisJobStore::open_unclassified(root)
             .map_err(DurableCoordinatorError::Persistence)?;
+        Self::from_operation_store(store)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn open_operations_with_fault(
+        root: PathBuf,
+        chain: &str,
+        state: &str,
+        revision: u64,
+        phase: super::persistence::FaultPhase,
+    ) -> (Result<Self, DurableCoordinatorError>, usize) {
+        let store = match PersistentAnalysisJobStore::open_unclassified(root) {
+            Ok(store) => store,
+            Err(error) => return (Err(DurableCoordinatorError::Persistence(error)), 0),
+        };
+        store.inject_logical_fault(chain, state, revision, phase);
+        let hits = store.logical_fault_hits.clone();
+        let result = Self::from_operation_store(store);
+        (result, hits.load(std::sync::atomic::Ordering::SeqCst))
+    }
+
+    fn from_operation_store(
+        store: PersistentAnalysisJobStore,
+    ) -> Result<Self, DurableCoordinatorError> {
         let operations = store
             .scan_operations()
             .map_err(DurableCoordinatorError::Persistence)?;
@@ -448,6 +504,8 @@ impl DurableAnalysisCoordinator {
             .classify_restart()
             .map_err(DurableCoordinatorError::Persistence)?;
         Ok(Self {
+            #[cfg(test)]
+            freeze_attempts: std::sync::atomic::AtomicUsize::new(0),
             store,
             queue: AnalysisJobQueue::default(),
             stopped: Mutex::new(false),
@@ -777,6 +835,9 @@ impl DurableAnalysisCoordinator {
     ) -> Result<Operation, DurableCoordinatorError> {
         let op = &ticket.operation;
         let cmd = op.command().expect("accepting command");
+        #[cfg(test)]
+        self.freeze_attempts
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let frozen = super::freeze_analysis_input(
             drafts,
             super::AnalysisFreezeSpec {

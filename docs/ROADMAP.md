@@ -1,5 +1,7 @@
 # 技术路线
 
+当前小批见[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)；H2.2实现已有，完整故障/并发验收仍开放。以下旧路线保留历史时点。
+
 本文件只定义阶段依赖与退出条件，不维护进度。当前状态以[TASKS](../TASKS.md)为准，验证证据以[TESTING](TESTING.md)为准；当前实施顺序见[W1-H2.1后路线](superpowers/plans/2026-11-01-post-w1h21-project-route.md)。早期路线按日期保留为历史快照。
 
 ## 产品基础与研究基础

@@ -23,6 +23,23 @@ const STORE_LOCK: &str = ".ygo-analysis.lock";
 const REVISION_KIND: &str = "workbench_analysis_job_revision";
 const MAX_REPORT_BYTES: usize = 64 * 1024 * 1024;
 
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FaultPhase {
+    BeforePublish,
+    AfterPublish,
+    Reread,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+struct LogicalFault {
+    chain: String,
+    state: String,
+    revision: u64,
+    phase: FaultPhase,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PersistenceError {
     Locked,
@@ -74,6 +91,10 @@ struct RevisionEnvelope {
 }
 
 pub struct PersistentAnalysisJobStore {
+    #[cfg(test)]
+    logical_fault: std::sync::Mutex<Option<LogicalFault>>,
+    #[cfg(test)]
+    pub(super) logical_fault_hits: std::sync::Arc<AtomicUsize>,
     pub(super) root: PathBuf,
     #[cfg(test)]
     pub(super) operation_failure: AtomicUsize,
@@ -100,6 +121,51 @@ impl std::fmt::Debug for PersistentAnalysisJobStore {
 }
 
 impl PersistentAnalysisJobStore {
+    #[cfg(test)]
+    pub(crate) fn inject_logical_fault(
+        &self,
+        chain: &str,
+        state: &str,
+        revision: u64,
+        phase: FaultPhase,
+    ) {
+        *self.logical_fault.lock().expect("fault lock") = Some(LogicalFault {
+            chain: chain.into(),
+            state: state.into(),
+            revision,
+            phase,
+        });
+        self.logical_fault_hits.store(0, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn logical_fault_hits(&self) -> usize {
+        self.logical_fault_hits.load(Ordering::SeqCst)
+    }
+
+    #[cfg(test)]
+    pub(super) fn check_logical_fault(
+        &self,
+        chain: &str,
+        state: &str,
+        revision: u64,
+        phase: FaultPhase,
+    ) -> Result<(), PersistenceError> {
+        let mut configured = self.logical_fault.lock().expect("fault lock");
+        if configured.as_ref().is_some_and(|f| {
+            f.chain == chain && f.state == state && f.revision == revision && f.phase == phase
+        }) {
+            configured.take();
+            self.logical_fault_hits.fetch_add(1, Ordering::SeqCst);
+            return Err(if phase == FaultPhase::BeforePublish {
+                PersistenceError::Io
+            } else {
+                PersistenceError::CommitUncertain
+            });
+        }
+        Ok(())
+    }
+
     pub fn open(root: PathBuf) -> Result<Self, PersistenceError> {
         let store = Self::open_unclassified(root)?;
         if store.root.join("operations").exists() {
@@ -125,6 +191,10 @@ impl PersistentAnalysisJobStore {
             }
         })?;
         let store = Self {
+            #[cfg(test)]
+            logical_fault: std::sync::Mutex::new(None),
+            #[cfg(test)]
+            logical_fault_hits: std::sync::Arc::new(AtomicUsize::new(0)),
             root,
             #[cfg(test)]
             operation_failure: AtomicUsize::new(usize::MAX),
@@ -241,6 +311,8 @@ impl PersistentAnalysisJobStore {
         {
             return Err(PersistenceError::Io);
         }
+        #[cfg(test)]
+        self.check_logical_fault("report", "file", 0, FaultPhase::BeforePublish)?;
         ygo_storage::publish_exclusive_file(&path, bytes).map_err(|error| {
             if error.starts_with("store_commit_uncertain:") {
                 PersistenceError::CommitUncertain
@@ -257,6 +329,10 @@ impl PersistentAnalysisJobStore {
         {
             return Err(PersistenceError::CommitUncertain);
         }
+        #[cfg(test)]
+        self.check_logical_fault("report", "file", 0, FaultPhase::AfterPublish)?;
+        #[cfg(test)]
+        self.check_logical_fault("report", "file", 0, FaultPhase::Reread)?;
         let reread = fs::read(&path).map_err(|_| PersistenceError::CommitUncertain)?;
         if ygo_storage::hash(&reread) != report_sha256 || strict_report(&reread).is_err() {
             return Err(PersistenceError::CommitUncertain);
@@ -359,6 +435,19 @@ impl PersistentAnalysisJobStore {
                     .fetch_sub(1, Ordering::SeqCst);
             }
         }
+        #[cfg(test)]
+        let logical_state = serde_json::to_value(record.state())
+            .expect("state")
+            .as_str()
+            .expect("state string")
+            .to_owned();
+        #[cfg(test)]
+        self.check_logical_fault(
+            "job",
+            &logical_state,
+            record.revision(),
+            FaultPhase::BeforePublish,
+        )?;
         ygo_storage::publish_exclusive_file(&path, &encoded).map_err(|error| {
             if error.starts_with("store_commit_uncertain:") || path.exists() {
                 PersistenceError::CommitUncertain
@@ -372,6 +461,15 @@ impl PersistentAnalysisJobStore {
         if self.fail_after_next_publish.swap(false, Ordering::SeqCst) {
             return Err(PersistenceError::CommitUncertain);
         }
+        #[cfg(test)]
+        self.check_logical_fault(
+            "job",
+            &logical_state,
+            record.revision(),
+            FaultPhase::AfterPublish,
+        )?;
+        #[cfg(test)]
+        self.check_logical_fault("job", &logical_state, record.revision(), FaultPhase::Reread)?;
         let history = self
             .read_history(record.job_id())
             .map_err(|_| PersistenceError::CommitUncertain)?;

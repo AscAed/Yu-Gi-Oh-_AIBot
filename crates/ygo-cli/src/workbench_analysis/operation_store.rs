@@ -252,7 +252,34 @@ impl PersistentAnalysisJobStore {
                 self.operation_failure.fetch_sub(1, Ordering::SeqCst);
             }
         }
+        #[cfg(test)]
+        let logical_state = serde_json::to_value(record.state())
+            .expect("state")
+            .as_str()
+            .expect("state string")
+            .to_owned();
+        #[cfg(test)]
+        self.check_logical_fault(
+            "operation",
+            &logical_state,
+            record.revision(),
+            super::persistence::FaultPhase::BeforePublish,
+        )?;
         ygo_storage::publish_exclusive_file(&path, &bytes).map_err(|_| Error::CommitUncertain)?;
+        #[cfg(test)]
+        self.check_logical_fault(
+            "operation",
+            &logical_state,
+            record.revision(),
+            super::persistence::FaultPhase::AfterPublish,
+        )?;
+        #[cfg(test)]
+        self.check_logical_fault(
+            "operation",
+            &logical_state,
+            record.revision(),
+            super::persistence::FaultPhase::Reread,
+        )?;
         if self
             .operation_history(record.operation_id())
             .ok()

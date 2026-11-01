@@ -1,4 +1,7 @@
 //! HTTP orchestration only; there is deliberately no production analysis executor.
+#[cfg(test)]
+#[path = "fault_matrix_tests.rs"]
+mod fault_matrix_tests;
 use super::{json_response, HttpRequest, HttpResponse};
 use crate::workbench_analysis::{
     durable::{DurableAnalysisCoordinator, DurableCoordinatorError},
@@ -284,6 +287,7 @@ pub(super) fn route(
 #[cfg(test)]
 mod tests {
     use super::*;
+    include!("analysis_query_fault_tests.rs");
     use crate::{
         workbench::{WorkbenchConfig, WorkbenchServer},
         workbench_analysis::tests::fixtures,
@@ -293,7 +297,7 @@ mod tests {
         net::TcpStream,
         sync::Barrier,
     };
-    fn request(
+    pub(super) fn request(
         addr: std::net::SocketAddr,
         token: &str,
         method: &str,
@@ -348,7 +352,14 @@ mod tests {
             })
             .expect("response content length");
         let mut body = vec![0u8; length];
-        socket.read_exact(&mut body).unwrap();
+        let mut received = 0;
+        while received < length {
+            match socket.read(&mut body[received..]) {
+                Ok(0) => panic!("{method} {path}: response body EOF after {received}/{length} bytes: {:?}", &body[..received]),
+                Ok(count) => received += count,
+                Err(error) => panic!("{method} {path}: response body failed after {received}/{length} bytes: {:?}: {error}", &body[..received]),
+            }
+        }
         (
             headers.split_whitespace().nth(1).unwrap().parse().unwrap(),
             serde_json::from_slice(&body).unwrap(),
@@ -459,10 +470,16 @@ mod tests {
             "/api/analysis-operations/{}",
             second["operation_id"].as_str().unwrap()
         );
-        assert_eq!(
-            request(addr, &token, "PUT", &second_path, cmd.clone()).0,
-            409
-        );
+        let (status, capacity_rejection) = request(addr, &token, "PUT", &second_path, cmd.clone());
+        assert_eq!(status, 409);
+        assert_eq!(capacity_rejection["error"]["code"], "analysis_queue_full");
+        let (status, rejected) = request(addr, &token, "GET", &second_path, Value::Null);
+        assert_eq!(status, 200);
+        assert_eq!(rejected["state"], "rejected");
+        assert_eq!(rejected["error_code"], "analysis_queue_full");
+        let (status, repeated_rejection) = request(addr, &token, "PUT", &second_path, cmd.clone());
+        assert_eq!(status, 409);
+        assert_eq!(repeated_rejection["error"]["code"], "analysis_queue_full");
         release.wait();
         for handle in service.background.lock().unwrap().drain(..) {
             handle.join().unwrap();
@@ -661,6 +678,117 @@ mod tests {
             .0,
             200
         );
+        stop.store(true, Ordering::SeqCst);
+        server_thread.join().unwrap();
+    }
+
+    #[test]
+    fn tcp_concurrent_duplicate_submissions_share_one_acceptance_and_freeze() {
+        const DUPLICATES: usize = 16;
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1h22b-concurrency-tests/fixtures")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        std::fs::create_dir_all(&root).unwrap();
+        let (drafts, snapshots, engine, catalog, banlist, draft) = fixtures(&root);
+        std::fs::write(&engine.script_manifest_path, b"{}").unwrap();
+        let saved = drafts.create(draft.clone()).unwrap();
+        let drafts = Arc::new(drafts);
+        let coordinator =
+            Arc::new(DurableAnalysisCoordinator::open_operations(root.join("jobs-store")).unwrap());
+        let entered = Arc::new(Barrier::new(2));
+        let release = Arc::new(Barrier::new(2));
+        let service = Arc::new(AnalysisHttpService {
+            coordinator: coordinator.clone(),
+            context: AnalysisOperationContext {
+                scoring: Default::default(),
+                default_catalog_id: catalog,
+                configuration_sha256: "a".repeat(64),
+            },
+            drafts,
+            snapshots,
+            engine,
+            accepting: AtomicBool::new(true),
+            background: Mutex::new(Vec::new()),
+            freeze_gate: Some((entered.clone(), release.clone())),
+        });
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("http-drafts");
+        let mut server = WorkbenchServer::start(config).unwrap();
+        server.analysis = Some(service.clone());
+        let addr = server.local_addr();
+        let token = server.token().to_owned();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stopping = stop.clone();
+        let server_thread = std::thread::spawn(move || server.serve_until(&stopping).unwrap());
+
+        let operation = request(
+            addr,
+            &token,
+            "POST",
+            "/api/analysis-operations",
+            serde_json::json!({"schema_version":1,"kind":"analysis_operation_allocate"}),
+        )
+        .1;
+        let operation_path = format!(
+            "/api/analysis-operations/{}",
+            operation["operation_id"].as_str().unwrap()
+        );
+        let command = serde_json::json!({"schema_version":1,"kind":"analysis_submit","draft_id":saved.id,"draft_revision":saved.revision,"opening_hand":draft.main[..5],"seed":1,"rules":"ocg-mr5","catalog_id":null,"banlist_id":banlist,"as_of":"2026-10-30","search":ygo_search::combo::SearchBudget::default()});
+        let (status, accepting) = request(addr, &token, "PUT", &operation_path, command.clone());
+        assert_eq!(status, 202);
+        entered.wait();
+        assert_eq!(service.background.lock().unwrap().len(), 1);
+        assert_eq!(coordinator.freeze_attempts_for_test(), 0);
+
+        let start = Arc::new(Barrier::new(DUPLICATES + 1));
+        let clients: Vec<_> = (0..DUPLICATES)
+            .map(|_| {
+                let start = start.clone();
+                let token = token.clone();
+                let path = operation_path.clone();
+                let body = command.clone();
+                std::thread::spawn(move || {
+                    start.wait();
+                    request(addr, &token, "PUT", &path, body)
+                })
+            })
+            .collect();
+        start.wait();
+        for client in clients {
+            let (status, repeated) = client.join().unwrap();
+            assert_eq!(status, 202);
+            assert_eq!(repeated, accepting);
+        }
+        assert_eq!(service.background.lock().unwrap().len(), 1);
+        assert_eq!(coordinator.freeze_attempts_for_test(), 0);
+
+        release.wait();
+        for handle in service.background.lock().unwrap().drain(..) {
+            handle.join().unwrap();
+        }
+        let (status, accepted) = request(addr, &token, "GET", &operation_path, Value::Null);
+        assert_eq!(status, 200);
+        assert_eq!(accepted["state"], "accepted");
+        assert_eq!(coordinator.freeze_attempts_for_test(), 1);
+        assert_eq!(service.background.lock().unwrap().len(), 0);
+
+        let evidence_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1h22b-concurrency-tests");
+        std::fs::create_dir_all(&evidence_root).unwrap();
+        std::fs::write(
+            evidence_root.join("concurrent-duplicate-submissions.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "duplicate_requests": DUPLICATES,
+                "all_replayed_acceptance": true,
+                "background_jobs": 1,
+                "freeze_attempts": 1,
+                "final_state": accepted["state"],
+                "native_calls": 0
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
         stop.store(true, Ordering::SeqCst);
         server_thread.join().unwrap();
     }
