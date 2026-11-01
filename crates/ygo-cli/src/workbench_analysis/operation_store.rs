@@ -54,8 +54,17 @@ fn valid_edge(old: &Record, next: &Record) -> Result<(), Error> {
     }
     Ok(())
 }
+pub(super) struct AuthenticatedChains {
+    pub operations: BTreeMap<String, Vec<Record>>,
+    pub jobs: BTreeMap<String, Vec<super::jobs::AnalysisJobRecordV1>>,
+    heads: BTreeMap<std::path::PathBuf, Vec<u8>>,
+}
+
 impl PersistentAnalysisJobStore {
     pub(super) fn authenticate_operation_bindings(&self) -> Result<(), Error> {
+        self.authenticate_chains().map(|_| ())
+    }
+    pub(super) fn authenticate_chains(&self) -> Result<AuthenticatedChains, Error> {
         let jobs = self.scan()?;
         let operations = self.scan_operations()?;
         let mut ids = std::collections::BTreeSet::new();
@@ -76,8 +85,103 @@ impl PersistentAnalysisJobStore {
                 }
             }
         }
+        let mut heads = BTreeMap::new();
+        for (id, history) in &operations {
+            let last = history.last().ok_or(Error::InvalidChain)?;
+            let path = self
+                .root
+                .join("operations")
+                .join(id)
+                .join("revisions")
+                .join(format!("{}.json", last.revision()));
+            heads.insert(path.clone(), fs::read(path).map_err(|_| Error::Io)?);
+        }
+        for (id, history) in &jobs {
+            let last = history.last().ok_or(Error::InvalidChain)?;
+            let path = self
+                .root
+                .join("jobs")
+                .join(id)
+                .join("revisions")
+                .join(format!("{}.json", last.revision()));
+            heads.insert(path.clone(), fs::read(path).map_err(|_| Error::Io)?);
+        }
+        Ok(AuthenticatedChains {
+            operations,
+            jobs,
+            heads,
+        })
+    }
+    pub(super) fn recover_authenticated(&self) -> Result<(), Error> {
+        let chains = self.authenticate_chains()?;
+        let now = super::persistence::now_ms()?;
+        let mut operations = Vec::new();
+        let mut jobs = Vec::new();
+        // Construct every transition before publishing any recovery revision.
+        for history in chains.operations.values() {
+            let old = history.last().ok_or(Error::InvalidChain)?;
+            if old.state() == State::Accepting {
+                let next = if old.job_id().is_some_and(|id| chains.jobs.contains_key(id)) {
+                    old.accept(old.updated_at_ms())
+                } else {
+                    old.mark_unknown(old.updated_at_ms())
+                }
+                .map_err(|_| Error::InvalidChain)?;
+                let path = self
+                    .root
+                    .join("operations")
+                    .join(old.operation_id())
+                    .join("revisions")
+                    .join(format!("{}.json", old.revision()));
+                operations.push((
+                    path.clone(),
+                    chains.heads.get(&path).ok_or(Error::InvalidChain)?.clone(),
+                    next,
+                ));
+            }
+        }
+        for history in chains.jobs.values() {
+            let old = history.last().ok_or(Error::InvalidChain)?;
+            if matches!(
+                old.state(),
+                super::jobs::AnalysisJobState::Queued | super::jobs::AnalysisJobState::Running
+            ) {
+                let next = old
+                    .transition(
+                        old.revision(),
+                        super::jobs::AnalysisJobEvent::ClassifyRestart,
+                        now,
+                    )
+                    .map_err(|_| Error::InvalidChain)?;
+                let path = self
+                    .root
+                    .join("jobs")
+                    .join(old.job_id())
+                    .join("revisions")
+                    .join(format!("{}.json", old.revision()));
+                jobs.push((
+                    path.clone(),
+                    chains.heads.get(&path).ok_or(Error::InvalidChain)?.clone(),
+                    old.revision(),
+                    next,
+                ));
+            }
+        }
+        for (path, bytes, next) in operations {
+            if fs::read(path).map_err(|_| Error::Io)? != bytes {
+                return Err(Error::RevisionConflict);
+            }
+            self.append_operation(&next)?;
+        }
+        for (path, bytes, revision, next) in jobs {
+            if fs::read(path).map_err(|_| Error::Io)? != bytes {
+                return Err(Error::RevisionConflict);
+            }
+            self.append_expected(next.job_id(), revision, next.clone())?;
+        }
         Ok(())
     }
+
     pub(super) fn scan_operations(&self) -> Result<BTreeMap<String, Vec<Record>>, Error> {
         let root = self.root.join("operations");
         let mut out = BTreeMap::new();

@@ -1,5 +1,7 @@
 # 本机环境与资产审计
 
+2026-11-01提交基线`main / 6b523f2`；当前工作区含H3.2-2a测试与Windows accepted-socket修复，普通`dist/ygo-local`未重建，仍为2026-10-19包。历史候选功能源码`a21d587`不等同当前HEAD。历史哈希清单不等于备份，证据不迁移；P4-R5因smoke预算截断和缺可比账本仍开放。详情见[TESTING](TESTING.md)与[当前路线](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。
+
 2026-11-01本轮基线`8d8c492`，隔离候选功能源码`a21d587`；主工作区旧普通包未替换。历史证据哈希清单不等于备份，Windows目录符号链接实测受策略限制；P4-R5因缺可比账本开放。
 
 当前主工作区为`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\Yu-Gi-Oh!_AIBot`本地`main`；`C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot`是仍保留的`e684f4e`隔离候选worktree，PR审查worktree也单独保留。两者不应当作当前主源码。GitHub连接器在2026-11-01确认远端`main`为`577924b`；当时本地主分支基线`8d8c492`领先6个提交。历史证据不迁移，原SHA-256清单保留且不代表已有备份。

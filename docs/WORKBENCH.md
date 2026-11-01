@@ -1,6 +1,14 @@
 # 本机牌组草稿工作台
 
-当前HTTP v1源码包含六个分析端点及无路径DTO；H2.2-A/B合成故障与并发验收已通过。普通`workbench serve`未配置分析后端，分析请求返回`analysis_not_configured`，网页没有任务操作界面。H3跨链恢复、响应丢失和W1-C真实分析仍开放；接口见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实现与证据见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)及[TESTING](TESTING.md)。
+W1-H3.2-2a响应丢失验收范围及结果见[本批交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)；零字节关闭、正文截断与受控重开分别记录。H3.2-2b目标窗口强杀及W1-C真实分析继续开放，普通启动保持`analysis_not_configured`。以下旧阶段描述保留原时点，当前状态回到TASKS与TESTING。
+
+历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见本文顶部与[当前任务](../TASKS.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。现有跨链认证/分类可复用；新增完整恢复与响应丢失矩阵尚未实现／尚未运行，留待H3.2。普通启动仍为`analysis_not_configured`。
+
+H2.2-A/B所列合成HTTP验收已关闭，但普通启动仍未配置分析后端，真实分析与H3开放。取消先完成的顺序分支有既有用例，16轮并发竞争均由claim获胜；早期TCP重置根因未知。
+
+当前HTTP v1源码包含六个分析端点及无路径DTO；H2.2-A/B及H3.2-2a限定合成验收已通过。普通`workbench serve`未配置分析后端，分析请求返回`analysis_not_configured`，网页没有任务操作界面。H3.2-2b目标窗口强杀、W1-C真实分析和P4-R5仍开放；接口见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实现与证据见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[H3.2-2a交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)及[TESTING](TESTING.md)。
 
 工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。
 
@@ -51,7 +59,7 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 
 H2.2源码实现六个端点：分配/提交/查询操作、查询任务、读取结果及取消排队任务。提交先持久保存`accepting`再返回202，后台锁外完成W1-A冻结；结果经无路径白名单投影，历史读取使用已认证的持久记录。完整请求/响应合同见[WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)。
 
-当前普通启动没有配置分析协调器，以上端点返回`analysis_not_configured`；测试专用合成服务不构成生产分析后端。真实分析、报告来源认证及H3进程崩溃/响应丢失恢复门禁仍开放。H2.2-A/B已覆盖的合成故障和并发范围见[验收记录](TESTING.md)。任务进程内冻结对象含本机路径与完整catalog，不可直接序列化；报告引用和合成状态也不表示真实执行。部署包状态见[DEPLOYMENT.md](DEPLOYMENT.md)。
+当前普通启动没有配置分析协调器，以上端点返回`analysis_not_configured`；测试专用合成服务不构成生产分析后端。真实分析、报告来源认证及H3.2-2b目标窗口进程终止仍开放；逐syscall、断电和介质故障未认证。H2.2-A/B与H3.2-2a已覆盖范围见[验收记录](TESTING.md)。任务进程内冻结对象含本机路径与完整catalog，不可直接序列化；报告引用和合成状态也不表示真实执行。部署包状态见[DEPLOYMENT.md](DEPLOYMENT.md)。
 
 ## 保存与本机数据
 

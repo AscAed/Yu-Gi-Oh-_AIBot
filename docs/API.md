@@ -1,6 +1,14 @@
 # CLI 与库接口
 
-当前分析HTTP v1包含六端点、严格合同、操作幂等、异步接受、历史报告读取和无路径投影；H2.2-A/B合成验收已通过。普通工作台启动仍返回`analysis_not_configured`，没有生产分析执行器；H3跨链恢复和W1-C真实分析仍开放。以下较早状态保留其原时点。接口与验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)、[TASKS](../TASKS.md)和[TESTING](TESTING.md)。
+W1-H3.2-2a响应丢失验收范围及结果见[本批交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)；零字节关闭、正文截断与受控重开分别记录。H3.2-2b目标窗口强杀及W1-C真实分析继续开放，普通启动保持`analysis_not_configured`。以下旧阶段描述保留原时点，当前状态回到TASKS与TESTING。
+
+历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见本文顶部与[当前任务](../TASKS.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。现有跨链认证/分类可复用；新增完整恢复与响应丢失矩阵尚未实现／尚未运行，留待H3.2。普通启动仍为`analysis_not_configured`。
+
+H2.2-A/B所列合成HTTP验收已关闭，测试服务装配分析协调器；普通启动仍为`analysis_not_configured`，H3和真实分析开放。16轮取消/领取竞争均由claim获胜，不证明两种并发胜者均已观察，见[交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+
+当前分析HTTP v1包含六端点、严格合同、操作幂等、异步接受、历史报告读取和无路径投影；H2.2-A/B、H3.2-1及H3.2-2a限定合成验收已通过。普通工作台启动仍返回`analysis_not_configured`，没有生产分析执行器；H3.2-2b、报告来源认证和W1-C真实分析仍开放。以下较早状态保留其原时点。接口与验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)、[TASKS](../TASKS.md)和[TESTING](TESTING.md)。
 
 历史记录：该段描述H2.1交付时点。H2.2现已实现HTTP路由、公开状态/结果DTO及路径安全边界；H3恢复验证与真实分析仍开放。详见本文开头的当前状态说明。
 

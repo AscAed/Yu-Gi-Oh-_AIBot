@@ -1,8 +1,18 @@
 # 实施任务与验收状态
 
-## 当前状态（2026-11-01）：W1-H2.2合成HTTP验收通过；H3与真实分析仍开放
+当前入口：[W1-H3.2-2a 响应丢失与幂等查询交接](docs/superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)。零字节丢失、正文截断及受控重开合成验收已完成，本批交付后暂停；H3.2-2b目标窗口强杀和W1-C真实分析继续开放。普通启动保持`analysis_not_configured`。
 
-本阶段合成HTTP故障与并发验收均已通过；分别见[H2.2-A交接](docs/superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[H2.2-B交接](docs/superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)和[TESTING](docs/TESTING.md)。六端点仍只在测试服务装配分析协调器；普通工作台启动返回`analysis_not_configured`，没有生产执行器。下一步转到H3响应丢失/跨链恢复设计，真实分析仍另定scope。
+当前下一步路线：[H3.2-2a后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。H3.2-2a共享认证/受控重开和响应丢失均按各自限定范围关闭；本批不将受控重开等同进程强杀或断电持久性。
+
+历史路线见[H3.2-1后项目路线](docs/superpowers/plans/2026-11-01-post-w1h321-project-route.md)和[H3.1后项目路线](docs/superpowers/plans/2026-11-01-post-w1h31-project-route.md)；详细当前状态以下表为准。
+
+H3.1设计及H3.2-1验收见[恢复设计](docs/superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[H3.1交接](docs/superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)和[H3.2-1交接](docs/superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。当前2a/2b边界见本节当前路线。普通启动仍为`analysis_not_configured`。
+
+## 当前状态（2026-11-01）：W1-H3.2-2a合成验收已完成并暂停；H3.2-2b与真实分析仍开放
+
+历史路线见[H2.2-A/B后路线](docs/superpowers/plans/2026-11-01-post-w1h22-ab-project-route.md)；下方旧路线保留历史时点。
+
+本阶段合成HTTP故障与并发验收均已通过；分别见[H2.2-A交接](docs/superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[H2.2-B交接](docs/superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)和[TESTING](docs/TESTING.md)。六端点仍只在测试服务装配分析协调器；普通工作台启动返回`analysis_not_configured`，没有生产执行器。H3.1响应丢失/跨链恢复设计已交付，H3.2-2a响应丢失已完成，下一步H3.2-2b目标窗口强杀及真实分析仍另定范围。
 
 上批实施见[H2.2交接](docs/superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。六端点、异步接受、严格HTTP合同及无路径结果投影已有实现；普通启动分析保持未配置，不提供生产执行器。历史下文“HTTP未接入”描述保留其原时点；当前验收及剩余项见TESTING，本批不自动关闭H3或真实分析门禁。
 
@@ -16,7 +26,7 @@ H2.1内部操作合同和持久提交为H2.2提供核心，见[H2.1交接](docs/
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
-这是当前状态和开放任务的唯一入口。产品目标、研究定义及阶段依赖分别见[产品愿景](docs/PRODUCT_VISION.md)、[最优性研究](docs/OPTIMALITY_RESEARCH.md)和[路线图](docs/ROADMAP.md)；当前实施顺序以本节H2.2-A交接及[W1-H2.2后路线](docs/superpowers/plans/2026-11-01-post-w1h22-project-route.md)为准，其他路线保留各自历史时点。下方各批历史数字仅适用于其日期和范围，不覆盖本节。
+这是当前状态和开放任务的唯一入口。产品目标、研究定义及阶段依赖分别见[产品愿景](docs/PRODUCT_VISION.md)、[最优性研究](docs/OPTIMALITY_RESEARCH.md)和[路线图](docs/ROADMAP.md)；历史实施顺序见H2.2-A交接及[W1-H2.2后路线](docs/superpowers/plans/2026-11-01-post-w1h22-project-route.md)为准，其他路线保留各自历史时点。下方各批历史数字仅适用于其日期和范围，不覆盖本节。
 
 | 阶段 | 当前能力与未完成门禁 |
 |---|---|
@@ -36,13 +46,18 @@ E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…`
 
 W1设计后的A阶段已交付：工作台所有API非GET请求在路由前均须通过本机Host、Bearer令牌和同源Origin门禁；Rust库新增内部`freeze_analysis_input`，在同一草稿存储锁内核对ID/revision并复制草稿，再通过现有`prepare`冻结搜索请求、已解析catalog/banlist及引擎资产身份。它不增加HTTP分析入口、队列或任务，也不运行适配器。见[W1-A交接](docs/superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)与[实测记录](docs/TESTING.md#2026-10-30-w1-a工作台同源保护与分析输入冻结)。
 
-历史交付（W1-B1至B3）：完成无路径`AnalysisJobRecordV1`、严格JSON、纯状态核心、进程内合成队列、任务revision、报告私有存储、报告引用启动核验、持久协调器及内部合成故障矩阵。领取时先持久化running，再核对冻结期资产哈希；不匹配或提交结果不确定时停止协调器，重开时按已提交revision分类。H2.2随后接入任务HTTP及无路径DTO；当前剩余HTTP验收矩阵列于下方独立任务。报告来源、真实执行、逐syscall崩溃和断电持久性仍未认证。最新验证见[TESTING](docs/TESTING.md)。
+历史交付（W1-B1至B3）：完成无路径`AnalysisJobRecordV1`、严格JSON、纯状态核心、进程内合成队列、任务revision、报告私有存储、报告引用启动核验、持久协调器及内部合成故障矩阵。领取时先持久化running，再核对冻结期资产哈希；不匹配或提交结果不确定时停止协调器，重开时按已提交revision分类。H2.2随后接入任务HTTP及无路径DTO；H3.2各批再覆盖限定的认证、并发与响应丢失场景。当前未完成的H3.2-2b目标窗口强杀、报告来源、真实执行、逐syscall崩溃和断电持久性仍未认证。最新验证见[TESTING](docs/TESTING.md)。
 
 C1离线字段核验已完成：冻结39卡逐项记录zh-CN/zh-SC名称、正文、别名及字段状态和候选哈希；候选正文不进入报告或工作台接口。zh-SC继续为`und`，语义审阅、使用依据和再分发资格未通过。报告、统计与限制见[LANGUAGE_REVIEW](docs/LANGUAGE_REVIEW.md)、[DATA_SOURCES](docs/DATA_SOURCES.md)和[TESTING](docs/TESTING.md)。
 
 A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义循环。两动作合成路线覆盖多次连续提示、End Phase及逐次QueryWitness审计；连续执行与每个语义调用边界暂停/重开结果相等，收费前保存失败与只读检查后的账本竞争均拒绝继续。合成适配器测试没有生成正式凭证；真实进程暂停、操作系统级崩溃矩阵及独立重放仍未认证。状态转移及限制见[执行恢复合同](docs/EXECUTION_RECOVERY.md)、[A3交接](docs/superpowers/plans/2026-10-28-a3-execution-recovery-handoff.md)和[P4-R1b交接](docs/superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)。
 
 ### 当前开放任务
+
+- [x] W1-H3.1：跨链恢复与响应丢失设计已交付；仅静态审阅，不代表H3运行验收通过。
+- [x] W1-H3.2-1：共享认证、完整候选清单、关联修复/分类及重复重开通过合成验收，具体范围见本批TESTING。
+- [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。
+- [ ] W1-H3.2-2b：目标窗口进程终止及其调度矩阵仍开放；逐系统调用故障、断电和介质故障未认证，不自动授权真实分析。
 
 - [x] D2：更新项目定位、双轨计划、研究经验与文档导航；交叉核对记录见[TESTING](docs/TESTING.md)顶部。
 - [x] 2026-10-27环境自检：区分部署包与开发资产，清理229个已确认空测试目录和本轮隔离Cargo缓存，整理pytest缓存及冗余直接依赖；范围和验证见[TESTING](docs/TESTING.md)。
@@ -72,7 +87,8 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-H2.2 HTTP投影实现：六端点、严格合同及无路径投影已接入；普通生产启动未配置分析后端。实现与定向验收见[交接](docs/superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
 - [x] W1-H2.2-A持久故障关口：42个逻辑提交故障、15个同步TCP503、12个202后后台故障及9类停止后查询通过；持久字节、内存槽位、实际后台冻结次数及只读稳定性均有断言。未复现需修改生产逻辑的缺陷；实测与边界见[本批交接](docs/superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)。
 - [x] W1-H2.2合成HTTP验收：六端点/无路径投影、逻辑持久故障、停止后只读认证、同ID并发重复、容量拒绝与重复读取、取消/领取线性化均有回归。限制为合成服务与已覆盖调度；不认证进程崩溃、客户端响应丢失或真实分析。见[H2.2-A](docs/superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[H2.2-B](docs/superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)及[TESTING](docs/TESTING.md)。
-- [ ] W1-H3故障恢复：验证跨链提交缺口、响应丢失、并发重复与停止状态的只读查询；不自动重发。
+- [x] W1-H3.2-1/2a限定门禁：跨链认证恢复、幂等重复、响应丢失、受控重开及停止后只读查询已按各自记录的范围验收；不自动重发，也不等同目标进程强杀。
+- [ ] W1-H3.2-2b目标窗口进程强杀及恢复门禁：保留H3.2-2a之外的开放项；验证真实目标进程终止后的认证恢复与重复重开，逐syscall故障、断电和介质故障另行限定。
 - [ ] W1-C本机分析验收设计：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析另行安排并单独记录。
 - [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；未知项不提升为正式数据资格。
 - [ ] P4-R1b-3真实恢复实验设计：定义固定场景、独立scope、预算、窗口、暂停/重开及独立原生重放标准；设计完成后真实执行另行授权。

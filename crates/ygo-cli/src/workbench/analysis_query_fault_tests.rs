@@ -190,6 +190,8 @@ fn stopped_http_queries_authenticate_saved_material_without_writing() {
             accepting: AtomicBool::new(true),
             background: Mutex::new(vec![]),
             freeze_gate: None,
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
         let mut config = WorkbenchConfig::local_default();
         config.drafts_dir = root.join("http-drafts");

@@ -85,6 +85,18 @@
 |---|---|---|
 | 历史：Curry V3恢复证据绑定的Curry七阶段再验真（历史） | [`本批交接`](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)、[`历史验证`](TESTING.md)、[`最终交付`](../data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json) | 新scope七阶段及两个独立重放通过，7/7消费、unknown 0；认证子集40、规划47；历史实际总消费仍未知，四项资格为false |
 
+## 2026-11-01：工作台分析接入与H3恢复验收
+
+以下交接记录限定范围的内部/合成实现与测试。每项真实分析、原生调用及进程故障资格仍以对应TESTING证据与TASKS开放门禁为准；不要把H3.2-1受控重开或H3.2-2a响应丢失结果解释为H3.2-2b目标进程强杀验收。
+
+| 历史条目 | 原链接 | 当时状态与范围 |
+|---|---|---|
+| 历史：H2.2 HTTP持久故障矩阵 | [H2.2-A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[验证记录](TESTING.md) | 42个逻辑提交组合、同步/后台TCP故障与停止后只读查询；不认证逐syscall、断电或真实执行 |
+| 历史：H2.2并发/容量矩阵及阶段路线 | [H2.2-B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)、[H2.2-A/B后路线](superpowers/plans/2026-11-01-post-w1h22-ab-project-route.md) | 重复提交、容量拒绝和取消/claim竞争；保留实测竞争胜者单一方向的限制 |
+| 历史：H3.1跨链恢复与响应丢失设计 | [设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md) | 静态设计，未证明完整H3运行恢复 |
+| 历史：H3.2-1认证恢复 | [交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)、[H3.2-1后路线](superpowers/plans/2026-11-01-post-w1h321-project-route.md) | 跨链认证、全候选验证后提交及受控重开合成验收；不替代强杀 |
+| 历史：H3.2-2a响应丢失与受控重开 | [交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)、[H3.2-2a后路线](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)、[验证记录](TESTING.md) | TCP零字节/正文截断、幂等查询和受控重开；H3.2-2b、W1-C和P4-R5仍开放 |
+
 ## 更早设计与验证的追溯
 
 原实现取舍见[IMPLEMENTATION_NOTES](IMPLEMENTATION_NOTES.md)，更早规则、规划与恢复证据见[TESTING](TESTING.md)的对应日期记录及[计划目录](superpowers/plans/)。目录中的旧计划同样只作历史背景；不得从旧命令、旧验收数字或旧handoff推断当前实现。

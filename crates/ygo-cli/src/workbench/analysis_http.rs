@@ -2,6 +2,9 @@
 #[cfg(test)]
 #[path = "fault_matrix_tests.rs"]
 mod fault_matrix_tests;
+#[cfg(test)]
+#[path = "response_loss_tests.rs"]
+mod response_loss_tests;
 use super::{json_response, HttpRequest, HttpResponse};
 use crate::workbench_analysis::{
     durable::{DurableAnalysisCoordinator, DurableCoordinatorError},
@@ -17,6 +20,12 @@ use std::thread::JoinHandle;
 use ygo_engine_adapter::ProcessEngineConfig;
 use ygo_storage::{DeckDraftStore, SnapshotStore};
 
+#[cfg(test)]
+type FreezeControl = (
+    std::sync::mpsc::SyncSender<()>,
+    Mutex<std::sync::mpsc::Receiver<()>>,
+);
+
 pub(super) struct AnalysisHttpService {
     pub(super) coordinator: Arc<DurableAnalysisCoordinator>,
     pub(super) context: AnalysisOperationContext,
@@ -25,6 +34,10 @@ pub(super) struct AnalysisHttpService {
     pub(super) engine: ProcessEngineConfig,
     #[cfg(test)]
     freeze_gate: Option<(Arc<std::sync::Barrier>, Arc<std::sync::Barrier>)>,
+    #[cfg(test)]
+    pub(super) response_fault: Mutex<Option<super::response_loss::ResponseFault>>,
+    #[cfg(test)]
+    freeze_control: Option<FreezeControl>,
     accepting: AtomicBool,
     background: Mutex<Vec<JoinHandle<()>>>,
 }
@@ -168,6 +181,17 @@ impl AnalysisHttpService {
                             if let Some((entered, release)) = &this.freeze_gate {
                                 entered.wait();
                                 release.wait();
+                            }
+                            #[cfg(test)]
+                            if let Some((entered, release)) = &this.freeze_control {
+                                let ready = entered.try_send(()).is_ok()
+                                    && release.lock().is_ok_and(|rx| {
+                                        rx.recv_timeout(std::time::Duration::from_secs(10)).is_ok()
+                                    });
+                                if !ready {
+                                    let _ = this.coordinator.stop_dispatch();
+                                    return;
+                                }
                             }
                             let result = now().map_err(|_| ()).and_then(|_t| {
                                 this.coordinator
@@ -392,6 +416,8 @@ mod tests {
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
             freeze_gate: Some((entered.clone(), release.clone())),
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
         let mut config = WorkbenchConfig::local_default();
         config.drafts_dir = root.join("http-drafts");
@@ -710,6 +736,8 @@ mod tests {
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
             freeze_gate: Some((entered.clone(), release.clone())),
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
         let mut config = WorkbenchConfig::local_default();
         config.drafts_dir = root.join("http-drafts");
@@ -817,6 +845,8 @@ mod tests {
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
             freeze_gate: None,
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
         let mut config = WorkbenchConfig::local_default();
         config.drafts_dir = root.join("http-drafts");
@@ -876,6 +906,8 @@ mod tests {
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
             freeze_gate: None,
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
 
         coordinator.inject_operation_failure_before_next_publish();
@@ -918,6 +950,8 @@ mod tests {
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
             freeze_gate: None,
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
         let mut config = WorkbenchConfig::local_default();
         config.drafts_dir = root.join("http-drafts");
@@ -1015,6 +1049,8 @@ mod tests {
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
             freeze_gate: Some((entered.clone(), release.clone())),
+            response_fault: Mutex::new(None),
+            freeze_control: None,
         });
         let mut config = WorkbenchConfig::local_default();
         config.drafts_dir = root.join("http-drafts");

@@ -1,5 +1,8 @@
 #[path = "workbench/analysis_http.rs"]
 mod analysis_http;
+#[cfg(test)]
+#[path = "workbench/response_loss.rs"]
+mod response_loss;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -317,6 +320,17 @@ impl HttpFailure {
     }
 }
 
+fn configure_connection(stream: &TcpStream) -> Result<(), String> {
+    // Windows accepted sockets can inherit the nonblocking listener mode.
+    // Request framing uses bounded blocking reads, including fragmented sends.
+    stream
+        .set_nonblocking(false)
+        .map_err(|error| error.to_string())?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .map_err(|error| error.to_string())
+}
+
 fn handle_connection(
     mut stream: TcpStream,
     port: u16,
@@ -326,9 +340,7 @@ fn handle_connection(
     language_status: Option<&BTreeMap<u32, Value>>,
     analysis: Option<&Arc<analysis_http::AnalysisHttpService>>,
 ) -> Result<(), String> {
-    stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
-        .map_err(|error| error.to_string())?;
+    configure_connection(&stream)?;
     let request = match read_http_request(&mut stream) {
         Ok(request) => request,
         Err(failure) => {
@@ -405,7 +417,14 @@ fn handle_connection(
         || path == "/api/analysis-jobs"
         || path.starts_with("/api/analysis-jobs/")
     {
-        return write_response(&mut stream, analysis_http::route(analysis, &request, path));
+        let response = analysis_http::route(analysis, &request, path);
+        #[cfg(test)]
+        if let Some(service) = analysis {
+            if response_loss::apply(service, &request.method, path, &mut stream, &response)? {
+                return Ok(());
+            }
+        }
+        return write_response(&mut stream, response);
     }
     let response = route_request(&request, path, query, drafts, catalog, language_status);
     match response {

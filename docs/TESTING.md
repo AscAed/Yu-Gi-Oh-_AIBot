@@ -1,5 +1,53 @@
 # 本机验证记录
 
+## 2026-11-01 W1-H3.2-2a HTTP响应丢失与幂等查询
+
+基线main / 6b523f2，保留已有未提交源码和文档。关闭本批限定合成关口后暂停，见[交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)。真实本机TCP在路由完成后分别零字节关闭和保留Content-Length截断正文；每种模式13份原始传输捕获、11项逻辑断言。覆盖allocated、accepting幂等及容量预占、后台accepted/rejected、取消、操作/任务/结果GET、completed及budget_limited空线路、健康停止后读取、报告字节损坏和独立引用错误、正常停服释放锁后重开及重复重开。没有自动重试请求，没有用未知状态推定零调用。
+
+最终源码验证（日志均在忽略目录`target/w1h322a-response-loss-tests/`）：
+
+- `workspace-final.log`：offline/locked默认workspace串行测试 **442 passed、0 failed、36 ignored**，退出0；其中CLI库79通过。逐项忽略名称和原因为`skipped.json`，均保留默认opt-in/frozen资产或收费研究门禁，未启用这些测试。
+- `focused-green.log`：响应丢失全矩阵及Windows socket模式回归 **2 passed**。
+- `fmt-final.log`、`clippy-final.log`：fmt检查及workspace全目标Clippy（`-D warnings`）通过。
+- `schema.log`：显式HTTP、任务、操作三个Python/schema测试文件 **16 passed**。
+- `python-full-final.log`：`py -m pytest -q -ra --tb=short`完整Python默认套件 **768 passed、9 skipped、208 subtests passed**，用时1,780.89秒、退出0。跳过项是Windows目录符号链接能力不足、缺少明确opt-in的报告/快照/引擎资产，以及独立赛事配置；完整逐项原因保留在日志中。本次默认全套通过，不将其解释为启用被跳过的资产或研究门禁。
+- 全部Cargo构建共用隔离`CARGO_TARGET_DIR`和同值显式`--target-dir`，使用`--offline --locked`；命令、汇总、覆盖和只读审阅分别见`commands.json`、`test-summary.json`、`coverage-summary.json`及`review.md`。
+
+保留失败证据：首轮`workspace.log`失败，随后`focused-diagnostic.log`捕获路由握手前零字节ConnectionReset，未计入通过。独立无载荷实验`socket-mode.log`证明本机Windows accepted socket继承非阻塞模式；`socket-mode-red-1.log`在原配置准确复现WouldBlock而非TimedOut。最小生产修复为接受连接后显式恢复blocking，保留listener非阻塞、原5秒读写超时及连接上限。`socket-mode-red.log`最初过滤0测试，不作为红测。该新证据不追认每次旧TCP重置的具体根因。早期锁文件快照、冻结计数及后台拒绝夹具错误均保留日志并在交接说明。
+
+独立只读审阅确认传输钩子仅cfg(test)、提交后握手、锁外等待、有限期限及冻结在客户端确认丢失后才释放；并检查取消revision、容量保护、独立引用错误和受控重开，没有绕过真实冻结/存储/报告认证。相关8份文档415项本地文件链接缺失0，`git diff --check`通过；结果另存`links.json`、`diff-check.log`，仅检查文件目标存在，不认证标题锚点。
+
+新增原生研究、真实runner/worker及引擎FFI调用0；普通工作台仍`analysis_not_configured`。H3.2-2b目标窗口强杀、逐syscall故障、断电/介质、非空线路结果及W1-C真实分析未覆盖。认证消费子集40、政策预留7、规划47和未知历史累计口径不变，Tenki pin不变；不运行doctor、不部署、不提交或推送。
+
+
+**2026-11-01 路线文档复核：**只读重算旧普通包 CLI 与 worker SHA-256，分别为 `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F` 和 `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内清单一致；不证明当前源码已部署。本次未运行 doctor、引擎、部署或测试。H3.2-1 历史 workspace 439 passed、36 ignored 后有增强断言与新增用例，最终 CLI 库 77 passed；不是第二次完整 workspace 复验。
+
+## 2026-11-01 W1-H3.2-1 跨链认证与恢复核心
+
+基线main / 6b523f2；保留原文档改动。共享链认证与完整恢复清单已实现，原函数红测复现分类时间非法却提前追加accepted（3→4条）。修复后通过。6种关联/分类发布故障组合逐一检查未分类磁盘状态，再恢复及重复重开；新增后排序操作损坏阻止先排序操作修复。见[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+日志target/w1h321-recovery-tests/：red-original-final.log为可靠原函数红测；focused-final.log两项通过（含六组合），multi-operation.log新增一项通过。workspace.log工作区串行439通过、0失败、36忽略；随后加强故障断言并新增多操作用例，分别聚焦复验，不将其计为第二次全workspace通过。最终CLI库复验77通过、0失败、0忽略，另存cli-lib-final.log。fmt-final.log、clippy-final.log均通过，schema.log相关HTTP/任务/操作schema共16通过。忽略项保持测试默认策略，原始逐项标注见workspace.log；未启用真实资产opt-in或doctor。
+
+独立只读审阅确认核心逻辑，要求将原始前驱纳入快照、故障后先未分类读取，均落实。最初并发编译的记录和LNK1104不算行为红测；保留原日志。静态本地链接6文档207项无缺失，diff --check通过。没有新增依赖或修改schema/HTTP端点。
+
+H3.2-2完整响应丢失及目标窗口强杀未验收，普通工作台仍未配置。新增原生研究、真实runner/worker/FFI调用0；消费子集40、预留7、规划47不变，历史实际累计未知。不部署、提交或推送。
+
+
+**2026-11-01 文档静态核对：**重新计算旧 `dist/ygo-local` 的 CLI 和 worker SHA-256，分别为 `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`、`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与包内 `build-hashes.json` 一致。仅检查文件身份；未运行 doctor、引擎、部署或测试，不证明当前源码已部署。
+
+## 2026-11-01 W1-H3.1跨链恢复与响应丢失设计（仅静态）
+
+基线main / 6b523f2；保留既有11份文档修改和新增路线文档。本批交付[设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)及[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)，同步任务、API、工作台、HTTP/持久化合同及导航。没有修改生产模块或schema。
+
+静态核对durable的全链扫描、操作关联修复、重启分类、只读查询，以及persistence的发布/报告认证和已有测试名称。矩阵明确P/U/R/L/K逻辑窗口、保存与内存状态、HTTP及下次追加数；它是H3.2待实现验收，不是运行通过记录。旧437通过、36忽略仅引用历史。
+
+本轮检查：独立只读设计审阅、本批涉及文档本地文件链接检查、git diff --check；检查结果：9份本批涉及文档、404项本地文件链接，缺失0（不校验标题锚点）；git diff --check通过。独立只读审阅的两项意见已落实：固定现有503错误映射，区分拒绝提交前allocated与accepting的分类追加数。未构建、未运行Rust/Python测试、doctor或真实分析；没有外网请求。新增原生研究、runner、worker、FFI调用均0。认证消费子集40、预留7、规划47与未知历史累计口径不变。
+
+
+## 2026-11-01 H2.2-A/B后路线文档复核
+
+本轮起始为干净`main / 6b523f2`；规划阶段只读核对旧普通包CLI/worker哈希与清单相符。本轮未运行doctor、引擎、收费实验、部署或全量测试。H2.2-A workspace 435 passed/36 ignored、H2.2-B 437 passed/36 ignored及候选双资产诊断按下文原范围读取，不相加，不代表真实工作台分析或P4-R5通过。路线见[H2.2-A/B后路线](superpowers/plans/2026-11-01-post-w1h22-ab-project-route.md)。
+
 ## 2026-11-01 W1-H2.2-B并发验收及审计收尾
 
 - 本轮从本地`main / 8d8c492`继续；针对分析HTTP补充并发重复提交与取消/领取竞争回归，逻辑故障矩阵及证据仅写入忽略的`target/w1h22a-persistence-fault-tests/`和`target/w1h22b-concurrency-tests/`。新增注入点和计数器均受`#[cfg(test)]`限制。

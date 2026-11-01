@@ -863,7 +863,7 @@ fn valid_id(id: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-fn now_ms() -> Result<u64, PersistenceError> {
+pub(super) fn now_ms() -> Result<u64, PersistenceError> {
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| PersistenceError::RecordInvalid)?

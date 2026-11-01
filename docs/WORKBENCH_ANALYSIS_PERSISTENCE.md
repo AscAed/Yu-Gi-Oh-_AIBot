@@ -1,8 +1,14 @@
 # W1-B3 任务持久化、报告保存与队列协调设计
 
+W1-H3.2-2a响应丢失验收范围及结果见[本批交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)；零字节关闭、正文截断与受控重开分别记录。H3.2-2b目标窗口强杀及W1-C真实分析继续开放，普通启动保持`analysis_not_configured`。以下旧阶段描述保留原时点，当前状态回到TASKS与TESTING。
+
+历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见[当前任务](../TASKS.md)及[最新验收](TESTING.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。现有跨链认证/分类可复用；新增完整恢复与响应丢失矩阵尚未实现／尚未运行，留待H3.2。普通启动仍为`analysis_not_configured`。
+
 历史交付记录（H2.1）：新增内部操作合同及持久幂等提交；操作感知入口`DurableAnalysisCoordinator::open_operations`先认证跨链再分类；`allocate_operation/submit_operation`使用服务预分配ID、锁外真实W1-A冻结和等待槽预占。重复指令复用保存结果，任务与accepted提交后才注册派发。`inspect_operation/inspect_job`供同锁所有者只读查询；旧无操作根接口保留，旧入口拒绝含操作根。H2.2随后接入HTTP与结果投影；普通启动未配置分析后端，真实分析未交付。验收与限制见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)及[当前HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
-[W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义操作修订链与任务链的提交顺序、容量预占、只读历史查询和回复丢失处理。H2.1已实现内部预分配ID提交、同锁只读查询及跨链认证；H2.2严格HTTP、公开DTO及合成A/B矩阵已完成。普通启动未配置分析后端，H3恢复与真实分析仍开放。原B3任务合同不变；不能把内部存储能力表述为真实分析已交付。
+[W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义操作修订链与任务链的提交顺序、容量预占、只读历史查询和回复丢失处理。H2.1已实现内部预分配ID提交、同锁只读查询及跨链认证；H2.2严格HTTP、公开DTO及合成A/B矩阵已完成；H3.2-2a响应丢失与受控重开范围已通过。普通启动未配置分析后端，H3.2-2b目标窗口强杀、真实分析和报告来源仍开放。原B3任务合同不变；不能把内部存储能力表述为真实分析已交付。
 
 日期：2026-10-31；基础实现提交：main / 8091362。任务revision格式、严格链校验、重启分类、严格报告合同/冻结输入绑定/私有落盘/摘要重读和持久先行协调器已实现。claim在返回票据前重新采集worker、DLL、CDB、脚本和引擎manifest身份；不匹配时提交failed/asset_mismatch，不调用执行器。若该终态或报告发布后的终态提交失败/不确定，协调器停止，重开时按持久状态归类。内部合成故障矩阵及冻结资产角色/路径漂移覆盖已实现；不覆盖逐syscall强杀、断电/介质故障，不连接HTTP或真实执行器。报告来源/真实执行仍未认证。已有记录合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)，队列现状见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 

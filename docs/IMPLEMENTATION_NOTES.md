@@ -1,5 +1,11 @@
 # 实施取舍与交付边界
 
+**H3.2-1 经验（2026-11-01）：**全量认证跨链材料并预先验证恢复候选，再依序提交；写后不确定即停止，重复重开不重复追加。原函数时间非法时曾提前追加 accepted，可靠串行红测记录于[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)；并发编译及 LNK1104 不能视为行为红测。目标窗口强杀、断电和介质故障仍未验收。
+
+**H3.1 设计经验（2026-11-01，尚待 H3.2 验证）：**先认证全部链和绑定，再规划修复，按操作关联、任务分类顺序提交；发布不确定时停派发。孤立报告不自动提升为完成，只读查询不触发恢复。目标逻辑窗口强杀不等于逐 syscall、断电或介质故障验收。详见[设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)。
+
+2026-11-01 H2.2并发经验：16次同ID并发提交只产生一个后台任务及一次冻结；16轮取消/领取竞争均由claim获胜，取消先完成仅有顺序用例。合成验收不能外推全部调度或响应丢失；早期TCP重置根因未知。范围与证据见[交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+
 2026-11-01 H2.2经验：异步提交先持久保存accepting，操作ID用于幂等；历史报告按保存字节和冻结身份校验，无路径投影不暴露内部配置。A/B合成故障与并发门禁已通过；此前TCP重置原因未认证，测试端完整写入和半关闭后复验通过不等于根因已查明。进程崩溃、响应丢失与逐syscall故障仍属于H3开放范围，见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)和[B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
 
 ## 2026-11-01 H2.1与候选部署经验

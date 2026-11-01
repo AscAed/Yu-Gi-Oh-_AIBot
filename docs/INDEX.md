@@ -1,10 +1,22 @@
 # 文档导航
 
+W1-H3.2-2a响应丢失验收范围及结果见[本批交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)；零字节关闭、正文截断与受控重开分别记录。H3.2-2b目标窗口强杀及W1-C真实分析继续开放，普通启动保持`analysis_not_configured`。以下旧阶段描述保留原时点，当前状态回到TASKS与TESTING。
+
+当前路线：[H3.2-2a 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。H3.2-2a限定响应丢失与受控重开验收已完成；H3.2-2b目标窗口强杀、W1-C真实分析和P4-R5仍开放。
+
+历史批次H3.2-1实现共享跨链认证、全候选验证后提交及重复重开；验收范围见[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。其后H3.2-2a有限响应丢失范围已完成；目标窗口强杀仍开放，普通分析保持未配置。
+
+历史路线见[H3.1后项目路线](superpowers/plans/2026-11-01-post-w1h31-project-route.md)；其后H3.2-1及2a分别完成限定合成验收。完整状态见本页当前路线和[TASKS](../TASKS.md)。
+
+H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。当时尚无运行验收；后续H3.2-1认证恢复及H3.2-2a有限响应丢失/受控重开合成验收已完成，目标窗口强杀仍开放。普通启动仍为`analysis_not_configured`。
+
 H2.2合成HTTP故障与并发验收见[H2.2-A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[H2.2-B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)和[TESTING](TESTING.md)。H3跨链恢复与W1-C真实分析仍开放；普通工作台分析保持未配置。
 
 ## 信息优先级
 
-当前实施顺序见[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)，下方旧路线保留历史时点。
+历史路线见[H2.2-A/B后路线](superpowers/plans/2026-11-01-post-w1h22-ab-project-route.md)；下方旧路线保留历史时点。
+
+历史实施顺序见[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)，下方旧路线保留历史时点。
 
 最新实现见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)：六个分析HTTP端点和无路径投影已接入；A/B合成验收通过。普通启动仍未配置分析后端；最终状态回到TASKS与TESTING。
 
@@ -38,7 +50,7 @@ H2.1为H2.2提供持久操作提交核心，见[H2.1交接](superpowers/plans/20
 | 子系统 | 设计与合同 | 当前界面/操作边界 |
 |---|---|---|
 | 工作台草稿 | [DECK_DRAFTS.md](DECK_DRAFTS.md)、[WORKBENCH.md](WORKBENCH.md)、[schemas](../schemas/) | 仅本机草稿编辑/导入导出；中文候选仍按其证据状态展示 |
-| 受限分析接入 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | 六端点与无路径DTO已实现，H2.2-A/B合成验收通过；普通启动未配置分析后端，H3与真实分析仍开放 |
+| 受限分析接入 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | 六端点与无路径DTO已实现；H2.2-A/B、H3.2-1/2a限定合成验收通过；普通启动未配置分析后端，H3.2-2b与真实分析仍开放 |
 | 引擎与报告 | [ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | ocgcore为效果执行权威；证据等级不能互相替代 |
 | 数据与语言 | [DATA_SOURCES.md](DATA_SOURCES.md)、[LANGUAGE_REVIEW.md](LANGUAGE_REVIEW.md) | 来源、语义、许可及字段覆盖分别核验 |
 | 研究工作流 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md)、[P1_MICROCASE.md](P1_MICROCASE.md) | 使用单独scope与预算；保存的准备材料不自动启动实验 |

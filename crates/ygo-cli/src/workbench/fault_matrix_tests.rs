@@ -47,6 +47,8 @@ impl Fixture {
             snapshots,
             engine,
             freeze_gate: gate,
+            response_fault: Mutex::new(None),
+            freeze_control: None,
             accepting: AtomicBool::new(true),
             background: Mutex::new(Vec::new()),
         });

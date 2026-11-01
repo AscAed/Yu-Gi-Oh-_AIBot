@@ -3,12 +3,13 @@
 //! This coordinates metadata and private reports only. It does not execute an
 //! analysis or authenticate the origin of a report.
 
+#[cfg(test)]
+use super::operations::AnalysisOperationState as OperationState;
 use super::{
     jobs::{AnalysisJobEvent, AnalysisJobFailure, AnalysisJobRecordV1},
     operations::{
         AnalysisOperationCommand as OperationCommand, AnalysisOperationContext as OperationContext,
         AnalysisOperationError, AnalysisOperationRecordV1 as Operation,
-        AnalysisOperationState as OperationState,
     },
     persistence::{PersistenceError, PersistentAnalysisJobStore},
     queue::{AnalysisJobQueue, DispatchTicket, QueueError, QueueSnapshot},
@@ -450,58 +451,8 @@ impl DurableAnalysisCoordinator {
     fn from_operation_store(
         store: PersistentAnalysisJobStore,
     ) -> Result<Self, DurableCoordinatorError> {
-        let operations = store
-            .scan_operations()
-            .map_err(DurableCoordinatorError::Persistence)?;
-        let jobs = store.scan().map_err(DurableCoordinatorError::Persistence)?;
-        let mut bound = std::collections::BTreeSet::new();
-        let mut repairs = Vec::new();
-        for history in operations.values() {
-            let op = history.last().ok_or(DurableCoordinatorError::Persistence(
-                PersistenceError::InvalidChain,
-            ))?;
-            if let Some(id) = op.job_id() {
-                if !bound.insert(id.to_owned()) {
-                    return Err(DurableCoordinatorError::Persistence(
-                        PersistenceError::InvalidChain,
-                    ));
-                }
-                if let Some(job) = jobs.get(id).and_then(|h| h.first()) {
-                    if !matches!(
-                        op.state(),
-                        OperationState::Accepting | OperationState::Accepted
-                    ) || op.frozen_input().and_then(|x| serde_json::to_vec(x).ok())
-                        != serde_json::to_vec(job.input()).ok()
-                    {
-                        return Err(DurableCoordinatorError::Persistence(
-                            PersistenceError::InvalidChain,
-                        ));
-                    }
-                } else if op.state() == OperationState::Accepted {
-                    return Err(DurableCoordinatorError::Persistence(
-                        PersistenceError::InvalidChain,
-                    ));
-                }
-            }
-            if op.state() == OperationState::Accepting {
-                let now = op.updated_at_ms();
-                let next = if op.job_id().is_some_and(|id| jobs.contains_key(id)) {
-                    op.accept(now)
-                } else {
-                    op.mark_unknown(now)
-                }
-                .map_err(DurableCoordinatorError::Operation)?;
-                repairs.push(next);
-            }
-        }
-        // Every chain was authenticated before the first recovery append.
-        for repair in repairs {
-            store
-                .append_operation(&repair)
-                .map_err(DurableCoordinatorError::Persistence)?;
-        }
         store
-            .classify_restart()
+            .recover_authenticated()
             .map_err(DurableCoordinatorError::Persistence)?;
         Ok(Self {
             #[cfg(test)]
@@ -1230,6 +1181,164 @@ mod operation_tests {
         );
         assert_eq!(count.load(Ordering::SeqCst), 1);
     }
+    #[test]
+    fn recovery_publish_faults_resume_only_remaining_revisions() {
+        use super::super::persistence::FaultPhase;
+        for phase in [
+            FaultPhase::BeforePublish,
+            FaultPhase::AfterPublish,
+            FaultPhase::Reread,
+        ] {
+            for (chain, state, revision) in
+                [("operation", "accepted", 4), ("job", "interrupted", 2)]
+            {
+                let root = root();
+                let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+                let path = root.join("store");
+                let c = DurableAnalysisCoordinator::open_operations(path.clone()).unwrap();
+                let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+                c.store.operation_failure.store(2, Ordering::SeqCst);
+                assert!(c
+                    .submit_operation(
+                        op.operation_id(),
+                        cmd,
+                        &ctx,
+                        101,
+                        &drafts,
+                        &snapshots,
+                        engine
+                    )
+                    .is_err());
+                let saved = c
+                    .store
+                    .operation_history(op.operation_id())
+                    .unwrap()
+                    .pop()
+                    .unwrap();
+                let id = saved.job_id().unwrap().to_owned();
+                drop(c);
+                let (result, hits) = DurableAnalysisCoordinator::open_operations_with_fault(
+                    path.clone(),
+                    chain,
+                    state,
+                    revision,
+                    phase,
+                );
+                assert_eq!(hits, 1, "{chain}/{phase:?}");
+                assert!(result.is_err());
+                let disk = PersistentAnalysisJobStore::open_unclassified(path.clone()).unwrap();
+                let before_publish = phase == FaultPhase::BeforePublish;
+                assert_eq!(
+                    disk.operation_history(op.operation_id()).unwrap().len(),
+                    if chain == "operation" && before_publish {
+                        3
+                    } else {
+                        4
+                    }
+                );
+                assert_eq!(
+                    disk.history(&id).unwrap().len(),
+                    if chain == "operation" || before_publish {
+                        1
+                    } else {
+                        2
+                    }
+                );
+                drop(disk);
+                let c = DurableAnalysisCoordinator::open_operations(path.clone()).unwrap();
+                let operations = c.inspect_operation(op.operation_id()).unwrap();
+                let jobs = c.inspect_job(&id).unwrap();
+                assert_eq!(operations.len(), 4);
+                assert_eq!(jobs.len(), 2);
+                assert!(c.snapshot().unwrap().queued.is_none());
+                drop(c);
+                let c = DurableAnalysisCoordinator::open_operations(path).unwrap();
+                assert_eq!(
+                    c.inspect_operation(op.operation_id()).unwrap().len(),
+                    operations.len()
+                );
+                assert_eq!(c.inspect_job(&id).unwrap().len(), jobs.len());
+            }
+        }
+    }
+
+    #[test]
+    fn later_corrupt_operation_prevents_earlier_repair() {
+        let root = root();
+        let (_, _, _, ctx, cmd) = setup(&root);
+        let path = root.join("store");
+        let store = PersistentAnalysisJobStore::open_unclassified(path.clone()).unwrap();
+        for (op_id, job_id) in [
+            ("a".repeat(32), "1".repeat(32)),
+            ("f".repeat(32), "2".repeat(32)),
+        ] {
+            let op = Operation::allocate(op_id, ctx.clone(), 100).unwrap();
+            store.append_operation(&op).unwrap();
+            store
+                .append_operation(&op.begin(cmd.clone(), job_id, 101).unwrap())
+                .unwrap();
+        }
+        drop(store);
+        let earlier = path
+            .join("operations")
+            .join("a".repeat(32))
+            .join("revisions");
+        let before = std::fs::read(earlier.join("2.json")).unwrap();
+        std::fs::write(
+            path.join("operations")
+                .join("f".repeat(32))
+                .join("revisions/2.json"),
+            b"{}",
+        )
+        .unwrap();
+        assert!(DurableAnalysisCoordinator::open_operations(path).is_err());
+        assert_eq!(std::fs::read(earlier.join("2.json")).unwrap(), before);
+        assert!(!earlier.join("3.json").exists());
+    }
+
+    #[test]
+    fn recovery_validates_future_task_before_repairing_operation() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let path = root.join("store");
+        let c = DurableAnalysisCoordinator::open_operations(path.clone()).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        c.store.operation_failure.store(2, Ordering::SeqCst);
+        assert!(c
+            .submit_operation(
+                op.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine
+            )
+            .is_err());
+        let before = c.store.operation_history(op.operation_id()).unwrap();
+        let id = before.last().unwrap().job_id().unwrap();
+        let job = c.store.history(id).unwrap().pop().unwrap();
+        let running = job
+            .transition(
+                job.revision(),
+                super::super::jobs::AnalysisJobEvent::Start,
+                u64::MAX,
+            )
+            .unwrap();
+        c.store
+            .append_expected(id, job.revision(), running)
+            .unwrap();
+        drop(c);
+        assert!(DurableAnalysisCoordinator::open_operations(path.clone()).is_err());
+        let store = PersistentAnalysisJobStore::open_unclassified(path).unwrap();
+        let after = store.operation_history(op.operation_id()).unwrap();
+        assert_eq!(
+            before.len(),
+            after.len(),
+            "invalid classification must precede all writes"
+        );
+    }
+
     #[test]
     fn task_commit_before_accepted_is_repaired_without_requeue() {
         let root = root();
