@@ -1,6 +1,6 @@
 # W1-H1后的项目评估与双轨路线
 
-历史路线：2026-10-31基线为`main / 577924b`，描述H2.1操作存储实现前的规划状态。当前路线见[W1-H2.1后路线](2026-11-01-post-w1h21-project-route.md)。产品目标以[PRODUCT_VISION](../../PRODUCT_VISION.md)为唯一事实源，当前状态以[TASKS](../../../TASKS.md)为准。
+历史路线：2026-10-31基线为`main / 577924b`，描述H2.1操作存储实现前的规划状态。当时后续路线见[W1-H2.1后路线](2026-11-01-post-w1h21-project-route.md)。产品目标以[PRODUCT_VISION](../../PRODUCT_VISION.md)为唯一事实源，当前状态以[TASKS](../../../TASKS.md)为准。
 
 ## 项目位置与部署
 

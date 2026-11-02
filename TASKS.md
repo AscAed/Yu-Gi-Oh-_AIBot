@@ -2,7 +2,7 @@
 
 当前入口：[W1-H3.2-2b-1 跨链关键窗口进程终止交接](docs/superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。四个限定提交窗口的子进程强杀与重复恢复验收已完成；H3.2-2b其余逻辑窗口/调度、syscall/断电/介质故障仍开放。普通启动保持`analysis_not_configured`。
 
-当前下一步路线：[H3.2-2a后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。H3.2-2a及2b-1各按限定范围关闭；其余强杀窗口、调度和系统/介质故障仍未认证。
+当前下一步路线：[H3.2-2b-1后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a及2b-1各按限定范围关闭；其余强杀窗口、调度和系统/介质故障仍未认证。
 
 阶段与模块文档见[INDEX](docs/INDEX.md)；历史批次由[HISTORY_INDEX](docs/HISTORY_INDEX.md)导航。
 
@@ -49,7 +49,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] D2：更新项目定位、双轨计划、研究经验与文档导航；交叉核对记录见[TESTING](docs/TESTING.md)顶部。
 - [x] 2026-10-27环境自检：区分部署包与开发资产，清理229个已确认空测试目录和本轮隔离Cargo缓存，整理pytest缓存及冗余直接依赖；范围和验证见[TESTING](docs/TESTING.md)。
 - [x] 本轮环境自检：Python 3.12干净快照、隔离部署文档复制、普通部署smoke与replay、离线验真及文档检查；覆盖、跳过项和后续保留边界见[工作区自检](docs/WORKSPACE_REVIEW.md)及[验证记录](docs/TESTING.md)。
-- [x] 环境后续：历史证据保留清单与SHA-256清点已建立；按用户决定暂不迁移，仅保留现有哈希清单，不表示证据已有备份。旧目录写入测试已改为target隔离仓库并验证不触碰原D盘证据；Windows目录符号链接实测仍受系统策略限制（对应用例跳过），最新源码双资产发布验收P4-R5仍开放；当前未授予任何研究scope。
+- [x] 环境后续：历史证据保留清单与SHA-256清点已建立；2026-11-02按独立授权将清单内54个唯一文件中的51个非空文件归档到Google Drive私有目录并逐项回读验哈希，3个零字节文件留本机。其他历史证据和运行资产仍未迁移，哈希清单不代表备份。旧目录写入测试已改为target隔离仓库并验证不触碰原D盘证据；Windows目录符号链接实测仍受系统策略限制（对应用例跳过），最新源码双资产发布验收P4-R5仍开放；当前未授予任何研究scope。详情见[环境审计](docs/ENVIRONMENT_AUDIT.md)和[证据保留清单](docs/EVIDENCE_RETENTION.md)。
 - [x] 2026-11-01配置清理：移除无消费者且与严格当前schema不兼容的忽略文件`configs/engine.toml.legacy`；记录原哈希并保留有效本机配置。证据见[环境审计](docs/ENVIRONMENT_AUDIT.md)。
 - [x] A1 / P4-R1a：首次`DuelResult.error`与`QueryWitness::capture`失败均先由合成收费账本红测复现，再修复诊断验证器；没有可信查询、成功资格、收据或可恢复前缀。测试证据见[TESTING](docs/TESTING.md)与[交接](docs/superpowers/plans/2026-10-28-first-failure-and-deck-draft-handoff.md)。
 - [x] B1 / P3.1：完成空/部分草稿、主/额外/Side编辑及YDK/JSON导入导出；草稿不等于完整合法牌组。CLI说明见[DECK_DRAFTS](docs/DECK_DRAFTS.md)。
@@ -91,7 +91,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 
-上述排序、依赖和停止条件见[W1-H2.1后路线](docs/superpowers/plans/2026-11-01-post-w1h21-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
+上述排序、依赖和停止条件见[当前H3.2-2b-1后路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
 
 前次交付后的603项源码归档身份、原生时点身份和普通dist是不同对象；后续文档、pytest配置和Cargo依赖整理已改变工作区，不再声称其与该归档完整逐字一致。实跑与静态核对分别见[TESTING](docs/TESTING.md)，历史导航见[HISTORY_INDEX](docs/HISTORY_INDEX.md)。
 

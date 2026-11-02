@@ -1,5 +1,14 @@
 # 本机验证记录
 
+## 2026-11-02 环境清理后自检与文档事实源复核
+
+基线为`main / ae4a9ab`；审计开始时工作区有6份已跟踪Markdown修改和1份新路线文档，源码未修改。清理范围、逐文件清单与权限/归档结果见[环境审计](ENVIRONMENT_AUDIT.md)和[证据保留清单](EVIDENCE_RETENTION.md)。本轮修正任务表里已过时的“未迁移”摘要，并将README、差距评估、路线图和工作区检查入口指向H3.2-2b-1后的路线。
+
+静态文档检查覆盖147份Markdown和1,122个本地目标引用；其中58个源文件/目标组合不在工作区，逐项均能在私有归档索引中找到匹配的51个云端文件，其他目标均存在。此检查验证路径和归档映射，不检查Markdown标题锚点；私有索引被Git忽略，普通克隆不能恢复归档。`git diff --check`通过。`cargo tree --workspace --duplicates --offline --locked`仅显示`hashbrown` 0.14.5（`rusqlite/hashlink`链）与0.17.1（`toml/indexmap`链）两条不同传递依赖，未发现可据此安全移除的重复直接依赖或crate。
+
+本轮差异只改文档，没有重新运行Rust/Python测试、构建、doctor、引擎、部署或真实分析。源码HEAD的最近完整Rust证据仍是上方2026-11-01记录：workspace 444通过、36忽略，schema 16通过，fmt和Clippy通过；这不能替代仍开放的H3.2-2b余项、W1-C或P4-R5门禁。
+**2026-11-01 路线只读复核：**本地HEAD `ae4a9ab`，初始工作区干净，本地跟踪引用领先9，未访问远端。旧普通包CLI SHA-256 `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`、worker `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`与包内清单一致；仅核对文件身份，未运行doctor、引擎、部署或测试。
+
 ## 2026-11-01 无效忽略配置清理
 
 只删除被Git忽略的`configs/engine.toml.legacy`，不触碰当前`configs/engine.toml`、dist或运行资产。删除前确认目标是仓库内普通文件、大小258 bytes、修改时间2026-09-09，SHA-256为`D2F51D7C826A35F8A2B595C063045500C903F69B7DE25E2B82FF2BC9BFB0876D`；Git忽略规则为`/configs/engine.toml.*`。文件中的`engine_path`、`working_directory`、`protocol`、`temp_directory`与当前严格`ProcessEngineConfig`不兼容，且无代码/脚本消费者。验证`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/w1h322b-process-kill/cargo --test doctor config_round_trip_and_legacy_gui_config_rejected -- --exact`：**1 passed**，并确认原文件已不存在。历史SHA仅用于说明被移除文件身份，不是可恢复副本。

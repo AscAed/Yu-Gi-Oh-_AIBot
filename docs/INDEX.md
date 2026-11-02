@@ -1,5 +1,7 @@
 # 文档导航
 
+当前实施路线：[H3.2-2b-1后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)；H3.2-2a后路线为历史时点。
+
 当前状态与开放门禁以[TASKS](../TASKS.md)为准；某次验证的范围和结果以[TESTING](TESTING.md)为准；部署身份与资产边界见[DEPLOYMENT](DEPLOYMENT.md)及其引用的验证记录。本页只提供事实源和模块文档导航。
 
 [W1-H3.2-2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)只记录四个跨链进程终止窗口。其余历史批次、计划和交接由[HISTORY_INDEX](HISTORY_INDEX.md)导航。

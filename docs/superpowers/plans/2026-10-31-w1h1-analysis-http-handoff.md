@@ -1,6 +1,6 @@
 # W1-H1分析任务HTTP设计交接
 
-历史交接：日期2026-10-31；源码基线main / 577924b。H1时仅完成设计；后续H2.1已实现内部操作记录、schema和协调器，当前状态见[H2.1交接](2026-10-31-w1h21-analysis-operation-handoff.md)及[当前路线](2026-11-01-post-w1h21-project-route.md)。本批当时只改Markdown，未改生产模块、Cargo或schema。
+历史交接：日期2026-10-31；源码基线main / 577924b。H1时仅完成设计；后续H2.1已实现内部操作记录、schema和协调器，当前状态见[H2.1交接](2026-10-31-w1h21-analysis-operation-handoff.md)及[当时路线](2026-11-01-post-w1h21-project-route.md)。本批当时只改Markdown，未改生产模块、Cargo或schema。
 
 ## 交付与审阅
 

@@ -1,6 +1,6 @@
 # 项目现状
 
-当前路线：[H3.2-2a 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)。截至2026-11-01，H2.2-A/B、H3.2-1/2a及H3.2-2b-1四个限定窗口的合成验收已通过；H3.2-2b其余窗口/调度、逐syscall/断电/介质故障、W1-C真实分析、报告来源认证及P4-R5仍开放。普通`workbench serve`未配置分析后端。具体进度唯一见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。本评估用于汇总能力和差距，不替代这些事实源。
+当前路线：[H3.2-2b-1 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。截至2026-11-01，H2.2-A/B、H3.2-1/2a及H3.2-2b-1四个限定窗口的合成验收已通过；H3.2-2b其余窗口/调度、逐syscall/断电/介质故障、W1-C真实分析、报告来源认证及P4-R5仍开放。普通`workbench serve`未配置分析后端。具体进度唯一见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。本评估用于汇总能力和差距，不替代这些事实源。
 
 ## 产品目标
 
