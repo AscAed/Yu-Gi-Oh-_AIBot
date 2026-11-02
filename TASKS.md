@@ -1,12 +1,14 @@
 # 实施任务与验收状态
 
-当前入口：[W1-H3.2-2b-1 跨链关键窗口进程终止交接](docs/superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。四个限定提交窗口的子进程强杀与重复恢复验收已完成；H3.2-2b其余逻辑窗口/调度、syscall/断电/介质故障仍开放。普通启动保持`analysis_not_configured`。
+当前入口：[H3.2-2b-1后项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。四个2b-1窗口及首次accepting保存后、冻结前的2b-2窗口已按限定合成范围验收；其他逻辑窗口/调度、syscall/断电/介质故障仍开放。普通启动保持`analysis_not_configured`。
 
 当前下一步路线：[H3.2-2b-1后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a及2b-1各按限定范围关闭；其余强杀窗口、调度和系统/介质故障仍未认证。
 
+2026-11-02复核在该路线补充H3.1窗口映射，并完成首次accepting保存后、冻结前的独立合成进程终止验收。双轨按工作台有限分析准备与独立研究小批并进。
+
 阶段与模块文档见[INDEX](docs/INDEX.md)；历史批次由[HISTORY_INDEX](docs/HISTORY_INDEX.md)导航。
 
-## 当前状态（2026-11-01）：W1-H3.2-2b-1限定合成验收已完成；其余H3.2-2b与真实分析仍开放
+## 当前状态（2026-11-02）：W1-H3.2-2b-1及accepting-before-freeze限定合成窗口已完成；其余H3.2-2b与真实分析仍开放
 
 下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。
 
@@ -44,6 +46,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-H3.2-1：共享认证、完整候选清单、关联修复/分类及重复重开通过合成验收，具体范围见本批TESTING。
 - [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。
 - [x] W1-H3.2-2b-1：四个跨链提交窗口的子进程强杀、完整认证恢复、重复重开稳定和绑定冲突负例通过；workspace 444通过、36忽略，见本批交接和TESTING。
+- [x] W1-H3.2-2b-2（accepting保存后、冻结前）：子进程在原子握手点终止；父进程认证完整操作修订链、命令摘要、前驱与记录哈希及状态迁移后确认freeze/claim均为0。恢复仅追加一次unknown，无任务、报告、冻结或可领取工作；再次重开字节和修订稳定。workspace 444通过、36忽略；这是合成协调器窗口，不是原生引擎、系统故障或全矩阵认证，见[TESTING](docs/TESTING.md)与[当前路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
 - [ ] W1-H3.2-2b余项：其他逻辑窗口/调度仍开放；逐系统调用故障、断电和介质故障未认证，不自动授权真实分析。
 
 - [x] D2：更新项目定位、双轨计划、研究经验与文档导航；交叉核对记录见[TESTING](docs/TESTING.md)顶部。

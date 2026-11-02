@@ -13,6 +13,7 @@ const CRASH_TEST: &str =
 const CHILD_STAGE: &str = "YGO_H3_CRASH_CHECKPOINT";
 const CHILD_ROOT: &str = "YGO_H3_CRASH_ROOT";
 const CHILD_MARKER: &str = "YGO_H3_CRASH_MARKER";
+const CHILD_EVENTS: &str = "YGO_H3_CRASH_EVENTS";
 
 struct ChildGuard(Child);
 
@@ -53,6 +54,82 @@ fn read_record(store: &Path, chain: &str, id: &str, revision: u64) -> serde_json
     serde_json::from_slice::<serde_json::Value>(&bytes).unwrap()["record"].clone()
 }
 
+fn authenticate_operation_chain(store: &Path, id: &str) -> Vec<Operation> {
+    let revisions = store.join("operations").join(id).join("revisions");
+    let mut names = fs::read_dir(&revisions)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    names.sort();
+    assert_eq!(names, ["1.json", "2.json"]);
+
+    let mut previous_sha256 = None;
+    let mut history: Vec<Operation> = Vec::new();
+    for revision in 1..=2 {
+        let raw = fs::read(revisions.join(format!("{revision}.json"))).unwrap();
+        let envelope: serde_json::Value = serde_json::from_slice(&raw).unwrap();
+        assert_eq!(envelope["schema_version"], 1);
+        assert_eq!(envelope["kind"], "workbench_analysis_operation_revision");
+        assert_eq!(envelope["operation_id"], id);
+        assert_eq!(envelope["revision"], revision);
+        assert_eq!(
+            envelope["previous_sha256"].as_str().map(str::to_owned),
+            previous_sha256
+        );
+
+        let record_bytes = serde_json::to_vec(&envelope["record"]).unwrap();
+        let record = Operation::read_json(&record_bytes).unwrap();
+        assert_eq!(record.operation_id(), id);
+        assert_eq!(record.revision(), revision);
+        assert_eq!(
+            envelope["record_sha256"].as_str(),
+            Some(ygo_storage::hash(&record.encode_json().unwrap()).as_str())
+        );
+        if revision == 1 {
+            assert_eq!(record.state(), AnalysisOperationState::Allocated);
+        } else {
+            assert_eq!(record.state(), AnalysisOperationState::Accepting);
+            let command = record.command().expect("accepting command");
+            let command_bytes = serde_json::to_vec(&(
+                "workbench-analysis-command-v1",
+                &command.draft_id,
+                &command.draft_revision,
+                &command.opening_hand,
+                command.seed,
+                &command.rules,
+                &command.catalog_id,
+                &command.banlist_id,
+                &command.as_of,
+                &command.search,
+                &record.context().scoring,
+                &record.context().default_catalog_id,
+            ))
+            .unwrap();
+            assert_eq!(
+                record.command_sha256(),
+                Some(ygo_storage::hash(&command_bytes).as_str())
+            );
+            let expected = history[0]
+                .begin(
+                    command.clone(),
+                    record.job_id().expect("accepting job").to_owned(),
+                    record.updated_at_ms(),
+                )
+                .unwrap();
+            assert_eq!(expected.encode_json().unwrap(), record.encode_json().unwrap());
+        }
+        previous_sha256 = Some(ygo_storage::hash(&raw));
+        history.push(record);
+    }
+    history
+}
+
+fn assert_child_event_counts(root: &Path, freeze: usize, claim: usize) {
+    let events = fs::read_to_string(root.join("child-events.log")).unwrap();
+    assert_eq!(events.lines().filter(|line| *line == "freeze").count(), freeze);
+    assert_eq!(events.lines().filter(|line| *line == "claim").count(), claim);
+}
+
 fn persisted_material(root: &Path) -> BTreeMap<String, Vec<u8>> {
     fn visit(base: &Path, current: &Path, files: &mut BTreeMap<String, Vec<u8>>) {
         for entry in fs::read_dir(current).unwrap() {
@@ -90,6 +167,8 @@ fn wait_for_checkpoint(child: &mut ChildGuard, marker: &Path, expected: &str) {
 
 fn spawn_checkpoint_child(root: &Path, stage: &str) -> (ChildGuard, std::path::PathBuf) {
     let marker = root.join("checkpoint.txt");
+    let events = root.join("child-events.log");
+    fs::write(&events, b"").unwrap();
     let child_output = fs::File::create(root.join("child-output.log")).unwrap();
     let mut child = ChildGuard(
         Command::new(std::env::current_exe().unwrap())
@@ -97,6 +176,7 @@ fn spawn_checkpoint_child(root: &Path, stage: &str) -> (ChildGuard, std::path::P
             .env(CHILD_STAGE, stage)
             .env(CHILD_ROOT, root)
             .env(CHILD_MARKER, &marker)
+            .env(CHILD_EVENTS, &events)
             .stdout(Stdio::from(child_output.try_clone().unwrap()))
             .stderr(Stdio::from(child_output))
             .spawn()
@@ -288,6 +368,7 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
     }
 
     let stages = [
+        "accepting_persisted_before_freeze",
         "frozen_input_persisted_before_task",
         "task_persisted_before_acceptance",
         "report_persisted_before_terminal",
@@ -305,13 +386,35 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
             "frozen_input_persisted_before_task" | "task_persisted_before_acceptance"
         ) {
             3
+        } else if stage == "accepting_persisted_before_freeze" {
+            2
         } else {
             4
         };
         let operation = read_record(&store, "operations", &operation_id, operation_revision);
         let job_id = operation["job_id"].as_str().unwrap().to_owned();
 
+        let (freeze_attempts, claim_attempts) = match stage {
+            "accepting_persisted_before_freeze" | "recovery_operation_repaired_before_task_classified" => (0, 0),
+            "report_persisted_before_terminal" => (1, 1),
+            _ => (1, 0),
+        };
+        assert_child_event_counts(&root, freeze_attempts, claim_attempts);
+        if stage == "accepting_persisted_before_freeze" {
+            assert_eq!(
+                authenticate_operation_chain(&store, &operation_id).last().unwrap().state(),
+                AnalysisOperationState::Accepting
+            );
+        }
+
         match stage {
+            "accepting_persisted_before_freeze" => {
+                assert_eq!(operation["state"], "accepting");
+                assert!(!operation["command_sha256"].is_null());
+                assert!(operation["frozen_input"].is_null());
+                assert!(!store.join("jobs").join(&job_id).exists());
+                assert_eq!(fs::read_dir(store.join("reports")).unwrap().count(), 0);
+            }
             "frozen_input_persisted_before_task" => {
                 assert_eq!(operation["state"], "accepting");
                 assert!(!operation["frozen_input"].is_null());
@@ -332,8 +435,10 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
             }
             _ => unreachable!(),
         }
+        let before_kill = persisted_material(&store);
         let status = child.kill();
         assert!(!status.success(), "checkpointed child must be terminated");
+        assert_eq!(persisted_material(&store), before_kill);
 
         let coordinator = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
         let operation_history = coordinator.inspect_operation(&operation_id).unwrap();
@@ -341,9 +446,13 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
         assert!(coordinator.snapshot().unwrap().queued.is_none());
         assert!(coordinator.claim_next(10_000).unwrap().is_none());
         match stage {
-            "frozen_input_persisted_before_task" => {
+            "accepting_persisted_before_freeze" | "frozen_input_persisted_before_task" => {
                 assert_eq!(recovered.state(), AnalysisOperationState::Unknown);
                 assert!(coordinator.inspect_job_optional(&job_id).unwrap().is_none());
+                if stage == "accepting_persisted_before_freeze" {
+                    assert_eq!(operation_history.len(), 3);
+                    assert_eq!(coordinator.freeze_attempts_for_test(), 0);
+                }
             }
             "task_persisted_before_acceptance" | "recovery_operation_repaired_before_task_classified" => {
                 assert_eq!(recovered.state(), AnalysisOperationState::Accepted);
@@ -362,6 +471,9 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
         }
         drop(coordinator);
         let after_first_reopen = persisted_material(&store);
+        for (path, bytes) in &before_kill {
+            assert_eq!(after_first_reopen.get(path), Some(bytes));
+        }
         let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
         assert!(reopened.snapshot().unwrap().queued.is_none());
         assert!(reopened.claim_next(10_001).unwrap().is_none());

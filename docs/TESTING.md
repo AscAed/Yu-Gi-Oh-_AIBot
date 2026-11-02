@@ -1,5 +1,23 @@
 # 本机验证记录
 
+## 2026-11-02 H3.2-2b-2 accepting保存后冻结前进程终止
+
+在`durable_crash_window_tests`中新增accepting修订持久化后、实际输入冻结前的子进程检查点。父进程等待同步原子握手，完整认证两条操作修订的封套、前驱/记录哈希、命令摘要和状态迁移，并确认无冻结输入、任务及报告，再终止子进程。强杀前事件日志为freeze=0、claim=0；该合成协调器测试不启动worker/ocgcore/FFI，不能将事件计数解释为原生执行或研究消费证明。恢复只追加一次unknown，不创建任务或报告；队列无工作，重复重开不追加修订且保存材料字节稳定。
+
+验证命令（离线、locked，产物位于忽略的`target/w1h322b-process-kill/cargo`）：
+
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h322b-process-kill/cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture`：1 passed。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h322b-process-kill/cargo -- --test-threads=1`：CLI各测试二进制合计103 passed，0 failed。
+- `cargo test --workspace --offline --locked --target-dir target/w1h322b-process-kill/cargo -- --test-threads=1`：91个测试组，444 passed、0 failed、36 ignored；逐组输出保存在忽略文件`target/w1h322b-process-kill/workspace-final.log`。
+- `cargo fmt --all -- --check`与`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h322b-process-kill/cargo -- -D warnings`：通过。
+- `py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`：16 passed。
+
+此结果只认证首次accepting保存后、freeze前这一合成进程终止窗口。H3.2-2b其他逻辑窗口/调度、worker执行、逐syscall、断电/介质持久性、W1-C真实分析、原生及账本资格仍分别开放；普通服务仍为`analysis_not_configured`。进程窗口设计与关系见[双轨路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
+
+## 2026-11-02 双轨路线文档复核
+
+只读基线`main / 39da661`，工作区开始干净；未访问远端。本次核对H3.1设计、限定交接、现有任务与需求矩阵，并在当前路线增加窗口映射及下一候选，未执行该窗口测试。旧普通包CLI和worker的SHA-256各自与包内`build-hashes.json`匹配；包文件日期为2026-10-19，仅证明文件身份。`git diff --stat a21d587 HEAD`显示其后工作台HTTP、持久协调器等源码已变化；历史候选不证明当前HEAD已部署。历史双资产诊断、预算截断和缺少可比账本见本页P4-R5记录。未运行构建、测试、doctor、引擎、真实分析或部署。
+
 ## 2026-11-02 环境清理后自检与文档事实源复核
 
 基线为`main / ae4a9ab`；审计开始时工作区有6份已跟踪Markdown修改和1份新路线文档，源码未修改。清理范围、逐文件清单与权限/归档结果见[环境审计](ENVIRONMENT_AUDIT.md)和[证据保留清单](EVIDENCE_RETENTION.md)。本轮修正任务表里已过时的“未迁移”摘要，并将README、差距评估、路线图和工作区检查入口指向H3.2-2b-1后的路线。

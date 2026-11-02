@@ -1,6 +1,10 @@
 # 实施取舍与交付边界
 
+2026-11-02复核：握手须在临时文件同步后原子发布，避免父进程读到半标记；Windows接受socket的非阻塞继承及修复见[响应丢失交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)，旧TCP重置根因仍未知。未知消费不能推断为零；Tenki pin与Curry实际执行源码缺少来源链，不能用相似代码替代，见[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)。合成、原生、会计与最优性证据分别判定；候选构建隔离且绑定资产，见[验证记录](TESTING.md)。历史证据归档仅覆盖清单所列文件，哈希清单不是备份，普通克隆不能取得私有索引，见[保留清单](EVIDENCE_RETENTION.md)。
+
 **H3.2-2b-1经验：**初版握手文件先创建再写入，父进程可能读到空或部分标记；改为同步临时文件后原子发布。四个限定窗口强杀后重新认证保存材料，核对空活动队列、重复重开和原始字节稳定；其他窗口及系统故障仍未认证。详见[交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
+
+**H3.2-2b-2经验（2026-11-02）：**首次accepting持久化后、freeze前强杀后，恢复仅追加一次unknown且不建任务。跨进程测试必须认证所有操作修订、摘要和哈希，再用同步事件文件确认freeze/claim计数；旧测试计数器漏掉`submit_operation_core`直接调用的冻结闭包。事件仅证明该合成协调器窗口的调用边界，不覆盖worker、原生引擎、syscall或消费账本。详见[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)和[验证记录](TESTING.md)。
 
 **H3.2-1 经验（2026-11-01）：**全量认证跨链材料并预先验证恢复候选，再依序提交；写后不确定即停止，重复重开不重复追加。原函数时间非法时曾提前追加 accepted，可靠串行红测记录于[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)；并发编译及 LNK1104 不能视为行为红测。目标窗口强杀、断电和介质故障仍未验收。
 

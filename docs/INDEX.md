@@ -1,10 +1,10 @@
 # 文档导航
 
-当前实施路线：[H3.2-2b-1后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)；H3.2-2a后路线为历史时点。
+当前实施路线：[H3.2-2b-1后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)；该文档已记录2b-2 accepting-before-freeze限定窗口结果。H3.2-2a后路线为历史时点。
 
 当前状态与开放门禁以[TASKS](../TASKS.md)为准；某次验证的范围和结果以[TESTING](TESTING.md)为准；部署身份与资产边界见[DEPLOYMENT](DEPLOYMENT.md)及其引用的验证记录。本页只提供事实源和模块文档导航。
 
-[W1-H3.2-2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)只记录四个跨链进程终止窗口。其余历史批次、计划和交接由[HISTORY_INDEX](HISTORY_INDEX.md)导航。
+[W1-H3.2-2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)记录四个跨链进程终止窗口；路线文档记录随后accepting-before-freeze窗口及全矩阵剩余项。其余历史批次、计划和交接由[HISTORY_INDEX](HISTORY_INDEX.md)导航。
 
 ## 信息优先级
 
@@ -38,7 +38,7 @@
 | 子系统 | 设计与合同 | 当前界面/操作边界 |
 |---|---|---|
 | 工作台草稿 | [DECK_DRAFTS.md](DECK_DRAFTS.md)、[WORKBENCH.md](WORKBENCH.md)、[schemas](../schemas/) | 仅本机草稿编辑/导入导出；中文候选仍按其证据状态展示 |
-| 受限分析接入 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | 六端点与无路径DTO已实现；H2.2-A/B、H3.2-1/2a/2b-1限定合成验收通过；普通启动未配置分析后端，H3.2-2b余项与真实分析仍开放 |
+| 受限分析接入 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | 六端点与无路径DTO已实现；H2.2-A/B、H3.2-1/2a、2b-1及accepting-before-freeze限定合成窗口通过；普通启动未配置分析后端，其他H3.2-2b窗口与真实分析仍开放 |
 | 引擎与报告 | [ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | ocgcore为效果执行权威；证据等级不能互相替代 |
 | 数据与语言 | [DATA_SOURCES.md](DATA_SOURCES.md)、[LANGUAGE_REVIEW.md](LANGUAGE_REVIEW.md) | 来源、语义、许可及字段覆盖分别核验 |
 | 研究工作流 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md)、[P1_MICROCASE.md](P1_MICROCASE.md) | 使用单独scope与预算；保存的准备材料不自动启动实验 |

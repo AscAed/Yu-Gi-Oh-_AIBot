@@ -100,6 +100,20 @@ pub(super) fn crash_checkpoint(point: &str) {
     }
 }
 
+#[cfg(test)]
+fn record_crash_test_event(event: &str) {
+    let Some(path) = std::env::var_os("YGO_H3_CRASH_EVENTS") else {
+        return;
+    };
+    let mut file = std::fs::OpenOptions::new()
+        .append(true)
+        .open(path)
+        .expect("open crash test event log");
+    use std::io::Write;
+    writeln!(file, "{event}").expect("write crash test event");
+    file.sync_all().expect("flush crash test event");
+}
+
 impl DurableAnalysisCoordinator {
     #[cfg(test)]
     pub(crate) fn inject_logical_fault(
@@ -222,6 +236,8 @@ impl DurableAnalysisCoordinator {
         &self,
         now_ms: u64,
     ) -> Result<Option<DispatchTicket>, DurableCoordinatorError> {
+        #[cfg(test)]
+        record_crash_test_event("claim");
         let mut stopped = self
             .stopped
             .lock()
@@ -668,6 +684,12 @@ impl DurableAnalysisCoordinator {
         match submission.ticket {
             None => Ok(submission.record),
             Some(ticket) => {
+                #[cfg(test)]
+                {
+                    record_crash_test_event("freeze");
+                    self.freeze_attempts
+                        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
                 let frozen = freeze(
                     ticket.operation.command().expect("accepting command"),
                     ticket.operation.context(),
@@ -779,6 +801,8 @@ impl DurableAnalysisCoordinator {
             *stopped = true;
             return Err(DurableCoordinatorError::Persistence(e));
         }
+        #[cfg(test)]
+        crash_checkpoint("accepting_persisted_before_freeze");
         *reservation = Some(id.to_owned());
         drop(reservation);
         drop(stopped);
@@ -812,6 +836,8 @@ impl DurableAnalysisCoordinator {
     ) -> Result<Operation, DurableCoordinatorError> {
         let op = &ticket.operation;
         let cmd = op.command().expect("accepting command");
+        #[cfg(test)]
+        record_crash_test_event("freeze");
         #[cfg(test)]
         self.freeze_attempts
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
