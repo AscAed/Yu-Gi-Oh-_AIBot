@@ -2,7 +2,7 @@
 
 当前入口：[H3.2-2b-1后项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。四个2b-1窗口及首次accepting保存后、冻结前的2b-2窗口已按限定合成范围验收；其他逻辑窗口/调度、syscall/断电/介质故障仍开放。普通启动保持`analysis_not_configured`。
 
-当前下一步路线：[H3.2-2b-1后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a及2b-1各按限定范围关闭；其余强杀窗口、调度和系统/介质故障仍未认证。
+当前下一步路线：[H3.2-2b-1后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a、2b-1及accepting-before-freeze窗口各按限定范围关闭；其他强杀窗口、调度和系统/介质故障仍未认证。
 
 2026-11-02复核在该路线补充H3.1窗口映射，并完成首次accepting保存后、冻结前的独立合成进程终止验收。双轨按工作台有限分析准备与独立研究小批并进。
 
