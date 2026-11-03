@@ -8,7 +8,8 @@
 
 ### 组件与依赖复核
 
-- 没有发现可依据源码消费者和历史证据安全删除的模块或运行目录。保留`target/`、`data/runtime/`、`dist/`及兼容路径；Markdown中的忽略路径和缺失目标集中登记于[EVIDENCE_RETENTION](#ignored-evidence-links)。
+- 没有发现可依据源码消费者和历史证据安全删除的源码模块、运行组件或兼容路径。2026-11-03只清理了11个逐一核验、仅含可重建Cargo `debug`构建输出且不含日志、状态、manifest、研究证据或资产的缓存目录：118,131个文件、81,243,791,398字节（75.664 GiB逻辑大小）。保留其余`target/`内容、`data/runtime/`、`dist/`、release产物和兼容路径；Markdown中的忽略路径和缺失目标集中登记于[EVIDENCE_RETENTION](#ignored-evidence-links)。
+- 清理后可访问的`target/`文件清点为1,086,097个文件、36,348,084,528字节（33.852 GiB逻辑大小）；排除了1个目录联接，受ACL保护的Python依赖子树无法枚举且未触碰。逻辑大小不等于NTFS实际占用或可回收空间。该批清理期间D盘可用空间增加77,289,877,504字节；记录和11个精确路径见忽略文件`data/runtime/cleanup-audit/target-build-cache-cleanup-20261103-220156.json`。
 - 对9个Rust crate逐项扫描直接依赖的crate标识符，覆盖该crate下的Rust源码、测试和示例；每个直接依赖至少有一个文本引用，没有发现零引用候选。该词法筛查不证明运行时实际使用，也不替代专用未用依赖分析器。`cargo-machete`、`cargo-audit`和`cargo-deny`未安装。
 - `cargo tree --workspace --duplicates --offline --locked`显示两个`hashbrown`版本：`0.14.5`经`rusqlite 0.32.1`/`hashlink`引入，`0.17.1`经`toml 0.8.23`/`toml_edit`引入。它们来自不同传递依赖约束；未作强制覆盖或升级。
 - Python的`pyproject.toml`只声明`jsonschema`运行依赖及可选`pytest`测试依赖。文件名盘点未发现`setup.py`、`setup.cfg`、`requirements*.txt`、`Pipfile`、Poetry、tox或Travis旧式配置；`pip-audit`、`bandit`、`semgrep`和`ruff`未安装，因此未完成外部漏洞库扫描或这些工具的专项检查。
