@@ -1,13 +1,13 @@
 # 实施任务与验收状态
 
-当前实施路线：[H3.2-2b-1后项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
+当前实施路线：[2026-11-03更新的项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
 H3恢复的逻辑窗口、证据层级和未覆盖边界见[H3.1证据门禁映射](docs/superpowers/plans/2026-11-02-h3-evidence-gate-map.md)及[HISTORY_INDEX](docs/HISTORY_INDEX.md)。所有窗口验收均按具体提交点限定；它们不关闭其他调度、逐syscall、断电或介质故障门禁。
 
 部署身份、隔离候选和本机资产权限见[DEPLOYMENT](docs/DEPLOYMENT.md)与[ENVIRONMENT_AUDIT](docs/ENVIRONMENT_AUDIT.md)。普通启动保持`analysis_not_configured`；局部测试或预算截断运行不表示完整搜索、全局最优或发布通过。
 
 
-## 当前状态（2026-11-03）：W1-H3.2-2b-1、accepting-before-freeze及多个running领取细分窗口（含两条AssetMismatch路径）已分别验收；W1-C单次有限分析已完成，其他门禁仍开放
+## 当前状态（2026-11-03）：W1-H3.2-2b-1/-2、allocated保存后协调器返回前及多个running领取细分窗口（含两条AssetMismatch路径）已分别验收；W1-C单次有限分析已完成，其他门禁仍开放
 
 下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。
 
@@ -52,6 +52,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。
 - [x] W1-H3.2-2b-1：四个跨链提交窗口的子进程强杀、完整认证恢复、重复重开稳定和绑定冲突负例通过；workspace 444通过、36忽略，见本批交接和TESTING。
 - [x] W1-H3.2-2b-2（accepting保存后、冻结前）：子进程在原子握手点终止；父进程认证完整操作修订链、命令摘要、前驱与记录哈希及状态迁移后确认freeze/claim均为0。恢复仅追加一次unknown，无任务、报告、冻结或可领取工作；再次重开字节和修订稳定。最终workspace 445通过、36忽略；忽略项为默认关闭的冻结资产/原生研究/人工准备opt-in，逐项原因见[TESTING](docs/TESTING.md)。这是合成协调器窗口，不是原生引擎、系统故障或全矩阵认证。
+- [x] W1-H3 allocated保存后、协调器响应返回前：限定合成子进程强杀后，两次重开材料字节稳定；显式再次分配生成新ID，不承诺找回客户端未收到的ID。该检查点不模拟独立HTTP响应传输强杀；详情见[TESTING](docs/TESTING.md#2026-11-02-allocated保存后协调器返回前限定合成验收)。
 - [x] W1-H3补充K窗口（假执行器进入后、返回前）：合成进程强杀后真实目录锁重开只追加一次`unknown`；操作/报告/队列/领取及第二次重开稳定。见[交接](docs/superpowers/plans/2026-11-03-running-executor-crash-handoff.md)。
 - [x] W1-H3补充K窗口（假执行器返回`Ok(report)`后、报告发布前）：父进程认证operation/job修订链、命令摘要和输入绑定后终止子进程；恢复仅追加job revision 3=`unknown`，无报告/队列/可领取工作，第二次重开稳定。聚焦1 passed，完整ygo-cli 121 passed，workspace默认串行测试退出码0；Python schema 24 passed、2 skipped。机器证据及范围见[交接](docs/superpowers/plans/2026-11-03-executor-return-crash-handoff.md)与[TESTING](docs/TESTING.md)。
 - [x] W1-H3补充K窗口（running修订已持久化、内存队列已更新、领取票据尚未返回）：父进程认证operation/job链和冻结输入绑定后终止子进程；事件为`freeze → claim → queue_updated`，报告和假执行器调用均为0。恢复仅追加一次`unknown`，队列无活动或可领取任务，重复重开字节稳定。聚焦及workspace、Clippy、格式和相关schema回归通过，见[交接](docs/superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)与[TESTING](docs/TESTING.md)。
@@ -110,7 +111,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 
-上述排序、依赖和停止条件见[当前H3.2-2b-1后路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
+上述排序、依赖和停止条件见[当前双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本次文档更新不改变scope、窗口、预算或部署授权。
 
 前次交付后的603项源码归档身份、原生时点身份和普通dist是不同对象；后续文档、pytest配置和Cargo依赖整理已改变工作区，不再声称其与该归档完整逐字一致。实跑与静态核对分别见[TESTING](docs/TESTING.md)，历史导航见[HISTORY_INDEX](docs/HISTORY_INDEX.md)。
 

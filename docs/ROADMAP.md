@@ -1,6 +1,6 @@
 # 技术路线
 
-当前路线：[H3.2-2b-1 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a、2b-1四个窗口及accepting-before-freeze窗口均按限定范围验收；其余H3.2-2b逻辑窗口/调度、W1-C真实分析和P4-R5仍开放。
+当前路线：[2026-11-03更新的项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a、2b-1四个窗口、2b-2 accepting-before-freeze窗口、allocated保存后协调器返回前窗口及多个running细分窗口均按各自限定范围验收；其他H3逻辑窗口/调度仍开放。W1-C已完成一次隔离候选上的Rabbit有限分析（`budget_limited/time_budget`）；分析来源、FFI/消费计量、完整搜索和发布资格仍未认证，P4-R5仍开放。
 
 历史路线见[H3.2-1后项目路线](superpowers/plans/2026-11-01-post-w1h321-project-route.md)及[H3.1后项目路线](superpowers/plans/2026-11-01-post-w1h31-project-route.md)。当前状态以 [TASKS](../TASKS.md) 为准，历史验证以 [TESTING](TESTING.md) 为准；旧计划保留各自时点。
 
