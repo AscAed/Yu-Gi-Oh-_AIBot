@@ -6,7 +6,12 @@
 
 只读ACL复查把权限来源追到`D:\`根目录：`NT AUTHORITY\Authenticated Users`在该卷根上有直接`Modify` ACE，并继承到`D:\PUBLIC`及下层项目文件。`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot`父目录还有两个无法映射到当前本机账户名的显式Modify SID；工作区再有两个此类显式SID，另继承父目录的两个SID。当前令牌是标准用户`LAPTOP-7SAI5TBV\AscAed`；本机账户枚举受拒，且四个SID在ProfileList中均无账户配置文件记录，无法确认对应主体。`.git`对这四个SID另有显式写入/删除Deny ACE，同时继承Authenticated Users的Modify；未评估任一具体账户令牌的有效访问结果。项目父目录含两个兄弟工作区，因此修改父级ACL会影响兄弟目录；删除卷根ACE则会影响D盘其他内容。配置仍指向包内worker及`data/runtime`中的引擎资产。源码hash只绑定所选文件，不证明文件由可信主体发布。普通工作台保持`analysis_not_configured`，检查时没有观察到`ygo`进程。用户于2026-11-03选择保留当前ACL并记录风险，本轮未调整权限。详细部署界限见[DEPLOYMENT](DEPLOYMENT.md)。
 
-本轮未发现可据源码消费者和历史证据确认安全删除的模块或运行目录。依赖树中两个`hashbrown`版本来自不同传递依赖链；`cargo-machete`不可用，未声称机器化未用依赖扫描完成。没有清理`target/`、`data/runtime/`、`dist/`或兼容路径。Markdown中的忽略路径和缺失目标集中登记于[EVIDENCE_RETENTION](#ignored-evidence-links)。
+### 组件与依赖复核
+
+- 没有发现可依据源码消费者和历史证据安全删除的模块或运行目录。保留`target/`、`data/runtime/`、`dist/`及兼容路径；Markdown中的忽略路径和缺失目标集中登记于[EVIDENCE_RETENTION](#ignored-evidence-links)。
+- 对9个Rust crate逐项扫描直接依赖的crate标识符，覆盖该crate下的Rust源码、测试和示例；每个直接依赖至少有一个文本引用，没有发现零引用候选。该词法筛查不证明运行时实际使用，也不替代专用未用依赖分析器。`cargo-machete`、`cargo-audit`和`cargo-deny`未安装。
+- `cargo tree --workspace --duplicates --offline --locked`显示两个`hashbrown`版本：`0.14.5`经`rusqlite 0.32.1`/`hashlink`引入，`0.17.1`经`toml 0.8.23`/`toml_edit`引入。它们来自不同传递依赖约束；未作强制覆盖或升级。
+- Python的`pyproject.toml`只声明`jsonschema`运行依赖及可选`pytest`测试依赖。文件名盘点未发现`setup.py`、`setup.cfg`、`requirements*.txt`、`Pipfile`、Poetry、tox或Travis旧式配置；`pip-audit`、`bandit`、`semgrep`和`ruff`未安装，因此未完成外部漏洞库扫描或这些工具的专项检查。
 
 ## 历史现场（2026-11-02）
 
