@@ -76,7 +76,19 @@ fn accepted_connection_uses_blocking_reads_with_a_timeout() {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let _client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
-    let (stream, _) = listener.accept().unwrap();
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+    let stream = loop {
+        match listener.accept() {
+            Ok((stream, _)) => break stream,
+            Err(error)
+                if error.kind() == std::io::ErrorKind::WouldBlock
+                    && std::time::Instant::now() < deadline =>
+            {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            Err(error) => panic!("accept did not become ready before deadline: {error}"),
+        }
+    };
     super::configure_connection(&stream).unwrap();
     stream
         .set_read_timeout(Some(Duration::from_millis(200)))

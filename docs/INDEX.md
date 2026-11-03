@@ -1,46 +1,39 @@
-# 文档导航
+# AI 文档入口
 
-当前实施路线：[H3.2-2b-1后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)；该文档已记录2b-2 accepting-before-freeze限定窗口结果。H3.2-2a后路线为历史时点。
+本页是导航，不维护项目状态。开始前先读仓库根目录的 `AGENTS.md`、本页和 [TASKS.md](../TASKS.md)。历史计划与聊天用于追溯背景；实现状态以当前源码、schema 和日期化验证记录为准。
 
-当前状态与开放门禁以[TASKS](../TASKS.md)为准；某次验证的范围和结果以[TESTING](TESTING.md)为准；部署身份与资产边界见[DEPLOYMENT](DEPLOYMENT.md)及其引用的验证记录。本页只提供事实源和模块文档导航。
+## 唯一事实源
 
-[W1-H3.2-2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)记录四个跨链进程终止窗口；路线文档记录随后accepting-before-freeze窗口及全矩阵剩余项。其余历史批次、计划和交接由[HISTORY_INDEX](HISTORY_INDEX.md)导航。
-
-## 信息优先级
-
-详细历史阶段、批次和交接由[HISTORY_INDEX](HISTORY_INDEX.md)定位。
-
-实现事实以当前源码、schema和可复现产物为准。按职责读取以下唯一事实源；历史计划和聊天仅作背景。
-
-| 需要回答 | 权威入口 | 使用规则 |
+| 问题 | 事实源 | 阅读规则 |
 |---|---|---|
-| 当前状态、开放项、提交/部署门槛 | [TASKS.md](../TASKS.md) | 唯一当前状态入口 |
-| 某次验证做了什么、结果与限制 | [TESTING.md](TESTING.md) | 按日期、commit、资产和运行范围判读；旧记录不等于当前复验 |
-| 产品目标和验收愿景 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 目标唯一来源；局部样例不代表达成 |
-| 全局最优定义与证明门槛 | [OPTIMALITY_RESEARCH.md](OPTIMALITY_RESEARCH.md) | 研究定义，不代表当前能力或可行性已证 |
-| 阶段依赖及退出条件 | [ROADMAP.md](ROADMAP.md) | 不维护阶段完成状态；进度回到TASKS |
-| 已有能力及差距矩阵 | [PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 引用TASKS/TESTING，不覆盖其状态 |
-| 模块边界和数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) | crate依赖与调用路径为准 |
-| 环境清点、证据保留和清理约束 | [ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md)、[EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 哈希清单不等于备份；保留策略优先于清理便利 |
-| 研究scope、预算、窗口和副作用 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md)、[EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 准备文档不授予执行权限 |
-| 本机构建、包身份和部署边界 | [DEPLOYMENT.md](DEPLOYMENT.md) | 区分当前checkout、构建产物、冻结资产和历史记录 |
-| 历史文档/批次定位 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[TASKS_HISTORY.md](../TASKS_HISTORY.md)、[TESTING_HISTORY.md](TESTING_HISTORY.md) | 保留原证据和来源，不视作当前状态 |
+| 当前能力、开放任务、验收门槛 | [TASKS.md](../TASKS.md) | 当前状态只在此维护 |
+| 某次验证的范围、结果和限制 | [TESTING.md](TESTING.md) | 按日期、commit、资产和执行范围读取 |
+| 当前部署与本机环境 | [DEPLOYMENT.md](DEPLOYMENT.md)、[ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md) | 区分源码、隔离候选、旧发布包和冻结资产 |
+| 本机证据是否可清理 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 被忽略或有哈希清单不代表可删除或已备份 |
+| 产品目标、阶段依赖、完成差距 | [PRODUCT_VISION.md](PRODUCT_VISION.md)、[ROADMAP.md](ROADMAP.md)、[PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 目标与计划不等于已实现能力 |
+| 模块、接口和数据流 | [ARCHITECTURE.md](ARCHITECTURE.md)、[API.md](API.md) | 源码与版本化合同优先 |
+| 研究副作用、预算、证据资格 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md)、[EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 准备材料不授予执行资格 |
+| 历史批次和交接 | [HISTORY_INDEX.md](HISTORY_INDEX.md) | 由索引定位原记录，不把旧计划当成当前指令 |
 
-## 推荐阅读顺序
+## 子系统导航
 
-1. 新任务先读仓库根目录的`AGENTS.md`、本页和[TASKS.md](../TASKS.md)。
-2. 涉及能力判断时再读[PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md)和[ROADMAP.md](ROADMAP.md)。
-3. 根据模块进入对应接口/合同文档；运行或部署主张必须回到[TESTING.md](TESTING.md)的具体证据。
-4. 需要历史上下文时用[HISTORY_INDEX.md](HISTORY_INDEX.md)定位原记录；不要把旧计划当作当前命令或授权。
-
-## 子系统入口
-
-| 子系统 | 设计与合同 | 当前界面/操作边界 |
+| 子系统 | 入口 | 当前边界 |
 |---|---|---|
-| 工作台草稿 | [DECK_DRAFTS.md](DECK_DRAFTS.md)、[WORKBENCH.md](WORKBENCH.md)、[schemas](../schemas/) | 仅本机草稿编辑/导入导出；中文候选仍按其证据状态展示 |
-| 受限分析接入 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[API.md](API.md) | 六端点与无路径DTO已实现；H2.2-A/B、H3.2-1/2a、2b-1及accepting-before-freeze限定合成窗口通过；普通启动未配置分析后端，其他H3.2-2b窗口与真实分析仍开放 |
-| 引擎与报告 | [ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | ocgcore为效果执行权威；证据等级不能互相替代 |
-| 数据与语言 | [DATA_SOURCES.md](DATA_SOURCES.md)、[LANGUAGE_REVIEW.md](LANGUAGE_REVIEW.md) | 来源、语义、许可及字段覆盖分别核验 |
-| 研究工作流 | [BASELINE_AUDIT.md](BASELINE_AUDIT.md)、[RESEARCH_AUDIT.md](RESEARCH_AUDIT.md)、[P1_MICROCASE.md](P1_MICROCASE.md) | 使用单独scope与预算；保存的准备材料不自动启动实验 |
+| 牌组草稿工作台 | [DECK_DRAFTS.md](DECK_DRAFTS.md)、[WORKBENCH.md](WORKBENCH.md) | 离线编辑、保存、导入与导出；不认证卡片语义或牌组效果 |
+| 分析 HTTP 与任务 | [WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)、[WORKBENCH_ANALYSIS_JOBS.md](WORKBENCH_ANALYSIS_JOBS.md)、[WORKBENCH_ANALYSIS_PERSISTENCE.md](WORKBENCH_ANALYSIS_PERSISTENCE.md) | 显式配置才启用串行分析；普通启动保持 `analysis_not_configured` |
+| 引擎、提示与恢复 | [ENGINE_PROTOCOL.md](ENGINE_PROTOCOL.md)、[EXECUTION_RECOVERY.md](EXECUTION_RECOVERY.md)、[FIRST_TURN_VERIFICATION.md](FIRST_TURN_VERIFICATION.md) | ocgcore 执行效果；合成故障证据不替代真实执行证据 |
+| 卡片数据与语言 | [DATA_SOURCES.md](DATA_SOURCES.md)、[LANGUAGE_REVIEW.md](LANGUAGE_REVIEW.md) | 来源、语义、许可、字段完整度分别判定 |
+| 搜索、规划与最优性 | [OPTIMALITY_RESEARCH.md](OPTIMALITY_RESEARCH.md)、[BASELINE_AUDIT.md](BASELINE_AUDIT.md) | 局部搜索或重放不证明完整性、全局最优或全卡适用 |
+| 部署与本机证据 | [DEPLOYMENT.md](DEPLOYMENT.md)、[EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 发布包身份、运行资格和清理资格分别核验 |
 
-历史快照、交接及故障链的清单见[历史索引](HISTORY_INDEX.md)。本页只负责导航，不复制任务状态、验证数字或阶段历史。
+## 推荐追踪路径
+
+1. 从 TASKS 选定当前开放项和它的退出条件。
+2. 回到源码、schema、配置和数据流确认实现位置。
+3. 从 TESTING 找到对应日期与源码/资产身份的验证记录。
+4. 需要历史脉络时，通过 HISTORY_INDEX 找原始计划、审计或交接。
+5. 涉及本机资产时，再核对 DEPLOYMENT、ENVIRONMENT_AUDIT 和 EVIDENCE_RETENTION。
+
+## 历史资料分组
+
+HISTORY_INDEX 按日期和主题索引 H3 恢复窗口、L1 卡片复核批次、P1/P4 研究交接、W1 工作台分析和 W2 草稿迁移。成批文件在原位置保留；导航不复制批次结论，也不扩大它们的证据范围。

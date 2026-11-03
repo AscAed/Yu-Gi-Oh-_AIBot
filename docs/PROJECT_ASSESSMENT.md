@@ -1,6 +1,6 @@
 # 项目现状
 
-当前路线：[H3.2-2b-1 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。截至2026-11-02，H2.2-A/B、H3.2-1/2a、2b-1四个窗口及首次accepting保存后冻结前一个2b-2合成窗口已通过各自限定验收；H3.2-2b其他窗口/调度、逐syscall/断电/介质故障、W1-C真实分析、报告来源认证及P4-R5仍开放。普通`workbench serve`未配置分析后端。具体进度唯一见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。本评估用于汇总能力和差距，不替代这些事实源。
+当前路线：[H3.2-2b-1 后项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。截至2026-11-03，W1-C固定Rabbit配置完成一次本机有限分析，结果为`budget_limited/time_budget`；FFI/消费未独立计量，报告来源未独立认证、搜索不完整。其他H3逻辑窗口/调度及逐syscall、断电、介质故障仍开放；P4-R5未通过。普通`workbench serve`未配置分析后端。当前权限审计还发现旧包与`data/runtime`可由Authenticated Users修改，见[DEPLOYMENT](DEPLOYMENT.md)和[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)。具体任务见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。
 
 ## 产品目标
 
@@ -49,7 +49,7 @@ R1a问题由离线合成收费账本复现并修复：[执行捕获](../crates/y
 
 ## 方案比较与关键判断
 
-2026-11-02复核：近期次序及逐窗口证据见[当前双轨路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。现有机器与离线资产足以规划和开展已有范围的工程小批，但没有证据证明足以完成全卡证明；研究可行性、预算和用户发布须分别验收。旧部署包不包含当前开发工作台，不能以本机已有包推断用户已能使用分析。
+2026-11-03复核：近期次序及逐窗口证据见[当前双轨路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。已完成一次本机有限分析，不足以证明全卡分析、搜索完整性或最优性。旧部署包不包含当前开发工作台，隔离候选未切换部署；目录权限问题也须在确认可信本机账户后处理。
 
 1. **继续逐卡扩充人工模型：**复用现有知识、账本与正反例，适合完成P4和定向规则；全卡维护和交互组合成本未验证，不能由案例推出安全剪枝。
 2. **完整引擎搜索：**保留执行权威；须补齐全部合法动作、随机分布、信息一致性、循环与值界。当前进程前缀重放和beam不是这样的求解器。

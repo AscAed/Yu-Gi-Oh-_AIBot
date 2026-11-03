@@ -1,14 +1,13 @@
 # 实施任务与验收状态
 
-当前入口：[H3.2-2b-1后项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。四个2b-1窗口及首次accepting保存后、冻结前的2b-2窗口已按限定合成范围验收；其他逻辑窗口/调度、syscall/断电/介质故障仍开放。普通启动保持`analysis_not_configured`。
+当前实施路线：[H3.2-2b-1后项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
-当前下一步路线：[H3.2-2b-1后项目评估与双轨安排](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。H3.2-2a、2b-1及accepting-before-freeze窗口各按限定范围关闭；其他强杀窗口、调度和系统/介质故障仍未认证。
+H3恢复的逻辑窗口、证据层级和未覆盖边界见[H3.1证据门禁映射](docs/superpowers/plans/2026-11-02-h3-evidence-gate-map.md)及[HISTORY_INDEX](docs/HISTORY_INDEX.md)。所有窗口验收均按具体提交点限定；它们不关闭其他调度、逐syscall、断电或介质故障门禁。
 
-2026-11-02复核在该路线补充H3.1窗口映射，并完成首次accepting保存后、冻结前的独立合成进程终止验收。双轨按工作台有限分析准备与独立研究小批并进。
+部署身份、隔离候选和本机资产权限见[DEPLOYMENT](docs/DEPLOYMENT.md)与[ENVIRONMENT_AUDIT](docs/ENVIRONMENT_AUDIT.md)。普通启动保持`analysis_not_configured`；局部测试或预算截断运行不表示完整搜索、全局最优或发布通过。
 
-阶段与模块文档见[INDEX](docs/INDEX.md)；历史批次由[HISTORY_INDEX](docs/HISTORY_INDEX.md)导航。
 
-## 当前状态（2026-11-02）：W1-H3.2-2b-1及accepting-before-freeze限定合成窗口已完成；其余H3.2-2b与真实分析仍开放
+## 当前状态（2026-11-03）：W1-H3.2-2b-1、accepting-before-freeze及多个running领取细分窗口（含两条AssetMismatch路径）已分别验收；W1-C单次有限分析已完成，其他门禁仍开放
 
 下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。
 
@@ -19,16 +18,22 @@ E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…`
 | 阶段 | 当前能力与未完成门禁 |
 |---|---|
 | P0 | 首批身份、构建记录、清点与输入工具已交付；全正式OCG发行分母及依赖证据未完成 |
-| P1 | P1.1协议、观察、局部原生案例和证据工具已推进；P1.2完整小问题尚不可进入证明，完整动作、真实概率、循环和独立值界仍缺 |
-| P2 | 39卡字段存在性、来源绑定及缺口已离线登记；语义、zh-SC语言类别、别名映射、使用与再分发依据仍未通过，正式中文检索/更新服务未交付 |
+| P1 | P1.1协议、观察、局部原生案例和证据工具已推进；受限观察边界合成实验及opcode24生产菜单映射核对已通过；固定Ground候选与当前本地资产已只读复核并完成真实opcode24实验设计。2026-11-03从私有归档按索引哈希恢复13份固定来源后，离线准备及verify-only通过；随后将阶段driver、runner和测试纳入19成员工具包并重建当前报告，来源稳定复核通过，报告`execution_ready=false`。另完成当前源码、隔离构建、冻结输入、最终stage 1请求和资产身份的离线候选清单评审；清单保持hold、未授权，不是runner可执行manifest。没有创建Ground scope或启动Ground runner/worker/FFI。真实提示、响应接受、完整动作、概率、循环和独立值界仍未认证 |
+| P2 | 39卡字段存在性、来源绑定及缺口已离线登记；L1十三批完成39/39张zh-CN候选名称/效果人工对照，zh-SC前十三批38/38张有候选值记录完成人工对照；zh-SC没有剩余有值候选待审阅，卡号44088353在该源缺少字段，全部语言类别、别名映射及使用/再分发依据仍未通过；在38张有官方简中详情页可直接比较的卡中，29张候选标题不同、21张正文类别称谓映射未确认；2026-11-03单卡来源审计再次确认人偶之锤仅有可用官方日文详情页，MyCard上游权利依据仍未知；正式中文检索/更新服务未交付 |
 | P3 | P3.1草稿CLI、B2本机工作台及只读C1字段状态接口已交付；分析/构筑未提供 |
-| P4 | R1a首次失败诊断及R1b可恢复执行循环已实现；非空两动作、连续提示逐边界合成暂停/重开及中断/竞争门禁通过；真实执行和独立重放未认证，R2–R5门禁均未通过 |
+| P4 | R1a首次失败诊断及R1b可恢复执行循环已实现；非空两动作、连续提示逐边界合成暂停/重开及中断/竞争门禁通过；R1b-3首轮只完成1次Execution调用，在event-49完整结果比较处暂停前中止；后续只读审计还发现旧固定见证重建漏掉对手牌组/手牌计数（旧manifest为0/0，冻结trace为39/1），离线修正已通过聚焦检查；该run未做Witness审计、暂停、恢复或独立重放，真实恢复与独立重放未认证，R2–R5门禁均未通过 |
 | P5–P6 | 指定profile知识和有限关联已有；通用知识、主题识别、自动构筑与评估反馈未交付 |
 | P7–P8 | 指定灰流丽场景有局部证据；通用干扰、全卡覆盖、最优性证明及可分发产品未交付 |
 
-最近Ground Collapse opcode24批次只完成离线协议、合成oracle和固定来源准备，**新增native/runner/worker/FFI调用均为0**；`execution_ready`、原生可达、响应接受及完整性/概率/最优性资格均为false。13/14已有各自冻结案例的部分原生分支和独立重放；24实际提示、掩码及响应接受仍未知，详见[本批交接](docs/superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)。
+最近Ground Collapse opcode24批次完成离线协议、合成oracle、固定来源准备、真实提示实验设计及Ground专用收费驱动。Python协议/准备/阶段驱动测试为54 passed、19 subtests passed；Rust adapter库56项及runner示例2项合成测试通过；格式检查和workspace全目标Clippy通过。新增native/runner/worker/FFI调用均为0，没有创建scope。2026-11-03从私有归档逐项恢复13份哈希匹配的固定历史来源后，当前独立离线准备通过六项来源检查；verify-only复核138个文件输入及5个目录输入通过。历史Ground准备报告仍缺失，当前报告不替代旧报告及其37成员历史声明；会计值为认证消费子集40、政策预留7、规划47，旧实际消费与全部历史实际累计继续为`null`。`execution_ready`、原生可达、响应接受及完整性/概率/最优性资格均保持false。13/14既有各自冻结案例的局部原生分支与重放不延伸到Ground；24实际提示、掩码及响应接受仍未知，见[历史准备交接](docs/superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)、[当前实验设计](docs/superpowers/plans/2026-11-03-ground-collapse-opcode24-experiment-design.md)和[测试记录](docs/TESTING.md)。
+
+随后独立复核固定工具源码绑定：当前profile固定19个成员，含Rust阶段模块/runner、Python协调器及其合成测试；v1 schema保留正整数结构兼容，Python profile和ZIP成员校验严格绑定当前19个文件。最新报告位于`data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/preparation.json`，SHA-256=`a238a2f114c7cb26b6f1e79d6ca34b3e5f01f33bdb57eab0b6d2f650c2bb8c99`；六项来源检查和CLI verify-only均通过。此前两份当前来源报告保留为历史快照；本报告不替代缺失的2026-10-27历史报告或归档恢复报告，scope仍未创建。
 
 最新可认证会计口径为**认证消费子集40、政策预留7、规划47**；旧confirmation实际消费和全部历史实际累计仍为`null`。旧窗口和槽位依各自scope封存；新增原生实验必须另定范围、预算和窗口，不能直接执行既有准备报告。
+
+2026-11-03 L1文档更新后对Ground准备报告重跑只读verify-only：`valid=true`，固定19个工具源码成员逐项复核无差异；当前完整源码身份另存于忽略文件`target/p1-ground-collapse-source-review-2026-11-03/source-identity.json`。准备报告仍`execution_ready=false`且新scope/预算/最终请求/worker绑定均为空，真实提示实验尚未准入。详情见[TESTING](docs/TESTING.md)。
+
+2026-11-03随后完成Ground Collapse候选执行清单离线评审：隔离runner/worker构建成功，冻结案例、stage 1请求、19成员工具包、资产、完整脚本树和文档定稿后的完整工作区源码身份均记录在忽略机器清单中；独立只读审阅确认清单自摘要、源码/build前后身份、请求、资产及调用边界一致。准备报告和候选清单均保持未准入，最终原生请求、实际prompt ID、scope及授权为空。未执行Ground runner/worker/引擎/FFI。评审细节见[候选清单评审记录](docs/superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)和[验证记录](docs/TESTING.md)。
 
 本批A1首次失败诊断、B1牌组草稿基础及B2本机中文浏览器工作台已完成。B2只提供本机草稿编辑、YDK/JSON导入导出和可选本地卡表查询；不表示中文译文、牌组合法性或引擎行为已核验。说明见[工作台文档](docs/WORKBENCH.md)，交接见[B2交接](docs/superpowers/plans/2026-10-28-b2-workbench-handoff.md)，实跑范围见[TESTING](docs/TESTING.md)。
 
@@ -46,7 +51,12 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-H3.2-1：共享认证、完整候选清单、关联修复/分类及重复重开通过合成验收，具体范围见本批TESTING。
 - [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。
 - [x] W1-H3.2-2b-1：四个跨链提交窗口的子进程强杀、完整认证恢复、重复重开稳定和绑定冲突负例通过；workspace 444通过、36忽略，见本批交接和TESTING。
-- [x] W1-H3.2-2b-2（accepting保存后、冻结前）：子进程在原子握手点终止；父进程认证完整操作修订链、命令摘要、前驱与记录哈希及状态迁移后确认freeze/claim均为0。恢复仅追加一次unknown，无任务、报告、冻结或可领取工作；再次重开字节和修订稳定。workspace 444通过、36忽略；这是合成协调器窗口，不是原生引擎、系统故障或全矩阵认证，见[TESTING](docs/TESTING.md)与[当前路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
+- [x] W1-H3.2-2b-2（accepting保存后、冻结前）：子进程在原子握手点终止；父进程认证完整操作修订链、命令摘要、前驱与记录哈希及状态迁移后确认freeze/claim均为0。恢复仅追加一次unknown，无任务、报告、冻结或可领取工作；再次重开字节和修订稳定。最终workspace 445通过、36忽略；忽略项为默认关闭的冻结资产/原生研究/人工准备opt-in，逐项原因见[TESTING](docs/TESTING.md)。这是合成协调器窗口，不是原生引擎、系统故障或全矩阵认证。
+- [x] W1-H3补充K窗口（假执行器进入后、返回前）：合成进程强杀后真实目录锁重开只追加一次`unknown`；操作/报告/队列/领取及第二次重开稳定。见[交接](docs/superpowers/plans/2026-11-03-running-executor-crash-handoff.md)。
+- [x] W1-H3补充K窗口（假执行器返回`Ok(report)`后、报告发布前）：父进程认证operation/job修订链、命令摘要和输入绑定后终止子进程；恢复仅追加job revision 3=`unknown`，无报告/队列/可领取工作，第二次重开稳定。聚焦1 passed，完整ygo-cli 121 passed，workspace默认串行测试退出码0；Python schema 24 passed、2 skipped。机器证据及范围见[交接](docs/superpowers/plans/2026-11-03-executor-return-crash-handoff.md)与[TESTING](docs/TESTING.md)。
+- [x] W1-H3补充K窗口（running修订已持久化、内存队列已更新、领取票据尚未返回）：父进程认证operation/job链和冻结输入绑定后终止子进程；事件为`freeze → claim → queue_updated`，报告和假执行器调用均为0。恢复仅追加一次`unknown`，队列无活动或可领取任务，重复重开字节稳定。聚焦及workspace、Clippy、格式和相关schema回归通过，见[交接](docs/superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)与[TESTING](docs/TESTING.md)。
+- [x] W1-H3补充K窗口（AssetMismatch已持久化、队列内存结算前）：子进程在冻结资产复核失败并保存failed/AssetMismatch revision后终止；父进程认证operation/job链与状态迁移，无报告且`claim_next`未返回。真实目录锁重开保留唯一failed终态、不追加unknown，队列无可领取任务，第二次重开七个revision文件字节稳定。聚焦测试1 passed；此点不覆盖HTTP派发准入拒绝路径或真实资产/引擎。见[交接](docs/superpowers/plans/2026-11-03-asset-mismatch-persisted-before-queue-update-handoff.md)与[TESTING](docs/TESTING.md)。
+- [x] W1-H3补充K窗口（HTTP派发准入AssetMismatch已持久化、内存队列结算前）：子进程经真实`dispatch_pending`进入准入拒绝分支，在`failed/AssetMismatch`修订保存后、内存队列结算前握手并终止；父进程认证operation/job完整修订链、迁移、命令摘要及输入绑定。真实目录锁重开保留failed终态，不追加unknown、报告或执行器调用；队列无可领取工作，第二次重开材料字节稳定。聚焦1 passed；工作区默认串行测试（过滤doctor适配器诊断用例）退出码0，`ygo-cli` 101 passed；schema 8 passed、2 skipped。该合成窗口不认证真实执行或引擎。见[交接](docs/superpowers/plans/2026-11-03-dispatch-admission-asset-mismatch-crash-handoff.md)与[TESTING](docs/TESTING.md)。
 - [ ] W1-H3.2-2b余项：其他逻辑窗口/调度仍开放；逐系统调用故障、断电和介质故障未认证，不自动授权真实分析。
 
 - [x] D2：更新项目定位、双轨计划、研究经验与文档导航；交叉核对记录见[TESTING](docs/TESTING.md)顶部。
@@ -80,13 +90,19 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-H2.2合成HTTP验收：六端点/无路径投影、逻辑持久故障、停止后只读认证、同ID并发重复、容量拒绝与重复读取、取消/领取线性化均有回归。限制为合成服务与已覆盖调度；不认证进程崩溃、客户端响应丢失或真实分析。见[H2.2-A](docs/superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[H2.2-B](docs/superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)及[TESTING](docs/TESTING.md)。
 - [x] W1-H3.2-1/2a限定门禁：跨链认证恢复、幂等重复、响应丢失、受控重开及停止后只读查询已按各自记录的范围验收；不自动重发，也不等同目标进程强杀。
 - [x] W1-H3.2-2b-1四个指定提交窗口：子进程终止后的认证恢复、重复重开字节稳定和跨链绑定冲突负例通过；不包含真实工作服务。
-- [ ] W1-H3.2-2b其余逻辑窗口/调度门禁；逐syscall故障、断电和介质故障继续单独开放。
-- [ ] W1-C本机分析验收设计：合成门禁通过后固定Rabbit输入、资产身份、调用和停止边界；真实分析另行安排并单独记录。
-- [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；未知项不提升为正式数据资格。
-- [ ] P4-R1b-3真实恢复实验设计：定义固定场景、独立scope、预算、窗口、暂停/重开及独立原生重放标准；设计完成后真实执行另行授权。
-- [ ] W2普通用户发布准备：独立干净环境验证启动、资源路径、草稿、导入导出和升级兼容；分别绑定源码、构建产物及资产身份。
-- [ ] A2 / P1：从动作完整性、观察投影、条件概率、自然结束或循环中选一个阻断项，形成可复现实验设计；Ground Collapse仅为候选，任何收费/原生执行须另定scope和授权。
-- [ ] A4 / P1：按已批准的单一研究设计验证所选缺口；不能只增加成功线路或从局部结果宣称完整小问题已证明。
+- [x] W1-H3恢复操作unknown修订追加P/U/R：提交前失败、提交后不确定、写后复读失败后均由重开按提交点继续；只覆盖无任务accepting操作的revision 3合成故障注入，见[交接](docs/superpowers/plans/2026-11-02-unknown-operation-fault-handoff.md)。
+- [ ] W1-H3.2-2b其余逻辑窗口/调度门禁；running报告临时文件同步后、正式发布前的单一K窗口已通过[限定合成强杀](docs/superpowers/plans/2026-11-03-report-temp-crash-window-map.md)，逐syscall故障、断电和介质故障继续单独开放。
+- [x] W1-H3混合恢复顺序K：第一条无任务accepting操作按ID先修复为unknown，第二条带queued任务的accepting操作随后修复为accepted，再将任务分类为interrupted；单一合成子进程终止场景通过，见[映射](docs/superpowers/plans/2026-11-02-mixed-operation-recovery-map.md)、[交接](docs/superpowers/plans/2026-11-02-mixed-operation-recovery-handoff.md)和[TESTING](docs/TESTING.md)。其他操作/任务状态组合、排序、调度及H3窗口仍开放。
+- [x] W1-C单次Rabbit本机有限分析：固定profile、隔离候选包及单次执行范围已按固定输入和停止条件验收；2026-11-03唯一operation `d9c94519880097bb0ef5213580f14e68` / job `70e9a8f132e88ff2334b269603363ab6`以`time_budget`得到`budget_limited`，报告Schema与受控重开稳定性通过。160 nodes、165 engine_calls、5条报告线路均标记engine_verified/replay_verified；该状态不代表独立原生重放、来源认证、完整搜索或全局最优。FFI调用及消费未独立计量，未知不等于0。运行证据见[TESTING](docs/TESTING.md)及[单次范围](docs/superpowers/plans/2026-11-03-w1c-single-rabbit-execution-scope.md)。普通启动仍`analysis_not_configured`；H3余项、R1b-3及P4发布门禁继续分别开放。
+- [x] W1-H3补充K窗口：父进程认证operation/job revision链后，在子进程已持久化`running`并进入测试专用假执行器、尚未返回时终止进程。持真实目录锁重开后仅将job追加一次`unknown`；operation、报告、队列、领取与第二次重开均稳定。该合成窗口不认证真实执行器/引擎；其余调度和系统/介质故障继续开放。证据见[交接](docs/superpowers/plans/2026-11-03-running-executor-crash-handoff.md)及[TESTING](docs/TESTING.md)。
+- [x] W1-H3补充K窗口：持久`running`领取票据返回并通过准入核对后、调用假执行器前终止子进程。父进程认证operation/job链、命令摘要与冻结输入绑定；真实目录锁重开只追加一次`unknown`，第二次重开和文件字节稳定，假执行器调用数为0。该K仅覆盖单一派发间隙，不代表其他调度、生产worker、真实引擎或消费证据。见[交接](docs/superpowers/plans/2026-11-03-ticket-return-crash-handoff.md)和[TESTING](docs/TESTING.md)。
+- [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；截至2026-11-02已人工对照39/39张zh-CN候选，其中38张有官方简中详情页可直接比较：29张候选标题不同，21张正文类别称谓映射未确认；人偶之锤（44088353）目前仅有可用官方日文详情页。2026-11-03单卡来源审计定位到MyCard上游提交，但未发现本项目使用/再分发许可，C1状态继续unknown；zh-SC已人工对照38/38张有候选值的记录，卡号44088353缺字段。全部语言类别、别名/本地化映射和权利依据仍开放，未知项不提升为正式数据资格。见[单卡来源与使用依据复核](docs/superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)、[双locale来源权利复核](docs/superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)、[zh-CN批次1](docs/superpowers/plans/2026-11-02-l1-card-review-batch-1.md)至[zh-CN批次13](docs/superpowers/plans/2026-11-02-l1-card-review-batch-13.md)、[zh-SC批次1](docs/superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-1.md)至[zh-SC批次13](docs/superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-13.md)及[字段核验说明](docs/LANGUAGE_REVIEW.md)。
+- [ ] P4-R1b-3固定场景真实恢复与独立原生重放：隔离驱动、当前工作树身份快照和prepare-only零调用预检已完成。2026-11-03首次预检发现驱动固定指向旧worker，失败的零调用记录保存在`target/p4-r1b3-current-20261103/preflight-attempt-01-mismatch.json`；驱动现从自身Cargo profile目录解析worker，并以当前`current_exe`绑定driver身份。新预检run `p4-r1b3-1793644408613378500-32336`绑定隔离worker `d50ac8ae796380e29d79f796170efea772cc2dad907923b499af5a47513c2cc1`和驱动`076d2a2ebf6b252688d687e2194829c0ed21e93b039ec4eb8df69bba4724d11c`；scope、worker进程、native calls均为0。完整HEAD、tracked diff、参与源码、`Cargo.lock`与产物身份见`target/p4-r1b3-current-20261103/source-identity.json`，固定输入仍与设计基线匹配。5项聚焦测试、workspace全目标Clippy、格式检查及workspace默认串行测试通过；opt-in冻结/原生测试保持忽略。旧run `p4-r1b3-1793625696606077800-54284`只有1次已完成Execution，旧见证对手牌组/手牌计数为0/0、冻结trace为39/1，保存输入/计划/source/driver身份不匹配，不能续跑；无Witness审计、marker、恢复重开或replay。真实scope仍需独立授权，窗口保持开放。详见[身份和零调用预检](docs/superpowers/plans/2026-11-03-p4-r1b3-scope-review.md)、[只读审计](data/runtime/p4-r1b3/p4-r1b3-1793625696606077800-54284/read-only-journal-audit.json)及[实验设计](docs/superpowers/plans/2026-11-02-p4-r1b3-native-resume-experiment-design.md)。
+- [ ] W2普通用户发布准备：2026-11-03已在隔离target构建源码CLI并完成候选包空profile启动、本地catalog路径/检索、草稿保存重开、JSON/YDK往返、同包重启及ZIP解压空格路径复核；另补裸Deck JSON到V1的兼容夹具、CLI失败不覆盖与schema回归，并定义profile升级/回滚合同。候选产物身份见[W2包验收](docs/superpowers/plans/2026-11-03-w2-offline-clean-environment-plan.md)，兼容边界及测试见[W2迁移合同](docs/superpowers/plans/2026-11-03-w2-draft-migration-contract.md)。旧dist不含workbench，真实profile升级、干净Windows环境和回滚仍开放，未切换部署。
+- [x] A2 / P1（观察投影候选）：已形成受限外层私有元数据边界实验设计，覆盖不变性、公开菜单变化传播、未知输入失败关闭及输入稳定性；只适用于冻结合成fixtures，见[实验设计](docs/superpowers/plans/2026-11-02-p1-observation-boundary-experiment.md)。
+- [x] A4 / P1（上述观察投影候选）：2026-11-03复验为29 passed、11 subtests passed；只验收该候选的合成边界，不代表真实隐藏状态等价或通用信息策略无泄漏。
+- [x] P1 opcode24规范菜单合成交叉核验：Rust生产解码器与独立Python oracle在固定掩码上45个规范菜单动作逐项一致；90种有序编码仅为语法排列数。原生提示可达性、响应接受、反序等价与全动作资格保持未知，见[交接](docs/superpowers/plans/2026-11-03-p1-opcode24-menu-crosscheck.md)。
+- [x] P1 Ground Collapse opcode24真实提示/响应接受实验设计及离线准备：固定案例、预算、分阶段重放、成功判据和停止条件已写明。私有归档中精确交付及父链材料逐项通过索引SHA恢复；归档恢复报告通过六项来源检查和verify-only（138个文件、5个目录），SHA-256=`0571114833868488b6213997ad085cb82acf6db3eac036fe9869808189f02278`。随后将阶段driver源码和测试绑定进19成员工具包；v1 schema保留正整数计数兼容，当前profile仍严格绑定19个成员。最新来源检查和verify-only通过，报告SHA-256=`a238a2f114c7cb26b6f1e79d6ca34b3e5f01f33bdb57eab0b6d2f650c2bb8c99`。准备报告仍`execution_ready=false`，没有创建scope或启动runner/worker/FFI。真实提示和响应接受仍开放；此前报告与历史失败材料保留。详见[实验设计](docs/superpowers/plans/2026-11-03-ground-collapse-opcode24-experiment-design.md)、[测试记录](docs/TESTING.md)、[归档恢复报告](data/runtime/p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2/preparation.json)、[前一版源码绑定报告](data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-1/preparation.json)和[当前源码绑定报告](data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/preparation.json)。
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。

@@ -13,6 +13,25 @@ def prefix():
     return [event([40,0]),event([33,0,5,0,0,0]+[123,0,0,0]*5),event([41,1,0]),event([2,1,0,27,0,0,0,0,0,0,0]),event([41,2,0]),event([41,4,0]),idle()]
 PUBLIC={'rules':{'region':'OCG','version':'frozen'},'objective':{'id':'rabbit-own-face-up-xyz-v1','normal_min':0,'normal_max':7,'early_win':8,'loss':-2,'draw':-1,'boundary':'first-next-turn-process-return-v1'},'known_deck_composition':{'main':{'123':5},'extra':{},'side':{}},'initial_public_state':{'own_player':0,'lp':[8000,8000],'turn':1,'turn_player':0,'own_hand_count':5,'opponent_hand_count':0,'empty_field':True,'opponent_deck_model':'copy-own-main'}}
 class ProjectionTests(unittest.TestCase):
+    def test_each_idle_view_ignores_independent_private_metadata(self):
+        events = prefix() + [event([33,0,5,0,0,0]+[123,0,0,0]*5), idle(9,(0,1,0))]
+        baseline = project_prefix(events, PUBLIC)
+        self.assertEqual(baseline['gaps'], [])
+        self.assertEqual(len(baseline['views']), 2)
+        for key, value in (('deck_order', [1, 2]), ('opponent_hand', [3, 4]),
+                           ('rng_state', {'state': 5}), ('source_hash', 'private')):
+            with self.subTest(key=key):
+                changed = copy.deepcopy(events)
+                for item in changed:
+                    item[key] = copy.deepcopy(value)
+                before = copy.deepcopy(changed)
+                projected = project_prefix(changed, PUBLIC)
+                self.assertEqual(projected['gaps'], [])
+                self.assertEqual(
+                    [(v['view'], v['observation_key']) for v in baseline['views']],
+                    [(v['view'], v['observation_key']) for v in projected['views']],
+                )
+                self.assertEqual(changed, before)
     def test_raw_projection_excludes_private_metadata(self):
         e=prefix(); a=project_prefix(e,PUBLIC)['views'][0]
         for x in e: x.update(seed=999,checkpoint={'cards':['hidden']},source_hash='secret',sequence=900)

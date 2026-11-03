@@ -1,6 +1,10 @@
 # Windows 本机部署与验收
 
-## 当前现场（2026-11-01）
+2026-11-03现场：源码基线HEAD为`672e5a8`，当前工作树含未提交修改。`dist/ygo-local`仍是2026-10-19旧包；CLI和worker分别匹配包内`build-hashes.json`，但该清单只绑定这两个文件，当前包无`manifest.json`，也不能证明当前源码已部署。隔离W1-C候选已构建并用于一次独立Rabbit有限分析，结果为`budget_limited/time_budget`；没有部署到`dist/ygo-local`。P4-R5仍开放。只读权限检查另发现`NT AUTHORITY\Authenticated Users`对`dist/ygo-local`及`data/runtime`有继承Modify权限；普通工作台仍关闭分析。安全影响和未决环境条件见[环境审计](ENVIRONMENT_AUDIT.md)。
+
+2026-11-03 W2隔离候选包：源码CLI已用`--offline --locked`构建并放入`target/w2-clean-20261103/package-candidate-02`，通过空profile启动、包内catalog读取/检索、牌组草稿保存重开、JSON/YDK往返和同包重启检查。源码/产物/catalog身份与机器验收见[TESTING](TESTING.md)及[W2批次计划](superpowers/plans/2026-11-03-w2-offline-clean-environment-plan.md)。候选仅在target目录，未切换部署。旧dist没有workbench，故升级兼容和旧草稿迁移未验收；同一主机隔离目录不等于干净Windows环境验收。
+
+## 历史现场（2026-11-01）
 
 当前checkout为`main / 2f690d5`，工作区有未提交修改；本批没有构建或部署当前工作区。`dist/ygo-local`仍为2026-10-19旧包，CLI/worker哈希与包内清单一致；`target/release`中的对应可执行文件与dist为同一Windows硬链接，不能作为当前HEAD构建证据。部署配置绑定本机绝对路径，不可直接搬移。
 

@@ -1,6 +1,8 @@
 # 本机牌组草稿工作台
 
-当前工作台状态与分析恢复门禁见[TASKS](../TASKS.md)和[TESTING](TESTING.md)。H3.2-2a、2b-1四个限定进程终止窗口及2b-2 accepting保存后冻结前窗口已验收；其余2b窗口/调度、syscall/断电/介质故障及W1-C真实分析仍开放。普通启动保持`analysis_not_configured`。以下历史段落保留原时点。
+当前工作台状态与分析恢复门禁见[TASKS](../TASKS.md)和[TESTING](TESTING.md)。H3.2-2a、2b-1四个限定进程终止窗口及2b-2 accepting保存后冻结前窗口已验收；其余2b窗口/调度、syscall/断电/介质故障仍开放。W1-C固定Rabbit单次本机有限分析已在隔离scope下以`budget_limited/time_budget`完成；FFI/消费未独立计量、报告来源未独立认证。普通启动保持`analysis_not_configured`；后续运行须另有执行范围。以下历史段落保留原时点。
+
+2026-11-03：隔离工作台候选包通过同机空profile启动、catalog检索、草稿和JSON/YDK往返、重启重开验收；旧发布包不含workbench，升级和干净Windows环境仍开放。见[W2验收记录](superpowers/plans/2026-11-03-w2-offline-clean-environment-plan.md)。
 
 历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见本文顶部与[当前任务](../TASKS.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
 
@@ -8,7 +10,7 @@ H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026
 
 H2.2-A/B所列合成HTTP验收已关闭，但普通启动仍未配置分析后端，真实分析与H3开放。取消先完成的顺序分支有既有用例，16轮并发竞争均由claim获胜；早期TCP重置根因未知。
 
-当前HTTP v1源码包含六个分析端点及无路径DTO；H2.2-A/B及H3.2-2a、2b-1、2b-2 accepting-before-freeze限定合成验收已通过。普通`workbench serve`未配置分析后端，分析请求返回`analysis_not_configured`，网页没有任务操作界面。H3.2-2b其他窗口/调度、W1-C真实分析和P4-R5仍开放；接口见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实现与证据见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[TESTING](TESTING.md)及[2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
+当前HTTP v1源码包含六个分析端点及无路径DTO；显式配置下还会启用持久单任务派发器，结果先落盘再提交终态。Rabbit固定参数/资产准入已接入显式生产入口，2026-11-03一次本机有限分析运行到`budget_limited/time_budget`并经受控重开复核。普通`workbench serve`仍未配置分析后端，分析请求返回`analysis_not_configured`；网页没有任务操作界面。H3.2-2b其他窗口/调度、FFI/消费独立计量、报告来源认证和P4-R5仍开放；接口见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实现与证据见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[TESTING](TESTING.md)及[2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
 
 工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。
 
@@ -31,6 +33,8 @@ cargo run -p ygo-cli --offline --locked -- workbench serve
 --store DIR       快照根目录，默认 data/snapshots
 --catalog-id ID   已导入本地catalog快照ID；不提供时卡名未核验
 --language-status FILE  C1字段状态报告；只读取状态和哈希，不读取候选正文
+--analysis-config FILE  显式启用分析执行；读取ProcessEngineConfig TOML，默认不启用
+--analysis-store DIR    分析任务/报告存储目录；仅能与--analysis-config一起使用
 --port PORT       固定本机端口；不提供时由系统分配
 ```
 
@@ -59,7 +63,7 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 
 H2.2源码实现六个端点：分配/提交/查询操作、查询任务、读取结果及取消排队任务。提交先持久保存`accepting`再返回202，后台锁外完成W1-A冻结；结果经无路径白名单投影，历史读取使用已认证的持久记录。完整请求/响应合同见[WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)。
 
-当前普通启动没有配置分析协调器，以上端点返回`analysis_not_configured`；测试专用合成服务不构成生产分析后端。真实分析、报告来源认证及H3.2-2b其他窗口/调度仍开放；逐syscall、断电和介质故障未认证。H2.2-A/B、H3.2-2a、2b-1与accepting-before-freeze已覆盖范围见[验收记录](TESTING.md)。任务进程内冻结对象含本机路径与完整catalog，不可直接序列化；报告引用和合成状态也不表示真实执行。部署包状态见[DEPLOYMENT.md](DEPLOYMENT.md)。
+默认启动没有配置分析协调器，以上端点返回`analysis_not_configured`。仅显式传入`--analysis-config FILE`才会构造持久协调器和生产执行器；成功冻结后每次派发调用至多领取一个任务，任务执行串行。该显式入口仅接受固定Rabbit牌组/起手/seed/rules/snapshot/date/budget及绑定资产与隔离包身份；一次真实本机有限分析已到`budget_limited/time_budget`，不是完整搜索或最优性证明。预算/引擎调用前可认证的失败提交为`analysis_failed`；调用后错误、panic或报告编码不确定会持久化为`unknown`并停止派发，重开不自动重试。成功报告先持久化，再提交completed或budget-limited终态。报告来源独立认证、FFI/消费独立计量及H3.2-2b其他窗口/调度仍开放；逐syscall、断电和介质故障未认证。任务进程内冻结对象含本机路径与完整catalog，不可直接序列化。部署包状态见[DEPLOYMENT.md](DEPLOYMENT.md)。
 
 ## 保存与本机数据
 

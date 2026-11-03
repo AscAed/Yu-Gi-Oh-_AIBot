@@ -1,10 +1,18 @@
 # 实施取舍与交付边界
 
+2b-2复核：父进程必须先认证完整链与握手，再终止子进程；freeze/claim事件只证明合成路径所观测调用。最终版本补充断言后须重新验证，不能沿用更早结果；Windows同一测试程序仍运行时并发链接曾失败，须等待占用释放并重跑，不能当作行为红测。详见[验证记录](TESTING.md)和[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
+
 2026-11-02复核：握手须在临时文件同步后原子发布，避免父进程读到半标记；Windows接受socket的非阻塞继承及修复见[响应丢失交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)，旧TCP重置根因仍未知。未知消费不能推断为零；Tenki pin与Curry实际执行源码缺少来源链，不能用相似代码替代，见[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)。合成、原生、会计与最优性证据分别判定；候选构建隔离且绑定资产，见[验证记录](TESTING.md)。历史证据归档仅覆盖清单所列文件，哈希清单不是备份，普通克隆不能取得私有索引，见[保留清单](EVIDENCE_RETENTION.md)。
 
 **H3.2-2b-1经验：**初版握手文件先创建再写入，父进程可能读到空或部分标记；改为同步临时文件后原子发布。四个限定窗口强杀后重新认证保存材料，核对空活动队列、重复重开和原始字节稳定；其他窗口及系统故障仍未认证。详见[交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
 
 **H3.2-2b-2经验（2026-11-02）：**首次accepting持久化后、freeze前强杀后，恢复仅追加一次unknown且不建任务。跨进程测试必须认证所有操作修订、摘要和哈希，再用同步事件文件确认freeze/claim计数；旧测试计数器漏掉`submit_operation_core`直接调用的冻结闭包。事件仅证明该合成协调器窗口的调用边界，不覆盖worker、原生引擎、syscall或消费账本。详见[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)和[验证记录](TESTING.md)。
+
+**running领取边界经验（2026-11-03）：**running修订持久化、内存队列更新、票据返回和执行器调用是不同的可观察边界；相邻强杀用例不能替代中间点。本批在队列更新后、票据返回前单独握手并认证，事件记录器只在目标checkpoint启用，避免污染既有事件顺序。补强父进程operation全链认证时，发现旧辅助函数虽然有accepted revision 4的转换校验，却在状态白名单中漏掉`Accepted`；修正后重新运行聚焦与workspace测试。该合成路径确认假执行器未被调用；恢复后的`unknown`仍不代表零消费。见[窗口交接](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)和[验证记录](TESTING.md)。
+
+**AssetMismatch恢复边界经验（2026-11-03）：**正向领取路径成功返回ticket的K证据不覆盖资产复核失败分支。新增单点K验证failed/AssetMismatch revision成功持久化、队列内存终态尚未应用时的进程终止；重开保留failed终态且不追加unknown。该协调器层合成检查不覆盖HTTP派发准入失败分支或真实资产/引擎，详见[交接](superpowers/plans/2026-11-03-asset-mismatch-persisted-before-queue-update-handoff.md)和[验证记录](TESTING.md)。
+
+**Ground候选构建身份边界（2026-11-03）：**离线候选清单必须分别绑定完整当前工作区源码、构建命令与产物、冻结输入、资产和最终阶段请求；准备报告的历史工作区摘要不能替代当前源码身份。候选review记录、构建成功或stage request摘要都不等于最终原生请求、scope授权或执行准入；保持hold时不得创建scope或启动runner/worker。机器记录和限制见[Ground候选清单评审](superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)与[验证记录](TESTING.md)。
 
 **H3.2-1 经验（2026-11-01）：**全量认证跨链材料并预先验证恢复候选，再依序提交；写后不确定即停止，重复重开不重复追加。原函数时间非法时曾提前追加 accepted，可靠串行红测记录于[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)；并发编译及 LNK1104 不能视为行为红测。目标窗口强杀、断电和介质故障仍未验收。
 

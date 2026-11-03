@@ -20,6 +20,14 @@ cargo run -p ygo-cli -- deck draft export --input draft.json --output deck.ydk -
 
 `show`可选接收`--store`与`--catalog-id`来对指定本地catalog检查未知卡号。未指定catalog时状态明确为“未核验”；检查只报告未知卡号，不自动删除或替换。输出中的legality恒为`not_checked`，分析仍由原有完整牌组和规则门禁负责。
 
+## 导入兼容与profile升级
+
+裸`Deck` JSON只接受`main`、`extra`、`side`三个字段；导入会保留每个分区内的顺序和重复卡号，将它归一成`DeckDocumentV1`并使用`Imported deck`标题。测试夹具把这种无版本输入标为legacy bare v0；这个标签仅说明输入形状，不代表曾发布过v0应用或profile。
+
+带版本JSON必须符合V1合同；未来schema版本、重复键、缺失/额外字段或非法卡号均失败关闭。YDK是牌组交换格式，不保存标题和其它元数据；导入时使用`Imported YDK deck`。CLI显式`deck draft import`会生成规范V1输出，默认拒绝覆盖现有目标，只有`--replace`明确替换；转换失败时保留原输入和目标。工作台`/api/import`只返回未保存草稿，必须由用户另行保存。
+
+工作台profile里的文件不是上述裸JSON文件，而是`StoredDeckDraft { id, revision, draft }`包装记录，按32位ID文件名存储并用revision校验内容。当前没有profile级版本清单或profile迁移器；不能把文件导入能力当作升级整个profile的支持。停止服务、备份源profile、分阶段转换、版本/资产身份校验、回滚journal和独立重开都必须纳入未来的安装包升级验收，具体合同见[W2迁移合同](superpowers/plans/2026-11-03-w2-draft-migration-contract.md)。
+
 JSON合同位于[`deck-document-v1.schema.json`](../schemas/deck-document-v1.schema.json)。
 
 浏览器工作台的启动方式与HTTP边界见[WORKBENCH](WORKBENCH.md)。

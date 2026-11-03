@@ -98,6 +98,16 @@ class Schemas(unittest.TestCase):
             invalid.update(mutation)
             self.assertTrue(list(check.iter_errors(invalid)), mutation)
 
+    def test_legacy_deck_fixture_expected_migration_output_matches_v1_schema(self):
+        fixture_dir = ROOT / 'tests/fixtures'
+        legacy = json.loads((fixture_dir / 'deck-draft-legacy-bare-v0.json').read_text())
+        migrated = json.loads((fixture_dir / 'deck-draft-legacy-bare-v0.expected-v1.json').read_text())
+        self.assertEqual(set(legacy), {'main', 'extra', 'side'})
+        self.assertNotIn('schema_version', legacy)
+        self.assertEqual(migrated['schema_version'], 1)
+        self.assertEqual(migrated['kind'], 'deck_draft')
+        validator('deck-document-v1.schema.json').validate(migrated)
+
     def test_language_field_review_contract_is_non_qualifying_and_contains_no_candidate_text(self):
         from ygo_data.language_review import audit_language_fields
         check = validator('language-field-review-v1.schema.json')

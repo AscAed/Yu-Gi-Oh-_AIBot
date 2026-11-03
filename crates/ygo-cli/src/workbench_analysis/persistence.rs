@@ -615,11 +615,26 @@ impl PersistentAnalysisJobStore {
         for entry in fs::read_dir(reports).map_err(|_| PersistenceError::Io)? {
             let entry = entry.map_err(|_| PersistenceError::Io)?;
             let name = entry.file_name().to_string_lossy().into_owned();
+            let metadata = ygo_storage::safe_store_metadata(&entry.path())
+                .map_err(|_| PersistenceError::InvalidPath)?;
+            if let Some(temporary_id) = name
+                .strip_prefix(".ygo-draft-")
+                .and_then(|name| name.strip_suffix(".tmp"))
+            {
+                if !valid_id(temporary_id)
+                    || !metadata.is_file()
+                    || metadata.len() > MAX_REPORT_BYTES as u64
+                {
+                    return Err(PersistenceError::ReportInvalid);
+                }
+                // An interrupted exclusive publish can leave its synced,
+                // unpublished temporary bytes behind. Preserve them as
+                // evidence, but never treat them as an indexed report.
+                continue;
+            }
             let id = name
                 .strip_suffix(".json")
                 .ok_or(PersistenceError::ReportInvalid)?;
-            let metadata = ygo_storage::safe_store_metadata(&entry.path())
-                .map_err(|_| PersistenceError::InvalidPath)?;
             if !valid_id(id) || !metadata.is_file() || metadata.len() > MAX_REPORT_BYTES as u64 {
                 return Err(PersistenceError::ReportInvalid);
             }

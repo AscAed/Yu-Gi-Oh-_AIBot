@@ -47,7 +47,7 @@
 
 **已验证·具备双时点材料的指定批次：**Curry再验真按其合同绑定执行当时的源码归档、文件清单、build record、runner/worker/CLI字节、资产身份、请求及账本。文档收尾会改变workspace identity，最终交付另外绑定完整当前源码及材料索引。不能用文档后identity替换原生时点build record的source identity，也不能反向声称旧二进制对应包含新文档/源码的完整最终工作区。这不是所有历史原生批次都已具备的保证：早期九次请求的旧runner来源不可得，缺失或未认证来源保持未知；当前归档、哈希或后续成功不能为它补签，见[独立历史核验交接](superpowers/plans/2026-10-21-history-followup-handoff.md)及[历史完整性工具边界](RESEARCH_AUDIT.md)。
 
-**仅历史scope·Curry再验真：**[交接](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)及[最终delivery](../data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json)分别保留原生时点与最终源码/构建材料。[Ground最终delivery](../target/ground-collapse-preparation-tests/final-release/delivery.json)进一步固定这两份来源。文档修改不为旧原生结果新增规则资格；最终身份变化也不表示原生证据失效，应按各自绑定及允许源码差异检查。
+**仅历史scope·Curry再验真：**[交接](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)及[最终delivery](../data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json)分别保留原生时点与最终源码/构建材料。[Ground最终delivery](#ignored-evidence-links)进一步固定这两份来源。文档修改不为旧原生结果新增规则资格；最终身份变化也不表示原生证据失效，应按各自绑定及允许源码差异检查。
 
 **已验证·恢复V3的细节：**成功报告发布重建要求工具身份绑定本次workspace，发布源签名包含`tool`；保存报告的verify-only允许文档更新后workspace变化，但仍核验保存工具包及来源，并要求本次读取稳定。这个兼容不是“忽略任意源码变化”，更不是允许篡改旧报告。[恢复器](../python/ygo_eval/curry_ledger_handoff_recovery.py)与[V3 schema](../schemas/curry-ledger-handoff-recovery-v3.schema.json)是具体边界。
 
@@ -82,5 +82,7 @@
 **仅历史scope：**Tenki opcode13与Curry opcode14的部分分支及独立重放，只适用于各自冻结案例；Ground opcode24的45个canonical区域对/90种有序编码来自静态与合成材料。实际mask、prompt ID、可达性、响应接受、反序等价与后继仍未知；FIELD_DISABLED56解析支持也不证明该消息在真实Ground线路出现。见[Ground交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md)。
 
 **已验证·现有资格边界：**`proof_ready`、`complete_action_coverage`、`global_optimality`、`native_probability_verified`继续为false。内容身份、成功恢复、预算预留、schema通过或局部原生重放均不能单独改变这些值。发行依据unknown也不能靠卡库行数、脚本存在或中文候选资料补齐。未知消费保持`null`，未知效果/来源明确保留未知，不填0或自签为engine-verified。
+
+**静态代码审阅·Ground执行准入字段：**standalone Rust probe会读取manifest中的`scope_authorized`与`preparation_execution_ready`，并验证context散列和文件散列。context是未加密钥的内容哈希，调用者改动布尔字段后可重算；Python stage driver会检查`source_identity`，Rust probe本身不独立确认该来源身份。故这些字段是准备/就绪断言，不是可信授权凭证；CLI被操作员明确调用是当前本机入口。若未来要求它们充当授权边界，必须由runner自身验证独立保护的签名或MAC，并绑定源码、资产、请求、输出路径和有效窗口。当前候选清单保持hold，`execution_ready=false`，未创建scope或执行runner/worker/FFI。代码位置见[`ground-collapse-probe.rs`](../crates/ygo-engine-adapter/examples/ground-collapse-probe.rs)与[`ground_collapse_stage_driver.py`](../python/ygo_eval/ground_collapse_stage_driver.py)。
 
 **拟议改善：**为新证据入口统一文档化“对象身份算法、原始文件hash、容器/成员核验、模式副作用、发布状态、可授予资格”六项清单，并用合成负例覆盖混淆；既有合同保持按版本读取，不以通用宽容解析替代精确历史约束。

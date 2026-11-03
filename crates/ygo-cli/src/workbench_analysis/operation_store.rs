@@ -172,6 +172,12 @@ impl PersistentAnalysisJobStore {
                 return Err(Error::RevisionConflict);
             }
             self.append_operation(&next)?;
+            #[cfg(test)]
+            super::durable::crash_checkpoint("recovery_first_operation_classified_before_next");
+            #[cfg(test)]
+            super::durable::crash_checkpoint(
+                "recovery_mixed_operations_first_classified_before_next",
+            );
         }
         #[cfg(test)]
         super::durable::crash_checkpoint("recovery_operation_repaired_before_task_classified");
@@ -180,6 +186,12 @@ impl PersistentAnalysisJobStore {
                 return Err(Error::RevisionConflict);
             }
             self.append_expected(next.job_id(), revision, next.clone())?;
+            #[cfg(test)]
+            super::durable::crash_checkpoint("recovery_first_task_classified_before_next");
+            #[cfg(test)]
+            super::durable::crash_checkpoint("recovery_first_task_classified_before_running");
+            #[cfg(test)]
+            super::durable::crash_checkpoint("recovery_unknown_before_queued");
         }
         Ok(())
     }

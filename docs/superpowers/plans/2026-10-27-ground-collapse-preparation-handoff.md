@@ -24,7 +24,7 @@ opcode24的实际原生提示、掩码、prompt ID、可达性、响应接受及
 
 ## 后续续接
 
-固定准备目录已存在；恢复时不得重跑prepare、覆盖报告、换名或把准备合同直接交给worker。先核验本交接指向的[最终交付记录](../../../target/ground-collapse-preparation-tests/final-release/delivery.json)、源码归档、文件清单、正式报告哈希及最后生成的体积/访问失败清单。文档定稿后的`--verify-only`只读结果及原始stdout/stderr/退出状态由delivery记录绑定。
+固定准备目录已存在；恢复时不得重跑prepare、覆盖报告、换名或把准备合同直接交给worker。先核验本交接指向的[最终交付记录](#ignored-evidence-links)、源码归档、文件清单、正式报告哈希及最后生成的体积/访问失败清单。文档定稿后的`--verify-only`只读结果及原始stdout/stderr/退出状态由delivery记录绑定。
 
 下一步若要原生发现opcode24，必须另立新scope、请求预算和窗口；在首次候选资产扫描前保存窗口起点，冻结worker/build/identity/request/seal，并逐阶段收费。公开选区只能按上述坐标唯一匹配，不可因缺失或重复而改选。任何未知提示、掩码变化、额外消息、响应失配、资产漂移、到期或未知消费均停止，不重试、不续开旧窗口。
 

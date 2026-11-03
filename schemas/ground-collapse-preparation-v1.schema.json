@@ -182,7 +182,7 @@
       "additionalProperties": false,
       "required": ["file_count", "archive_sha256", "file_list_sha256", "source_identity"],
       "properties": {
-        "file_count": { "const": 11 },
+        "file_count": { "type": "integer", "minimum": 1 },
         "archive_sha256": { "$ref": "#/$defs/sha256" },
         "file_list_sha256": { "$ref": "#/$defs/sha256" },
         "source_identity": { "$ref": "#/$defs/sha256" }

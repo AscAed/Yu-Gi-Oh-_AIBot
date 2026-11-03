@@ -77,6 +77,16 @@ fn requires_stop(error: PersistenceError) -> bool {
 }
 
 #[cfg(test)]
+const RUNNING_QUEUE_UPDATED_BEFORE_TICKET_RETURN: &str =
+    "running_queue_updated_before_ticket_return";
+#[cfg(test)]
+const ASSET_MISMATCH_PERSISTED_BEFORE_QUEUE_UPDATE: &str =
+    "asset_mismatch_persisted_before_queue_update";
+#[cfg(test)]
+const DISPATCH_ASSET_MISMATCH_PERSISTED_BEFORE_QUEUE_UPDATE: &str =
+    "dispatch_asset_mismatch_persisted_before_queue_update";
+
+#[cfg(test)]
 pub(super) fn crash_checkpoint(point: &str) {
     const STAGE: &str = "YGO_H3_CRASH_CHECKPOINT";
     const MARKER: &str = "YGO_H3_CRASH_MARKER";
@@ -251,7 +261,10 @@ impl DurableAnalysisCoordinator {
         }
         let claimed = match self.queue.claim_next_with_persist(now_ms, |record| {
             self.store
-                .append_expected(record.job_id(), record.revision() - 1, record.clone())
+                .append_expected(record.job_id(), record.revision() - 1, record.clone())?;
+            #[cfg(test)]
+            crash_checkpoint("running_persisted_before_queue_update");
+            Ok(())
         }) {
             Ok(ticket) => ticket,
             Err(error) => return self.map_queue_error(error, stopped),
@@ -269,7 +282,17 @@ impl DurableAnalysisCoordinator {
                         record.job_id(),
                         record.revision() - 1,
                         record.clone(),
-                    )
+                    )?;
+                    #[cfg(test)]
+                    {
+                        if std::env::var("YGO_H3_CRASH_CHECKPOINT").as_deref()
+                            == Ok(ASSET_MISMATCH_PERSISTED_BEFORE_QUEUE_UPDATE)
+                        {
+                            record_crash_test_event("asset_mismatch_persisted");
+                        }
+                        crash_checkpoint(ASSET_MISMATCH_PERSISTED_BEFORE_QUEUE_UPDATE);
+                    }
+                    Ok(())
                 },
             ) {
                 Ok(_) => return Err(DurableCoordinatorError::AssetMismatch),
@@ -286,6 +309,14 @@ impl DurableAnalysisCoordinator {
                 }
             }
         }
+        #[cfg(test)]
+        if std::env::var("YGO_H3_CRASH_CHECKPOINT").as_deref()
+            == Ok(RUNNING_QUEUE_UPDATED_BEFORE_TICKET_RETURN)
+        {
+            record_crash_test_event("queue_updated");
+        }
+        #[cfg(test)]
+        crash_checkpoint(RUNNING_QUEUE_UPDATED_BEFORE_TICKET_RETURN);
         Ok(Some(ticket))
     }
 
@@ -309,8 +340,14 @@ impl DurableAnalysisCoordinator {
         match self
             .queue
             .cancel_with_persist(job_id, revision, now_ms, |record| {
-                self.store
-                    .append_expected(record.job_id(), record.revision() - 1, record.clone())
+                self.store.append_expected(
+                    record.job_id(),
+                    record.revision() - 1,
+                    record.clone(),
+                )?;
+                #[cfg(test)]
+                crash_checkpoint("cancelled_persisted_before_queue_update");
+                Ok(())
             }) {
             Ok(record) => Ok(record),
             Err(error) => self.map_queue_error(error, stopped),
@@ -370,8 +407,16 @@ impl DurableAnalysisCoordinator {
         let outcome = self
             .queue
             .settle_with_persist(ticket, event, now_ms, |record| {
-                self.store
-                    .append_expected(record.job_id(), record.revision() - 1, record.clone())
+                self.store.append_expected(
+                    record.job_id(),
+                    record.revision() - 1,
+                    record.clone(),
+                )?;
+                #[cfg(test)]
+                crash_checkpoint("completed_persisted_before_queue_update");
+                #[cfg(test)]
+                crash_checkpoint("budget_persisted_before_queue_update");
+                Ok(())
             });
         match outcome {
             Ok(record) => Ok((record, report)),
@@ -409,6 +454,91 @@ impl DurableAnalysisCoordinator {
         match self.queue.settle_with_persist(
             ticket,
             AnalysisJobEvent::Fail(AnalysisJobFailure::AnalysisFailed),
+            now_ms,
+            |record| {
+                self.store.append_expected(
+                    record.job_id(),
+                    record.revision() - 1,
+                    record.clone(),
+                )?;
+                #[cfg(test)]
+                crash_checkpoint("failed_persisted_before_queue_update");
+                Ok(())
+            },
+        ) {
+            Ok(record) => Ok(record),
+            Err(QueueError::Persistence(error)) => self.map_persistence_error(error, stopped),
+            Err(error) => Err(DurableCoordinatorError::Queue(error)),
+        }
+    }
+
+    /// Commits a known pre-execution identity failure for a claimed task.
+    pub fn fail_asset_mismatch(
+        &self,
+        ticket: &DispatchTicket,
+        now_ms: u64,
+    ) -> Result<AnalysisJobRecordV1, DurableCoordinatorError> {
+        let mut stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Persistence(error));
+        }
+        match self.queue.settle_with_persist(
+            ticket,
+            AnalysisJobEvent::Fail(AnalysisJobFailure::AssetMismatch),
+            now_ms,
+            |record| {
+                self.store.append_expected(
+                    record.job_id(),
+                    record.revision() - 1,
+                    record.clone(),
+                )?;
+                #[cfg(test)]
+                {
+                    if std::env::var("YGO_H3_CRASH_CHECKPOINT").as_deref()
+                        == Ok(DISPATCH_ASSET_MISMATCH_PERSISTED_BEFORE_QUEUE_UPDATE)
+                    {
+                        record_crash_test_event("dispatch_asset_mismatch_persisted");
+                    }
+                    crash_checkpoint(DISPATCH_ASSET_MISMATCH_PERSISTED_BEFORE_QUEUE_UPDATE);
+                }
+                Ok(())
+            },
+        ) {
+            Ok(record) => Ok(record),
+            Err(QueueError::Persistence(error)) => self.map_persistence_error(error, stopped),
+            Err(error) => Err(DurableCoordinatorError::Queue(error)),
+        }
+    }
+
+    /// Persists an uncertain execution outcome and stops dispatch. The task is
+    /// never retried; a failed commit remains running and is classified unknown
+    /// by the existing restart recovery path.
+    pub fn mark_unknown(
+        &self,
+        ticket: &DispatchTicket,
+        now_ms: u64,
+    ) -> Result<AnalysisJobRecordV1, DurableCoordinatorError> {
+        let mut stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        *stopped = true;
+        if let Err(error) = self.store.authenticate_operation_bindings() {
+            return Err(DurableCoordinatorError::Persistence(error));
+        }
+        match self.queue.settle_with_persist(
+            ticket,
+            AnalysisJobEvent::Fail(AnalysisJobFailure::CompletionUncertain),
             now_ms,
             |record| {
                 self.store
@@ -634,6 +764,8 @@ impl DurableAnalysisCoordinator {
             *stopped = true;
             return Err(DurableCoordinatorError::Persistence(e));
         }
+        #[cfg(test)]
+        crash_checkpoint("allocated_persisted_before_return");
         Ok(op)
     }
     /// Resolves a new operation through the actual W1-A freeze gate. Repeated
@@ -770,6 +902,14 @@ impl DurableAnalysisCoordinator {
                 *stopped = true;
                 return Err(DurableCoordinatorError::Persistence(e));
             }
+            #[cfg(test)]
+            if full && !context_changed {
+                crash_checkpoint("capacity_rejected_persisted_before_return");
+            }
+            #[cfg(test)]
+            if context_changed {
+                crash_checkpoint("context_rejected_persisted_before_return");
+            }
             return Ok(OperationSubmission {
                 record: op,
                 ticket: None,
@@ -834,6 +974,27 @@ impl DurableAnalysisCoordinator {
         snapshots: &ygo_storage::SnapshotStore,
         engine: ygo_engine_adapter::ProcessEngineConfig,
     ) -> Result<Operation, DurableCoordinatorError> {
+        self.finish_operation_with_clock_and_validator(
+            ticket,
+            now,
+            drafts,
+            snapshots,
+            engine,
+            |_| true,
+        )
+    }
+
+    /// Applies a private service admission check to the captured input before
+    /// the coordinator persists a task or publishes the operation as accepted.
+    pub fn finish_operation_with_clock_and_validator(
+        &self,
+        ticket: OperationFreezeTicket,
+        now: impl FnOnce() -> u64,
+        drafts: &ygo_storage::DeckDraftStore,
+        snapshots: &ygo_storage::SnapshotStore,
+        engine: ygo_engine_adapter::ProcessEngineConfig,
+        validate: impl FnOnce(&FrozenAnalysisInput) -> bool,
+    ) -> Result<Operation, DurableCoordinatorError> {
         let op = &ticket.operation;
         let cmd = op.command().expect("accepting command");
         #[cfg(test)]
@@ -857,7 +1018,14 @@ impl DurableAnalysisCoordinator {
             engine,
             snapshots,
             &op.context().default_catalog_id,
-        );
+        )
+        .and_then(|input| {
+            if validate(&input) {
+                Ok(input)
+            } else {
+                Err(super::AnalysisFreezeError::AnalysisProfileMismatch)
+            }
+        });
         self.finish_operation_core(ticket, now(), frozen)
     }
 
@@ -936,6 +1104,8 @@ impl DurableAnalysisCoordinator {
                     *stopped = true;
                     return Err(DurableCoordinatorError::Persistence(e));
                 }
+                #[cfg(test)]
+                crash_checkpoint("preparation_rejected_persisted_before_return");
                 *self
                     .reservation
                     .lock()
@@ -969,7 +1139,10 @@ impl DurableAnalysisCoordinator {
                 self.store.append_initial(record.clone())?;
                 #[cfg(test)]
                 crash_checkpoint("task_persisted_before_acceptance");
-                self.store.append_operation(&accepted)
+                self.store.append_operation(&accepted)?;
+                #[cfg(test)]
+                crash_checkpoint("accepted_persisted_before_queue_update");
+                Ok(())
             },
         );
         match outcome {
@@ -1035,6 +1208,72 @@ mod operation_tests {
         };
         (drafts, snapshots, engine, context, command)
     }
+
+    #[test]
+    fn rejected_frozen_input_is_not_persisted_as_a_job() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let started = c
+            .begin_operation(op.operation_id(), cmd, &ctx, 101)
+            .unwrap();
+
+        let rejected = c
+            .finish_operation_with_clock_and_validator(
+                started.ticket.unwrap(),
+                || 200,
+                &drafts,
+                &snapshots,
+                engine,
+                |_| false,
+            )
+            .unwrap();
+
+        assert_eq!(rejected.state(), OperationState::Rejected);
+        assert_eq!(rejected.error_code(), Some("analysis_profile_mismatch"));
+        assert!(rejected.job_id().is_some());
+        assert!(c.inspect_job(rejected.job_id().unwrap()).is_err());
+        assert!(c.snapshot().unwrap().queued.is_none());
+        assert!(c.snapshot().unwrap().running.is_none());
+    }
+
+    #[test]
+    fn post_claim_package_mismatch_is_a_durable_pre_execution_failure() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let c = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let op = c.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepted = c
+            .submit_operation(
+                op.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let ticket = c.claim_next(102).unwrap().unwrap();
+
+        let failed = c.fail_asset_mismatch(&ticket, 103).unwrap();
+
+        assert_eq!(failed.state(), AnalysisJobState::Failed);
+        assert_eq!(failed.error_code(), Some(AnalysisJobFailure::AssetMismatch));
+        assert_eq!(failed.job_id(), accepted.job_id().unwrap());
+        assert!(c.snapshot().unwrap().queued.is_none());
+        assert!(c.snapshot().unwrap().running.is_none());
+        assert_eq!(
+            c.inspect_job(failed.job_id())
+                .unwrap()
+                .last()
+                .unwrap()
+                .error_code(),
+            Some(AnalysisJobFailure::AssetMismatch)
+        );
+    }
+
     #[test]
     fn split_completion_samples_clock_after_freeze_and_stopped_queries_remain_read_only() {
         let root = root();

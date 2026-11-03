@@ -1,10 +1,10 @@
 # W1-H1 分析任务HTTP合同设计
 
-当前状态以[TASKS](../TASKS.md)和[TESTING](TESTING.md)为准：H3.2-2a、2b-1四个限定进程终止窗口及accepting保存后冻结前窗口已验收；其余2b窗口/调度及系统故障、W1-C真实分析仍开放。普通启动保持`analysis_not_configured`。本文历史设计段落保留原时点。
+当前状态以[TASKS](../TASKS.md)和[TESTING](TESTING.md)为准：H3.2-2a、2b-1四个限定进程终止窗口及accepting保存后冻结前窗口已验收；其余2b窗口/调度及系统故障仍开放。W1-C单次Rabbit本机有限分析已按scope完成并在重开后稳定读取，结果为`budget_limited/time_budget`；报告来源未独立认证，FFI/消费未独立计量。普通启动保持`analysis_not_configured`。本文历史设计段落保留原时点。
 
 H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。现有跨链认证/分类可复用；新增完整恢复与响应丢失矩阵尚未实现／尚未运行，留待H3.2。普通启动仍为`analysis_not_configured`。
 
-当前状态：H2.1提供内部操作存储；H2.2已实现本文六个HTTP端点及状态/结果DTO；H2.2-A/B、H3.2-1、2a、2b-1及accepting-before-freeze限定合成验收已通过。普通启动仍未配置分析服务，H3.2-2b其他窗口/调度、真实分析和报告来源认证仍开放，详见[TASKS](../TASKS.md)和[TESTING](TESTING.md)。本文早期“拟议”描述保留设计时点，不代表当前接口未实现。
+当前状态：H2.1提供内部操作存储；H2.2已实现本文六个HTTP端点及状态/结果DTO；显式配置下的生产单任务执行器及W1-C固定Rabbit准入已接入。W1-C一次有限本机分析已到`budget_limited/time_budget`，报告来源独立认证仍开放。普通启动仍未配置分析服务；H3.2-2b其他窗口/调度及系统故障继续开放，详见[TASKS](../TASKS.md)和[TESTING](TESTING.md)。本文早期“拟议”描述保留设计时点，不代表当前接口未实现。
 
 日期：2026-10-31；设计基线main / 577924b。本文接口及公开DTO为设计合同；H2.1后来实现了内部操作存储，但当前[工作台](WORKBENCH.md)没有任务HTTP，不能据此声称分析用户流程已接通。
 
@@ -17,7 +17,7 @@ H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026
 | 方法/路径 | 必填输入及来源 | 成功响应（kind） | 失败与重试 |
 |---|---|---|---|
 | POST /api/analysis-operations | schema_version=1，kind=analysis_operation_allocate；无其他字段 | 201 analysis_operation：服务operation_id、revision、allocated状态、时间及可空指令/任务绑定 | 503配置/存储不可用；丢失分配响应可重新分配，旧空操作不产生任务 |
-| PUT /api/analysis-operations/{id} | schema_version=1，kind=analysis_submit；draft_id、draft_revision、opening_hand、seed、rules、catalog_id（可空）、banlist_id、as_of、search | 首次接受202 analysis_operation；已接受重复200，同一job_id | 400格式；409指令冲突/revision/容量；422准备失败；503停派发/提交不确定。先查询原ID，不生成替代任务 |
+| PUT /api/analysis-operations/{id} | schema_version=1，kind=analysis_submit；draft_id、draft_revision、opening_hand、seed、rules、catalog_id（可空）、banlist_id、as_of、search | 首次接受202 analysis_operation；已接受重复200，同一job_id | 400格式；409指令冲突/revision/容量；422准备失败或显式W1-C profile不符；503停派发/提交不确定。先查询原ID，不生成替代任务 |
 | GET /api/analysis-operations/{id} | ID；无body | 200 analysis_operation：allocated/accepting/accepted/rejected/unknown及绑定 | 404明确不存在；503不能认证。404不推定旧调用消费为0 |
 | GET /api/analysis-jobs/{id} | ID；无body | 200 analysis_job_status：已认证保存记录的白名单 | 404不存在；503存储不可认证，不能返回空成功 |
 | GET /api/analysis-jobs/{id}/result | ID；无body | 200 analysis_job_result：完成或预算截断报告投影 | 409 job_result_unavailable（未完成或其他终态）；503报告损坏/不可认证 |
@@ -38,6 +38,10 @@ H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026
 | expected_revision | u64整数，当前任务图仅1/2/3 | cancel的任务revision，不是draft_revision |
 
 search逐项范围：top_k 1–100、node_budget 1–1,000,000、beam_width 1–1,024、max_depth 1–1,024、time_limit_ms 1–3,600,000。评分来自分配时服务ScoringConfig的board_interaction/resource_advantage/follow_up/complexity，全部有限，不接受客户端评分覆盖。
+
+### W1-C显式配置准入（2026-11-03）
+
+通用HTTP schema仍表达较宽的请求范围；生产显式W1-C配置另加固定profile。非固定手牌、seed、rules、snapshot、banlist/date或SearchBudget在`allocated`操作提交前返回422 `analysis_profile_mismatch`，操作保持allocated且不冻结、不建job。冻结后的完整牌组及运行身份再次校验；不匹配时操作持久拒绝且不产生job。派发前校验隔离CLI/worker、配置、快照和完整引擎资产身份；认领后的包身份漂移提交`AssetMismatch`执行前失败并停止派发。配置不启用该profile时的既有合同行为不变；普通工作台默认不配置分析。
 
 格式/重复键/未知字段用400 analysis_request_invalid；未知操作/任务用404 analysis_operation_not_found/job_not_found。冻结的revision_conflict为409；其余已知AnalysisFreezeError原code为422（包括draft_not_found、deck_illegal、opening_hand_invalid、snapshot_unavailable、catalog_cdb_mismatch等），不携带原异常。容量拒绝409 analysis_queue_full，摘要冲突409 analysis_operation_conflict，提交不能认证503 analysis_commit_uncertain。GET操作总是以200返回可认证的保存状态；重复PUT对accepted返回200，对accepting返回202，对rejected重放保存的原409/422及error_code，对unknown返回503 analysis_commit_uncertain。语法错误在识别有效指令前不绑定/推进操作；基础设施错误503不伪造业务拒绝。
 

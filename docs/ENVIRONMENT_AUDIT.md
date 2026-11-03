@@ -1,6 +1,14 @@
 # 本机环境与资产审计
 
-## 当前现场（2026-11-02）
+## 当前现场（2026-11-03）
+
+当前checkout基线HEAD为`672e5a823fcad60e9413d79cac810b68a2bb003c`，工作树含用户已有源码、测试和文档修改。只读安全扫描覆盖25个差异审查项并完成关联源码/文档复核；记录1项低严重度本机包完整性问题（Codex Security scan `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`）。`dist/ygo-local`仍为2026-10-19旧包，`build-hashes.json`只记录CLI与worker哈希且与当前文件匹配；包内没有`manifest.json`，该结果只证明旧包文件与自身清单一致。W1-C隔离候选另完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；它没有部署进普通包，P4-R5仍开放。
+
+只读ACL检查在`dist/ygo-local`、`data/runtime`和相关`configs`路径上观察到继承的`NT AUTHORITY\Authenticated Users: Modify`；配置指向包内worker及`data/runtime`中的引擎资产。源码hash检查绑定所选文件，不证明文件由可信主体发布。普通工作台保持`analysis_not_configured`，检查时没有观察到`ygo`进程；另一不可信本机账户是否存在、是否有启动分析的wrapper仍未知。尚未改变ACL；收紧前需要明确可信操作账户，避免影响共享主机上的其他用户。详细部署界限见[DEPLOYMENT](DEPLOYMENT.md)。
+
+本轮未发现可据源码消费者和历史证据确认安全删除的模块或运行目录。依赖树中两个`hashbrown`版本来自不同传递依赖链；`cargo-machete`不可用，未声称机器化未用依赖扫描完成。没有清理`target/`、`data/runtime/`、`dist/`或兼容路径。Markdown中的忽略路径和缺失目标集中登记于[EVIDENCE_RETENTION](#ignored-evidence-links)。
+
+## 历史现场（2026-11-02）
 
 2026-11-01 WinDirStat截图估算项目约312.3 GB，其中`target/`约199.2 GB、`data/runtime/`约112.6 GB。`target/p4-r5-current-a21d587/data/runtime`是指向主`data/runtime/`的目录联接，清理扫描排除此联接，避免重复计量。保留当前P4-R5候选、全部release目录、`dist/ygo-local`、可执行文件、引擎与卡库资产、报告、账本、脚本和图片。2026-11-02流式只读扫描显示`target/`逻辑大小20,237,986,969字节（889,994个文件）、`data/runtime/`为11,462,519,359字节（98,514个文件）、`data/tmp/`为190,719,560字节（5,756个文件）。扫描排除1个已知目录联接；`target/`有28个、`data/tmp/`有14个受保护目录无法枚举，均属于保留的Python/pip依赖临时目录，故这些逻辑体积是可访问文件统计。WinDirStat仍开着原D盘视图，但本次桌面截图通道超时，未能用同一工具完成清理后复测；以上是流式文件扫描结果，不等同NTFS去重后的可回收空间，也不应冒充WinDirStat结果。D盘当前可用307,274,039,296字节；相对清理前21,336,346,624字节的卷级净变化为+285,937,692,672字节，期间可能包含其他卷活动，不能单独归因于项目清理。
 

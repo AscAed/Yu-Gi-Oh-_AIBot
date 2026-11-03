@@ -1,6 +1,6 @@
 # CLI 与库接口
 
-当前分析HTTP与恢复验收状态见[TASKS](../TASKS.md)及[TESTING](TESTING.md)。H3.2-2a、2b-1四个窗口及2b-2首次accepting保存后冻结前窗口已按限定范围完成；其他2b窗口/调度、syscall/断电/介质故障、W1-C真实分析仍开放。普通启动保持`analysis_not_configured`。以下历史段落保留其原时点。
+当前接口和工作台状态以[TASKS](../TASKS.md)为准，逐次结果见[TESTING](TESTING.md)。截至2026-11-03，W1-C完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；报告来源与底层FFI/消费未独立认证，搜索不完整。H3还留有其他逻辑窗口、调度及系统级故障门禁。普通启动仍为`analysis_not_configured`。本机旧发布包不含当前workbench，且当前目录ACL审计发现配置执行资产可被Authenticated Users修改，详见[部署](DEPLOYMENT.md)和[环境审计](ENVIRONMENT_AUDIT.md)。以下历史段落保留其原时点。
 
 历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见本文顶部与[当前任务](../TASKS.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
 
@@ -8,7 +8,7 @@ H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026
 
 H2.2-A/B所列合成HTTP验收已关闭，测试服务装配分析协调器；普通启动仍为`analysis_not_configured`，H3和真实分析开放。16轮取消/领取竞争均由claim获胜，不证明两种并发胜者均已观察，见[交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
 
-当前分析HTTP v1包含六端点、严格合同、操作幂等、异步接受、历史报告读取和无路径投影；H2.2-A/B、H3.2-1、H3.2-2a、2b-1及2b-2 accepting-before-freeze限定合成验收已通过。普通工作台启动仍返回`analysis_not_configured`，没有生产分析执行器；H3.2-2b其他窗口/调度、报告来源认证和W1-C真实分析仍开放。接口与验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)、[TASKS](../TASKS.md)和[TESTING](TESTING.md)。
+当前分析HTTP v1包含六端点、严格合同、操作幂等、异步接受、历史报告读取和无路径投影；显式配置下的单任务生产执行器已接入，普通启动仍返回`analysis_not_configured`。固定Rabbit参数/快照/资产/隔离包准入已实现；2026-11-03完成一次本机有限分析并以`budget_limited/time_budget`停止。底层FFI/消费未独立计量，报告来源未独立认证，结果不证明完整搜索或最优性。H2.2-A/B和列明的H3窗口只按各自合成范围验收；其他H3窗口及调度仍开放。接口与验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)、[TASKS](../TASKS.md)和[TESTING](TESTING.md)。
 
 历史记录：该段描述H2.1交付时点。H2.2现已实现HTTP路由、公开状态/结果DTO及路径安全边界；H3恢复验证与真实分析仍开放。详见本文开头的当前状态说明。
 

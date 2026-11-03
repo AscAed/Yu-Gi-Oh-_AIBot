@@ -18,6 +18,8 @@ use std::{
     time::Duration,
 };
 use ygo_domain::{Catalog, DeckDocumentV1};
+use ygo_engine_adapter::ProcessEngineConfig;
+use ygo_search::combo::ScoringConfig;
 use ygo_storage::{secure_random_hex, DeckDraftStore, SnapshotStore};
 
 const MAX_HEADER_BYTES: usize = 16 * 1024;
@@ -59,14 +61,74 @@ pub struct WorkbenchServer {
 
 impl WorkbenchServer {
     pub fn start(config: WorkbenchConfig) -> Result<Self, String> {
+        Self::start_with_analysis(config, None, None)
+    }
+
+    fn start_with_analysis(
+        config: WorkbenchConfig,
+        analysis_config_path: Option<PathBuf>,
+        analysis_store_dir: Option<PathBuf>,
+    ) -> Result<Self, String> {
         if config.bind.ip() != IpAddr::V4(Ipv4Addr::LOCALHOST) {
             return Err("workbench_bind_must_be_127_0_0_1".into());
         }
         let drafts = Arc::new(DeckDraftStore::open(config.drafts_dir)?);
-        let catalog = match config.catalog_id {
+        let catalog = match config.catalog_id.as_deref() {
             Some(id) => {
-                let snapshot = SnapshotStore::new(config.snapshots_dir).catalog(&id)?;
+                let snapshot = SnapshotStore::new(config.snapshots_dir.clone()).catalog(id)?;
                 Some((snapshot.id, Arc::new(snapshot.data)))
+            }
+            None => None,
+        };
+        let analysis = match &analysis_config_path {
+            Some(path) => {
+                let Some((catalog_id, _)) = catalog.as_ref() else {
+                    return Err("workbench_analysis_requires_catalog_id".into());
+                };
+                let bytes = std::fs::read(path)
+                    .map_err(|_| "workbench_analysis_config_unavailable".to_owned())?;
+                if bytes.is_empty() || bytes.len() > 64 * 1024 {
+                    return Err("workbench_analysis_config_invalid".into());
+                }
+                let text = std::str::from_utf8(&bytes)
+                    .map_err(|_| "workbench_analysis_config_invalid".to_owned())?;
+                let engine = ProcessEngineConfig::from_toml(text)
+                    .map_err(|_| "workbench_analysis_config_invalid".to_owned())?;
+                let admission = {
+                    #[cfg(test)]
+                    {
+                        None
+                    }
+                    #[cfg(not(test))]
+                    {
+                        Some(Arc::new(crate::workbench_analysis::W1cAdmission::load(
+                            path,
+                            &bytes,
+                            &config.snapshots_dir,
+                            catalog_id,
+                            &engine,
+                        )?))
+                    }
+                };
+                let context = crate::workbench_analysis::operations::AnalysisOperationContext {
+                    scoring: ScoringConfig::default(),
+                    default_catalog_id: catalog_id.clone(),
+                    configuration_sha256: ygo_storage::hash(&bytes),
+                };
+                let store_dir = analysis_store_dir
+                    .clone()
+                    .unwrap_or_else(|| PathBuf::from("data/runtime/workbench/analysis"));
+                Some(Arc::new(analysis_http::AnalysisHttpService::open(
+                    store_dir,
+                    context,
+                    drafts.clone(),
+                    SnapshotStore::new(config.snapshots_dir.clone()),
+                    engine,
+                    admission,
+                )?))
+            }
+            None if analysis_store_dir.is_some() => {
+                return Err("workbench_analysis_store_requires_config".into());
             }
             None => None,
         };
@@ -84,7 +146,7 @@ impl WorkbenchServer {
             .map_err(|error| format!("workbench_listener_failed: {error}"))?;
         let token = secure_random_hex(32)?;
         Ok(Self {
-            analysis: None,
+            analysis,
             listener,
             address,
             token,
@@ -171,7 +233,7 @@ impl Drop for ConnectionGuard {
 
 pub fn execute(args: &[String]) -> Result<(), String> {
     if args.first().map(String::as_str) != Some("serve") {
-        return Err("usage: ygo workbench serve [--drafts DIR] [--store DIR] [--catalog-id ID] [--language-status FILE] [--port PORT]".into());
+        return Err("usage: ygo workbench serve [--drafts DIR] [--store DIR] [--catalog-id ID] [--language-status FILE] [--analysis-config FILE] [--analysis-store DIR] [--port PORT]".into());
     }
     let values = parse_options(&args[1..])?;
     for key in values.keys() {
@@ -180,6 +242,8 @@ pub fn execute(args: &[String]) -> Result<(), String> {
             "--store",
             "--catalog-id",
             "--language-status",
+            "--analysis-config",
+            "--analysis-store",
             "--port",
         ]
         .contains(&key.as_str())
@@ -196,13 +260,19 @@ pub fn execute(args: &[String]) -> Result<(), String> {
     }
     config.catalog_id = values.get("--catalog-id").cloned();
     config.language_status_path = values.get("--language-status").map(PathBuf::from);
+    let analysis_config_path = values.get("--analysis-config").map(PathBuf::from);
+    let analysis_store_dir = values.get("--analysis-store").map(PathBuf::from);
+    if analysis_store_dir.is_some() && analysis_config_path.is_none() {
+        return Err("--analysis-store requires --analysis-config".into());
+    }
     if let Some(port) = values.get("--port") {
         let port = port
             .parse::<u16>()
             .map_err(|_| "--port must be a valid u16")?;
         config.bind.set_port(port);
     }
-    let server = WorkbenchServer::start(config)?;
+    let server =
+        WorkbenchServer::start_with_analysis(config, analysis_config_path, analysis_store_dir)?;
     println!("工作台已启动：{}", server.browser_url());
     println!("按 Ctrl+C 停止。草稿目录由本服务独占锁定。\n");
     server.serve_until(&AtomicBool::new(false))
@@ -884,4 +954,89 @@ fn write_response(stream: &mut TcpStream, response: HttpResponse) -> Result<(), 
         .write_all(&response.body)
         .map_err(|error| error.to_string())?;
     stream.flush().map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::workbench_analysis::tests::fixtures;
+
+    fn test_root(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-workbench-config-tests")
+            .join(name)
+            .join(secure_random_hex(12).unwrap())
+    }
+
+    #[test]
+    fn normal_workbench_start_keeps_analysis_unconfigured() {
+        let root = test_root("default");
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("drafts");
+
+        let server = WorkbenchServer::start(config).unwrap();
+
+        assert!(server.analysis.is_none());
+    }
+
+    #[test]
+    fn explicit_analysis_config_opens_durable_service_without_running_worker() {
+        let root = test_root("enabled");
+        std::fs::create_dir_all(&root).unwrap();
+        let (_, _, engine, catalog, _, _) = fixtures(&root);
+        let config_path = root.join("analysis.toml");
+        std::fs::write(&config_path, engine.to_toml().unwrap()).unwrap();
+
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("workbench-drafts");
+        config.snapshots_dir = root.join("snapshots");
+        let expected_catalog = catalog.clone();
+        config.catalog_id = Some(catalog);
+        let expected_config_hash = ygo_storage::hash(&std::fs::read(&config_path).unwrap());
+        let server = WorkbenchServer::start_with_analysis(
+            config,
+            Some(config_path),
+            Some(root.join("analysis-store")),
+        )
+        .unwrap();
+
+        let service = server.analysis.as_ref().unwrap();
+        assert!(!service.coordinator.is_stopped().unwrap());
+        assert_eq!(service.context.configuration_sha256, expected_config_hash);
+        assert_eq!(service.context.default_catalog_id, expected_catalog);
+        let snapshot = service.coordinator.snapshot().unwrap();
+        assert!(snapshot.queued.is_none());
+        assert!(snapshot.running.is_none());
+    }
+
+    #[test]
+    fn explicit_analysis_config_requires_a_selected_catalog() {
+        let root = test_root("catalog-required");
+        std::fs::create_dir_all(&root).unwrap();
+        let (_, _, engine, _, _, _) = fixtures(&root);
+        let config_path = root.join("analysis.toml");
+        std::fs::write(&config_path, engine.to_toml().unwrap()).unwrap();
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("workbench-drafts");
+        assert_eq!(
+            WorkbenchServer::start_with_analysis(config, Some(config_path), None)
+                .err()
+                .unwrap(),
+            "workbench_analysis_requires_catalog_id"
+        );
+    }
+
+    #[test]
+    fn analysis_store_cli_option_requires_analysis_config() {
+        let args = vec![
+            "serve".to_owned(),
+            "--analysis-store".to_owned(),
+            "target/analysis".to_owned(),
+        ];
+
+        assert_eq!(
+            execute(&args).unwrap_err(),
+            "--analysis-store requires --analysis-config"
+        );
+    }
 }

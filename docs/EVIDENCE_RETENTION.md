@@ -6,11 +6,25 @@
 
 ## 当前处置（2026-11-02；更新2026-10-28决定）
 
-在用户授权下，下方目录表格列出的54个唯一源文件中，51个非空文件共750,733字节已上传至Google Drive专用私有归档。上传后逐个回读并核对字节数和SHA-256，校验通过后删除对应本机源文件；3个零字节日志保留本机。2026-11-02再次列出归档目录并逐个回读当前云端对象：索引中的51个对象全部存在，字节数与SHA-256均匹配，合计750,733字节；云端目录及文件权限均为仅所有者可访问。5份重试产生的重复副本已删除。对回读内容作凭证/私钥模式检查未发现匹配项。一次Drive对象标题与索引显示名差异已在本机忽略索引中更正，文件ID、字节数和哈希未变。文件ID、源路径、哈希及校验结果只记录在被Git忽略的`data/runtime/cleanup-audit/drive-archive-index.json`。普通克隆无法访问该私有归档；下方路径表示归档前的位置，并非当前工作区仍有副本。之后清理的测试生成临时文件与这些54个源文件不是同一范围；其他未逐项审查的忽略文件及运行/部署资产仍保留本机，未上传到公开GitHub。
+在用户授权下，下方目录表格列出的54个唯一源文件中，51个非空文件共750,733字节已上传至Google Drive专用私有归档。上传后逐个回读并核对字节数和SHA-256，校验通过后删除对应本机源文件；3个零字节日志保留本机。2026-11-02再次列出归档目录并逐个回读当前云端对象：索引中的51个对象全部存在，字节数与SHA-256均匹配，合计750,733字节；云端目录及文件权限均为仅所有者可访问。5份重试产生的重复副本已删除。对回读内容作凭证/私钥模式检查未发现匹配项。一次Drive对象标题与索引显示名差异已在本机忽略索引中更正，文件ID、字节数和哈希未变。文件ID、源路径、哈希及校验结果只记录在被Git忽略的`data/runtime/cleanup-audit/drive-archive-index.json`。普通克隆无法访问该私有归档；表格路径表示归档时的源位置。
+
+2026-11-03为Ground Collapse固定来源离线准备，从该私有归档恢复13份文件到原有忽略路径，合计141,493字节。每份恢复字节数和SHA-256均与索引中的上传源及回读值匹配；归档副本未修改。恢复项为Curry revalidation交付；Curry recovery v1、v2、v3报告及v3交付；Curry ledger handoff v3审计报告、v4审计报告及交付；consumption reservation v3 acceptance；V5 saved-input审计的JSON/stderr/stdout三件记录；以及V5测试`audit-command.log`。这些文件目前在本机原路径可用。Ground 2026-10-27历史`preparation.json`仍缺失；2026-11-03新准备报告单独保存在`data/runtime/p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2/`。
+
+2026-11-03源码绑定复核产生两份不可变报告快照。前一版`driver-review-1/`报告SHA-256为`ab19a8467ccfd0242216818eaa1305670c6457979b5568319ffd340a1307cea2`，工具包ZIP和文件清单哈希分别为`40e236ad9ab020c88ee3ebecd58299102d3ddf9ec4e994327165afc2d0fceeb3`与`8a9d3573a1ac4377a686aab59a38dd35232099c03a66a34f9560f81e105c6710`；该快照使用将当前成员数写成schema常量的版本，现保留作历史审计。
+
+当前报告保存在被Git忽略的`data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/`：`preparation.json`为25,131字节、SHA-256 `a238a2f114c7cb26b6f1e79d6ca34b3e5f01f33bdb57eab0b6d2f650c2bb8c99`；`source-native-file-list.json`为2,392字节、SHA-256 `9e844de98ab205f2243c706aa6b368d2b68a81af65e9c70472d47f8f9689f746`；`source-native.zip`为95,895字节、SHA-256 `8fd8bb6ad057f6b83507b28a33adc6281c049974cac5d3e49db723df96515dbc`。工具包固定19个文件；schema保留正整数结构兼容，运行时仍按profile核对当前精确成员。报告六项来源检查和只读verify-only均通过，`execution_ready=false`。两份报告、此前归档恢复材料和缺失历史报告的记录均保留。
+
+随后交付的Ground阶段驱动和合成测试属于跟踪源码及测试，不生成或替代`data/runtime/`中的原生研究证据。本批未创建scope、窗口、账本或原生收据；未来执行应在固定专用输出根写入，并保留其manifest、阶段输入/收据、调用账本和汇总报告。
 
 2026-10-28扫描了112篇跟踪Markdown。隔离worktree中68条目标路径不存在，映射到原D盘工作区后均存在；去重为46个目标。目录链接只验证目录存在，不代表其全部内容已盘点。原工作区检查显示这些目标都被Git忽略；初始扫描没有复制或计算内容哈希。
 
 随后对原D盘工作区中的46个目标做了只读复核：全部仍存在且被Git忽略。展开3个目录目标并按相对路径去重，共盘点54个文件、750,733字节（19个JSON、32个日志、1个文本和2个二进制文件）。逐文件SHA-256与字节数保存在隔离worktree的忽略文件`target/evidence-retention-source-20261028.json`；两个`.bin`文件只记录路径、大小和哈希，未读取内容。该清单用于后续迁移时校验源文件，不是归档副本、许可审查或恢复演练；原文件未修改。
+
+## Ignored evidence links (checked 2026-11-03)
+
+本次只读检查发现46个Markdown本机证据链接在当前checkout中没有目标：43个指向被忽略的`target/`日志或报告，另3个指向2026-10-27 Ground preparation报告。原链接文字中的路径已保留；为避免点入不存在的文件，链接现在指向本节。缺失项分布于`docs/EVIDENCE_CONTRACTS.md`、`docs/TESTING.md`、`docs/TESTING_HISTORY.md`、Ground交接计划和根目录`TASKS_HISTORY.md`。
+
+缺失目标说明当前checkout中无法读取该路径；它不证明文件已删除、已上传或在其他工作区不存在。当前找到的Ground preparation报告仍使用独立2026-11-03路径，不能替代缺失的历史报告。任何恢复或归档结论都需要单独的字节数、SHA-256及来源链核验。此次没有移动、删除或恢复这些目标。
 
 ## 历史处置决定（2026-10-28；已由上方有限归档更新）
 
@@ -29,7 +43,7 @@
 
 路径相对于仓库根目录。`被引用文档`列出当前已知消费者；相同产物可能还有未扫描的代码、报告或本地消费者。
 
-### `data/runtime/`：11个目标
+### `data/runtime/`：14个目标
 
 | 目标 | 被引用文档 |
 |---|---|
@@ -44,6 +58,9 @@
 | `data/runtime/p1-curry-ledger-handoff-v5-offline-2026-10-26/process-diagnostics/` | `docs/EVIDENCE_CONTRACTS.md` |
 | `data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json` | `docs/EVIDENCE_CONTRACTS.md`, `docs/HISTORY_INDEX.md`, `docs/TESTING_HISTORY.md` |
 | `data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json` | `TASKS_HISTORY.md`, `docs/INDEX.md`, `docs/TESTING.md`, `docs/TESTING_HISTORY.md` |
+| `data/runtime/p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2/preparation.json` | `TASKS.md`, `docs/TESTING.md` |
+| `data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-1/preparation.json` | `TASKS.md`, `docs/TESTING.md` |
+| `data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/preparation.json` | `TASKS.md`, `docs/TESTING.md` |
 
 ### `target/`：35个目标
 

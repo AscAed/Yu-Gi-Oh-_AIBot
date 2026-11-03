@@ -5,6 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+h3-crash-test-hook = []
+
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true

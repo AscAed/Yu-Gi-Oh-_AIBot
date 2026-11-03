@@ -12,6 +12,9 @@ use ygo_engine_adapter::{ProcessEngineConfig, RunDuelRequest};
 use ygo_search::combo::SearchBudget;
 use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
+mod admission;
+pub(crate) use admission::W1cAdmission;
+
 pub mod durable;
 pub mod http_contract;
 pub mod jobs;
@@ -86,6 +89,7 @@ pub enum AnalysisFreezeError {
     CatalogCdbMismatch,
     AssetUnavailable,
     AssetChanged,
+    AnalysisProfileMismatch,
     PreparationFailed,
 }
 
@@ -105,6 +109,7 @@ impl AnalysisFreezeError {
             Self::CatalogCdbMismatch => "catalog_cdb_mismatch",
             Self::AssetUnavailable => "asset_unavailable",
             Self::AssetChanged => "asset_changed_during_freeze",
+            Self::AnalysisProfileMismatch => "analysis_profile_mismatch",
             Self::PreparationFailed => "preparation_failed",
         }
     }

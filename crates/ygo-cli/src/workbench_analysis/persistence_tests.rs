@@ -124,6 +124,34 @@ fn report_bytes(frozen: &FrozenAnalysisInput, scoring: ScoringConfig) -> Vec<u8>
     .unwrap()
 }
 
+#[test]
+fn uncertain_execution_is_durably_unknown_and_stops_dispatch() {
+    let root = root();
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    let queued = coordinator
+        .submit(frozen(), ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = coordinator.claim_next(101).unwrap().unwrap();
+
+    let unknown = coordinator.mark_unknown(&ticket, 102).unwrap();
+
+    assert_eq!(unknown.job_id(), queued.job_id());
+    assert_eq!(unknown.state(), AnalysisJobState::Unknown);
+    assert_eq!(unknown.revision(), 3);
+    assert_eq!(
+        unknown.error_code(),
+        Some(AnalysisJobFailure::CompletionUncertain)
+    );
+    assert!(unknown.report().is_none());
+    assert!(coordinator.is_stopped().unwrap());
+    drop(coordinator);
+
+    let reopened = super::durable::DurableAnalysisCoordinator::open(root).unwrap();
+    let history = reopened.history(queued.job_id()).unwrap();
+    assert_eq!(history.last().unwrap().state(), AnalysisJobState::Unknown);
+    assert!(reopened.claim_next(103).unwrap().is_none());
+}
+
 fn revision_path(root: &std::path::Path, id: &str, revision: u64) -> PathBuf {
     root.join("jobs")
         .join(id)

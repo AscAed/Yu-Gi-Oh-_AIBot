@@ -1,4 +1,6 @@
 from itertools import combinations
+import json
+from pathlib import Path
 
 import pytest
 
@@ -77,6 +79,34 @@ def test_opcode24_and_hint_zone_preserve_raw_fields():
             [_zone(1, 0), _zone(1, 1)],
             [1, 4, 0, 1, 4, 1],
         )
+
+
+def test_opcode24_rust_menu_fixture_matches_independent_zone_oracle():
+    fixture_path = Path(__file__).parent / "fixtures" / "ground-collapse-opcode24-menu-v1.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    raw = bytes(fixture["raw_prompt"])
+    parsed = parse_opcode24(raw)
+    pairs = canonical_zone_pairs(parsed["disabled_mask"])
+    expected_actions = [
+        {
+            "choice": {"kind": "place", "zones": pair},
+            "card_ids": [],
+            "bytes": zone_response_bytes(pair),
+        }
+        for pair in pairs
+    ]
+
+    assert fixture["fixture_id"] == "ground-collapse-opcode24-canonical-menu-v1"
+    assert fixture["classification"] == "synthetic_only"
+    assert parsed == {"player": 0, "count": 2, "disabled_mask": 0xFFE0FFE0}
+    assert fixture["disabled_mask"] == "ffe0ffe0"
+    assert fixture["available_zones"] == 10
+    assert fixture["canonical_menu_pair_count"] == 45
+    assert fixture["distinct_ordered_encodings"] == 90
+    assert fixture["actions"] == expected_actions
+    assert fixture["native_reachability_verified"] is False
+    assert fixture["native_response_acceptance_verified"] is False
+    assert fixture["order_equivalence_verified"] is False
 
 
 def test_opcode24_parser_preserves_zero_count_as_raw_u8():
