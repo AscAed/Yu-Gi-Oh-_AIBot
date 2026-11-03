@@ -1,26 +1,29 @@
 # 本机验证记录
 
-## 2026-11-03 全项目自检（当前工作树）
+## 2026-11-03 全项目自检（代码基线）
 
-本轮先核对 `docs/INDEX.md`、`TASKS.md`、部署包身份及隔离运行材料，再审阅当前 diff 和历史验证边界。只读 Codex Security 扫描完成：ID `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`，25/25 项 diff 审阅行已关闭；扫描覆盖为 diff 范围/partial，不是 715 文件仓库的完整安全认证。记录到 1 项低严重度本机问题：`dist/ygo-local`、`data/runtime` 和相关 `configs` 路径存在继承的 `NT AUTHORITY\Authenticated Users: Modify`。风险要求另一个已认证本机账户且后续显式启动分析；普通工作台保持 `analysis_not_configured`，检查时未观察到 `ygo` 进程。因为共享主机可信操作账户尚未明确，本轮未改 ACL。调查和部署限制见[环境审计](ENVIRONMENT_AUDIT.md)、[部署状态](DEPLOYMENT.md)与[证据边界](EVIDENCE_CONTRACTS.md)。
+本轮核对 `docs/INDEX.md`、`TASKS.md`、部署包身份、隔离运行材料及当前工作区状态。执行可执行代码验证时的基线为 `main / 50c279b0605c55f8e1f05240078700d63c01dd9d`；该时点工作树干净，较 `origin/main` 领先13个本地提交。随后变更仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围为diff/partial，不是全仓扫描。它记录1项低严重度本机权限问题。全仓Deep Scan已启动；截至本记录更新时仍无最终结果，不视为完成或通过。只读ACL复核发现`Authenticated Users: Modify`直接设置在`D:\`根并继承到项目；项目父目录和工作区另有四个无法映射到当前账户名的Modify SID。本机账户枚举受拒，且四个SID在ProfileList中均无对应项；修改卷根可能影响D盘其他内容，修改项目父目录可能影响两个兄弟工作区。本轮未改ACL。普通工作台保持 `analysis_not_configured`，检查时未观察到 `ygo` 进程。调查和部署限制见[环境审计](ENVIRONMENT_AUDIT.md)、[部署状态](DEPLOYMENT.md)与[证据边界](EVIDENCE_CONTRACTS.md)。
 
-发布检查确认 `dist/ygo-local` 仍是 2026-10-19 旧包；`build-hashes.json` 仅核对包内 CLI 与 worker 哈希，且 `manifest.json` 缺失，不能证明它对应当前工作树。W1-C 一次固定 Rabbit 运行在隔离候选目录完成，结果为 `budget_limited/time_budget`；160 nodes、165 engine_calls，不是完整搜索或最优性证明。此轮未运行 doctor、发布包、真实 runner/worker/FFI、原生研究或部署。未发现可以根据消费者和保留目的安全删除的模块；`cargo-machete` 不可用，因此没有声称完成自动未用依赖扫描。没有清理 `target/`、`data/runtime/`、`dist/` 或兼容路径。
+发布检查确认 `dist/ygo-local` 仍是 2026-10-19 旧包；`build-hashes.json` 只核对包内 CLI 与 worker 哈希，且 `manifest.json` 缺失，不能证明它对应当前工作树。W1-C 一次固定 Rabbit 运行在隔离候选目录完成，结果为 `budget_limited/time_budget`；160 nodes、165 engine_calls，不是完整搜索或最优性证明。此轮未运行 doctor、发布包、真实 runner/worker/FFI、原生研究或部署。未发现可以根据消费者和保留目的安全删除的模块；`cargo-machete` 不可用，因此没有声称完成自动未用依赖扫描。没有清理 `target/`、`data/runtime/`、`dist/` 或兼容路径。
 
-修复了一处报告状态错误：阶段驱动的后续 runner 调用结果不确定时，不再复用上一阶段的 `actual_unknown=0`；当前 ledger 和实际消费改为 unknown，并单独保留最后一份已认证 ledger。聚焦 Python 回归及相关准备/协议/schema 组为 **64 passed、2 skipped、19 subtests passed**；pytest 提示一项未知配置 `cache_dir`。这不是 Python 全套测试结果。
+修复了一处报告状态错误：阶段驱动的后续 runner 调用结果不确定时，不再复用上一阶段的 `actual_unknown=0`；当前 ledger 和实际消费改为 unknown，并单独保留最后一份已认证 ledger。聚焦 Python 回归及相关准备/协议/schema 组为 **64 passed、2 skipped、19 subtests passed**。随后运行完整默认Python测试集：**786 passed、9 skipped、219 subtests passed**，耗时2324.45秒。跳过项包括Windows目录符号链接能力限制，以及需本机引擎、快照、历史报告或赛事配置的opt-in组。pytest有一条未知配置 `cache_dir` 警告。`py -m pip check`报告没有损坏的依赖；样例卡数据校验通过，计2张卡。
 
-Rust 验证在隔离目录离线完成：`cargo fmt --all -- --check` 通过；workspace 默认串行测试退出码 0，显式跳过唯一会调用 CLI doctor 的 `doctor_reports_missing_worker_and_assets`；预先标记的冻结资产/原生/opt-in 测试保持忽略。workspace all-targets Clippy 使用 `-D warnings` 通过。全库 Markdown 本地目标扫描发现并修复 48 处断链：46 个已忽略证据目标改指向[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md#ignored-evidence-links)的登记说明，另修 2 个相对路径错误；复扫结果为 0 个缺失本地目标。`git diff --check` 在提交前复核。
+Rust验证在隔离目录离线完成：`cargo fmt --all -- --check`通过；workspace默认串行测试退出码0，显式跳过唯一会调用CLI doctor的`doctor_reports_missing_worker_and_assets`；预先标记的冻结资产/原生/opt-in测试保持忽略。workspace all-targets Clippy使用`-D warnings`通过。workspace重复依赖检查确认两个`hashbrown`版本来自不同传递依赖链；`cargo-machete`不可用，未声称完成自动未用依赖扫描。此前全库Markdown本地目标扫描发现并修复48处断链：46个已忽略证据目标改指向[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md#ignored-evidence-links)登记说明，另修2个相对路径错误。当前扫描覆盖210个tracked Markdown文件的1,639个相对链接目标，0个缺失。`git diff --check`提交前复核通过。
 
 ```powershell
 cargo fmt --all -- --check
 cargo test --workspace --offline --locked --target-dir target/audit-2026-11-03/rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets
 cargo clippy --workspace --all-targets --offline --locked --target-dir target/audit-2026-11-03/rust -- -D warnings
+$env:PYTHONPATH='python'; $env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/audit-2026-11-03/python-full tests
+py -m pip check
+py -m ygo_data.cli validate --input tests/fixtures/cards.sample.json
 Set-Item Env:PYTHONPATH python
 Set-Item Env:PYTHONDONTWRITEBYTECODE 1
 py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/audit-2026-11-03/pytest-tmp tests/test_ground_collapse_stage_driver.py tests/test_ground_collapse_preparation.py tests/test_ground_collapse_protocol.py tests/test_schemas.py
 git diff --check
 ```
 
-Rust 覆盖的是当前工作树离线 workspace 测试；ignored 项目没有运行。Python 只跑上述聚焦组。安全扫描是变更 diff 范围；ACL 缺陷尚待确定可信账户后处理。上述检查不认证当前 `dist/ygo-local`、完整引擎资产、研究账户等价性、独立原生重放、完整搜索或全局最优性。
+Rust覆盖当前源码的离线workspace测试；被显式跳过的doctor测试和ignored项目没有运行。默认Python测试集完成，但需本机引擎/快照/报告/赛事配置的opt-in组仍跳过。diff安全扫描范围有限，全仓Deep Scan尚无最终结果。ACL问题需先确认卷级和项目级共享账户范围。上述检查不认证当前`dist/ygo-local`、完整引擎资产、研究账户等价性、独立原生重放、完整搜索或全局最优性。
 
 ## 2026-11-03 H3 HTTP派发准入AssetMismatch持久化后、队列结算前进程终止
 
