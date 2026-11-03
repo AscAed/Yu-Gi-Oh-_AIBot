@@ -201,6 +201,102 @@ fn open_existing_locked(path: &Path) -> Result<Option<File>, WorkerError> {
     Ok(Some(file))
 }
 
+fn path_metadata_without_reparse(path: &Path) -> std::io::Result<Option<fs::Metadata>> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error),
+    };
+    let is_reparse_point = metadata.file_type().is_symlink() || {
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            metadata.file_attributes() & 0x400 != 0
+        }
+        #[cfg(not(windows))]
+        {
+            false
+        }
+    };
+    if is_reparse_point {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "journal paths cannot be symbolic links or reparse points",
+        ));
+    }
+    Ok(Some(metadata))
+}
+
+fn validate_journal_file_path(path: &Path) -> std::io::Result<()> {
+    if let Some(metadata) = path_metadata_without_reparse(path)? {
+        if !metadata.is_file() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "journal path is not a regular file",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn check_optional_blob_directory(path: &Path) -> std::io::Result<bool> {
+    match path_metadata_without_reparse(path)? {
+        Some(metadata) if metadata.is_dir() => Ok(true),
+        Some(_) => Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "journal evidence path is not a directory",
+        )),
+        None => Ok(false),
+    }
+}
+
+fn check_blob_tree(blobs: &Path) -> std::io::Result<()> {
+    if !check_optional_blob_directory(blobs)? {
+        return Ok(());
+    }
+    for folder in ["results", "events", "recoveries", "checkpoints"] {
+        check_optional_blob_directory(&blobs.join(folder))?;
+    }
+    Ok(())
+}
+
+fn ensure_blob_directory(path: &Path) -> std::io::Result<()> {
+    if !check_optional_blob_directory(path)? {
+        match fs::create_dir(path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(error),
+        }
+    }
+    if !check_optional_blob_directory(path)? {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "journal evidence directory disappeared during creation",
+        ));
+    }
+    Ok(())
+}
+
+fn ensure_blob_tree(blobs: &Path) -> std::io::Result<()> {
+    ensure_blob_directory(blobs)?;
+    for folder in ["results", "events", "recoveries", "checkpoints"] {
+        ensure_blob_directory(&blobs.join(folder))?;
+    }
+    Ok(())
+}
+
+fn validate_blob_file(path: &Path) -> std::io::Result<()> {
+    if let Some(metadata) = path_metadata_without_reparse(path)? {
+        if !metadata.is_file() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "journal evidence path is not a regular file",
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl State {
     fn sequence_id(&self, count: usize) -> Result<String, WorkerError> {
         let sequence: Vec<_> = self
@@ -452,6 +548,7 @@ impl CallJournal {
             ));
         }
         let path = path.as_ref();
+        validate_journal_file_path(path).map_err(io_fail)?;
         let Some(mut file) = open_existing_locked(path)? else {
             return Ok(None);
         };
@@ -544,9 +641,11 @@ impl CallJournal {
         }
         let mut name = path.as_os_str().to_owned();
         name.push(".blobs");
+        let blobs = PathBuf::from(name);
+        check_blob_tree(&blobs).map_err(io_fail)?;
         let journal = Arc::new(Self {
             state: Mutex::new(state),
-            blobs: PathBuf::from(name),
+            blobs,
         });
         journal.verify()?;
         journal.verify_recovery_markers(&recovery_markers)?;
@@ -568,6 +667,7 @@ impl CallJournal {
             ));
         }
         let path = path.as_ref();
+        validate_journal_file_path(path).map_err(io_fail)?;
         let mut options = OpenOptions::new();
         options.read(true);
         #[cfg(windows)]
@@ -683,9 +783,11 @@ impl CallJournal {
 
         let mut name = path.as_os_str().to_owned();
         name.push(".blobs");
+        let blobs = PathBuf::from(name);
+        check_blob_tree(&blobs).map_err(io_fail)?;
         let journal = CallJournal {
             state: Mutex::new(state),
-            blobs: PathBuf::from(name),
+            blobs,
         };
         journal.verify()?;
         journal.verify_recovery_markers(&recovery_markers)?;
@@ -708,9 +810,15 @@ impl CallJournal {
             ));
         }
         let path = path.as_ref();
+        validate_journal_file_path(path).map_err(io_fail)?;
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(io_fail)?;
         }
+        validate_journal_file_path(path).map_err(io_fail)?;
+        let mut blobs_name = path.as_os_str().to_owned();
+        blobs_name.push(".blobs");
+        let blobs = PathBuf::from(blobs_name);
+        check_blob_tree(&blobs).map_err(io_fail)?;
         let mut file = open_locked(path)?;
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).map_err(io_fail)?;
@@ -787,10 +895,7 @@ impl CallJournal {
             state: Mutex::new(state),
             blobs: PathBuf::from(name),
         });
-        fs::create_dir_all(journal.blobs.join("results")).map_err(io_fail)?;
-        fs::create_dir_all(journal.blobs.join("events")).map_err(io_fail)?;
-        fs::create_dir_all(journal.blobs.join("recoveries")).map_err(io_fail)?;
-        fs::create_dir_all(journal.blobs.join("checkpoints")).map_err(io_fail)?;
+        ensure_blob_tree(&journal.blobs).map_err(io_fail)?;
         journal.recover_tail(&bytes, valid_length)?;
         Ok(journal)
     }
@@ -808,8 +913,10 @@ impl CallJournal {
             self.put_blob("recoveries", &encoded(&marker)?)?;
         }
         let mut pending = Vec::new();
-        for file in fs::read_dir(self.blobs.join("recoveries")).map_err(io_fail)? {
+        let recovery_dir = self.blob_directory("recoveries")?;
+        for file in fs::read_dir(recovery_dir).map_err(io_fail)? {
             let file = file.map_err(io_fail)?;
+            validate_blob_file(&file.path()).map_err(io_fail)?;
             let name = file.file_name().to_string_lossy().into_owned();
             let hash = name
                 .strip_suffix(".json")
@@ -1026,7 +1133,9 @@ impl CallJournal {
     }
     fn put_blob(&self, folder: &str, bytes: &[u8]) -> Result<String, WorkerError> {
         let hash = digest(bytes);
-        let path = self.blobs.join(folder).join(format!("{hash}.json"));
+        let directory = self.blob_directory(folder)?;
+        let path = directory.join(format!("{hash}.json"));
+        validate_blob_file(&path).map_err(io_fail)?;
         match OpenOptions::new().write(true).create_new(true).open(&path) {
             Ok(mut file) => {
                 file.write_all(bytes)
@@ -1034,6 +1143,7 @@ impl CallJournal {
                     .map_err(io_fail)?;
             }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                validate_blob_file(&path).map_err(io_fail)?;
                 if fs::read(&path).map_err(io_fail)? != bytes {
                     return Err(fail("journal_blob_hash", "existing blob is corrupt"));
                 }
@@ -1046,12 +1156,28 @@ impl CallJournal {
         if hash.len() != 64 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
             return Err(fail("journal_blob_hash", "invalid content address"));
         }
-        let bytes =
-            fs::read(self.blobs.join(folder).join(format!("{hash}.json"))).map_err(io_fail)?;
+        let path = self.blob_directory(folder)?.join(format!("{hash}.json"));
+        validate_blob_file(&path).map_err(io_fail)?;
+        let bytes = fs::read(path).map_err(io_fail)?;
         if digest(&bytes) != hash {
             return Err(fail("journal_blob_hash", "result evidence was changed"));
         }
         Ok(bytes)
+    }
+
+    fn blob_directory(&self, folder: &str) -> Result<PathBuf, WorkerError> {
+        if !["results", "events", "recoveries", "checkpoints"].contains(&folder) {
+            return Err(fail("journal_contract", "invalid evidence directory"));
+        }
+        let blobs_exist = check_optional_blob_directory(&self.blobs).map_err(io_fail)?;
+        let directory = self.blobs.join(folder);
+        if !blobs_exist || !check_optional_blob_directory(&directory).map_err(io_fail)? {
+            return Err(io_fail(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "journal evidence directory is missing",
+            )));
+        }
+        Ok(directory)
     }
     fn complete(
         &self,
@@ -1186,6 +1312,12 @@ impl CallJournal {
         &self,
         expected_markers: &BTreeMap<String, (String, u64)>,
     ) -> Result<(), WorkerError> {
+        if !check_optional_blob_directory(&self.blobs).map_err(io_fail)? {
+            if self.lock()?.recoveries.is_empty() {
+                return Ok(());
+            }
+            return Err(fail("journal_blob_hash", "recovery evidence is missing"));
+        }
         let recovery_dir = self.blobs.join("recoveries");
         let mut recorded = self
             .lock()?
@@ -1193,7 +1325,7 @@ impl CallJournal {
             .iter()
             .map(|recovery| recovery.tail_hash.clone())
             .collect::<BTreeSet<_>>();
-        if !recovery_dir.exists() {
+        if !check_optional_blob_directory(&recovery_dir).map_err(io_fail)? {
             if recorded.is_empty() {
                 return Ok(());
             }
@@ -1201,6 +1333,7 @@ impl CallJournal {
         }
         for item in fs::read_dir(&recovery_dir).map_err(io_fail)? {
             let item = item.map_err(io_fail)?;
+            validate_blob_file(&item.path()).map_err(io_fail)?;
             let file_type = item.file_type().map_err(io_fail)?;
             if !file_type.is_file() {
                 return Err(fail(

@@ -52,9 +52,27 @@ fn request(addr: std::net::SocketAddr, raw: &str) -> String {
         .set_read_timeout(Some(Duration::from_secs(2)))
         .unwrap();
     stream.write_all(raw.as_bytes()).unwrap();
-    let mut response = String::new();
-    stream.read_to_string(&mut response).unwrap();
-    response
+    let mut response = Vec::new();
+    let mut buffer = [0u8; 4096];
+    loop {
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(count) => response.extend_from_slice(&buffer[..count]),
+            Err(error)
+                if !response.is_empty()
+                    && matches!(
+                        error.kind(),
+                        std::io::ErrorKind::ConnectionReset | std::io::ErrorKind::ConnectionAborted
+                    ) =>
+            {
+                // Windows can reset a connection after delivering a response
+                // when a rejected request still has unread body bytes.
+                break;
+            }
+            Err(error) => panic!("read HTTP response failed: {error}"),
+        }
+    }
+    String::from_utf8(response).unwrap()
 }
 
 #[test]
@@ -82,6 +100,18 @@ fn local_workbench_authenticates_mutations_and_supports_draft_round_trip() {
         ),
     );
     assert!(no_token.starts_with("HTTP/1.1 403"));
+
+    let unauthenticated_stalled_post = request(
+        addr,
+        &format!(
+            "POST /api/drafts HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Length: 1048576\r\nConnection: close\r\n\r\n",
+            addr.port()
+        ),
+    );
+    assert!(
+        unauthenticated_stalled_post.starts_with("HTTP/1.1 403"),
+        "{unauthenticated_stalled_post}"
+    );
 
     let body = r#"{"title":"工作草稿"}"#;
     let create = format!(

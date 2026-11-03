@@ -7,9 +7,9 @@ H3恢复的逻辑窗口、证据层级和未覆盖边界见[H3.1证据门禁映�
 部署身份、隔离候选和本机资产权限见[DEPLOYMENT](docs/DEPLOYMENT.md)与[ENVIRONMENT_AUDIT](docs/ENVIRONMENT_AUDIT.md)。普通启动保持`analysis_not_configured`；局部测试或预算截断运行不表示完整搜索、全局最优或发布通过。
 
 
-## 当前状态（2026-11-03）：W1-H3.2-2b-1/-2、allocated保存后协调器返回前及多个running领取细分窗口（含两条AssetMismatch路径）已分别验收；W1-C单次有限分析已完成，其他门禁仍开放
+## 当前状态（2026-11-04）：W1-H3.2-2b-1/-2、allocated保存后协调器返回前及多个running领取细分窗口（含两条AssetMismatch路径）已分别验收；W1-C单次有限分析已完成，安全审计整改已复核，其他门禁仍开放
 
-下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。
+下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。2026-11-04安全扫描发现、修复、未处理的ACL风险和残余边界见[SECURITY_AUDIT](docs/SECURITY_AUDIT.md)；本轮不改变产品、研究、原生验真或发布门禁。
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 

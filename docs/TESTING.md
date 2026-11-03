@@ -1,5 +1,29 @@
 # 本机验证记录
 
+## 2026-11-04 安全审计整改与workspace复核
+
+本轮在`b35b12dec226b3b71eb36896e27452ec7fd12015`基线上修复Deep Scan发现的四项代码问题，并为一项本机ACL风险记录保留决定；发现、修复边界与残余事项见[SECURITY_AUDIT](SECURITY_AUDIT.md)。本轮未修改Python、schema、部署资产或研究数据。Deep Scan本身针对旧提交`50c279b`且覆盖部分，不把它作为修复后代码的扫描证据。
+
+全workspace Rust测试以串行模式离线运行，退出码0；遵循前次环境验收边界，跳过唯一会调用CLI doctor的`doctor_reports_missing_worker_and_assets`，默认忽略冻结引擎、原生和opt-in测试。随后对最终代码重跑全目标Clippy（`-D warnings`）并通过。结构整理后追加的定向测试也通过：HTTP deadline 1项、终端转义2项、workbench HTTP 5项、journal测试组21项；快照测试2项已在workspace测试中通过。Windows当前账户无法创建目录链接，journal测试因此明确跳过动态symlink部分，非目录sidecar拒绝测试通过。
+
+```powershell
+cargo fmt --all -- --check
+cargo test --workspace --offline --locked -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets
+cargo clippy --workspace --all-targets --offline --locked -- -D warnings
+cargo test -p ygo-cli --lib workbench::tests::incomplete_request_head_obeys_absolute_deadline --offline --locked
+cargo test -p ygo-cli --bin ygo-cli terminal_output_tests --offline --locked
+cargo test -p ygo-cli --test workbench_http --offline --locked
+cargo test -p ygo-engine-adapter --test journal --offline --locked
+cargo test -p ygo-storage --test snapshot --offline --locked
+git diff --check
+```
+
+格式检查、全目标Clippy、workspace Rust测试及本轮定向回归通过。Python未修改，因此没有重跑Python套件；最近一次全量Python结果保留在下方2026-11-03记录中。没有运行engine、worker、FFI、doctor、研究runner、原生研究或部署；本轮也不认证旧`dist/ygo-local`、原生效果资格、研究账本等价性、完整搜索或全局最优性。
+
+修复后Codex Security差异扫描`cd684777-42da-4fea-ba6c-09a0c54e17b4`已完成：快照基线`b35b12d`，716个文件是仓库清单数量，4个改动实现文件完成紧凑审阅并检查相关测试/选定文档；结果0项确认可报告发现、覆盖`partial`。三项候选路径竞态保留为未决，因为当前没有证明攻击者对目标目录的有效权限或跨越权限边界的影响；Windows目录链接动态复现因错误1314跳过。完整范围和候选处置见[安全审计](SECURITY_AUDIT.md)及扫描报告。该快照早于本轮随后校正的工作台与部署说明；这些文档按当前源码和只读部署观察人工复核。
+
+随后完成最终差异复核`4ee4dc69-03f9-4bec-ba82-69dc68ba1db3`，于2026-11-04 02:25:52 CST结束，快照摘要`codex-security-snapshot/v1:sha256:b4d849be4cf2aeeb294e01251119351d6af8eaeb91eece4dc21e9d7ddde2a0b5`。扫描纳入前述工作台/部署文档校正；0项确认可报告发现，覆盖仍为`partial`，同三项路径竞态候选仍未证实。审计结果摘要在快照封存后写入本记录和[安全审计](SECURITY_AUDIT.md)，没有后续代码差异。
+
 ## 2026-11-03 全项目自检（代码基线）
 
 本轮核对 `docs/INDEX.md`、`TASKS.md`、部署包身份、隔离运行材料及当前工作区状态。执行可执行代码验证时的基线为 `main / 50c279b0605c55f8e1f05240078700d63c01dd9d`；该时点工作树干净，较 `origin/main` 领先13个本地提交。随后变更仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围为diff/partial，不是全仓扫描；它记录1项低严重度本机权限问题。原全仓Deep Scan执行句柄`214`于2026-11-03恢复时返回`not found`。用户随后提供的界面截图显示条目“Yu-Gi-Oh!_AIBot · 11月3日 16:10”针对提交`50c279b`扫描全仓715个文件；截图时处于第8轮汇总，9项已完成、4项进行中。截图只证明该时点仍在运行；没有显示`scanId`/handoff token或最终报告，用户确认没有续接凭据，因此当前状态和最终结果无法核验，不记为完成或通过。按扫描协议，不以新扫描替换缺少恢复上下文的任务。只读ACL复核发现`Authenticated Users: Modify`直接设置在`D:\`根并继承到项目；项目父目录和工作区另有四个无法映射到当前账户名的Modify SID。本机账户枚举受拒，且四个SID在ProfileList中均无对应项；修改卷根可能影响D盘其他内容，修改项目父目录可能影响两个兄弟工作区。用户于2026-11-03选择保留当前ACL并记录风险；本轮未改ACL。普通工作台保持 `analysis_not_configured`，检查时未观察到 `ygo` 进程。调查和部署限制见[环境审计](ENVIRONMENT_AUDIT.md)、[部署状态](DEPLOYMENT.md)与[证据边界](EVIDENCE_CONTRACTS.md)。

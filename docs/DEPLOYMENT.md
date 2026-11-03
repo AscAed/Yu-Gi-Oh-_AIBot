@@ -1,5 +1,7 @@
 # Windows 本机部署与验收
 
+2026-11-04只读复核：检查时HEAD为`main / b35b12dec226b3b71eb36896e27452ec7fd12015`；代码与文档整改尚未部署。`dist/ygo-local`中的`ygo.exe`和`ygo-engine-worker.exe`时间戳为2026-10-19，SHA-256分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内只列这两个文件的`build-hashes.json`一致。包内没有`manifest.json`或`workbench/`；只读检查未运行任何包内程序。因此这些哈希只确认旧包与自身清单一致，不能证明当前源码已部署。ACL于2026-11-04再次只读复核；用户选择保留当前ACL，本轮未改权限。默认工作台仍返回`analysis_not_configured`；只有源码CLI显式传入`--analysis-config`才构造固定Rabbit分析执行器并调用worker。旧发布包不含该工作台入口。
+
 2026-11-03现场：本轮可执行代码自检基线为`main / 50c279b0605c55f8e1f05240078700d63c01dd9d`；该验证时点工作树干净，较`origin/main`领先13个本地提交。后续仅补充审计文档，未改变可执行代码。本次文档续审开始时，HEAD为`87e6d57`，main较origin/main领先21个本地提交且工作区干净；`crates/`、`python/`、Cargo清单、`schemas/`、`scripts/`相对`50c279b`无可执行代码差异。`dist/ygo-local`仍是2026-10-19旧包；CLI和worker分别匹配包内`build-hashes.json`，但该清单只绑定这两个文件，当前包无`manifest.json`，也不能证明当前源码已部署。2026-11-03续审通过包内`configs/engine.toml`对普通包执行`ygo.exe engine doctor`，结果为`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`；此项启动包内worker执行`probe_only=true`的ABI探针，不是决斗smoke或P4-R5验收。隔离W1-C候选已构建并用于一次独立Rabbit有限分析，结果为`budget_limited/time_budget`；没有部署到`dist/ygo-local`。P4-R5仍开放。只读ACL复查发现`Authenticated Users: Modify`直接设置在`D:\`根并继承到项目；项目父目录和工作区另有四个无法映射到当前账户名的Modify SID。修改卷根ACL可能影响D盘其他数据，修改项目父目录ACL可能影响两个兄弟工作区，用户于2026-11-03选择保留现状并记录ACL风险，本轮未变更权限。普通工作台仍关闭分析。安全影响和未决环境条件见[环境审计](ENVIRONMENT_AUDIT.md)。
 
 2026-11-03 W2隔离候选包：源码CLI已用`--offline --locked`构建并放入`target/w2-clean-20261103/package-candidate-02`，通过空profile启动、包内catalog读取/检索、牌组草稿保存重开、JSON/YDK往返和同包重启检查。源码/产物/catalog身份与机器验收见[TESTING](TESTING.md)及[W2批次计划](superpowers/plans/2026-11-03-w2-offline-clean-environment-plan.md)。候选仅在target目录，未切换部署。旧dist没有workbench，故升级兼容和旧草稿迁移未验收；同一主机隔离目录不等于干净Windows环境验收。
@@ -44,7 +46,7 @@
 
 通用 `combo analyze` 的基线范围：OCG/MR5，双方8000 LP，先攻首回合，固定五张手牌、seed初始化剩余牌库、无对手干扰；对手相同主卡组作惰性占位库，初始手牌为空，只选择可选不响应。另有版本化规划v4/v5的指定单灰合成场景，见[恢复规划](RECOVERY_PLANNING.md)及[灰流丽策略](ASH_STRATEGY_PLANNING.md)。这不提供任意对手、通用手坑、后攻或构筑能力。
 
-本机草稿浏览器由开发CLI命令`ygo workbench serve`提供，运行方式见[WORKBENCH](WORKBENCH.md)。它不在当前`dist/ygo-local`发布包内，不分析牌组、不启动引擎，也不是可迁移安装包。一键发布启动、路径迁移、分析界面和引擎切换仍是后续P3/P8任务。
+本机草稿浏览器由开发CLI命令`ygo workbench serve`提供，运行方式见[WORKBENCH](WORKBENCH.md)。它不在当前`dist/ygo-local`发布包内。默认启动提供草稿操作且不启动引擎；源码显式配置`--analysis-config`可运行固定Rabbit分析并调用worker。它不是可迁移安装包。一键发布启动、路径迁移、分析界面和引擎切换仍是后续P3/P8任务。
 
 ## 环境准备
 

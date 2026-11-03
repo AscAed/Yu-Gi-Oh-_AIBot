@@ -1,6 +1,12 @@
 # 本机环境与资产审计
 
-## 当前现场（2026-11-03）
+## 当前现场（2026-11-04）
+
+本轮开始时HEAD为`b35b12dec226b3b71eb36896e27452ec7fd12015`；在该基线上完成安全整改与Rust复核。Codex Security Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`检查的是旧基线`50c279b`，715文件清单中完成12个独立审阅并报告5项发现；覆盖按部分记录。扫描与整改结果、五项处置、验证和残余风险见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
+
+用户于2026-11-04选择保留已观察的ACL，不调整`D:\`、项目父目录或工作区权限；该卷根的Authenticated Users Modify及四个未映射SID继续作为本机残余风险登记。当前源码变化不会自动更新`dist/ygo-local`；部署身份仍以[DEPLOYMENT](DEPLOYMENT.md)记录为准。
+
+## 历史现场（2026-11-03；本轮Deep Scan之前）
 
 本轮可执行代码审计基线为`main` / `50c279b0605c55f8e1f05240078700d63c01dd9d`；该验证时点工作树干净，较`origin/main`领先13个本地提交。后续仅补充审计文档，未改变可执行代码。本次文档续审开始时，HEAD为`87e6d57`，main较origin/main领先21个本地提交且工作区干净；`crates/`、`python/`、Cargo清单、`schemas/`、`scripts/`相对`50c279b`无可执行代码差异。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围明确为diff/partial。全仓Deep Scan原执行句柄`214`于2026-11-03恢复时返回`not found`。用户随后提供的界面截图显示条目“Yu-Gi-Oh!_AIBot · 11月3日 16:10”针对提交`50c279b`扫描全仓715个文件；截图时处于第8轮汇总，9项已完成、4项进行中。该截图只证明当时仍在运行；没有提供该扫描的`scanId`/handoff token或最终报告，用户确认没有续接凭据，因此当前状态和最终结果无法核验，不记为完成或通过。按扫描协议，不以新扫描替换缺少恢复上下文的任务。差异扫描记录1项低严重度本机权限问题。`dist/ygo-local`仍为2026-10-19旧包，`build-hashes.json`只记录CLI与worker哈希且与当前文件匹配；包内没有`manifest.json`，该结果只证明旧包文件与自身清单一致。W1-C隔离候选另完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；它没有部署进普通包，P4-R5仍开放。
 

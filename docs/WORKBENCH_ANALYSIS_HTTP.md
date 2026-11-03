@@ -85,7 +85,7 @@ analysis_job_result固定含schema_version、kind、job_id、revision、input_bi
 
 evidence固定区分report_contract_validated=true与report_origin_authenticated=false，并声明search_complete=false、global_optimality=false。合成接口验收只能标synthetic；W1-C之前没有production分析后端。投影不从客户端或报告自述推定来源，不生成运行凭证。空线路保留:no_verified_lines；exhausted不表示找到解或全局穷尽，预算截断保留原文原因。
 
-沿用精确127.0.0.1:port Host、全部API的Bearer token、非GET的精确Origin。上限保持16KiB header、1MiB请求body、32连接及当前5秒socket期限；不新增浏览器本机路径入口。严格JSON业务解析必须补充现有parse_json的重复键门禁。
+沿用精确127.0.0.1:port Host、全部API的Bearer token、非GET的精确Origin。上限保持16KiB header、1MiB请求body及32连接；请求头和请求体共用从accept开始计算的15秒绝对读取期限，socket写超时为5秒；不新增浏览器本机路径入口。严格JSON业务解析必须补充现有parse_json的重复键门禁。
 
 | 服务情形 | 允许 | 拒绝 |
 |---|---|---|

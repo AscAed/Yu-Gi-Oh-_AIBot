@@ -8,6 +8,7 @@
 |---|---|---|
 | 当前能力、开放任务、验收门槛 | [TASKS.md](../TASKS.md) | 当前状态只在此维护 |
 | 某次验证的范围、结果和限制 | [TESTING.md](TESTING.md)；较早批次的详细归档见[TESTING_HISTORY.md](TESTING_HISTORY.md) | 按日期、commit、资产和执行范围读取 |
+| 安全扫描发现、处置和残余风险 | [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | 扫描覆盖范围与主机ACL状态分开判断 |
 | 当前部署与本机环境 | [DEPLOYMENT.md](DEPLOYMENT.md)、[ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md) | 区分源码、隔离候选、旧发布包和冻结资产 |
 | 本机证据是否可清理 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 被忽略或有哈希清单不代表可删除或已备份 |
 | 产品目标、阶段依赖、完成差距 | [PRODUCT_VISION.md](PRODUCT_VISION.md)、[ROADMAP.md](ROADMAP.md)、[PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 目标与计划不等于已实现能力 |

@@ -15,7 +15,7 @@ use std::{
         Arc,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use ygo_domain::{Catalog, DeckDocumentV1};
 use ygo_engine_adapter::ProcessEngineConfig;
@@ -26,6 +26,7 @@ const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 const MAX_CARD_RESULTS: usize = 50;
 const MAX_CONNECTIONS: usize = 32;
+const MAX_REQUEST_DURATION: Duration = Duration::from_secs(15);
 
 #[derive(Clone, Debug)]
 pub struct WorkbenchConfig {
@@ -182,6 +183,7 @@ impl WorkbenchServer {
         while !stop.load(Ordering::SeqCst) {
             match self.listener.accept() {
                 Ok((stream, _peer)) => {
+                    let request_deadline = Instant::now() + MAX_REQUEST_DURATION;
                     let active = self.active_connections.fetch_add(1, Ordering::SeqCst);
                     if active >= MAX_CONNECTIONS {
                         self.active_connections.fetch_sub(1, Ordering::SeqCst);
@@ -201,12 +203,15 @@ impl WorkbenchServer {
                         let _guard = ConnectionGuard(active_connections);
                         let _ = handle_connection(
                             stream,
-                            port,
-                            &token,
-                            &drafts,
-                            catalog.as_ref(),
-                            language_status.as_ref(),
-                            analysis.as_ref(),
+                            ConnectionContext {
+                                port,
+                                request_deadline,
+                                token: &token,
+                                drafts: &drafts,
+                                catalog: catalog.as_ref(),
+                                language_status: language_status.as_ref(),
+                                analysis: analysis.as_ref(),
+                            },
                         );
                     });
                 }
@@ -301,20 +306,45 @@ fn parse_options(args: &[String]) -> Result<BTreeMap<String, String>, String> {
 struct HttpRequest {
     method: String,
     target: String,
-    headers: BTreeMap<String, String>,
     body: Vec<u8>,
 }
 
-fn read_http_request(stream: &mut TcpStream) -> Result<HttpRequest, HttpFailure> {
+#[derive(Debug)]
+struct HttpRequestHead {
+    method: String,
+    target: String,
+    headers: BTreeMap<String, String>,
+    content_length: usize,
+}
+
+fn set_read_timeout_until(stream: &TcpStream, deadline: Instant) -> Result<(), HttpFailure> {
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    if remaining.is_zero() {
+        return Err(HttpFailure::new(408, "request_timeout"));
+    }
     stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .map_err(|_| HttpFailure::new(400, "request_timeout"))?;
+        .set_read_timeout(Some(remaining))
+        .map_err(|_| HttpFailure::new(400, "request_timeout"))
+}
+
+fn read_http_request_head(
+    stream: &mut TcpStream,
+    deadline: Instant,
+) -> Result<HttpRequestHead, HttpFailure> {
     let mut header_bytes = Vec::new();
     let mut byte = [0u8; 1];
     while header_bytes.len() < MAX_HEADER_BYTES {
-        let count = stream
-            .read(&mut byte)
-            .map_err(|_| HttpFailure::new(400, "request_read_failed"))?;
+        set_read_timeout_until(stream, deadline)?;
+        let count = stream.read(&mut byte).map_err(|error| {
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+            ) {
+                HttpFailure::new(408, "request_timeout")
+            } else {
+                HttpFailure::new(400, "request_read_failed")
+            }
+        })?;
         if count == 0 {
             return Err(HttpFailure::new(400, "request_headers_truncated"));
         }
@@ -366,16 +396,39 @@ fn read_http_request(stream: &mut TcpStream) -> Result<HttpRequest, HttpFailure>
     if matches!(method, "POST" | "PUT") && !headers.contains_key("content-length") {
         return Err(HttpFailure::new(411, "content_length_required"));
     }
-    let mut body = vec![0u8; content_length];
-    stream
-        .read_exact(&mut body)
-        .map_err(|_| HttpFailure::new(400, "request_body_truncated"))?;
-    Ok(HttpRequest {
+    Ok(HttpRequestHead {
         method: method.to_owned(),
         target: target.to_owned(),
         headers,
-        body,
+        content_length,
     })
+}
+
+fn read_http_body(
+    stream: &mut TcpStream,
+    content_length: usize,
+    deadline: Instant,
+) -> Result<Vec<u8>, HttpFailure> {
+    let mut body = vec![0u8; content_length];
+    let mut offset = 0;
+    while offset < body.len() {
+        set_read_timeout_until(stream, deadline)?;
+        let count = stream.read(&mut body[offset..]).map_err(|error| {
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+            ) {
+                HttpFailure::new(408, "request_timeout")
+            } else {
+                HttpFailure::new(400, "request_body_truncated")
+            }
+        })?;
+        if count == 0 {
+            return Err(HttpFailure::new(400, "request_body_truncated"));
+        }
+        offset += count;
+    }
+    Ok(body)
 }
 
 #[derive(Debug)]
@@ -401,18 +454,29 @@ fn configure_connection(stream: &TcpStream) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
-fn handle_connection(
-    mut stream: TcpStream,
+struct ConnectionContext<'a> {
     port: u16,
-    token: &str,
-    drafts: &DeckDraftStore,
-    catalog: Option<&(String, Arc<Catalog>)>,
-    language_status: Option<&BTreeMap<u32, Value>>,
-    analysis: Option<&Arc<analysis_http::AnalysisHttpService>>,
-) -> Result<(), String> {
+    request_deadline: Instant,
+    token: &'a str,
+    drafts: &'a DeckDraftStore,
+    catalog: Option<&'a (String, Arc<Catalog>)>,
+    language_status: Option<&'a BTreeMap<u32, Value>>,
+    analysis: Option<&'a Arc<analysis_http::AnalysisHttpService>>,
+}
+
+fn handle_connection(mut stream: TcpStream, context: ConnectionContext<'_>) -> Result<(), String> {
+    let ConnectionContext {
+        port,
+        request_deadline,
+        token,
+        drafts,
+        catalog,
+        language_status,
+        analysis,
+    } = context;
     configure_connection(&stream)?;
-    let request = match read_http_request(&mut stream) {
-        Ok(request) => request,
+    let head = match read_http_request_head(&mut stream, request_deadline) {
+        Ok(head) => head,
         Err(failure) => {
             return write_json(
                 &mut stream,
@@ -422,10 +486,10 @@ fn handle_connection(
         }
     };
     let host = format!("127.0.0.1:{port}");
-    if request.headers.get("host").map(String::as_str) != Some(host.as_str()) {
+    if head.headers.get("host").map(String::as_str) != Some(host.as_str()) {
         return write_json(&mut stream, 400, json!({"error":{"code":"host_not_local"}}));
     }
-    if request.target == "/" && request.method == "GET" {
+    if head.target == "/" && head.method == "GET" {
         return write_asset(
             &mut stream,
             200,
@@ -433,7 +497,7 @@ fn handle_connection(
             include_str!("workbench/index.html"),
         );
     }
-    if request.target == "/app.js" && request.method == "GET" {
+    if head.target == "/app.js" && head.method == "GET" {
         return write_asset(
             &mut stream,
             200,
@@ -441,7 +505,7 @@ fn handle_connection(
             include_str!("workbench/app.js"),
         );
     }
-    if request.target == "/style.css" && request.method == "GET" {
+    if head.target == "/style.css" && head.method == "GET" {
         return write_asset(
             &mut stream,
             200,
@@ -449,7 +513,7 @@ fn handle_connection(
             include_str!("workbench/style.css"),
         );
     }
-    if !request.target.starts_with("/api/") {
+    if !head.target.starts_with("/api/") {
         return write_json(
             &mut stream,
             404,
@@ -458,8 +522,7 @@ fn handle_connection(
     }
     let expected_auth = format!("Bearer {token}");
     if !constant_time_eq(
-        request
-            .headers
+        head.headers
             .get("authorization")
             .map(String::as_str)
             .unwrap_or(""),
@@ -471,9 +534,9 @@ fn handle_connection(
             json!({"error":{"code":"authorization_required"}}),
         );
     }
-    if request.method != "GET" {
+    if head.method != "GET" {
         let expected_origin = format!("http://127.0.0.1:{port}");
-        if request.headers.get("origin").map(String::as_str) != Some(expected_origin.as_str()) {
+        if head.headers.get("origin").map(String::as_str) != Some(expected_origin.as_str()) {
             return write_json(
                 &mut stream,
                 403,
@@ -481,6 +544,21 @@ fn handle_connection(
             );
         }
     }
+    let body = match read_http_body(&mut stream, head.content_length, request_deadline) {
+        Ok(body) => body,
+        Err(failure) => {
+            return write_json(
+                &mut stream,
+                failure.status,
+                json!({"error":{"code":failure.code}}),
+            );
+        }
+    };
+    let request = HttpRequest {
+        method: head.method,
+        target: head.target,
+        body,
+    };
     let (path, query) = split_target(&request.target);
     if path == "/api/analysis-operations"
         || path.starts_with("/api/analysis-operations/")
@@ -960,6 +1038,21 @@ fn write_response(stream: &mut TcpStream, response: HttpResponse) -> Result<(), 
 mod tests {
     use super::*;
     use crate::workbench_analysis::tests::fixtures;
+
+    #[test]
+    fn incomplete_request_head_obeys_absolute_deadline() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            read_http_request_head(&mut stream, Instant::now() + Duration::from_millis(100))
+                .unwrap_err()
+                .status
+        });
+        let _client = TcpStream::connect(address).unwrap();
+
+        assert_eq!(server.join().unwrap(), 408);
+    }
 
     fn test_root(name: &str) -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
