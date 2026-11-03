@@ -2,7 +2,7 @@
 
 ## 当前现场（2026-11-03）
 
-本轮可执行代码审计基线为`main` / `50c279b0605c55f8e1f05240078700d63c01dd9d`；该验证时点工作树干净，较`origin/main`领先13个本地提交。后续仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围明确为diff/partial；全仓Deep Scan已启动但尚未返回最终结果，因此本轮不记为全仓扫描通过。差异扫描记录1项低严重度本机权限问题。`dist/ygo-local`仍为2026-10-19旧包，`build-hashes.json`只记录CLI与worker哈希且与当前文件匹配；包内没有`manifest.json`，该结果只证明旧包文件与自身清单一致。W1-C隔离候选另完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；它没有部署进普通包，P4-R5仍开放。
+本轮可执行代码审计基线为`main` / `50c279b0605c55f8e1f05240078700d63c01dd9d`；该验证时点工作树干净，较`origin/main`领先13个本地提交。后续仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围明确为diff/partial；全仓Deep Scan原执行句柄`214`于2026-11-03恢复时返回`not found`；当前可读记录未提供该扫描的`scanId`/handoff token，本机也未发现对应持久报告，因此扫描状态未知，不记为完成或通过。按扫描协议，不以新扫描替换缺少恢复上下文的任务。差异扫描记录1项低严重度本机权限问题。`dist/ygo-local`仍为2026-10-19旧包，`build-hashes.json`只记录CLI与worker哈希且与当前文件匹配；包内没有`manifest.json`，该结果只证明旧包文件与自身清单一致。W1-C隔离候选另完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；它没有部署进普通包，P4-R5仍开放。
 
 只读ACL复查把权限来源追到`D:\`根目录：`NT AUTHORITY\Authenticated Users`在该卷根上有直接`Modify` ACE，并继承到`D:\PUBLIC`及下层项目文件。`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot`父目录还有两个无法映射到当前本机账户名的显式Modify SID；工作区再有两个此类显式SID，另继承父目录的两个SID。当前令牌是标准用户`LAPTOP-7SAI5TBV\AscAed`；本机账户枚举受拒，且四个SID在ProfileList中均无账户配置文件记录，无法确认对应主体。`.git`对这四个SID另有显式写入/删除Deny ACE，同时继承Authenticated Users的Modify；未评估任一具体账户令牌的有效访问结果。项目父目录含两个兄弟工作区，因此修改父级ACL会影响兄弟目录；删除卷根ACE则会影响D盘其他内容。配置仍指向包内worker及`data/runtime`中的引擎资产。源码hash只绑定所选文件，不证明文件由可信主体发布。普通工作台保持`analysis_not_configured`，检查时没有观察到`ygo`进程。用户于2026-11-03选择保留当前ACL并记录风险，本轮未调整权限。详细部署界限见[DEPLOYMENT](DEPLOYMENT.md)。
 
