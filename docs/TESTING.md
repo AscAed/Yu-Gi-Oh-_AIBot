@@ -2,7 +2,7 @@
 
 ## 2026-11-03 全项目自检（代码基线）
 
-本轮核对 `docs/INDEX.md`、`TASKS.md`、部署包身份、隔离运行材料及当前工作区状态。执行可执行代码验证时的基线为 `main / 50c279b0605c55f8e1f05240078700d63c01dd9d`；该时点工作树干净，较 `origin/main` 领先13个本地提交。随后变更仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围为diff/partial，不是全仓扫描。它记录1项低严重度本机权限问题。全仓Deep Scan已启动；截至本记录更新时仍无最终结果，不视为完成或通过。只读ACL复核发现`Authenticated Users: Modify`直接设置在`D:\`根并继承到项目；项目父目录和工作区另有四个无法映射到当前账户名的Modify SID。本机账户枚举受拒，且四个SID在ProfileList中均无对应项；修改卷根可能影响D盘其他内容，修改项目父目录可能影响两个兄弟工作区。本轮未改ACL。普通工作台保持 `analysis_not_configured`，检查时未观察到 `ygo` 进程。调查和部署限制见[环境审计](ENVIRONMENT_AUDIT.md)、[部署状态](DEPLOYMENT.md)与[证据边界](EVIDENCE_CONTRACTS.md)。
+本轮核对 `docs/INDEX.md`、`TASKS.md`、部署包身份、隔离运行材料及当前工作区状态。执行可执行代码验证时的基线为 `main / 50c279b0605c55f8e1f05240078700d63c01dd9d`；该时点工作树干净，较 `origin/main` 领先13个本地提交。随后变更仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围为diff/partial，不是全仓扫描。它记录1项低严重度本机权限问题。全仓Deep Scan已启动；截至本记录更新时仍无最终结果，不视为完成或通过。只读ACL复核发现`Authenticated Users: Modify`直接设置在`D:\`根并继承到项目；项目父目录和工作区另有四个无法映射到当前账户名的Modify SID。本机账户枚举受拒，且四个SID在ProfileList中均无对应项；修改卷根可能影响D盘其他内容，修改项目父目录可能影响两个兄弟工作区。用户于2026-11-03选择保留当前ACL并记录风险；本轮未改ACL。普通工作台保持 `analysis_not_configured`，检查时未观察到 `ygo` 进程。调查和部署限制见[环境审计](ENVIRONMENT_AUDIT.md)、[部署状态](DEPLOYMENT.md)与[证据边界](EVIDENCE_CONTRACTS.md)。
 
 发布检查确认 `dist/ygo-local` 仍是 2026-10-19 旧包；`build-hashes.json` 只核对包内 CLI 与 worker 哈希，且 `manifest.json` 缺失，不能证明它对应当前工作树。W1-C 一次固定 Rabbit 运行在隔离候选目录完成，结果为 `budget_limited/time_budget`；160 nodes、165 engine_calls，不是完整搜索或最优性证明。此轮未运行 doctor、发布包、真实 runner/worker/FFI、原生研究或部署。未发现可以根据消费者和保留目的安全删除的模块；`cargo-machete` 不可用，因此没有声称完成自动未用依赖扫描。没有清理 `target/`、`data/runtime/`、`dist/` 或兼容路径。
 
@@ -23,7 +23,7 @@ py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/audit-2026-
 git diff --check
 ```
 
-Rust覆盖当前源码的离线workspace测试；被显式跳过的doctor测试和ignored项目没有运行。默认Python测试集完成，但需本机引擎/快照/报告/赛事配置的opt-in组仍跳过。diff安全扫描范围有限，全仓Deep Scan尚无最终结果。ACL问题需先确认卷级和项目级共享账户范围。上述检查不认证当前`dist/ygo-local`、完整引擎资产、研究账户等价性、独立原生重放、完整搜索或全局最优性。
+Rust覆盖当前源码的离线workspace测试；被显式跳过的doctor测试和ignored项目没有运行。默认Python测试集完成，但需本机引擎/快照/报告/赛事配置的opt-in组仍跳过。diff安全扫描范围有限，全仓Deep Scan尚无最终结果。用户于2026-11-03选择保留现状并记录ACL风险；本轮未修改权限。上述检查不认证当前`dist/ygo-local`、完整引擎资产、研究账户等价性、独立原生重放、完整搜索或全局最优性。
 
 ## 2026-11-03 H3 HTTP派发准入AssetMismatch持久化后、队列结算前进程终止
 
