@@ -7,13 +7,13 @@
 | 问题 | 事实源 | 阅读规则 |
 |---|---|---|
 | 当前能力、开放任务、验收门槛 | [TASKS.md](../TASKS.md) | 当前状态只在此维护 |
-| 某次验证的范围、结果和限制 | [TESTING.md](TESTING.md) | 按日期、commit、资产和执行范围读取 |
+| 某次验证的范围、结果和限制 | [TESTING.md](TESTING.md)；较早批次的详细归档见[TESTING_HISTORY.md](TESTING_HISTORY.md) | 按日期、commit、资产和执行范围读取 |
 | 当前部署与本机环境 | [DEPLOYMENT.md](DEPLOYMENT.md)、[ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md) | 区分源码、隔离候选、旧发布包和冻结资产 |
 | 本机证据是否可清理 | [EVIDENCE_RETENTION.md](EVIDENCE_RETENTION.md) | 被忽略或有哈希清单不代表可删除或已备份 |
 | 产品目标、阶段依赖、完成差距 | [PRODUCT_VISION.md](PRODUCT_VISION.md)、[ROADMAP.md](ROADMAP.md)、[PROJECT_ASSESSMENT.md](PROJECT_ASSESSMENT.md) | 目标与计划不等于已实现能力 |
 | 模块、接口和数据流 | [ARCHITECTURE.md](ARCHITECTURE.md)、[API.md](API.md) | 源码与版本化合同优先 |
 | 研究副作用、预算、证据资格 | [RESEARCH_OPERATIONS.md](RESEARCH_OPERATIONS.md)、[EVIDENCE_CONTRACTS.md](EVIDENCE_CONTRACTS.md) | 准备材料不授予执行资格 |
-| 历史批次和交接 | [HISTORY_INDEX.md](HISTORY_INDEX.md) | 由索引定位原记录，不把旧计划当成当前指令 |
+| 历史批次和交接 | [HISTORY_INDEX.md](HISTORY_INDEX.md)、[TASKS_HISTORY.md](../TASKS_HISTORY.md)、[TESTING_HISTORY.md](TESTING_HISTORY.md) | 由索引定位原记录，不把旧计划当成当前指令 |
 
 ## 子系统导航
 
@@ -36,4 +36,4 @@
 
 ## 历史资料分组
 
-HISTORY_INDEX 按日期和主题索引 H3 恢复窗口、L1 卡片复核批次、P1/P4 研究交接、W1 工作台分析和 W2 草稿迁移。成批文件在原位置保留；导航不复制批次结论，也不扩大它们的证据范围。
+HISTORY_INDEX 按日期和主题索引 H3 恢复窗口、L1 卡片复核批次、P1/P4 研究交接、W1 工作台分析和 W2 草稿迁移。`TASKS.md`维护当前状态，历史任务快照在`TASKS_HISTORY.md`；`TESTING.md`维护近期验证，较早批次的详细正文在`TESTING_HISTORY.md`。为保持既有链接，当前页中部分旧标题只保留跳转锚点，阅读时应继续到归档页；历史结果不覆盖当前源码、TASKS状态或更新的验证记录。
