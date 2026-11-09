@@ -245,27 +245,167 @@ pub struct SearchReport {
     pub scoring: ScoringConfig,
     pub budget: SearchBudget,
 }
-fn run<A: EngineAdapter>(
-    adapter: &A,
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchAttemptPhase {
+    Initial,
+    Baseline,
+    Exploration,
+    Replay,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SearchAttemptResult {
+    DuelResult { status: DuelStatus },
+    AdapterError { code: String, stage: String },
+}
+
+/// In-memory association between one search call and its process observation.
+/// This is not serialized into the public search report or persisted.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SearchAttemptObservation {
+    pub ordinal: u64,
+    pub attempt_id: String,
+    pub phase: SearchAttemptPhase,
+    pub result: SearchAttemptResult,
+    pub process_observation: ProcessRunObservation,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SearchAttemptStart {
+    pub ordinal: u64,
+    pub attempt_id: String,
+    pub phase: SearchAttemptPhase,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchAttemptFfiDirection {
+    HostToOcgcore,
+    OcgcoreCallbackToHost,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchAttemptFfiReturnStatus {
+    Returned,
+    Error,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SearchAttemptFfiEntry {
+    pub attempt_ordinal: u64,
+    pub attempt_id: String,
+    pub call_id: String,
+    pub direction: SearchAttemptFfiDirection,
+    pub name: String,
+    pub ffi_ordinal: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SearchAttemptFfiReturn {
+    pub attempt_ordinal: u64,
+    pub attempt_id: String,
+    pub call_id: String,
+    pub status: SearchAttemptFfiReturnStatus,
+    pub result_sha256: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "event", content = "data", rename_all = "snake_case")]
+pub enum SearchAttemptJournalEvent {
+    Started(SearchAttemptStart),
+    FfiEntered(SearchAttemptFfiEntry),
+    FfiReturned(SearchAttemptFfiReturn),
+    Finished(SearchAttemptObservation),
+}
+
+/// Search result plus process observations. The observation sequence is
+/// available to a later persistence layer without changing the report schema.
+pub struct ObservedSearchOutcome {
+    pub report: Result<SearchReport, String>,
+    pub attempts: Vec<SearchAttemptObservation>,
+}
+
+enum SearchRunError {
+    Local(WorkerError),
+    Adapter(WorkerError),
+    AttemptGateBeforeAdapter(WorkerError),
+    AttemptGateAfterAdapter(WorkerError),
+}
+
+impl SearchRunError {
+    fn local(error: WorkerError) -> Self {
+        Self::Local(error)
+    }
+
+    fn adapter(error: WorkerError) -> Self {
+        Self::Adapter(error)
+    }
+
+    fn attempt_gate_before_adapter(error: WorkerError) -> Self {
+        Self::AttemptGateBeforeAdapter(error)
+    }
+
+    fn attempt_gate_after_adapter(error: WorkerError) -> Self {
+        Self::AttemptGateAfterAdapter(error)
+    }
+
+    fn is_attempt_gate(&self) -> bool {
+        matches!(
+            self,
+            Self::AttemptGateBeforeAdapter(_) | Self::AttemptGateAfterAdapter(_)
+        )
+    }
+
+    fn adapter_was_called(&self) -> bool {
+        matches!(self, Self::Adapter(_) | Self::AttemptGateAfterAdapter(_))
+    }
+
+    fn into_worker_error(self) -> WorkerError {
+        match self {
+            Self::Local(error)
+            | Self::Adapter(error)
+            | Self::AttemptGateBeforeAdapter(error)
+            | Self::AttemptGateAfterAdapter(error) => error,
+        }
+    }
+}
+
+fn run<F>(
+    execute: &mut F,
     r: &RunDuelRequest,
+    phase: SearchAttemptPhase,
     start: Instant,
     budget: &SearchBudget,
     stats: &mut SearchStats,
-) -> Result<DuelResult, WorkerError> {
+) -> Result<DuelResult, SearchRunError>
+where
+    F: FnMut(&RunDuelRequest, SearchAttemptPhase) -> Result<DuelResult, SearchRunError>,
+{
     let left = budget
         .time_limit_ms
         .saturating_sub(start.elapsed().as_millis() as u64);
     if left == 0 {
-        return Err(WorkerError::new(
+        return Err(SearchRunError::local(WorkerError::new(
             "analysis_timeout",
             "search",
             "analysis deadline",
-        ));
+        )));
     }
     let mut r = r.clone();
     r.engine.timeout_ms = r.engine.timeout_ms.min(left);
-    stats.engine_calls += 1;
-    let result = adapter.run(&r)?;
+    let result = execute(&r, phase);
+    if result.as_ref().is_ok_and(|_| true)
+        || result
+            .as_ref()
+            .is_err_and(SearchRunError::adapter_was_called)
+    {
+        stats.engine_calls += 1;
+    }
+    let result = result?;
     stats.worker_peak_working_set_bytes = stats
         .worker_peak_working_set_bytes
         .max(result.peak_working_set_bytes);
@@ -309,20 +449,33 @@ fn passive(prompt: &Prompt) -> Option<Choice> {
         .or_else(|| prompt.actions.first())
         .map(|a| a.choice.clone())
 }
-pub fn search<A: EngineAdapter>(
-    adapter: &A,
+fn search_inner<F>(
+    mut execute: F,
     request: &RunDuelRequest,
     budget: &SearchBudget,
     weights: &ScoringConfig,
-) -> Result<SearchReport, String> {
+) -> Result<SearchReport, String>
+where
+    F: FnMut(&RunDuelRequest, SearchAttemptPhase) -> Result<DuelResult, SearchRunError>,
+{
     budget.validate()?;
     let start = Instant::now();
     let mut stats = SearchStats::default();
     let mut cache = BTreeMap::new();
     let mut diagnostics = vec![];
     let mut lines = vec![];
-    let first = run(adapter, request, start, budget, &mut stats)
-        .map_err(|e| format!("{}: {}", e.code, e.message))?;
+    let first = run(
+        &mut execute,
+        request,
+        SearchAttemptPhase::Initial,
+        start,
+        budget,
+        &mut stats,
+    )
+    .map_err(|e| {
+        let error = e.into_worker_error();
+        format!("{}: {}", error.code, error.message)
+    })?;
     stats.nodes += 1;
     if first.status == DuelStatus::Failed {
         return Err(format!("{:?}", first.error));
@@ -343,7 +496,14 @@ pub fn search<A: EngineAdapter>(
             player: p.player,
             choice,
         });
-        match run(adapter, &baseline, start, budget, &mut stats) {
+        match run(
+            &mut execute,
+            &baseline,
+            SearchAttemptPhase::Baseline,
+            start,
+            budget,
+            &mut stats,
+        ) {
             Ok(next) => {
                 stats.nodes += 1;
                 baseline.decisions = next.resolved_decisions.clone();
@@ -352,7 +512,12 @@ pub fn search<A: EngineAdapter>(
                 b = next;
             }
             Err(e) => {
-                diagnostics.push(e);
+                let is_gate = e.is_attempt_gate();
+                let error = e.into_worker_error();
+                if is_gate {
+                    return Err(format!("{}: {}", error.code, error.message));
+                }
+                diagnostics.push(error);
                 break;
             }
         }
@@ -417,15 +582,27 @@ pub fn search<A: EngineAdapter>(
                         cached.clone()
                     } else {
                         stats.nodes += 1;
-                        match run(adapter, &child, start, budget, &mut stats) {
+                        match run(
+                            &mut execute,
+                            &child,
+                            SearchAttemptPhase::Exploration,
+                            start,
+                            budget,
+                            &mut stats,
+                        ) {
                             Ok(v) => {
                                 cache.insert(key, v.clone());
                                 v
                             }
                             Err(e) => {
+                                let is_gate = e.is_attempt_gate();
+                                let error = e.into_worker_error();
+                                if is_gate {
+                                    return Err(format!("{}: {}", error.code, error.message));
+                                }
                                 stats.failed_branches += 1;
                                 if diagnostics.len() < 20 {
-                                    diagnostics.push(e);
+                                    diagnostics.push(error);
                                 }
                                 continue;
                             }
@@ -525,7 +702,14 @@ pub fn search<A: EngineAdapter>(
         }
         let mut replay = request.clone();
         replay.decisions = line.decisions.clone();
-        match run(adapter, &replay, start, budget, &mut stats) {
+        match run(
+            &mut execute,
+            &replay,
+            SearchAttemptPhase::Replay,
+            start,
+            budget,
+            &mut stats,
+        ) {
             Ok(result)
                 if result.status == line.result.status
                     && result.checkpoint == line.result.checkpoint
@@ -543,7 +727,12 @@ pub fn search<A: EngineAdapter>(
                 "trace/state changed",
             )),
             Err(e) => {
-                diagnostics.push(e);
+                let is_gate = e.is_attempt_gate();
+                let error = e.into_worker_error();
+                if is_gate {
+                    return Err(format!("{}: {}", error.code, error.message));
+                }
+                diagnostics.push(error);
                 break;
             }
         }
@@ -562,4 +751,135 @@ pub fn search<A: EngineAdapter>(
         scoring: weights.clone(),
         budget: budget.clone(),
     })
+}
+
+/// Run the regular bounded search while collecting one process observation
+/// per adapter attempt. IDs must be lowercase 32-character hex values and
+/// unique within this search. ID creation or validation failure stops further
+/// adapter calls; collected observations remain available in the outcome.
+pub fn search_with_observations<A, F>(
+    adapter: &A,
+    request: &RunDuelRequest,
+    budget: &SearchBudget,
+    weights: &ScoringConfig,
+    next_attempt_id: F,
+) -> ObservedSearchOutcome
+where
+    A: ProcessObservedAdapter,
+    F: FnMut() -> Result<String, String>,
+{
+    search_with_receipts(adapter, request, budget, weights, next_attempt_id, |_| {
+        Ok(())
+    })
+}
+
+/// Run a search while durably bracketing every adapter call with callbacks.
+/// The `Started` callback must succeed before the adapter is called; failure
+/// from either callback stops all later adapter calls in this search.
+pub fn search_with_receipts<A, F, J>(
+    adapter: &A,
+    request: &RunDuelRequest,
+    budget: &SearchBudget,
+    weights: &ScoringConfig,
+    mut next_attempt_id: F,
+    mut record_event: J,
+) -> ObservedSearchOutcome
+where
+    A: ProcessObservedAdapter,
+    F: FnMut() -> Result<String, String>,
+    J: FnMut(SearchAttemptJournalEvent) -> Result<(), String>,
+{
+    let mut attempts = Vec::new();
+    let mut seen_ids = BTreeSet::new();
+    let report = search_inner(
+        |run_request, phase| {
+            let attempt_id = next_attempt_id().map_err(|error| {
+                SearchRunError::attempt_gate_before_adapter(WorkerError::new(
+                    "attempt_id_unavailable",
+                    "attempt_identity",
+                    error,
+                ))
+            })?;
+            if attempt_id.len() != 32
+                || !attempt_id
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            {
+                return Err(SearchRunError::attempt_gate_before_adapter(
+                    WorkerError::new(
+                        "attempt_id_invalid",
+                        "attempt_identity",
+                        "expected 32 lowercase hexadecimal characters",
+                    ),
+                ));
+            }
+            if !seen_ids.insert(attempt_id.clone()) {
+                return Err(SearchRunError::attempt_gate_before_adapter(
+                    WorkerError::new(
+                        "attempt_id_reused",
+                        "attempt_identity",
+                        "attempt ID already used in this search",
+                    ),
+                ));
+            }
+
+            let ordinal = attempts.len() as u64 + 1;
+            let start = SearchAttemptStart {
+                ordinal,
+                attempt_id: attempt_id.clone(),
+                phase,
+            };
+            record_event(SearchAttemptJournalEvent::Started(start)).map_err(|error| {
+                SearchRunError::attempt_gate_before_adapter(WorkerError::new(
+                    "attempt_receipt_write_failed",
+                    "attempt_receipt",
+                    error,
+                ))
+            })?;
+            let outcome = adapter.run_process_observed(run_request);
+            let result = match &outcome.result {
+                Ok(result) => SearchAttemptResult::DuelResult {
+                    status: result.status.clone(),
+                },
+                Err(error) => SearchAttemptResult::AdapterError {
+                    code: error.code.clone(),
+                    stage: error.stage.clone(),
+                },
+            };
+            let observation = SearchAttemptObservation {
+                ordinal,
+                attempt_id,
+                phase,
+                result,
+                process_observation: outcome.observation,
+            };
+            attempts.push(observation.clone());
+            record_event(SearchAttemptJournalEvent::Finished(observation)).map_err(|error| {
+                SearchRunError::attempt_gate_after_adapter(WorkerError::new(
+                    "attempt_receipt_write_failed",
+                    "attempt_receipt",
+                    error,
+                ))
+            })?;
+            outcome.result.map_err(SearchRunError::adapter)
+        },
+        request,
+        budget,
+        weights,
+    );
+    ObservedSearchOutcome { report, attempts }
+}
+
+pub fn search<A: EngineAdapter>(
+    adapter: &A,
+    request: &RunDuelRequest,
+    budget: &SearchBudget,
+    weights: &ScoringConfig,
+) -> Result<SearchReport, String> {
+    search_inner(
+        |run_request, _phase| adapter.run(run_request).map_err(SearchRunError::adapter),
+        request,
+        budget,
+        weights,
+    )
 }

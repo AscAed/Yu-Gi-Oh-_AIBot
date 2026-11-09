@@ -1,5 +1,7 @@
 # 实施取舍与交付边界
 
+**2026-11-04复核：**预算截断可产生有限线路，不证明搜索完整；未知调用或消费不能继承上一阶段的零值。R1b-3旧见证遗漏对手牌组/手牌计数，修正后须重新绑定冻结输入、driver及worker，旧run不能续跑。跨链恢复先认证再追加；报告临时文件窗口说明未发布临时件应按合同保留，不可误当终态。扫描和安全处置的范围、三个未证实路径竞态及用户选择保留ACL见[安全审计](SECURITY_AUDIT.md)；partial扫描不证明全仓安全。上述证据见[测试记录](TESTING.md)。
+
 2b-2复核：父进程必须先认证完整链与握手，再终止子进程；freeze/claim事件只证明合成路径所观测调用。最终版本补充断言后须重新验证，不能沿用更早结果；Windows同一测试程序仍运行时并发链接曾失败，须等待占用释放并重跑，不能当作行为红测。详见[验证记录](TESTING.md)和[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
 
 2026-11-02复核：握手须在临时文件同步后原子发布，避免父进程读到半标记；Windows接受socket的非阻塞继承及修复见[响应丢失交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)，旧TCP重置根因仍未知。未知消费不能推断为零；Tenki pin与Curry实际执行源码缺少来源链，不能用相似代码替代，见[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)。合成、原生、会计与最优性证据分别判定；候选构建隔离且绑定资产，见[验证记录](TESTING.md)。历史证据归档仅覆盖清单所列文件，哈希清单不是备份，普通克隆不能取得私有索引，见[保留清单](EVIDENCE_RETENTION.md)。
@@ -7,6 +9,8 @@
 **H3.2-2b-1经验：**初版握手文件先创建再写入，父进程可能读到空或部分标记；改为同步临时文件后原子发布。四个限定窗口强杀后重新认证保存材料，核对空活动队列、重复重开和原始字节稳定；其他窗口及系统故障仍未认证。详见[交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
 
 **H3.2-2b-2经验（2026-11-02）：**首次accepting持久化后、freeze前强杀后，恢复仅追加一次unknown且不建任务。跨进程测试必须认证所有操作修订、摘要和哈希，再用同步事件文件确认freeze/claim计数；旧测试计数器漏掉`submit_operation_core`直接调用的冻结闭包。事件仅证明该合成协调器窗口的调用边界，不覆盖worker、原生引擎、syscall或消费账本。详见[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)和[验证记录](TESTING.md)。
+
+**H3窗口选择经验（2026-11-04）：**先比较检查点所在的实际状态迁移，再判断是否是新窗口。`time_budget`与`node_budget`共享同一报告保存后`budget_limited`修订和队列结算回调；增加一个原因场景可验证原因字节恢复，不应重复计作新K边界。显式`mark_unknown`的`CompletionUncertain`修订落盘后、内存队列结算前则是与重开时分类running不同的实际迁移，故单独建立K并认证跨链与重复重开。证据见[原因分类交接](superpowers/plans/2026-11-04-time-budget-recovery-handoff.md)、[unknown终态交接](superpowers/plans/2026-11-04-unknown-terminal-persisted-before-queue-update.md)及[H3映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)。
 
 **running领取边界经验（2026-11-03）：**running修订持久化、内存队列更新、票据返回和执行器调用是不同的可观察边界；相邻强杀用例不能替代中间点。本批在队列更新后、票据返回前单独握手并认证，事件记录器只在目标checkpoint启用，避免污染既有事件顺序。补强父进程operation全链认证时，发现旧辅助函数虽然有accepted revision 4的转换校验，却在状态白名单中漏掉`Accepted`；修正后重新运行聚焦与workspace测试。该合成路径确认假执行器未被调用；恢复后的`unknown`仍不代表零消费。见[窗口交接](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)和[验证记录](TESTING.md)。
 
@@ -293,3 +297,25 @@
 - **处理：**W1-A移除该对象serde能力；W1-B须另设计无路径记录，执行前重建请求并重新核验资产身份。
 - **代价：**重启不能直接恢复内存对象，未知或中断任务须显示为相应状态，不自动重发。
 - **范围与证据：**W1工作台分析接口尚未实现，详见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)及[API](API.md)。
+
+### 27. 一个分析job可包含多个adapter调用
+
+- **问题：**初版W1-C合成回执合同把每个job限制为一次adapter attempt，无法表示搜索探索和线路replay产生的多次调用。
+- **根因：**合同先按单个worker请求建模，却未对照`combo::search`的调用路径；已验收的Rabbit分析包含165次应用层adapter调用。
+- **处理：**每个顺序调用绑定唯一attempt ID；完整协议响应后允许下一次计划调用，spawn/请求/响应未决后拒绝继续；replay失败后保存的部分report保持整体`incomplete`。
+- **代价：**多attempt链只证明记录可按调用序列校验；真实OS进程、FFI、报告producer和消费仍须独立观察及认证。
+- **范围与证据：**W1-C回执合同v1；17项聚焦回归见[验证记录](TESTING.md)和[计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+### 28. 持久化搜索attempt的开始和host结果
+
+- **问题：**内存观察在进程崩溃时消失，且无法判断崩溃发生在adapter调用之前还是之后。
+- **处理：**job绑定的私有日志在adapter调用前追加`Started`，返回后追加host结果；事件链绑定operation/job/running revision/command/input/资产摘要。提交前失败与写后不确定都会停止后续派发，重开把仍运行的任务分类为unknown。允许最后一条`Started`没有配对结果，作为未决调用现场保留。
+- **代价：**source/build身份当前为null；host摘要不认证OS worker、worker FFI、报告生产者或研究消费。unknown保持unknown，不从adapter次数推导零消费。
+- **范围与证据：**仅W1-C主机attempt日志及合成进程终止/写入故障；新增opt-in的Rust搜索回执API。workbench HTTP routes/DTO、job/schema和报告合同不变。测试与未关闭门禁见[验证记录](TESTING.md)和[计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+### 29. FFI事件必须独立配对
+
+- **问题：**只记录host结果无法说明某个ocgcore入口是否已经返回，尤其是回调嵌套或进程中断。
+- **处理：**attempt日志新增`ffi_entered`和`ffi_returned`。call ID在job内唯一，entered序号连续，returned必须对应未返回入口；HostResult会拒绝仍有未返回入口的attempt。孤立entered保留为unknown现场，并在重开后保持稳定。
+- **代价：**当前事件由合成调用方生成，不能证明真实worker/ocgcore执行、回调完整性或硬件结果；worker确认通道和报告producer来源仍开放。
+- **范围与证据：**7项CLI FFI/回执聚焦回归覆盖嵌套LIFO配对、外层提前返回、孤立入口重开、错误关闭、跨attempt重复ID、写前失败和磁盘历史链唯一性；外层提前返回测试先RED再GREEN。Rust receipt Schema与Python离线验证器同步检查两类事件及嵌套LIFO顺序。Python回归18 passed；真实分析和FFI运行仍不在本批范围，workspace为494 passed/36 ignored，详见[验证记录](TESTING.md)。

@@ -8,6 +8,12 @@ fn main() {
         .into_owned();
     if name.contains("hang") {
         std::thread::sleep(std::time::Duration::from_secs(60));
+    } else if name.ends_with("-valid") {
+        let mut result = ygo_engine_adapter::DuelResult::failure(
+            ygo_engine_adapter::WorkerError::new("fixture", "test", ""),
+        );
+        result.protocol_version = 2;
+        println!("{}", serde_json::to_string(&result).unwrap());
     } else if name.contains("crash") {
         std::process::exit(7);
     } else if name.contains("noise") {

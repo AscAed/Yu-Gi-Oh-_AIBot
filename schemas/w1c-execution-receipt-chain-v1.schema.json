@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/w1c-execution-receipt-chain-v1.schema.json",
+  "title": "W1-C synthetic execution receipt chain v1",
+  "description": "A versioned local receipt contract for synthetic validation. Hash consistency does not authenticate a producer or attest hardware execution; consumption is fixed to unknown until a separate ledger contract exists.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "context", "context_sha256", "events", "consumption"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "w1c_execution_receipt_chain"},
+    "context": {"$ref": "#/$defs/context"},
+    "context_sha256": {"$ref": "#/$defs/hash"},
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {"$ref": "#/$defs/event"}
+    },
+    "consumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "unit", "count", "evidence_sha256"],
+      "properties": {
+        "status": {"const": "unknown"},
+        "unit": {"type": "null"},
+        "count": {"type": "null"},
+        "evidence_sha256": {"type": "null"}
+      }
+    }
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-f0-9]{32}$"},
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "job_id", "input_sha256", "source_bundle_identity", "build_record_identity", "assets"],
+      "properties": {
+        "operation_id": {"$ref": "#/$defs/id"},
+        "job_id": {"$ref": "#/$defs/id"},
+        "input_sha256": {"$ref": "#/$defs/hash"},
+        "source_bundle_identity": {"$ref": "#/$defs/hash"},
+        "build_record_identity": {"$ref": "#/$defs/hash"},
+        "assets": {
+          "type": "object",
+          "minProperties": 3,
+          "required": ["cli", "worker", "engine"],
+          "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,63}$"},
+          "additionalProperties": {"$ref": "#/$defs/hash"}
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "attempt_id", "event_type", "previous_sha256", "payload", "event_sha256"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1},
+        "attempt_id": {
+          "$ref": "#/$defs/id",
+          "description": "Identifies the adapter invocation owning this event; a job-level report_persisted event uses the final attempt ID."
+        },
+        "event_type": {"enum": ["adapter_attempt", "worker_spawn", "protocol_request", "protocol_response", "ffi_entered", "ffi_returned", "report_persisted"]},
+        "previous_sha256": {"$ref": "#/$defs/hash"},
+        "event_sha256": {"$ref": "#/$defs/hash"},
+        "payload": {"type": "object"}
+      },
+      "oneOf": [
+        {"properties": {"event_type": {"const": "adapter_attempt"}, "payload": {"$ref": "#/$defs/adapter_attempt"}}},
+        {"properties": {"event_type": {"const": "worker_spawn"}, "payload": {"$ref": "#/$defs/worker_spawn"}}},
+        {"properties": {"event_type": {"const": "protocol_request"}, "payload": {"$ref": "#/$defs/protocol_request"}}},
+        {"properties": {"event_type": {"const": "protocol_response"}, "payload": {"$ref": "#/$defs/protocol_response"}}},
+        {"properties": {"event_type": {"const": "ffi_entered"}, "payload": {"$ref": "#/$defs/ffi_entered"}}},
+        {"properties": {"event_type": {"const": "ffi_returned"}, "payload": {"$ref": "#/$defs/ffi_returned"}}},
+        {"properties": {"event_type": {"const": "report_persisted"}, "payload": {"$ref": "#/$defs/report_persisted"}}}
+      ]
+    },
+    "adapter_attempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["command_sha256", "status"],
+      "properties": {"command_sha256": {"$ref": "#/$defs/hash"}, "status": {"const": "started"}}
+    },
+    "worker_spawn": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "pid", "executable_sha256"],
+      "properties": {
+        "status": {"enum": ["spawned", "failed"]},
+        "pid": {"type": ["integer", "null"], "minimum": 1},
+        "executable_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "spawned"}}}, "then": {"properties": {"pid": {"type": "integer"}, "executable_sha256": {"$ref": "#/$defs/hash"}}}},
+        {"if": {"properties": {"status": {"const": "failed"}}}, "then": {"properties": {"pid": {"type": "null"}, "executable_sha256": {"type": "null"}}}}
+      ]
+    },
+    "protocol_request": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "request_sha256", "bytes", "input_sha256"],
+      "properties": {
+        "status": {"enum": ["written", "failed", "unknown"]},
+        "request_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "bytes": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+        "input_sha256": {"$ref": "#/$defs/hash"}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "written"}}}, "then": {"properties": {"request_sha256": {"$ref": "#/$defs/hash"}, "bytes": {"type": "integer", "minimum": 1}}}},
+        {"if": {"properties": {"status": {"enum": ["failed", "unknown"]}}}, "then": {"properties": {"request_sha256": {"type": "null"}, "bytes": {"type": "null"}}}}
+      ]
+    },
+    "protocol_response": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "response_sha256", "bytes", "exit_code", "observation", "ffi_receipt_status"],
+      "properties": {
+        "status": {"enum": ["received", "missing", "invalid", "unknown"]},
+        "response_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "bytes": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+        "exit_code": {"type": ["integer", "null"], "description": "Signed host-observed process return code; negative values may encode signal termination."},
+        "observation": {"enum": ["complete", "worker_exit", "timeout", "read_error", "parse_error", "unknown"]},
+        "ffi_receipt_status": {"enum": ["complete", "partial", "unknown"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"enum": ["received", "invalid"]}}}, "then": {"properties": {"response_sha256": {"$ref": "#/$defs/hash"}, "bytes": {"type": "integer", "minimum": 1}}}},
+        {"if": {"properties": {"status": {"const": "missing"}}}, "then": {"properties": {"response_sha256": {"type": "null"}, "bytes": {"type": "null"}}}},
+        {"if": {"properties": {"status": {"const": "unknown"}}}, "then": {"properties": {"response_sha256": {"type": "null"}, "bytes": {"type": "null"}, "exit_code": {"type": "null"}}}},
+        {"if": {"properties": {"status": {"const": "received"}}}, "then": {"properties": {"observation": {"const": "complete"}}}},
+        {"if": {"properties": {"status": {"const": "missing"}}}, "then": {"properties": {"observation": {"enum": ["worker_exit", "timeout", "read_error", "unknown"]}}}},
+        {"if": {"properties": {"status": {"const": "invalid"}}}, "then": {"properties": {"observation": {"const": "parse_error"}}}},
+        {"if": {"properties": {"status": {"const": "unknown"}}}, "then": {"properties": {"observation": {"const": "unknown"}}}}
+      ]
+    },
+    "ffi_entered": {
+      "type": "object", "additionalProperties": false,
+      "required": ["call_id", "direction", "name", "ordinal"],
+      "properties": {
+        "call_id": {"$ref": "#/$defs/id"},
+        "direction": {"enum": ["host_to_ocgcore", "ocgcore_callback_to_host"]},
+        "name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"},
+        "ordinal": {"type": "integer", "minimum": 1}
+      }
+    },
+    "ffi_returned": {
+      "type": "object", "additionalProperties": false,
+      "required": ["call_id", "status", "result_sha256"],
+      "properties": {
+        "call_id": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["returned", "error"]},
+        "result_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+      }
+    },
+    "report_persisted": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "report_sha256", "report_bytes", "readback_sha256"],
+      "properties": {
+        "status": {"enum": ["committed", "failed", "unknown"]},
+        "report_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "report_bytes": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+        "readback_sha256": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "committed"}}}, "then": {"properties": {"report_sha256": {"$ref": "#/$defs/hash"}, "report_bytes": {"type": "integer", "minimum": 1}, "readback_sha256": {"$ref": "#/$defs/hash"}}}},
+        {"if": {"properties": {"status": {"const": "unknown"}}}, "then": {"properties": {"readback_sha256": {"type": "null"}}}},
+        {"if": {"properties": {"status": {"const": "failed"}}}, "then": {"properties": {"report_sha256": {"type": "null"}, "report_bytes": {"type": "null"}, "readback_sha256": {"type": "null"}}}}
+      ]
+    }
+  }
+}

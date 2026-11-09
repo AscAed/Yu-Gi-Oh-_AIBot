@@ -11,8 +11,8 @@ H3.1拟议矩阵要求各边界P/U/R/K，有HTTP回复的线路另有L；因此�
 | rejected | H2.2-A容量、配置、草稿修订失败各三故障；2a后台旧revision拒绝 | [容量](2026-11-02-capacity-rejection-crash-handoff.md)、[配置身份](2026-11-02-context-rejection-crash-handoff.md)、[合成手牌错误](2026-11-02-preparation-rejection-crash-handoff.md)保存后 | 其他准备错误/路径及其K不能从合成闭包推广 |
 | 冻结绑定 / queued / accepted | H2.2-A三故障；2a接受与后续查询 | 绑定后job前、queued后accepted前见[2b-1](2026-11-01-w1h322b1-process-kill-handoff.md)；[accepted后队列更新前](2026-11-02-accepted-crash-handoff.md) | 其他中断点和调度；并非真实执行确认 |
 | running / cancelled | H2.2-A三故障；2a取消响应丢失；H2.2-B有限竞争 | [running提交后队列更新前](2026-11-02-running-crash-handoff.md)、[队列更新后、票据返回前](2026-11-03-running-queue-updated-before-ticket-return-handoff.md)、[`claim_next` AssetMismatch已保存、队列结算前](2026-11-03-asset-mismatch-persisted-before-queue-update-handoff.md)、[HTTP派发准入AssetMismatch已保存、队列结算前](2026-11-03-dispatch-admission-asset-mismatch-crash-handoff.md)、[cancelled提交后队列更新前](2026-11-02-cancelled-crash-handoff.md)、[票据返回后、执行器调用前](2026-11-03-ticket-return-crash-handoff.md)、[假执行器进入、返回前](2026-11-03-running-executor-crash-handoff.md)、[假执行器返回、报告发布前](2026-11-03-executor-return-crash-handoff.md) | 其他调度竞态和dispatch准入拒绝原因、真实执行器副作用、report写入中故障和其他实际调度 |
-| failed / unknown | H2.2-A failed/3及恢复unknown/3三故障 | [合成analysis_failed提交后](2026-11-02-failed-crash-handoff.md)；[running→unknown已保存、后续queued未分类](2026-11-02-unknown-first-recovery-handoff.md)；[queued/running混合恢复](2026-11-02-mixed-task-recovery-handoff.md) | 其他失败来源、unknown终态提交及恢复状态组合 |
-| 报告及终态 | H2.2-A报告文件与completed/3三故障；2a完成/预算报告及读取 | [报告临时文件同步后、正式发布前](2026-11-03-report-temp-crash-window-map.md)、[报告发布后终态前](2026-11-01-w1h322b1-process-kill-handoff.md)、[合成completed后](2026-11-02-completed-crash-handoff.md)、[合成node_budget后](2026-11-02-budget-crash-handoff.md) | 其他budget原因及报告来源，合成报告不证明真实来源 |
+| failed / unknown | H2.2-A failed/3及恢复unknown/3三故障 | [合成analysis_failed提交后](2026-11-02-failed-crash-handoff.md)；[running→unknown已保存、后续queued未分类](2026-11-02-unknown-first-recovery-handoff.md)；[queued/running混合恢复](2026-11-02-mixed-task-recovery-handoff.md)；[显式mark_unknown终态保存后、队列结算前](2026-11-04-unknown-terminal-persisted-before-queue-update.md) | 其他失败来源及恢复状态/排序组合；unknown仍不解释为零执行或零消费 |
+| 报告及终态 | H2.2-A报告文件与completed/3三故障；2a完成/预算报告及读取 | [报告临时文件同步后、正式发布前](2026-11-03-report-temp-crash-window-map.md)、[报告发布后终态前](2026-11-01-w1h322b1-process-kill-handoff.md)、[合成completed后](2026-11-02-completed-crash-handoff.md)、[合成node_budget后](2026-11-02-budget-crash-handoff.md)；同一`budget_limited`K点另加[`time_budget`原因分类用例](2026-11-04-time-budget-recovery-handoff.md) | 其他budget原因分类及报告来源；`time_budget`用例与`node_budget`使用同一物理检查点，不扩大K边界，合成报告不证明真实来源 |
 | 恢复操作追加 | H3.2-1 accepted/4三故障；[无任务accepting→unknown revision 3的BeforePublish/AfterPublish/Reread](2026-11-02-unknown-operation-fault-handoff.md) | [关联修复后分类前](2026-11-01-w1h322b1-process-kill-handoff.md)、[第一无任务操作unknown后第二前](2026-11-02-partial-operation-recovery-handoff.md)、[混合unknown/accepted第一操作提交后](2026-11-02-mixed-operation-recovery-handoff.md) | 其他操作状态组合、ID排序及提交窗口；单一混合K不扩展为全恢复顺序证明 |
 | 恢复任务分类追加 | H3.2-1 interrupted/2三故障；H2.2-A unknown/3三故障 | [双queued](2026-11-02-partial-task-recovery-handoff.md)、[queued/running](2026-11-02-mixed-task-recovery-handoff.md)、[running/queued](2026-11-02-unknown-first-recovery-handoff.md)中第一任务分类后、第二分类前 | 其他顺序及调度仍开放 |
 
@@ -23,6 +23,12 @@ H3.1拟议矩阵要求各边界P/U/R/K，有HTTP回复的线路另有L；因此�
 | 本批边界 | 现有相邻证据 | 本批验收点 | 保持开放 |
 |---|---|---|---|
 | running / 报告发布前 | [执行器返回前](2026-11-03-running-executor-crash-handoff.md)；[报告持久化后、终态前](2026-11-01-w1h322b1-process-kill-handoff.md) | 子进程在假执行器返回`Ok(report)`、生产结果分支尚未运行时原子发布握手；父进程认证operation/job链、命令摘要、accepted与running revision及输入绑定，核对唯一claim/executor调用和无报告后终止，再用真实目录锁恢复 | 真实执行器副作用、report写入中故障、所有其他调度次序、逐syscall、断电和介质故障均不由该窗口覆盖 |
+
+## 2026-11-04 显式 `mark_unknown` 终态K映射
+
+此前的running强杀用例是在执行仍处于running时终止进程，随后由启动恢复把running分类为unknown；恢复修订用例则观察operation/job恢复分类追加。它们不覆盖显式`DurableAnalysisCoordinator::mark_unknown`路径中，`CompletionUncertain`的unknown revision已经持久化、`settle_with_persist`尚未清除内存running槽的时点。
+
+新增K在该append之后握手。父进程完整认证operation/job链及revision 3的记录/前驱哈希和状态转换，确认零报告与零执行器调用后才终止子进程。真实目录锁重开两次均保留原unknown revision，空队列没有claimable工作，持久材料字节稳定。该用例区分显式终态提交与重启分类，不认证实际worker、结果来源或消费；更多失败来源、恢复顺序及系统/介质故障继续开放。实现和验证见[交接](2026-11-04-unknown-terminal-persisted-before-queue-update.md)与[TESTING](../../TESTING.md)。
 
 2026-11-03该K窗口已按上述边界通过；详细测试结果及机器证据见[交接](2026-11-03-executor-return-crash-handoff.md)和[TESTING](../../TESTING.md)。它只证明测试假执行器返回至报告发布前的合成恢复，不授予真实分析、引擎/FFI、研究账本、部署或最优性资格。
 

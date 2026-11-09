@@ -6,6 +6,7 @@
 #[cfg(test)]
 use super::operations::AnalysisOperationState as OperationState;
 use super::{
+    attempt_receipts::{AttemptReceiptContextV1, AttemptReceiptEventV1},
     jobs::{AnalysisJobEvent, AnalysisJobFailure, AnalysisJobRecordV1},
     operations::{
         AnalysisOperationCommand as OperationCommand, AnalysisOperationContext as OperationContext,
@@ -194,6 +195,16 @@ impl DurableAnalysisCoordinator {
         self.store.inject_report_publish_failure(after_publish);
     }
 
+    #[cfg(test)]
+    pub(crate) fn inject_attempt_receipt_failure_after(
+        &self,
+        successful_publishes: usize,
+        after_publish: bool,
+    ) {
+        self.store
+            .inject_attempt_receipt_failure_after(successful_publishes, after_publish);
+    }
+
     pub fn snapshot(&self) -> Result<QueueSnapshot, DurableCoordinatorError> {
         let stopped = self
             .stopped
@@ -320,6 +331,69 @@ impl DurableAnalysisCoordinator {
         Ok(Some(ticket))
     }
 
+    pub(crate) fn attempt_receipt_context(
+        &self,
+        ticket: &DispatchTicket,
+    ) -> Result<AttemptReceiptContextV1, DurableCoordinatorError> {
+        let stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        let current = self
+            .queue
+            .snapshot()
+            .map_err(DurableCoordinatorError::Queue)?
+            .running
+            .ok_or(DurableCoordinatorError::Queue(QueueError::TicketMismatch))?;
+        if current.encode_json().ok() != ticket.record().encode_json().ok() {
+            return Err(DurableCoordinatorError::Queue(QueueError::TicketMismatch));
+        }
+        match self.store.attempt_receipt_context(ticket) {
+            Ok(context) => Ok(context),
+            Err(error) => self.map_persistence_error(error, stopped),
+        }
+    }
+
+    pub(crate) fn append_attempt_receipt(
+        &self,
+        ticket: &DispatchTicket,
+        context: &AttemptReceiptContextV1,
+        event: AttemptReceiptEventV1,
+    ) -> Result<(), DurableCoordinatorError> {
+        let mut stopped = self
+            .stopped
+            .lock()
+            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
+        if *stopped {
+            return Err(DurableCoordinatorError::Stopped);
+        }
+        let current = self
+            .queue
+            .snapshot()
+            .map_err(DurableCoordinatorError::Queue)?
+            .running
+            .ok_or(DurableCoordinatorError::Queue(QueueError::TicketMismatch))?;
+        if current.encode_json().ok() != ticket.record().encode_json().ok()
+            || context.job_id != ticket.record().job_id()
+            || context.running_job_revision != ticket.record().revision()
+        {
+            *stopped = true;
+            return Err(DurableCoordinatorError::Queue(QueueError::TicketMismatch));
+        }
+        match self.store.append_attempt_receipt(context, event) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                // A receipt write failure forbids every later adapter call.
+                // Restart recovery classifies the still-running job unknown.
+                *stopped = true;
+                Err(DurableCoordinatorError::Persistence(error))
+            }
+        }
+    }
+
     pub fn cancel(
         &self,
         job_id: &str,
@@ -416,6 +490,8 @@ impl DurableAnalysisCoordinator {
                 crash_checkpoint("completed_persisted_before_queue_update");
                 #[cfg(test)]
                 crash_checkpoint("budget_persisted_before_queue_update");
+                #[cfg(test)]
+                crash_checkpoint("time_budget_persisted_before_queue_update");
                 Ok(())
             });
         match outcome {
@@ -541,8 +617,14 @@ impl DurableAnalysisCoordinator {
             AnalysisJobEvent::Fail(AnalysisJobFailure::CompletionUncertain),
             now_ms,
             |record| {
-                self.store
-                    .append_expected(record.job_id(), record.revision() - 1, record.clone())
+                self.store.append_expected(
+                    record.job_id(),
+                    record.revision() - 1,
+                    record.clone(),
+                )?;
+                #[cfg(test)]
+                crash_checkpoint("unknown_persisted_before_queue_update");
+                Ok(())
             },
         ) {
             Ok(record) => Ok(record),

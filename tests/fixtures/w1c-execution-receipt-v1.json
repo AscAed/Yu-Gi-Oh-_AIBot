@@ -1,0 +1,114 @@
+{
+  "consumption": {
+    "count": null,
+    "evidence_sha256": null,
+    "status": "unknown",
+    "unit": null
+  },
+  "context": {
+    "assets": {
+      "cli": "6666666666666666666666666666666666666666666666666666666666666666",
+      "engine": "8888888888888888888888888888888888888888888888888888888888888888",
+      "worker": "7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    "build_record_identity": "5555555555555555555555555555555555555555555555555555555555555555",
+    "input_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+    "job_id": "22222222222222222222222222222222",
+    "operation_id": "11111111111111111111111111111111",
+    "source_bundle_identity": "4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "context_sha256": "4a84758299b53b453761b8d6035ee5c73d1631bd99aa5d9cdbd10d8b3c5f4cae",
+  "events": [
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "3d5675562d4b22122f3ebf0ff6ae5dcccfb01e8576c741b9e8f502f6260460a6",
+      "event_type": "adapter_attempt",
+      "payload": {
+        "command_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "status": "started"
+      },
+      "previous_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+    },
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "b383d7771a4f5f56ee6c92ba9b8bd177d174d83fcae05dba522d1ee2056ff4aa",
+      "event_type": "worker_spawn",
+      "payload": {
+        "executable_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+        "pid": 12345,
+        "status": "spawned"
+      },
+      "previous_sha256": "3d5675562d4b22122f3ebf0ff6ae5dcccfb01e8576c741b9e8f502f6260460a6",
+      "sequence": 2
+    },
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "7ab5b83d963ca75d2303f513a2249f9f2052a36e346242f429451bd31d0cb4b4",
+      "event_type": "protocol_request",
+      "payload": {
+        "bytes": 24,
+        "input_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "request_sha256": "e7caa716af61bbc481a8b9b754df4e1614a236c3246ff1537a0148339267aa14",
+        "status": "written"
+      },
+      "previous_sha256": "b383d7771a4f5f56ee6c92ba9b8bd177d174d83fcae05dba522d1ee2056ff4aa",
+      "sequence": 3
+    },
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "49f918c230dd150bca9bd9c6419e07ca803d5c2827d232d33e5da98a87280480",
+      "event_type": "ffi_entered",
+      "payload": {
+        "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "direction": "host_to_ocgcore",
+        "name": "DuelProcess",
+        "ordinal": 1
+      },
+      "previous_sha256": "7ab5b83d963ca75d2303f513a2249f9f2052a36e346242f429451bd31d0cb4b4",
+      "sequence": 4
+    },
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "c73a292d6952ed1f5185b442f72e23a432a6ea8eb3e8029a2c4f0c33f1f16970",
+      "event_type": "ffi_returned",
+      "payload": {
+        "call_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "result_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "status": "returned"
+      },
+      "previous_sha256": "49f918c230dd150bca9bd9c6419e07ca803d5c2827d232d33e5da98a87280480",
+      "sequence": 5
+    },
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "8ee4f153627a1b5b4f7dfbb2cdf124a7bd4c36670de7b4d33dc912022e9f1852",
+      "event_type": "protocol_response",
+      "payload": {
+        "bytes": 23,
+        "exit_code": 0,
+        "ffi_receipt_status": "complete",
+        "observation": "complete",
+        "response_sha256": "a2566221c8a29c800c52fbfbb951494b58b7dc5600aaaa9a64f83b3cd78a147e",
+        "status": "received"
+      },
+      "previous_sha256": "c73a292d6952ed1f5185b442f72e23a432a6ea8eb3e8029a2c4f0c33f1f16970",
+      "sequence": 6
+    },
+    {
+      "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_sha256": "c19faeb5757b877a2de6ac0401d4025bdd51e3fdde58efcacb21ef18a004d8de",
+      "event_type": "report_persisted",
+      "payload": {
+        "readback_sha256": "ef3c33250ac76bc44e58f89e8bb300cd54de6283b4897ce8076da5b35626cf80",
+        "report_bytes": 198,
+        "report_sha256": "ef3c33250ac76bc44e58f89e8bb300cd54de6283b4897ce8076da5b35626cf80",
+        "status": "committed"
+      },
+      "previous_sha256": "8ee4f153627a1b5b4f7dfbb2cdf124a7bd4c36670de7b4d33dc912022e9f1852",
+      "sequence": 7
+    }
+  ],
+  "kind": "w1c_execution_receipt_chain",
+  "schema_version": 1
+}

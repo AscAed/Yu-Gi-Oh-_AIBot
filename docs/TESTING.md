@@ -1,5 +1,134 @@
 # 本机验证记录
 
+## 2026-11-05 当前工作树回归与安全差异审查
+
+针对`622546c144604f36620deebe7f0f57e72271501f`之后的工作树差异，修复并回归了四项输入/边界问题：Rust搜索回执门禁改用内部错误类型，避免adapter通过stage字符串触发错误分类；Python回执枚举值非字符串时返回合同诊断；source-bound build verifier将非字符串状态拒为诊断而不抛出`TypeError`；`source_bundle_changed`记录按实际前后身份差异验收，保留`observed_command_only`边界。
+
+当前验证结果：`cargo test --workspace --offline --locked --target-dir target/audit-20261105/rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`退出码0；按日志汇总为**495 passed、0 failed、36 ignored**，完整日志SHA-256=`B94D42D97212E93074D2CBFE615A7CE3E1FE59CDED21BCDF08B66878B975F652`。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/audit-20261105/rust -- -D warnings`通过；`cargo fmt --all -- --check`和`git diff --check`通过。Python默认套件为**821 passed、9 skipped、219 subtests passed**，最终日志SHA-256=`F98ECAC557E42119C3777903F0771CB5EE415A43C6FCAF66C03D9D53EEEC40C0`，另有一条既有`cache_dir`配置警告。Python跳过项为Windows目录链接能力限制或明确opt-in的本机资产/报告组。
+
+Codex Security Diff Scan `08cd98e2-89e5-4903-9544-212440640450`于2026-11-05完成，目标快照摘要`codex-security-snapshot/v1:sha256:7066e237e5b6940d462847261d8c44928b0b64c2f2fd470c9e9c6d5e52047bf5`对应相对`622546c`的工作树差异。17个源码/schema差异条目完成审阅，0项确认可报告发现，覆盖为`partial`。保留三项待补证候选：回执路径检查/读取竞态、worker路径哈希与实际加载映像不一致、来源包构建前后路径竞态。三项均缺少已证明的低权限写入者和跨权限边界影响。完成工具返回一条coverage receipt引用缺失警告；canonical coverage中的三项deferred仍保留，故记录该报告为部分覆盖结果，不称为完整安全认证。此扫描针对该快照；之后的工作树来源状态校验器非字符串状态守卫由定向回归复核。
+
+最终工作树的Codex Security Diff Scan `c8484c40-59c5-440f-a758-6ad8f94daa01`绑定快照摘要`codex-security-snapshot/v1:sha256:6b616d69ff48052c4654288ae6ac762b1f60d7df9a153b102959a1ed8efe610c`，在17个源码/schema条目上完成审阅，0项确认可报告发现，覆盖仍为`partial`。三项候选继续deferred；本次最终化没有coverage receipt引用警告。扫描没有执行真实engine、worker、doctor、runner、FFI或部署，不代表全仓/主机安全认证。canonical结果保存在Codex Security扫描目录。
+
+## 2026-11-04 W1-C job绑定持久attempt日志（历史批次）
+
+为搜索adapter调用增加job私有的追加事件链：每次调用前持久化`Started`，adapter返回后持久化host结果和`ProcessRunObservation`。事件上下文绑定operation/job ID、running修订、命令摘要、job input binding、输入摘要及冻结资产摘要；workbench无法自行认证的source bundle/build record身份显式为null。序号、前驱摘要、上下文摘要和事件摘要经严格复读及跨链重开验证。日志不进入既有HTTP或报告合同。
+
+新增写前和写后故障注入覆盖attempt-start与host-result两处：写入错误或提交结果不确定都会立即停派；已实际落盘的事件保留作证据，重开将running任务分类为unknown，不自动重试。一个测试子进程在attempt-start已持久化、fake adapter入口尚未到达时发布同步临时文件+原子重命名握手。父进程校验标记字段集合、PID与实际子进程一致、operation/job链、running revision、输入/命令和资产绑定、完整receipt摘要及adapter调用数0后才终止；真实存储锁重开后只追加一次unknown，无报告或可领取任务；第二次重开时持久材料逐字节稳定。此窗口是合成测试，不证明生产worker、FFI、报告来源或消费。
+
+聚焦回归：`ygo-search/tests/beam_execution.rs` **5 passed**；CLI attempt持久化写故障 **1 passed**、job绑定/重复重开 **1 passed**、attempt-start后进程终止恢复 **1 passed**。Python schema回归`tests/test_schemas.py` **12 passed、2 skipped**；两项skip要求显式启用本机快照/报告，未启用。pytest在禁用cacheprovider时报告既有`cache_dir`配置警告。
+
+最终workspace命令为`cargo test --workspace --offline --locked --target-dir target/w1c-attempt-journal -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`：92个结果组，**487 passed、0 failed、36 ignored**；36项是各测试显式标注的本机资产、原生执行、人工准备或本机报告opt-in，逐项名称/原因见[workspace-test.log](../target/w1c-attempt-journal/workspace-test.log)，SHA-256=`D6AE14D34445E402C93BBCFA1298232906CC7DF66C124EF3AEBE687EAEB3ECD3`。doctor诊断测试由命令过滤，不计入ignored。`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-attempt-journal -- -D warnings`通过，日志SHA-256=`0071ADBF57AD7A20901CAEA4E555B0B917DB0D433E03349BC0D8C7CA125A4268`。Python schema测试为12 passed/2 opt-in skipped。Cargo使用本机缓存，无联网构建。未运行doctor命令、生产worker、真实引擎、runner、FFI或真实分析；未创建新分析scope、部署、提交或推送。该批不改变workbench HTTP routes/DTO、job/report持久schema或自动重试语义，也不关闭W1-C来源/FFI/报告producer/消费门禁。
+
+本批为Rust搜索库新增opt-in的`search_with_receipts`及其事件类型，供调用方在搜索adapter边界提供持久化回调；这是新增的Rust crate API。workbench HTTP routes/DTO、job/report持久schema和自动重试行为保持不变。对应历史源码快照见target目录中v13版本；本节不再将其作为当前源码身份。
+
+## 2026-11-04 W1-C持久日志中的合成FFI调用事件
+
+当前实施状态以本节测试结果、TASKS中W1-C行及部署文档中本批快照为准。
+
+在job绑定attempt日志中新增`ffi_entered`与`ffi_returned`事件，可由opt-in Rust回调提交。每条记录绑定当前attempt ordinal/ID、job内唯一call ID、方向、入口名称及连续FFI ordinal；返回事件必须匹配尚未返回的入口。按嵌套调用顺序使用LIFO配对，外层ocgcore调用未返回时，内部回调必须先返回。HostResult拒绝存在任何未返回入口；日志末尾孤立的entered允许留作中断证据并在重开后保留unknown。相同call ID即使跨attempt重复也会拒绝，已认证的前缀留存，重开只分类unknown而不创建claimable工作。
+
+7项CLI FFI/回执聚焦测试通过：嵌套FFI配对与稳定重开、外层先返回拒绝、孤立entered重开、HostResult关闭未返回调用拒绝、跨attempt重用call ID拒绝、FFI receipt写前失败停派、磁盘历史链跨attempt重用call ID fail-closed。外层先返回用例先在移除LIFO校验时失败，再恢复校验后通过。search beam_execution 5项通过；schema全文件12 passed、2个本机fixture opt-in跳过。最终`ygo-cli` lib suite为**111 passed、0 failed、0 ignored**；workspace隔离离线串行为**92结果组494 passed、0 failed、36 ignored**，唯一额外过滤doctor诊断测试；fmt和workspace全目标Clippy通过。workspace日志SHA-256=`79EF7B8153C5A83297C39E3E28748DBDF3560B9C43E02699D7B9255B767D84FC`，Clippy日志=`4C2E60520679C557860D310B8F36CB4278AA7297CC41646E75C9688A2A4C599A`。36个ignored用例原因见[workspace日志](../target/w1c-ffi-final/workspace-test.log)。
+
+Python独立离线验证器也加入嵌套FFI返回顺序检查。新增测试先通过完整哈希重封链复现RED：外层`DuelProcess`在内层`card_reader` callback返回前被错误接受；实现LIFO校验后该用例转为GREEN。`tests/test_execution_receipts.py`全文件18 passed，退出码0，日志SHA-256=`D79E4F3857FB2D4FFF9B00D5C711CCABB5C7825E4E3BA900A3F1F4FBA082DC0B`；另报告禁用cacheprovider时既有`cache_dir`未知配置warning。Rust和Python两侧的事件仍由合成executor/记录产生，不能证明worker或ocgcore实际调用。生产worker尚无宿主确认通道：当前请求/响应是单次JSON行，worker若事后写stderr事件，宿主无法在每个FFI入口前持久化并确认。下一批的协议与合成验收顺序见[worker确认流计划](superpowers/plans/2026-11-04-w1c-worker-ffi-ack-stream-plan.md)。未运行worker、ocgcore/FFI或真实分析。
+
+来源与Git状态快照v19为历史快照，不代表2026-11-05当前工作树；历史attempt日志批次的v13链接保留在上方历史章节。当前工作树与v19差异由[部署状态](DEPLOYMENT.md)记录；完整修订后的来源包应在最终提交后重新生成。
+
+历史源码与Git状态快照v19：[源码包manifest](../target/w1c-provenance-20261104/source-bundle-v19/manifest.json)、[workspace-state manifest](../target/w1c-provenance-20261104/workspace-state-v19/manifest.json)。只确认该历史快照自身有效；2026-11-05复核发现它与当前工作树六个文件不同，详情见[部署状态](DEPLOYMENT.md)。快照不含忽略的运行资产，也不等同Cargo构建产物或部署包。
+
+## 2026-11-04 H3报告预算原因与显式unknown终态强杀回归
+
+本批复核发现：`time_budget`与已有`node_budget`案例都在`publish_report`报告引用及`budget_limited`修订持久化后、同一个`settle_with_persist`回调内被检查。为验证实际观察过的W1-C原因，新增`time_budget`报告字节的原因分类用例；它复用同一物理K点，不另计为一个H3逻辑窗口，也不改变该终态映射。
+
+随后按证据映射选择了独立的显式`mark_unknown`边界：`CompletionUncertain`导致的revision 3=`unknown`已保存、内存running槽尚未清除。未加挂点时聚焦矩阵以预期方式失败：子进程走到保护性panic并以101退出，父进程没有收到该阶段marker。增加仅`cfg(test)`挂点后，父进程认证operation与job三修订链、前驱/记录哈希、跨链绑定和状态迁移，再终止子进程。杀前确认恰好一次freeze/claim、事件日志只有这两项、无报告且执行器未调用；持真实目录锁重开两次后unknown保持revision 3，队列为空、`claim_next`无任务，所有持久字节稳定。该K验证合成协调器的显式不确定终态处理，不认证真实worker、执行器副作用或研究消费。
+
+聚焦回归先对time_budget和显式unknown两个缺失挂点分别观察到红测，补入测试专用挂点后`h3_2b_cross_chain_windows_recover_after_process_kill`为**1 passed**（最终运行耗时22.88秒）。CLI套件为**127 passed、0 failed、0 ignored**。最终workspace使用隔离目录`target/h3-time-budget-recovery`、`--offline --locked`和默认串行线程：**92个测试结果组，480 passed、0 failed、36 ignored**；完整日志SHA-256=`BFFE89CF15FA9B196A8D42E4D3BAA9B2B3CFAC16504F16EEA8FEDEF44EA007A3`，见本机忽略文件[workspace-test.log](../target/h3-time-budget-recovery/workspace-test.log)。36项均为默认关闭的本机资产、原生查询/重放、人工准备或显式本地报告opt-in，逐项原因在该日志；没有启用这些测试。
+
+`cargo fmt --all -- --check`及`cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-time-budget-recovery -- -D warnings`通过。相关Python schema回归为**16 passed**；pytest报告一条既有`cache_dir`未知配置警告（命令禁用cacheprovider），退出码仍为0。Cargo依赖均从缓存离线读取。
+
+本批只增加测试专用检查点与合成断言；公开API、schema、自动重试语义和普通启动未改变。未运行doctor、引擎、runner、worker、FFI、真实分析或部署；没有创建研究scope、提交或推送。H3其余逻辑窗口/调度、其他预算原因分类、报告来源、逐syscall故障、断电和介质故障仍分别开放。
+
+## 2026-11-04 W1-C多adapter回执合同校正
+
+源码核对发现当前`combo::search`可在同一job内进行节点探索与线路replay，既有Rabbit运行记录为165次应用层`engine_calls`。初版回执校验器却拒绝第二个adapter attempt，无法表示该实际工作负载。现允许job内顺序记录多个唯一attempt ID；后续attempt要求前一调用已写出请求并收到完整协议响应。worker spawn失败、请求未完成或响应未到达后，链中再出现attempt将被拒绝。这里的顺序多attempt表示多个有完整响应的搜索调用，不将它们并成重试；若生产搜索在未决调用后继续执行其他分支，v1将拒绝把该链认证为完整，生产观察器需保留此开放边界。
+
+校验器仍允许在replay传输失败后记录已提交的部分report，因为当前搜索实现会把该失败记入diagnostic并返回已验证线路。报告字节、长度及operation/job/input绑定可独立检查，但只要任一attempt没有完整回执，整条执行链仍为`incomplete`，`report_origin_authenticated=false`，消费仍unknown。报告落盘事件采用最后一个attempt ID。
+
+新增三项回归分别验证多attempt完成序列、未决transport后拒绝新attempt，以及replay失败后记录部分report仍保持incomplete。每项均先观察到预期红测；最终回执聚焦套件17 passed。完整Python回归共收集826项：**817 passed、9 skipped、219 subtests passed、0 failed**，耗时1929.70秒，退出码0。9项跳过中两项因当前Windows配置无法创建目录符号链接，其余为需明确opt-in的原生资产、报告或快照用例。唯一警告是禁用`cacheprovider`后pytest配置项`cache_dir`未被识别。完整日志为[python-full-suite.log](../target/w1c-execution-receipt-multi-attempt/python-full-suite.log)，SHA-256=`1D6D1D6A1F42914F411D066023CA6DE6282BEE9607B55DBF7A5DFEA51DDD4DF4`。该批仅修正合成合同，生产adapter、worker、FFI、报告持久化观察点尚未接入；未运行真实分析或建立scope。
+
+## 2026-11-04 ProcessEngineAdapter host观察
+
+为W1-C增加可选的`ProcessEngineAdapter::run_observed`，直接运行同一个进程适配路径并返回内存观察对象：worker配置路径在spawn前读取的SHA-256、spawn状态与PID、实际完整写入stdin的请求SHA-256/字节数、读至EOF的stdout SHA-256/字节数、JSON/协议/运行版本校验状态、退出/超时状态、退出码和耗时。spawn失败不声称有pipe I/O；写入不完整时不把预期请求摘要标成已写入。`ProcessIoStatus::Complete`只表示host pipe操作完成，超时后被杀进程的stdout读流排空仍须结合`termination=timed_out`判断。
+
+worker哈希是spawn前对配置路径当前文件内容的hash，不认证操作系统实际映像；请求写入成功不证明worker读入或消费；观察不落盘、不含attempt/job ID、worker FFI或报告/消费。正常`EngineAdapter::run`继续使用相同Result语义，且不计算worker文件与请求哈希。此段记录的是搜索收集器接入前的状态，后续接入见下节。
+
+测试先在`process_failures.rs`要求不存在的`run_observed`接口，观察到预期编译失败；实现后假worker成功、spawn失败、非零退出、超时、无效JSON和协议版本不符全部通过。聚焦命令`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/w1c-process-observation --test process_failures -- --test-threads=1`：**8 passed、0 failed**。workspace串行命令`cargo test --workspace --offline --locked --target-dir target/w1c-process-observation -- --test-threads=1`：**92个结果组，483 passed、0 failed、36 ignored**。忽略项是默认关闭的本机资产、原生执行、冻结规则/数据及人工准备opt-in；未启用它们。`cargo fmt --all -- --check`及`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-process-observation -- -D warnings`通过。workspace日志为[workspace-test.log](../target/w1c-process-observation/workspace-test.log)，SHA-256=`615673C6794558A930F8BA1E2FFABC78F8828DCDE143E8829EA978876B0E0E27`。
+
+该批没有执行doctor、真实worker、ocgcore/FFI、真实分析或部署；没有建立scope。
+
+## 2026-11-04 W1-C搜索调用attempt收集接入
+
+新增`ProcessObservedAdapter` opt-in入口及`ygo_search::combo::search_with_observations`。原有`search`仍调用普通`EngineAdapter::run`，不计算进程哈希，也不改变搜索报告或HTTP JSON。观察式入口将每次真实搜索路径调用标记为`initial`、`baseline`、`exploration`或`replay`，在adapter调用前由factory生成唯一32位小写hex attempt ID；观察序号按adapter调用顺序递增，记录返回的DuelStatus或WorkerError code/stage及对应的完整`ProcessRunObservation`。ID缺失、格式非法或重复会停止本次搜索，且不启动下一次adapter调用。探索中的普通adapter错误仍可按既有搜索规则记录诊断并继续其他分支，后续attempt保持原顺序。
+
+当时的workbench `process_analysis_executor`以`secure_random_hex(16)`生成attempt ID，并把`AnalysisExecution`中的观察暂留到report发布或unknown结算；该批尚未持久化观察。此项描述接入持久日志前的状态。后续job绑定日志现记录`Started`与host结果，见本页顶部“W1-C job绑定持久attempt日志”。公开HTTP JSON、`AnalysisReport`持久合同和schema保持不变；持久host观察仍不认证report来源，也不把pipe字节解释为worker消费。
+
+新增合成测试验证唯一ID、序号和四种搜索阶段，探索错误后仍记录后续成功replay，以及ID重复时在下一次adapter调用前失败。`cargo test -p ygo-search --offline --locked --target-dir target/w1c-process-observation -- --test-threads=1`：**8 passed、0 failed**。默认串行workspace命令`cargo test --workspace --offline --locked --target-dir target/w1c-process-observation -- --test-threads=1`：**92个结果组，485 passed、0 failed、36 ignored**；其中`ygo-cli`单元测试102项全部通过。36项是默认关闭的本机资产、原生执行、冻结规则/数据及人工准备opt-in。workspace日志为[workspace-test.log](../target/w1c-search-observation/workspace-test.log)，SHA-256=`CB2CF1AAA474C3B8926318AAAEC8B8EAEACD00F19693150FAD0BF8D8B48DC3B8`。
+
+`cargo fmt --all -- --check`、`git diff --check`及workspace全目标Clippy通过；Clippy日志为[workspace-clippy.log](../target/w1c-search-observation/workspace-clippy.log)，SHA-256=`6A7318EF9D830AF1EB8A69A7C7715D37DDB5953A5BB86610C9F565C5477682C8`。本批未改动receipt/schema合同，也未重跑Python套件；未运行doctor、真实worker、ocgcore/FFI、runner、真实分析或部署，未建立scope。
+
+这一批之后已实施job绑定的持久attempt receipt链，且已加入合成FFI entered/returned事件合同。生产worker尚无逐FFI宿主确认通道，因此不能从这组Rust回调用例推定真实ocgcore事件已被观测。真实分析仍须另立scope。
+
+## 2026-11-04 W1-C搜索attempt收集后的源码与Git状态快照v9（历史）
+
+旧记录曾指向`target/w1c-provenance-20261104/source-bundle-v9`与`workspace-state-v9`。本次检查时这两个忽略目录均不存在，因此无法复核它们所述的manifest；保留该历史记录但不把它们作为当前证据。上一批生成并离线验证的v13源码与Git状态快照属于前一批，不绑定当前合成FFI事件实现。
+
+快照封存当前工作树源文件字节和精确Git index/patch/文件模式状态；不保存ACL、时间戳、忽略的运行资产或操作者身份，不证明构建可重现或之后执行了相同源码。本批没有构建Rust发布产物；`target/w1c-process-observation`只含本地测试构建产物，`rebuild-v3/build-record.json`仍绑定更早的source/state v3。命令与离线格式见[部署合同](DEPLOYMENT.md)。
+
+## 2026-11-04 ProcessEngineAdapter观察批后的源码与Git状态快照v8（历史）
+
+在W1-C host观察实现后的当时源码包为[源码字节包v8](../target/w1c-provenance-20261104/source-bundle-v8/manifest.json)，配套[Git状态包v8](../target/w1c-provenance-20261104/workspace-state-v8/manifest.json)。本节为历史快照，当前源码已由v9封存；v7及更早快照也保留作历史材料。
+
+快照封存当前工作树源文件字节和精确Git index/patch/文件模式状态；不保存ACL、时间戳、忽略的运行资产或操作者身份，不证明构建可重现或之后执行了相同源码。没有为v8构建Rust发布产物；`target/w1c-process-observation`只含本地测试构建产物，`rebuild-v3/build-record.json`仍绑定更早的source/state v3。命令与离线格式见[部署合同](DEPLOYMENT.md)。
+
+## 2026-11-04 W1-C回执校正后的当前源码与Git状态快照v7
+
+在H3窗口与W1-C回执合同校正、任务状态、验证记录、路线和交接文档更新后，离线生成当前[源码字节包](../target/w1c-provenance-20261104/source-bundle-v7/manifest.json)并运行`verify-source-bundle`，随后生成配套[Git状态包](../target/w1c-provenance-20261104/workspace-state-v7/manifest.json)并运行`verify-workspace-state-bundle`。两份manifest记录自身identity、source identity、成员/载荷计数和SHA-256；输出位于Git忽略目录，v5及v6快照保留作历史材料。
+
+快照封存当前工作树源文件字节和精确Git index/patch/文件模式状态；不保存ACL、时间戳、忽略的运行资产或操作者身份，不证明构建可重现或之后执行了相同源码。没有为v7运行Cargo构建；`rebuild-v3/build-record.json`仍绑定其自己的旧source/state v3，不是v7产物身份。命令与离线格式见[部署合同](DEPLOYMENT.md)。
+
+## 2026-11-04 W1-C工作区状态证据包
+
+修正来源身份采集：已暂存删除的HEAD跟踪路径现在仍以`null`进入来源清单，避免Git index移除路径后将其漏掉。新增workspace-state-bundle v1及schema，配套来源包捕获原始index字节/hash、`ls-files --stage -z`、porcelain v2、二进制暂存与未暂存patch、以及来源包每个现存文件的模式。Git子进程设`GIT_OPTIONAL_LOCKS=0`；来源变化或存在`index.lock`时拒绝捕获。未跟踪文件内容仍由来源字节包保存，状态包不包含ACL或文件时间戳。
+
+先运行新增聚焦回归：`py -m pytest -q tests/test_identity.py tests/test_schemas.py -k 'workspace_state_bundle or staged_tracked_deletion'`，**4 passed**。回归覆盖staged delete保留、stage/unstage patch、未跟踪状态、index原字节不变、来源绑定、确定性重复捕获、活动index锁拒绝及schema约束。
+
+随后按默认串行配置运行全量Python套件：
+
+```powershell
+$env:PYTHONPATH='python'; $env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/w1c-provenance-20261104/python-final tests
+```
+
+结果为**800 passed、9 skipped、219 subtests passed，0 failed**，耗时1886.17秒。9项跳过分别是Windows目录符号链接能力限制2项、v3/v4/真实报告/本机资产/本机快照/赛事配置opt-in 7项；完整原因由pytest输出列出。存在一条pytest未知配置`cache_dir`警告，不影响退出码0。本批只改Python身份工具、测试和schema/文档，没有Rust源码差异；未运行doctor、worker、FFI、runner、引擎、真实分析或部署。
+
+本批源码包和配套Git状态包的目标位置为忽略目录`target/w1c-provenance-20261104/source-bundle-v4`与`workspace-state-v4`，分别绑定最终源码字节和精确Git工作区状态；两份manifest保存身份及各payload哈希。最近的`rebuild-v3/build-record.json`绑定此前的source/state bundle v3，不绑定本批v4源码。此批没有Rust源码变化，因此没有重建v4 Rust产物；既有Python全套800 passed和v3离线build仅适用于各自记录的旧快照，不作为本批结果。
+
+## 2026-11-04 双轨路线文档复核
+
+只读基线`main / 622546c`，开始时工作区干净；对照任务、H3证据映射、日期化验证和部署/安全记录整理下一候选及小批门禁。没有重跑行为测试、doctor、引擎、worker、FFI或部署；下方历史合成测试、有限原生运行和partial安全扫描仍只适用于原范围。旧包哈希沿用同日既有只读记录，不证明当前源码部署。
+
+## 2026-11-04 H3.2-2b-2 当前源码复核与回归
+
+源码基线为`main / 622546c`，测试前已有四份未提交Markdown修改，均予保留。首次accepting窗口及测试挂点已存在于当前源码；本轮没有重复新增挂点，也没有修改Rust、schema或公开接口。按`durable.rs`中accepting revision持久追加后的挂点复核`durable_crash_window_tests.rs`：父进程校验握手阶段、operation修订链、命令摘要、分配的job ID、前驱/记录哈希与状态迁移，并在确认任务、报告及freeze/claim均为0后终止子进程。恢复使用真实目录锁和完整链认证，只追加一次`unknown`；再次重开无新修订且材料字节稳定。该检查确认既有单窗口状态，不扩大H3覆盖。
+
+离线、locked验证均使用隔离目录`target/h3-2b-2-cargo`：
+
+- 聚焦子进程测试：`cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1`，1 passed；日志SHA-256=`8925A761BECE0845DB0AAD5356FAF0B8E6FDA68C3B46DF1D1230D12C626290A3`。
+- CLI默认套件：`cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`，127 passed、0 failed、0 ignored。
+- Workspace默认串行套件：`cargo test --workspace --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`，92个测试结果组，480 passed、0 failed、36 ignored；完整日志SHA-256=`C34F9D70DA703F238C802C6DDC4F4D16F650258D77FC64470D4BFA0EAE3AEE9A`。
+- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-2b-2-cargo -- -D warnings`通过；`py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`为16 passed。
+
+36项ignored均是默认关闭的opt-in，需冻结引擎/core/CDB/scripts等资产、收费原生查询/重放、人工准备或`YGO_PILOT_REPORT_DIR`报告；本轮没有启用这些项目。测试与工具输出保留在忽略目录`target/h3-2b-2-cargo/`。本轮只复核已验收窗口；其他H3逻辑/调度、逐syscall、断电、介质故障、真实worker/引擎、研究消费及报告来源资格仍分别开放。未运行doctor、runner、worker或FFI，未部署、提交或推送。
+
 ## 2026-11-04 安全审计整改与workspace复核
 
 本轮在`b35b12dec226b3b71eb36896e27452ec7fd12015`基线上修复Deep Scan发现的四项代码问题，并为一项本机ACL风险记录保留决定；发现、修复边界与残余事项见[SECURITY_AUDIT](SECURITY_AUDIT.md)。本轮未修改Python、schema、部署资产或研究数据。Deep Scan本身针对旧提交`50c279b`且覆盖部分，不把它作为修复后代码的扫描证据。
@@ -310,6 +439,59 @@ cargo test --workspace --offline --locked --target-dir target/h3-ticket-return-k
 搜索以`time_budget`停止：160 nodes、165 `engine_calls`、55,775 ms耗时、1,658 ms `replay_ms`、28条completed_lines，报告返回5条线路且各自`engine_verified`和`replay_verified=true`。任务提交到最终状态查询用时83,776 ms。结果投影合同通过，schema `workbench-analysis-http-v1`、operation/job/result三类响应均校验通过。重开后operation、job、result响应逐字节相同；草稿与分析存储的11个文件哈希清单一致。报告ID `fccc8baf6f3178a511a9e9d45d7b26d7`，报告哈希=`52f6b0e2707d86b92e63906f7d03fa8352960904e603f1690dee4782fc0c6bbe`，结果投影哈希=`8287e8231683145e490776f312898edcd9a78d11494f1ba9c59d476defc7632c`。记录及全量运行包位于忽略目录`target/w1c-execution-20261103/`。
 
 该次运行关闭“一次固定Rabbit本机有限分析”验收项；`report_origin_authenticated=false`、`search_complete=false`、`global_optimality=false`。没有ResearchBatch账本；底层FFI调用数、worker OS进程创建数和独立消费均未计量，不能把未知消费写成0。没有独立原生重放、完整搜索、全卡覆盖或部署验收。此前两次尝试分别在哈希录入预检和Windows服务日志读取处失败；失败记录保留在同一运行目录，均未提交分析操作。
+
+## 2026-11-04 W1-C执行证据链只读审计
+
+审计基线为本地main / `622546c144604f36620deebe7f0f57e72271501f`。只读取忽略目录中的运行包、当前固定资产与源码；没有运行CLI、workbench、worker、engine、runner、FFI或分析。
+
+| 证据面 | 本次可复核结果 | 仍未知或未认证 |
+|---|---|---|
+| 运行包和资产身份 | `artifact-hashes-final.json`列出的56项逐文件重算均匹配；package manifest中的14条CLI/worker/config、固定输入/资产和身份报告记录也均匹配其记录。Rabbit请求/YDK、catalog/banlist快照、CDB、ocgcore、engine/scripts清单、CLI和worker当前字节与运行包身份相符（[逐文件哈希清单](../target/w1c-execution-20261103/artifact-hashes-final.json)，[包/资产清单](../target/w1c-execution-20261103/package-manifest.json)）。 | 哈希证明当前文件与清单相符，不证明上游卡池/禁限表内容完整，也不单独认证当时由哪个进程执行。 |
+| 持久操作和结果 | operation `d9c94519880097bb0ef5213580f14e68`在重开后为accepted revision 4；job `70e9a8f132e88ff2334b269603363ab6`为budget_limited revision 3。重开前后operation、job、result及11文件存储清单的字节哈希一致；三类HTTP响应的schema-validation记录均为valid（[operation](../target/w1c-execution-20261103/operation-final.after-reopen.json)，[job](../target/w1c-execution-20261103/job-final.after-reopen.json)，[result](../target/w1c-execution-20261103/result.after-reopen.json)，[存储清单](../target/w1c-execution-20261103/store-files.after-reopen.json)）。 | 这是同一运行记录的合同、绑定和重开稳定性证据，不独立证明worker或报告生产者身份。 |
+| 报告 | 持久report id、SHA-256与job引用一致；统计为160 nodes、165 engine_calls、time_budget、28 completed_lines和5条返回线路（[持久报告](../target/w1c-execution-20261103/analysis/reports/fccc8baf6f3178a511a9e9d45d7b26d7.json)，[结果投影](../target/w1c-execution-20261103/result.after-reopen.json)）。HTTP投影明确写入report_contract_validated=true、report_origin_authenticated=false、search_complete=false、global_optimality=false（[投影实现](../crates/ygo-cli/src/workbench_analysis/http_contract.rs)）。 | 五条线路的engine_verified/replay_verified是该报告内的标签；未单独原生重放，不能据此认证报告来源。 |
+| 执行计数 | 当前搜索实现先递增engine_calls，再调用adapter.run；ProcessEngineAdapter正常路径会spawn worker，但run计数本身不证明spawn成功。所以按当前实现，165属于应用层adapter调用计数（[搜索计数](../crates/ygo-search/src/combo.rs)，[worker适配器](../crates/ygo-engine-adapter/src/process.rs)）。 | 没有操作系统进程创建审计；FFI函数进入/返回次数没有记录。历史构建差异未完整保留，也不能据当前源码补出当次worker数或FFI数。 |
+| 消费 | execution记录明确无ResearchBatch账本（[执行记录](../target/w1c-execution-20261103/execution.json)）。 | 本次独立消费量未知；缺记录不等于零，也不能由engine_calls换算。 |
+| 源码构建来源 | 运行包记录HEAD `672e5a823fcad60e9413d79cac810b68a2bb003c`，该提交是审计时HEAD的祖先；包、配置与运行资产哈希可重新核对。 | package manifest所记5个未跟踪构建输入只有2个当前字节匹配；其余3个在当前树中已变化，且在本地Git历史未找到原SHA内容。tracked Cargo/crates diff记录SHA也无法从HEAD到当前HEAD的12个提交复算，因此旧build-input state无法由现存源码完整重建。该来源缺口不构成二进制或资产哈希不匹配的证据。 |
+
+源码摘要复算结果：包记录HEAD为672e5a823fcad60e9413d79cac810b68a2bb003c，build-input state SHA-256为dffc6c5f84a71c7f8e2031f8f6f868f25e10a53839e43e6da4bc06aaf4de4f3a，tracked Cargo/crates diff SHA-256为fe2e02406545ddad060dc20a99140d7e958e774fe42ffba322ebe4db08d2a9bb。当前HEAD累计差异SHA-256为245da31db43c89d4d70924940e762c8cc3c8ba49d3980fc215c0e77e4edff50f；从包HEAD到当前HEAD扫描的12个提交中没有匹配原diff摘要的提交。
+
+| 未跟踪输入文件 | 包记录SHA-256 | 当前SHA-256 | 原字节在本地Git历史 |
+|---|---|---|---|
+| crates/ygo-planner/examples/p4-r1b3-native-resume.rs | bfa59c062273007ddedf543e1c2b476b56308187a27045beab780f0850cda097 | 8a9bb9a9cac8dece47889af3894013f8c85452677e8709544f486ce74fad5e3f | 未找到 |
+| crates/ygo-planner/examples/p4_r1b3/harness.rs | f6b58647846a4ef790e37caa8d14a4d37eaa7332583835537287e70c365bd570 | 094ac50d996e5f5e3d6ab8c4b7f2e21357a3d230363f8a441d66e910cc787f6a | 未找到 |
+| crates/ygo-planner/tests/p4_r1b3_harness.rs | 66f5cf760f1283aab650912bab172964a2607313349fa995dc3c7cd1b7747835 | 89b2aa81fc500b8ab1013e4c2b84825079a84a0d31fd120e72add543b43de38b | 未找到 |
+
+结论：原单次运行继续按其独立scope验收为一次time-budget截断的有限分析；本次审计补强了磁盘文件身份和持久链稳定性的复核，不提升报告来源、原生调用计量、消费、独立重放、完整搜索、部署或最优性资格。若再次运行，应先完成[来源与调用计量合同设计](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)，并以可重建的源码包和逐次worker/FFI回执作为独立门禁；新运行仍需另立scope。
+
+## 2026-11-04 W1-C源码来源字节包v1
+
+在`python/ygo_data/identity.py`新增`source-bundle`与`verify-source-bundle`。清单以`workspace-source-bundle.schema.json`固定版本字段，绑定HEAD、每个当前跟踪/非忽略未跟踪文件的路径及SHA-256、删除路径、ZIP字节数/哈希和清单自摘要；ZIP成员使用排序路径和固定元数据。输入在归档前逐文件比对身份，打包中/结束后再次采样，变化时停止且不发布；校验器离线复算自摘要、archive摘要、完整成员集合与逐文件哈希。输出要求在仓库Git忽略路径且不得覆盖已有目录。
+
+当前树运行命令为`py -m ygo_data.identity source-bundle --repo . --output-dir target/w1c-provenance-20261104/source-bundle`，随后运行`py -m ygo_data.identity verify-source-bundle --bundle-dir target/w1c-provenance-20261104/source-bundle`；创建与验证均成功，证据见忽略目录中的[manifest](../target/w1c-provenance-20261104/source-bundle/manifest.json)。验证仅说明归档内容与自带来源清单一致。工具不保存Git index、文件模式/时间戳/ACL或Git忽略的运行资产；不证明构建可复现、源包制作者身份、进程/FFI调用、报告来源或消费。W1-C的`report_origin_authenticated=false`及底层调用/消费unknown保持不变，没有启动doctor、引擎、worker、runner、FFI或新分析。
+
+Python全套离线回归：`py -m pytest -p no:cacheprovider -q -ra --basetemp target/w1c-provenance-20261104/pytest-full`，790 passed、9 skipped、219 subtests passed，耗时2088.46秒，退出码0。跳过项为两个Windows目录符号链接能力用例、七个明确要求opt-in本机报告/资产的用例；pytest另报告既有`cache_dir`配置项因禁用cacheprovider而未知的单条warning。来源包/身份聚焦测试与Schema相关测试此前为23 passed、2 skipped、4 subtests passed；完整回归包含最终实现及新增Schema。
+
+## 2026-11-04 W1-C来源包到离线候选构建绑定v1
+
+在来源包v1上新增`source-bound-build-record.schema.json`和`build-provenance-record`/`verify-source-bound-build-record`入口。构建记录嵌入原有严格`build-record.schema.json`合同，不改变旧`build-record`输出；它将来源包身份、全量构建argv摘要、工具链版本、候选产物SHA-256以及构建前后固定输入/资产摘要绑定在一起。构建前要求CLI和worker输出路径不存在且位于忽略目录；构建后重新核验源码、来源包和资产。完整argv由SHA-256绑定；记录摘要只显示允许的安全参数，具体路径和任意参数以`<argument>`隐藏。验证器要求调用方按同一逻辑role提供待核文件路径。
+
+当前源码包在构建前重新生成并离线校验，来源包identity=`131903ffa17c91652e170b743ed49f59b42042de7937a07653712feac37f89f0`，source identity=`e7afccada7a715550179a6d73dfb6219acb3e5bf777438e5e78ba627de4a354b`，归档719个文件，位于忽略目录`target/w1c-provenance-20261104/source-build-bundle`。随后用独立target运行`cargo build --offline --locked --profile dev -p ygo-cli --bin ygo-cli -p ygo-engine-adapter --bin ygo-engine-worker --target-dir target/w1c-provenance-20261104/isolated-target`，退出码0，dev构建耗时52.90秒；只构建产物，没有启动CLI或worker。
+
+来源绑定记录保存在忽略目录`target/w1c-provenance-20261104/build-record.json`，identity=`9b01f2713fc48ee51d5dae9f8eff130c51ed45b4cab3ecde0ef8a753bbff3bb2`，状态`recorded`。CLI SHA-256=`5da031d8277f502a5b575385e92370dc021e0045b909b91ef72435e0f7a0ea2a`；worker SHA-256=`4261829e693cdcd673d39d0a111cf866bf6eeba57c4f3948960bf525303613d3`。Python 3.14.7、rustc 1.98.1、Cargo 1.98.1、Git 2.40.0.windows.1均记录在嵌套构建记录中。九个资产role分别为`analysis_config`、`catalog_snapshot`、`banlist_snapshot`、`cdb`、`ocgcore`、`engine_manifest`、`script_manifest`、`rabbit_request`和`rabbit_ydk`；当前路径及哈希和旧W1-C清单逐项相符。CLI离线验证返回`valid=true`、`artifacts_verified=true`、`assets_verified=true`；使用仓库本地schema registry验证实际JSON记录通过。
+
+身份与Schema回归在最终代码上运行：`py -m pytest -p no:cacheprovider -q -ra tests/test_identity.py tests/test_schemas.py --basetemp target/w1c-provenance-build-record/final`，29 passed、2 skipped、4 subtests passed，110.42秒，退出码0。两项skip要求显式设置`YGO_LIVE_ENGINE`以使用本机snapshots/reports或actual v2 report；本批未启用。pytest另有一条既有`cache_dir`配置warning，因为此命令禁用了cacheprovider。新记录的实际schema校验使用测试所用本地registry，未依赖网络。`git diff --check`通过，仅输出既有LF→CRLF工作区提示。
+
+该批只认证观察到的来源/构建/产物/资产字节关系：`provenance=observed_command_only`且`reproducible_build_proven=false`。来源包不保存Git index、文件模式、时间戳、ACL或精确patch；role映射需由验证调用者提供。没有执行doctor、真实CLI、worker、runner、FFI、ocgcore或新分析，没有建立研究scope或切换部署；报告来源认证、调用计量、消费账本与全局最优资格继续开放。W1-C设计和未关闭门禁见[来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+## 2026-11-04 W1-C合成执行回执合同v1
+
+新增严格schema `schemas/w1c-execution-receipt-chain-v1.schema.json`、只读离线校验器 `python/ygo_eval/execution_receipts.py`，以及固定假receipt/报告字节fixture。v1把同一operation/job下多个顺序adapter attempt、worker spawn结果与PID/worker摘要、协议请求/响应摘要、Rust主动FFI与ocgcore回调两个方向的entered/returned事件、报告落盘/回读摘要按连续序号和前驱SHA-256连接。链尾可由调用方提供`--expected-head-sha256`锚定；未提供外部锚时只报告自洽，不认证producer。
+
+校验器可用`--report`重新读取精确报告字节并检查其长度、SHA-256和operation/job/input绑定。合法但不完整的链返回`valid=true,status=incomplete`，不补写零值；spawn、请求或响应观察缺失、FFI只有entered、报告写入失败/结果不确定都分别保留。所有整数型字段遵循JSON Schema语义，接受有限且数学上为整数的JSON数值表示；进程退出码保留host观察到的有符号值，负数可表示信号终止。若任一attempt的FFI事件流不完整，聚合`ffi_total_count`为null，并逐attempt列出已观察到但无返回事件的entry数。transport未决后再出现attempt会拒绝；完整协议响应后的下一attempt代表另一项搜索调用。replay传输失败后的最终report可以落盘并绑定精确字节，但整条receipt保持`incomplete`。`report_origin_authenticated`在此实验合同中恒为false；消费字段严格为unknown/null，不能从任一技术调用计数推导消费。该hash链不认证OS进程事实、生产者身份、硬件执行或卡片语义，也未接入生产adapter、worker、FFI、HTTP或真实分析路径。
+
+回执聚焦命令`py -m pytest -p no:cacheprovider -q tests/test_execution_receipts.py -ra --tb=short`结果为**17 passed、0 failed**。完整Python回归命令与结果在下方验证记录中。原有整数、spawn/请求/响应故障、FFI、hash链篡改、report绑定及unknown消费行为均保留；新增用例确认一个job下两个完整搜索调用、未决响应后的重试拒绝，以及replay失败后的部分报告状态。离线CLI对静态fixture仍返回`valid=true,status=complete`，报告字节/绑定为true，`report_origin_authenticated=false`，消费unknown；样例未传外部head，因此`head_anchor_verified=false`。本批未执行doctor、引擎、runner、worker、FFI、真实分析或部署。
+
+针对独立审查发现的schema/校验器退出码不一致，负退出码用例先复现负整数被拒绝，再复现`-9.0`这一schema有效数值被拒绝；校验器随后改为接受有限的数学整数并保留原事件摘要验证，回归通过。最终源码和Git状态快照另保存为忽略目录`target/w1c-provenance-20261104/source-bundle-v5`及`workspace-state-v5`，身份以各自manifest为准。最近Rust构建记录仍是`rebuild-v3/build-record.json`，不绑定v5源码，也没有为本批Python/schema/doc改动生成Rust产物。
 
 ## 2026-11-03 W1-C 派发身份采样收敛与最终复验
 

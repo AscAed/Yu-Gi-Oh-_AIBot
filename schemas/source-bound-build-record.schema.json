@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/source-bound-build-record.schema.json",
+  "title": "Source-bound observed build record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "source_bundle_before",
+    "source_bundle_after",
+    "asset_inputs_before",
+    "asset_inputs_after",
+    "artifact_outputs_before",
+    "build_record",
+    "status",
+    "provenance",
+    "reproducible_build_proven",
+    "identity"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "source_bound_build_record"},
+    "source_bundle_before": {"$ref": "#/$defs/source_bundle"},
+    "source_bundle_after": {
+      "oneOf": [{"$ref": "#/$defs/source_bundle"}, {"type": "null"}]
+    },
+    "asset_inputs_before": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/asset_snapshot"}
+    },
+    "asset_inputs_after": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [{"$ref": "#/$defs/asset_snapshot"}, {"type": "null"}]
+      }
+    },
+    "artifact_outputs_before": {
+      "type": "object",
+      "additionalProperties": {"type": "null"}
+    },
+    "build_record": {"$ref": "build-record.schema.json"},
+    "status": {
+      "enum": ["recorded", "failed", "source_changed", "asset_changed", "source_bundle_changed"]
+    },
+    "provenance": {"const": "observed_command_only"},
+    "reproducible_build_proven": {"const": false},
+    "identity": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "source_identity", "archive_sha256", "archive_bytes"],
+      "properties": {
+        "identity": {"$ref": "#/$defs/hash"},
+        "source_identity": {"$ref": "#/$defs/hash"},
+        "archive_sha256": {"$ref": "#/$defs/hash"},
+        "archive_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "asset_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes"],
+      "properties": {
+        "sha256": {"$ref": "#/$defs/hash"},
+        "bytes": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

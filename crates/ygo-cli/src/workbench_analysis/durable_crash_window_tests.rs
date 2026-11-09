@@ -357,16 +357,21 @@ fn child_submit_to_checkpoint(root: &Path, stage: &str) {
         let _ = coordinator.claim_next(102);
         panic!("claim checkpoint did not stop the child");
     }
+    if stage == "unknown_persisted_before_queue_update" {
+        let ticket = coordinator.claim_next(102).unwrap().unwrap();
+        coordinator.mark_unknown(&ticket, 103).unwrap();
+        panic!("unknown checkpoint did not stop the child");
+    }
     if stage == "cancelled_persisted_before_queue_update" {
         let _ = coordinator.cancel(accepted.job_id().unwrap(), 1, 102);
         panic!("cancel checkpoint did not stop the child");
     }
-    if stage == "report_persisted_before_terminal" || stage == "completed_persisted_before_queue_update" || stage == "budget_persisted_before_queue_update" {
+    if stage == "report_persisted_before_terminal" || stage == "completed_persisted_before_queue_update" || stage == "budget_persisted_before_queue_update" || stage == "time_budget_persisted_before_queue_update" {
         let ticket = coordinator.claim_next(102).unwrap().unwrap();
         let mut bytes = report_bytes(ticket.input(), ticket.record().input().scoring.clone());
-        if stage == "budget_persisted_before_queue_update" {
+        if stage == "budget_persisted_before_queue_update" || stage == "time_budget_persisted_before_queue_update" {
             let mut report: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-            report["search"]["termination"] = "node_budget".into();
+            report["search"]["termination"] = if stage == "time_budget_persisted_before_queue_update" { "time_budget" } else { "node_budget" }.into();
             bytes = serde_json::to_vec(&report).unwrap();
         }
         coordinator.publish_report(&ticket, &bytes, 103).unwrap();
@@ -688,6 +693,8 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
         "recovery_mixed_operations_first_classified_before_next",
         "recovery_first_task_classified_before_next",
         "budget_persisted_before_queue_update",
+        "time_budget_persisted_before_queue_update",
+        "unknown_persisted_before_queue_update",
         "completed_persisted_before_queue_update",
         "failed_persisted_before_queue_update",
         "asset_mismatch_persisted_before_queue_update",
@@ -999,23 +1006,27 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
             })).unwrap()).unwrap();
             continue;
         }
-        if stage == "cancelled_persisted_before_queue_update" || stage == "running_persisted_before_queue_update" || stage == "running_queue_updated_before_ticket_return" || stage == "failed_persisted_before_queue_update" || stage == "asset_mismatch_persisted_before_queue_update" || stage == "completed_persisted_before_queue_update" || stage == "budget_persisted_before_queue_update" {
+        if stage == "cancelled_persisted_before_queue_update" || stage == "running_persisted_before_queue_update" || stage == "running_queue_updated_before_ticket_return" || stage == "failed_persisted_before_queue_update" || stage == "asset_mismatch_persisted_before_queue_update" || stage == "completed_persisted_before_queue_update" || stage == "budget_persisted_before_queue_update" || stage == "time_budget_persisted_before_queue_update" || stage == "unknown_persisted_before_queue_update" {
             let running = stage == "running_persisted_before_queue_update" || stage == "running_queue_updated_before_ticket_return";
             let failed = stage == "failed_persisted_before_queue_update";
             let asset_mismatch = stage == "asset_mismatch_persisted_before_queue_update";
+            let explicit_unknown = stage == "unknown_persisted_before_queue_update";
             let terminal_failure = failed || asset_mismatch;
-            let budget = stage == "budget_persisted_before_queue_update";
+            let node_budget = stage == "budget_persisted_before_queue_update";
+            let time_budget = stage == "time_budget_persisted_before_queue_update";
+            let budget = node_budget || time_budget;
             let completed = stage == "completed_persisted_before_queue_update" || budget;
+            let terminal_revision = terminal_failure || completed || explicit_unknown;
             let operation_history = authenticate_operation_chain(&store, &operation_id);
             assert_eq!(operation_history.len(), 4);
             let op = operation_history.last().unwrap();
             assert_eq!(op.state(), AnalysisOperationState::Accepted);
             let job_id = op.job_id().unwrap().to_owned();
             let revisions = store.join("jobs").join(&job_id).join("revisions");
-            assert_eq!(fs::read_dir(&revisions).unwrap().count(), if terminal_failure || completed { 3 } else { 2 });
+            assert_eq!(fs::read_dir(&revisions).unwrap().count(), if terminal_revision { 3 } else { 2 });
             let mut previous = None;
             let mut jobs: Vec<AnalysisJobRecordV1> = Vec::new();
-            for revision in 1..=if terminal_failure || completed { 3 } else { 2 } {
+            for revision in 1..=if terminal_revision { 3 } else { 2 } {
                 let raw = fs::read(revisions.join(format!("{revision}.json"))).unwrap();
                 let envelope: serde_json::Value = serde_json::from_slice(&raw).unwrap();
                 assert_eq!(envelope["schema_version"], 1);
@@ -1031,8 +1042,8 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
                 jobs.push(job);
             }
             assert_eq!(jobs[0].state(), AnalysisJobState::Queued);
-            assert_eq!(jobs[1].state(), if running || terminal_failure || completed { AnalysisJobState::Running } else { AnalysisJobState::Cancelled });
-            assert_eq!(jobs[0].transition(1, if running || terminal_failure || completed { AnalysisJobEvent::Start } else { AnalysisJobEvent::Cancel }, 102).unwrap().encode_json().unwrap(), jobs[1].encode_json().unwrap());
+            assert_eq!(jobs[1].state(), if running || terminal_revision { AnalysisJobState::Running } else { AnalysisJobState::Cancelled });
+            assert_eq!(jobs[0].transition(1, if running || terminal_revision { AnalysisJobEvent::Start } else { AnalysisJobEvent::Cancel }, 102).unwrap().encode_json().unwrap(), jobs[1].encode_json().unwrap());
             if failed {
                 assert_eq!(jobs[2].state(), AnalysisJobState::Failed);
                 assert_eq!(jobs[1].transition(2, AnalysisJobEvent::Fail(AnalysisJobFailure::AnalysisFailed), 103).unwrap().encode_json().unwrap(), jobs[2].encode_json().unwrap());
@@ -1042,6 +1053,11 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
                 assert_eq!(jobs[2].error_code(), Some(AnalysisJobFailure::AssetMismatch));
                 assert_eq!(jobs[1].transition(2, AnalysisJobEvent::Fail(AnalysisJobFailure::AssetMismatch), 102).unwrap().encode_json().unwrap(), jobs[2].encode_json().unwrap());
             }
+            if explicit_unknown {
+                assert_eq!(jobs[2].state(), AnalysisJobState::Unknown);
+                assert_eq!(jobs[2].error_code(), Some(AnalysisJobFailure::CompletionUncertain));
+                assert_eq!(jobs[1].transition(2, AnalysisJobEvent::Fail(AnalysisJobFailure::CompletionUncertain), 103).unwrap().encode_json().unwrap(), jobs[2].encode_json().unwrap());
+            }
             if completed {
                 assert_eq!(jobs[2].state(), if budget { AnalysisJobState::BudgetLimited } else { AnalysisJobState::Completed });
                 let reference = jobs[2].report().unwrap();
@@ -1050,7 +1066,7 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
                 assert_eq!(jobs[1].transition(2, AnalysisJobEvent::ReportPublished(reference.clone()), 103).unwrap().encode_json().unwrap(), jobs[2].encode_json().unwrap());
             }
             assert_eq!(serde_json::to_value(op.frozen_input().unwrap()).unwrap(), serde_json::to_value(jobs[0].input()).unwrap());
-            assert_child_event_counts(&root, 1, usize::from(running || terminal_failure || completed));
+            assert_child_event_counts(&root, 1, usize::from(running || terminal_failure || completed || explicit_unknown));
             if asset_mismatch {
                 let events = fs::read_to_string(root.join("child-events.log")).unwrap();
                 assert_eq!(events.lines().collect::<Vec<_>>(), ["freeze", "claim", "asset_mismatch_persisted"]);
@@ -1058,6 +1074,10 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
             if stage == "running_queue_updated_before_ticket_return" {
                 let events = fs::read_to_string(root.join("child-events.log")).unwrap();
                 assert_eq!(events.lines().collect::<Vec<_>>(), ["freeze", "claim", "queue_updated"]);
+            }
+            if explicit_unknown {
+                let events = fs::read_to_string(root.join("child-events.log")).unwrap();
+                assert_eq!(events.lines().collect::<Vec<_>>(), ["freeze", "claim"]);
             }
             assert_eq!(fs::read_dir(store.join("reports")).unwrap().count(), usize::from(completed));
             let before = persisted_material(&store);
@@ -1069,12 +1089,15 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
                 let coordinator = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
                 assert_eq!(coordinator.inspect_operation(&operation_id).unwrap().last().unwrap().state(), AnalysisOperationState::Accepted);
                 let saved = coordinator.inspect_job(&job_id).unwrap();
-                assert_eq!(saved.len(), if running || terminal_failure || completed { 3 } else { 2 });
-                assert_eq!(saved.last().unwrap().state(), if running { AnalysisJobState::Unknown } else if terminal_failure { AnalysisJobState::Failed } else if budget { AnalysisJobState::BudgetLimited } else if completed { AnalysisJobState::Completed } else { AnalysisJobState::Cancelled });
+                assert_eq!(saved.len(), if running || terminal_revision { 3 } else { 2 });
+                assert_eq!(saved.last().unwrap().state(), if running || explicit_unknown { AnalysisJobState::Unknown } else if terminal_failure { AnalysisJobState::Failed } else if budget { AnalysisJobState::BudgetLimited } else if completed { AnalysisJobState::Completed } else { AnalysisJobState::Cancelled });
                 if asset_mismatch {
                     assert_eq!(saved.last().unwrap().error_code(), Some(AnalysisJobFailure::AssetMismatch));
                 }
-                if completed { assert_eq!(coordinator.inspect_report(&job_id).unwrap().search.termination, if budget { "node_budget" } else { "exhausted" }); }
+                if explicit_unknown {
+                    assert_eq!(saved.last().unwrap().error_code(), Some(AnalysisJobFailure::CompletionUncertain));
+                }
+                if completed { assert_eq!(coordinator.inspect_report(&job_id).unwrap().search.termination, if time_budget { "time_budget" } else if node_budget { "node_budget" } else { "exhausted" }); }
                 assert!(coordinator.snapshot().unwrap().queued.is_none());
                 assert!(coordinator.snapshot().unwrap().running.is_none());
                 assert!(coordinator.claim_next(now).unwrap().is_none());
@@ -1088,11 +1111,12 @@ fn h3_2b_cross_chain_windows_recover_after_process_kill() {
             let recovered_hashes = first_recovery.as_ref().map(|files| {
                 files.iter().map(|(path, bytes)| (path.clone(), ygo_storage::hash(bytes))).collect::<BTreeMap<_, _>>()
             });
-            fs::write(root.join(if asset_mismatch { "asset-mismatch-evidence.json" } else if running { "running-evidence.json" } else if failed { "failed-evidence.json" } else if budget { "budget-evidence.json" } else if completed { "completed-evidence.json" } else { "cancelled-evidence.json" }), serde_json::to_vec_pretty(&serde_json::json!({
+            fs::write(root.join(if asset_mismatch { "asset-mismatch-evidence.json" } else if explicit_unknown { "unknown-terminal-evidence.json" } else if running { "running-evidence.json" } else if failed { "failed-evidence.json" } else if time_budget { "time-budget-evidence.json" } else if node_budget { "budget-evidence.json" } else if completed { "completed-evidence.json" } else { "cancelled-evidence.json" }), serde_json::to_vec_pretty(&serde_json::json!({
                 "checkpoint": stage, "child_exit": killed.to_string(), "operation_id": operation_id, "job_id": job_id,
-                "freeze_events_before_kill": 1, "claim_events_before_kill": usize::from(running || terminal_failure || completed),
+                "freeze_events_before_kill": 1, "claim_events_before_kill": usize::from(running || terminal_failure || completed || explicit_unknown),
                 "events_before_kill": fs::read_to_string(root.join("child-events.log")).unwrap().lines().collect::<Vec<_>>(),
                 "report_count_before_kill": usize::from(completed), "executor_invocations_before_kill": 0,
+                "report_termination": if time_budget { Some("time_budget") } else if node_budget { Some("node_budget") } else { None },
                 "claim_returned": if asset_mismatch { Some(false) } else { None },
                 "failure_code": if asset_mismatch { Some("asset_mismatch") } else { None },
                 "recovered_material_sha256": recovered_hashes,

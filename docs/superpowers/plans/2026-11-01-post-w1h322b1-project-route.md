@@ -1,10 +1,29 @@
-# 项目评估与双轨路线（2026-11-03更新）
+# 项目评估与双轨路线（2026-11-04更新）
+
+## 2026-11-04 复核与小批安排
+
+当前事实以[TASKS](../../../TASKS.md)为准。W1-C已完成隔离候选的单次Rabbit有限分析，160节点、165 engine_calls，`time_budget`截断；报告来源和底层FFI/消费未独立认证。普通启动仍`analysis_not_configured`。下文较早时点称W1-C尚未验收的段落仅是历史，不覆盖此结果。引用的实施对话曾在2b-2未完成时中断，后续汇总及日期化测试已记录限定窗口验收；不可用早期状态覆盖后续证据。
+
+| 小批 | 依赖、交付与停止/退出条件 |
+|---|---|
+| H3本批复核与下一批 | `time_budget`报告只作为已有`budget_limited`保存后K点的原因分类补充，与`node_budget`共用同一物理检查点，不计为新逻辑窗口。随后完成独立的[显式mark_unknown终态保存后、队列结算前K](2026-11-04-unknown-terminal-persisted-before-queue-update.md)：`CompletionUncertain` revision 3落盘后强杀，真实锁重开两次稳定。此单点不关闭其他H3逻辑状态/调度、报告来源或syscall/断电/介质故障。工作台/研究下一批优先推进[W1-C分层执行回执与计量合同](2026-11-04-w1c-provenance-accounting-plan.md)；如继续H3，须再从[证据映射](2026-11-02-h3-evidence-gate-map.md)选一个不同的未覆盖提交点。 |
+| 已完成：W1-C证据链复核 | 2026-11-04离线重算执行包56/56项及包/资产身份记录14/14项哈希；operation、job、result及11文件存储清单重开前后字节稳定。报告明确将report_origin_authenticated设为false；按当前源码165 engine_calls是应用层adapter调用计数，OS worker创建、FFI调用和消费仍未知。旧运行的3/5个未跟踪构建输入原字节无法从当前树或Git历史找回，tracked diff摘要也无法复算。单次有限分析验收保持不变；详见[TESTING审计](../../TESTING.md)。 |
+| 已完成第一子批：W1-C源码字节包v1 | 当前工作树跟踪及非忽略未跟踪文件已进入版本化ZIP包，清单和每个成员可离线复核；Schema及全Python回归通过。包只保全路径/字节，不含Git index、模式、忽略资产、构建复现、执行或消费认证。记录与命令见[TESTING](../../TESTING.md)和[部署合同](../../DEPLOYMENT.md)。 |
+| 已完成第二子批：W1-C观察式离线候选构建绑定v1 | 当前源码包绑定Cargo `dev` profile命令、工具链版本、CLI/worker候选哈希和9项固定输入/资产；隔离`--offline --locked`构建、实际记录Schema及产物/资产校验通过。记录身份与限制见[TESTING](../../TESTING.md)：这是观察式记录，不证明构建可重现，也不认证worker运行、报告来源或消费。精确workspace patch、Git index/模式仍开放。 |
+| W1-C执行来源与计量合同 | 多attempt合成回执合同及job绑定host日志已实现；另有合成FFI entered/returned事件，验证LIFO返回、唯一call ID、连续序号、未返回现场和写入失败停派。生产worker确认通道、真实ocgcore事件、报告producer来源与ResearchBatch消费仍开放。attempt-start后强杀恢复、持久链及FFI合成矩阵见[TESTING](../../TESTING.md)与[设计计划](2026-11-04-w1c-provenance-accounting-plan.md)。下一批先按[FFI worker确认流计划](2026-11-04-w1c-worker-ffi-ack-stream-plan.md)设计向后兼容的host-ack通道并仅用假worker验收；普通分析仍另立scope，合成事件不作为原生执行、来源或消费认证。 |
+| Ground/P1 | Ground候选保持hold；先复核固定请求、源码/资产身份与预算，形成准入决定，任何变化或来源缺口即停。另选一个动作、观察、概率或循环阻断项，交付可复现设计与失败判据；真实调用另行授权。 |
+| R1b-3 | 旧run只完成一次Execution且不能续跑；先对齐修正后的对手牌组/手牌见证、输入、driver与worker身份，设计新的独立scope、暂停/重开及replay。身份不符或消费不确定即停；真实恢复须另授权。 |
+| L1 | 已对照39张zh-CN及38张有值zh-SC候选；逐批解决名称/类别差异和别名映射，单独核实使用与再分发依据。缺字段或权利依据时保持unknown，不提升正式资格。 |
+| W2 | 同机隔离包与迁移合同已有基础；取得独立Windows用户或虚拟机后核验启动、草稿、往返及升级/回滚。无真实旧profile或环境时记录阻塞，不以同机结果代替。 |
+| P4-R2–R5 | R2先完成场景规则逐项认证；R3交付v6和v1–v5兼容；R4冻结人工基准并完成16+32手评估；R5绑定源码、产物、配置、双资产及可比账本。缺一项或预算截断即保留开放，不切换发布包。 |
+
+以上每批先保存身份与证据、再复盘收益、成本和剩余门禁；合成、有限原生、账本与证明资格分别判定。
 
 2026-11-01静态基线：本地main / `ae4a9ab`，工作区干净，本地跟踪引用领先9；未访问远端。目标以[PRODUCT_VISION](../../PRODUCT_VISION.md)为准，状态以[TASKS](../../../TASKS.md)为准，验证以[TESTING](../../TESTING.md)为准。
 
 项目是具备草稿工作台的有限场景研究原型。P0/P1缺正式OCG发行分母、完整动作、条件概率、信息策略、循环和独立值界；P2/P3缺正式中文数据、真实分析流程和普通发布；P4真实恢复、独立原生重放及R2–R5开放；P5–P8通用知识、构筑反馈、全卡及可核查最优性证明尚未完成。全卡和最优性存在尚未证明可行的研究关口，不计算总完成比例或最终工期。
 
-## 当前状态与下一批（2026-11-03）
+## 当前状态与下一批（2026-11-04）
 
 当前状态以[TASKS](../../../TASKS.md)为准。W1-C已在隔离候选包和独立单次范围内完成一次Rabbit本机有限分析：160 nodes、165 `engine_calls`，以`time_budget`到达`budget_limited`；端到端观测83.776秒。报告schema与受控重开稳定性通过，但报告来源、底层FFI/消费未独立认证，搜索不完整且不证明全局最优。普通启动仍`analysis_not_configured`，P4-R5发布门禁开放。
 
@@ -71,8 +90,8 @@ P/U/R为提交前失败、提交后不确定、写后复读失败；L为响应�
 | queued任务 | H2.2-A逻辑故障；2b-1覆盖queued已保存、accepted前K |
 | accepted关联 | H2.2-A逻辑故障及2a响应场景；关联保存后、内存队列更新前的合成K见[交接](2026-11-02-accepted-crash-handoff.md)；其他位置和调度仍开放 |
 | running领取、cancelled | H2.2-A故障、H2.2-B指定取消/领取调度及2a取消响应；新增cancelled与running保存后内存队列更新前各一合成K，另有running队列已更新、票据返回前的单点K，见[取消交接](2026-11-02-cancelled-crash-handoff.md)、[领取交接](2026-11-02-running-crash-handoff.md)及[票据返回前交接](2026-11-03-running-queue-updated-before-ticket-return-handoff.md)；不代表其他跨链窗口及调度 |
-| failed / unknown终态 | H2.2-A指定故障；合成`analysis_failed`保存后内存结算前的K已验收，见[交接](2026-11-02-failed-crash-handoff.md)；其他失败和unknown终态提交窗口仍未认证 |
-| 报告文件、completed / budget_limited | H2.2-A指定故障、2a报告及结果读取；2b-1覆盖报告保存后终态提交前K；exhausted合成报告的completed和node_budget合成报告的budget_limited保存后内存结算前K分别见[完成交接](2026-11-02-completed-crash-handoff.md)及[预算交接](2026-11-02-budget-crash-handoff.md)，其他预算原因及窗口开放 |
+| failed / unknown终态 | H2.2-A指定故障；合成`analysis_failed`保存后内存结算前的K见[交接](2026-11-02-failed-crash-handoff.md)；2026-11-04另验收显式`mark_unknown`写入`CompletionUncertain` revision 3后、队列内存结算前K，见[交接](2026-11-04-unknown-terminal-persisted-before-queue-update.md)。其他失败来源和恢复状态/排序组合仍未认证 |
+| 报告文件、completed / budget_limited | H2.2-A指定故障、2a报告及结果读取；2b-1覆盖报告保存后终态提交前K；exhausted合成报告的completed和node_budget合成报告的budget_limited保存后内存结算前K分别见[完成交接](2026-11-02-completed-crash-handoff.md)及[预算交接](2026-11-02-budget-crash-handoff.md)。2026-11-04增加time_budget报告字节作为同一budget_limited K点的原因分类用例，不扩大逻辑窗口；其他预算原因及报告来源开放 |
 | 恢复操作追加 | H3.2-1合成恢复；2b-1覆盖关联修复后、任务分类前K；两条手工构造的无任务accepting链中第一条unknown保存后、第二条分类前K见[交接](2026-11-02-partial-operation-recovery-handoff.md)；无任务accepting→unknown的revision 3追加已覆盖BeforePublish/AfterPublish/Reread，见[故障交接](2026-11-02-unknown-operation-fault-handoff.md)；混合unknown/accepted恢复第一条操作提交后的单一K见[交接](2026-11-02-mixed-operation-recovery-handoff.md)；其他状态组合、排序和窗口仍开放 |
 | 恢复任务分类追加 | H3.2-1合成重复重开；手工构造的双queued及queued/running混合链中，第一分类保存后、第二分类前K分别见[双queued交接](2026-11-02-partial-task-recovery-handoff.md)及[混合交接](2026-11-02-mixed-task-recovery-handoff.md)；其他分类与顺序仍未认证 |
 
@@ -82,7 +101,7 @@ P/U/R为提交前失败、提交后不确定、写后复读失败；L为响应�
 
 测试子进程在`accepting_persisted_before_freeze`检查点写完并同步原子握手后暂停。父进程认证revision 1/2的封套、前驱哈希、记录哈希、typed记录、命令摘要以及allocated→accepting迁移；另确认没有冻结输入、任务或报告。子进程事件日志确认freeze=0、claim=0后才强杀。该协调器路径不启动worker或引擎，因此本测试没有原生/FFI执行；合成event计数不替代外部系统调用或实际消费账本。
 
-新协调器恢复为一次`unknown`，没有补建任务、冻结输入、报告、排队或可领取工作；第二次重开不增加修订，保存材料字节稳定。事件记录检测到测试路径直接调用的冻结闭包以及claim入口，避免仅依赖未覆盖直接冻结路径的旧计数器。验证命令、workspace计数和边界见[TESTING](../../TESTING.md)。这只关闭首次accepting窗口；其他逻辑窗口、调度、syscall、断电和介质故障继续开放。
+新协调器恢复为一次`unknown`，没有补建任务、冻结输入、报告、排队或可领取工作；第二次重开不增加修订，保存材料字节稳定。事件记录检测到测试路径直接调用的冻结闭包以及claim入口，避免仅依赖未覆盖直接冻结路径的旧计数器。2026-11-04在`main / 622546c`复核该挂点并重跑聚焦、CLI、workspace、格式、Clippy和schema回归，结果见[TESTING](../../TESTING.md)。这只关闭首次accepting窗口；其他逻辑窗口、调度、syscall、断电和介质故障继续开放。
 
 ### 2026-11-02 恢复操作unknown追加的P/U/R故障
 

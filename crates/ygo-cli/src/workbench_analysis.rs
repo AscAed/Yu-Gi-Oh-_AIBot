@@ -13,7 +13,11 @@ use ygo_search::combo::SearchBudget;
 use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
 mod admission;
+mod attempt_receipts;
 pub(crate) use admission::W1cAdmission;
+#[cfg(test)]
+pub(crate) use attempt_receipts::AttemptReceiptContextV1;
+pub(crate) use attempt_receipts::AttemptReceiptEventV1;
 
 pub mod durable;
 pub mod http_contract;

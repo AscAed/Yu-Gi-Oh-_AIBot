@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-aibot.local/schemas/w1c-search-attempt-journal-v1.schema.json",
+  "title": "W1-C persisted search attempt journal event v1",
+  "description": "A job-bound host journal for adapter attempt start/result observations and individually paired worker FFI events. Null source/build identities remain unknown; FFI events are synthetic until an acknowledged worker transport emits them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "context", "context_sha256", "sequence", "previous_sha256", "event", "event_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "w1c_search_attempt_journal_event"},
+    "context": {"$ref": "#/$defs/context"},
+    "context_sha256": {"$ref": "#/$defs/hash"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "previous_sha256": {"$ref": "#/$defs/hash"},
+    "event": {"$ref": "#/$defs/event"},
+    "event_sha256": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-f0-9]{32}$"},
+    "nullableHash": {"oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+    "phase": {"enum": ["initial", "baseline", "exploration", "replay"]},
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "job_id", "running_job_revision", "command_sha256", "job_input_binding_sha256", "input_sha256", "source_bundle_identity", "build_record_identity", "assets"],
+      "properties": {
+        "operation_id": {"$ref": "#/$defs/id"},
+        "job_id": {"$ref": "#/$defs/id"},
+        "running_job_revision": {"type": "integer", "minimum": 2},
+        "command_sha256": {"$ref": "#/$defs/hash"},
+        "job_input_binding_sha256": {"$ref": "#/$defs/hash"},
+        "input_sha256": {"$ref": "#/$defs/hash"},
+        "source_bundle_identity": {"$ref": "#/$defs/nullableHash"},
+        "build_record_identity": {"$ref": "#/$defs/nullableHash"},
+        "assets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["engine_sha256", "worker_sha256", "cdb_sha256", "scripts_sha256", "engine_manifest_sha256"],
+          "properties": {
+            "engine_sha256": {"$ref": "#/$defs/hash"},
+            "worker_sha256": {"$ref": "#/$defs/hash"},
+            "cdb_sha256": {"$ref": "#/$defs/hash"},
+            "scripts_sha256": {"$ref": "#/$defs/hash"},
+            "engine_manifest_sha256": {"$ref": "#/$defs/hash"}
+          }
+        }
+      }
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event_type", "ordinal", "attempt_id", "phase"],
+          "properties": {
+            "event_type": {"const": "started"},
+            "ordinal": {"type": "integer", "minimum": 1},
+            "attempt_id": {"$ref": "#/$defs/id"},
+            "phase": {"$ref": "#/$defs/phase"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event_type", "ordinal", "attempt_id", "phase", "result", "process_observation"],
+          "properties": {
+            "event_type": {"const": "host_result"},
+            "ordinal": {"type": "integer", "minimum": 1},
+            "attempt_id": {"$ref": "#/$defs/id"},
+            "phase": {"$ref": "#/$defs/phase"},
+            "result": {"$ref": "#/$defs/result"},
+            "process_observation": {"$ref": "#/$defs/processObservation"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event_type", "attempt_ordinal", "attempt_id", "call_id", "direction", "name", "ffi_ordinal"],
+          "properties": {
+            "event_type": {"const": "ffi_entered"},
+            "attempt_ordinal": {"type": "integer", "minimum": 1},
+            "attempt_id": {"$ref": "#/$defs/id"},
+            "call_id": {"$ref": "#/$defs/id"},
+            "direction": {"enum": ["host_to_ocgcore", "ocgcore_callback_to_host"]},
+            "name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"},
+            "ffi_ordinal": {"type": "integer", "minimum": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["event_type", "attempt_ordinal", "attempt_id", "call_id", "status", "result_sha256"],
+          "properties": {
+            "event_type": {"const": "ffi_returned"},
+            "attempt_ordinal": {"type": "integer", "minimum": 1},
+            "attempt_id": {"$ref": "#/$defs/id"},
+            "call_id": {"$ref": "#/$defs/id"},
+            "status": {"enum": ["returned", "error"]},
+            "result_sha256": {"$ref": "#/$defs/nullableHash"}
+          }
+        }
+      ]
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "status"],
+          "properties": {
+            "kind": {"const": "duel_result"},
+            "status": {"enum": ["engine_verified", "decision_required", "partial", "failed", "probe_passed"]}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "code", "stage"],
+          "properties": {
+            "kind": {"const": "adapter_error"},
+            "code": {"type": "string", "minLength": 1},
+            "stage": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    },
+    "processObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worker_executable_sha256", "spawn_status", "worker_pid", "request_status", "request_sha256", "request_bytes", "response_status", "response_sha256", "response_bytes", "response_validation", "termination", "exit_code", "elapsed_ms"],
+      "properties": {
+        "worker_executable_sha256": {"$ref": "#/$defs/nullableHash"},
+        "spawn_status": {"enum": ["not_attempted", "spawned", "failed"]},
+        "worker_pid": {"type": ["integer", "null"], "minimum": 0},
+        "request_status": {"enum": ["not_attempted", "complete", "failed", "unknown"]},
+        "request_sha256": {"$ref": "#/$defs/nullableHash"},
+        "request_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "response_status": {"enum": ["not_attempted", "complete", "failed", "unknown"]},
+        "response_sha256": {"$ref": "#/$defs/nullableHash"},
+        "response_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "response_validation": {"enum": ["not_attempted", "parsed", "invalid_json", "protocol_version_mismatch", "runtime_version_mismatch"]},
+        "termination": {"enum": ["not_started", "exited", "timed_out", "wait_failed"]},
+        "exit_code": {"type": ["integer", "null"]},
+        "elapsed_ms": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

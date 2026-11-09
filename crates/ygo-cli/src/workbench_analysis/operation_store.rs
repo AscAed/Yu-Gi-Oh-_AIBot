@@ -3,6 +3,7 @@ use super::{
     jobs::strict_json_value,
     operations::{AnalysisOperationRecordV1 as Record, AnalysisOperationState as State},
     persistence::{PersistenceError as Error, PersistentAnalysisJobStore},
+    queue::DispatchTicket,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fs};
@@ -85,6 +86,7 @@ impl PersistentAnalysisJobStore {
                 }
             }
         }
+        self.validate_attempt_receipt_bindings(&operations, &jobs)?;
         let mut heads = BTreeMap::new();
         for (id, history) in &operations {
             let last = history.last().ok_or(Error::InvalidChain)?;
@@ -111,6 +113,86 @@ impl PersistentAnalysisJobStore {
             jobs,
             heads,
         })
+    }
+
+    pub(super) fn attempt_receipt_context(
+        &self,
+        ticket: &DispatchTicket,
+    ) -> Result<super::attempt_receipts::AttemptReceiptContextV1, Error> {
+        let chains = self.authenticate_chains()?;
+        let job_id = ticket.record().job_id();
+        let history = chains.jobs.get(job_id).ok_or(Error::InvalidChain)?;
+        let latest = history.last().ok_or(Error::InvalidChain)?;
+        if latest.encode_json().ok() != ticket.record().encode_json().ok() {
+            return Err(Error::RevisionConflict);
+        }
+        let mut matches = chains
+            .operations
+            .iter()
+            .filter_map(|(operation_id, history)| {
+                history.last().map(|record| (operation_id, record))
+            })
+            .filter(|(_, operation)| operation.job_id() == Some(job_id));
+        let (operation_id, operation) = matches.next().ok_or(Error::InvalidChain)?;
+        if matches.next().is_some()
+            || operation.state() != State::Accepted
+            || operation.command_sha256().is_none()
+        {
+            return Err(Error::InvalidChain);
+        }
+        super::attempt_receipts::AttemptReceiptContextV1::for_running_job(
+            operation_id,
+            operation.command_sha256().ok_or(Error::InvalidChain)?,
+            ticket.record(),
+            ticket.input(),
+        )
+    }
+
+    fn validate_attempt_receipt_bindings(
+        &self,
+        operations: &BTreeMap<String, Vec<Record>>,
+        jobs: &BTreeMap<String, Vec<super::jobs::AnalysisJobRecordV1>>,
+    ) -> Result<(), Error> {
+        for (job_id, receipts) in jobs
+            .keys()
+            .map(|job_id| Ok((job_id, self.read_attempt_receipts(job_id)?)))
+            .collect::<Result<Vec<_>, Error>>()?
+        {
+            let Some(first_receipt) = receipts.first() else {
+                continue;
+            };
+            let mut matches = operations
+                .iter()
+                .filter_map(|(operation_id, history)| {
+                    history.last().map(|record| (operation_id, record))
+                })
+                .filter(|(_, operation)| operation.job_id() == Some(job_id));
+            let (operation_id, operation) = matches.next().ok_or(Error::InvalidChain)?;
+            if matches.next().is_some()
+                || operation.state() != State::Accepted
+                || operation.command_sha256().is_none()
+            {
+                return Err(Error::InvalidChain);
+            }
+            let running = jobs
+                .get(job_id)
+                .and_then(|history| {
+                    history.iter().find(|record| {
+                        record.revision() == first_receipt.context.running_job_revision
+                    })
+                })
+                .ok_or(Error::InvalidChain)?;
+            if running.state() != super::jobs::AnalysisJobState::Running {
+                return Err(Error::InvalidChain);
+            }
+            super::attempt_receipts::validate_receipt_binding(
+                &first_receipt.context,
+                operation_id,
+                operation.command_sha256().ok_or(Error::InvalidChain)?,
+                running,
+            )?;
+        }
+        Ok(())
     }
     pub(super) fn recover_authenticated(&self) -> Result<(), Error> {
         let chains = self.authenticate_chains()?;

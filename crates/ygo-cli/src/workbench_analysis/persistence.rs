@@ -110,6 +110,10 @@ pub struct PersistentAnalysisJobStore {
     fail_before_next_report_publish: AtomicBool,
     #[cfg(test)]
     fail_after_next_report_publish: AtomicBool,
+    #[cfg(test)]
+    pub(super) fail_attempt_receipt_before_publish_after: AtomicUsize,
+    #[cfg(test)]
+    pub(super) fail_attempt_receipt_after_publish_after: AtomicUsize,
 }
 
 impl std::fmt::Debug for PersistentAnalysisJobStore {
@@ -209,6 +213,10 @@ impl PersistentAnalysisJobStore {
             fail_before_next_report_publish: AtomicBool::new(false),
             #[cfg(test)]
             fail_after_next_report_publish: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_attempt_receipt_before_publish_after: AtomicUsize::new(usize::MAX),
+            #[cfg(test)]
+            fail_attempt_receipt_after_publish_after: AtomicUsize::new(usize::MAX),
         };
         store.scan()?;
         Ok(store)
@@ -533,6 +541,9 @@ impl PersistentAnalysisJobStore {
                 }
             }
         }
+        for job_id in result.keys() {
+            self.read_attempt_receipts(job_id)?;
+        }
         Ok(result)
     }
 
@@ -662,8 +673,16 @@ impl PersistentAnalysisJobStore {
         }
         for entry in fs::read_dir(&dir).map_err(|_| PersistenceError::Io)? {
             let entry = entry.map_err(|_| PersistenceError::Io)?;
-            if entry.file_name() != "revisions" {
-                return Err(PersistenceError::InvalidChain);
+            match entry.file_name().to_str() {
+                Some("revisions") => {}
+                Some("attempt_receipts") => {
+                    let metadata = ygo_storage::safe_store_metadata(&entry.path())
+                        .map_err(|_| PersistenceError::InvalidPath)?;
+                    if !metadata.is_dir() {
+                        return Err(PersistenceError::InvalidPath);
+                    }
+                }
+                _ => return Err(PersistenceError::InvalidChain),
             }
         }
         let mut files = Vec::new();
@@ -753,6 +772,54 @@ impl PersistentAnalysisJobStore {
     }
     fn report_path(&self, id: &str) -> PathBuf {
         self.root.join("reports").join(format!("{id}.json"))
+    }
+
+    #[cfg(test)]
+    pub(super) fn inject_attempt_receipt_failure_after(
+        &self,
+        successful_publishes: usize,
+        after_publish: bool,
+    ) {
+        let target = if after_publish {
+            &self.fail_attempt_receipt_after_publish_after
+        } else {
+            &self.fail_attempt_receipt_before_publish_after
+        };
+        target.store(successful_publishes, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    pub(super) fn fail_attempt_receipt_before_publish(&self) -> Result<(), PersistenceError> {
+        let remaining = self
+            .fail_attempt_receipt_before_publish_after
+            .load(Ordering::SeqCst);
+        if remaining == 0 {
+            self.fail_attempt_receipt_before_publish_after
+                .store(usize::MAX, Ordering::SeqCst);
+            return Err(PersistenceError::Io);
+        }
+        if remaining != usize::MAX {
+            self.fail_attempt_receipt_before_publish_after
+                .fetch_sub(1, Ordering::SeqCst);
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(super) fn fail_attempt_receipt_after_publish(&self) -> Result<(), PersistenceError> {
+        let remaining = self
+            .fail_attempt_receipt_after_publish_after
+            .load(Ordering::SeqCst);
+        if remaining == 0 {
+            self.fail_attempt_receipt_after_publish_after
+                .store(usize::MAX, Ordering::SeqCst);
+            return Err(PersistenceError::CommitUncertain);
+        }
+        if remaining != usize::MAX {
+            self.fail_attempt_receipt_after_publish_after
+                .fetch_sub(1, Ordering::SeqCst);
+        }
+        Ok(())
     }
 }
 

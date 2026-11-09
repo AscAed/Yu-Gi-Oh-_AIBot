@@ -2,6 +2,18 @@
 
 本页是本机安全扫描发现及其处置状态的当前事实源。逐次执行证据见[TESTING](TESTING.md)；主机ACL和部署现场见[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)与[DEPLOYMENT](DEPLOYMENT.md)。
 
+## 2026-11-05 当前工作树差异审查
+
+Codex Security Diff Scan `08cd98e2-89e5-4903-9544-212440640450`完成了`622546c`之后工作树差异快照`codex-security-snapshot/v1:sha256:7066e237e5b6940d462847261d8c44928b0b64c2f2fd470c9e9c6d5e52047bf5`中17个源码/schema条目的审阅，结果为0项确认可报告发现，覆盖为`partial`。候选验证保留三项待补证路径竞态：
+
+- `attempt_receipts.rs`的路径元数据检查与后续读取/发布之间的本地竞态；
+- `process.rs`在worker路径哈希和进程spawn之间的映像身份竞态；
+- `identity.py`在来源包构建前后检查之间的bundle路径竞态。
+
+三项均缺少已证明的低权限本地写入者、有效跨账户权限或敏感权限边界影响，因此不升级为已确认漏洞。扫描最终化返回一条可选coverage receipt引用缺失警告；canonical coverage仍保留三项deferred，结论限于部分覆盖，不称为完整认证。当前工作树验证同时修复了Rust回执门禁字符串误分类、Python非字符串枚举/状态异常和`source_bundle_changed`记录验收问题。报告、覆盖和候选验证保存在Codex Security扫描目录中；当前ACL按用户决定保持原样，旧`dist/ygo-local`仍未切换。
+
+最终工作树复核使用Diff Scan `c8484c40-59c5-440f-a758-6ad8f94daa01`，快照摘要`codex-security-snapshot/v1:sha256:6b616d69ff48052c4654288ae6ac762b1f60d7df9a153b102959a1ed8efe610c`。17个源码/schema条目审阅完成，0项确认可报告发现；覆盖标记为`partial`，三项未决候选保持deferred。此次最终化没有coverage receipt警告。它检查了最终差异，但不替代全仓Deep Scan、运行时验收或主机有效ACL审计。
+
 ## 2026-11-04 修复后差异复核
 
 Codex Security Diff Scan `cd684777-42da-4fea-ba6c-09a0c54e17b4`于2026-11-04 02:10:50 CST（2026-11-03 18:10:50 UTC）完成，基线为`b35b12dec226b3b71eb36896e27452ec7fd12015`，目标快照摘要为`codex-security-snapshot/v1:sha256:075ae28ff5f8d695acbbdfd151ec8dfb47b1b2ecb91bed516ba7fb90aff461e9`。它检查工作区差异，紧凑代码审阅覆盖4个实现文件，另检查支持测试和选定架构/部署/工作台文档；716是仓库文件清单数，不是逐文件审阅数。扫描没有确认可报告发现，整体覆盖标记为`partial`，不是“全仓无问题”。六个候选中，Banlist路径穿越、HTTP慢请求与终端控制注入因当前整改控制而关闭；另三项保留为未决本地文件系统路径竞态：journal祖先/sidecar路径、Banlist保存前检查与写入之间、Banlist读取前检查与读取之间。尚未证明有低权限本地攻击者能利用这些竞态访问更高权限文件。Windows目录链接测试因错误1314跳过，且没有验证跨账户ACL的有效权限。报告和结构化覆盖清单保存在Codex Security扫描目录中；逐项验证见该报告。

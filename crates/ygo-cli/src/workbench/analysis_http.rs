@@ -6,6 +6,8 @@ mod fault_matrix_tests;
 #[path = "response_loss_tests.rs"]
 mod response_loss_tests;
 use super::{json_response, HttpRequest, HttpResponse};
+#[cfg(test)]
+use crate::workbench_analysis::AttemptReceiptContextV1;
 use crate::workbench_analysis::{
     durable::{DurableAnalysisCoordinator, DurableCoordinatorError},
     http_contract as wire,
@@ -13,7 +15,7 @@ use crate::workbench_analysis::{
         AnalysisOperationContext, AnalysisOperationError, AnalysisOperationRecordV1,
         AnalysisOperationState,
     },
-    FrozenAnalysisInput, W1cAdmission,
+    AttemptReceiptEventV1, FrozenAnalysisInput, W1cAdmission,
 };
 use serde_json::Value;
 use std::sync::{
@@ -23,19 +25,51 @@ use std::sync::{
 use std::thread::JoinHandle;
 use ygo_api::combo::AnalysisReport;
 use ygo_engine_adapter::{ProcessEngineAdapter, ProcessEngineConfig};
-use ygo_search::combo::ScoringConfig;
+use ygo_search::combo::{ScoringConfig, SearchAttemptJournalEvent, SearchAttemptObservation};
 use ygo_storage::{DeckDraftStore, SnapshotStore};
 
+pub(super) trait AttemptJournalSink {
+    fn record(&mut self, event: SearchAttemptJournalEvent) -> Result<(), String>;
+}
+
+impl<F> AttemptJournalSink for F
+where
+    F: FnMut(SearchAttemptJournalEvent) -> Result<(), String>,
+{
+    fn record(&mut self, event: SearchAttemptJournalEvent) -> Result<(), String> {
+        self(event)
+    }
+}
+
 pub(super) type AnalysisExecutor = Arc<
-    dyn Fn(&FrozenAnalysisInput, &ScoringConfig) -> Result<AnalysisReport, AnalysisExecutionFailure>
+    dyn Fn(
+            &FrozenAnalysisInput,
+            &ScoringConfig,
+            &mut dyn AttemptJournalSink,
+        ) -> Result<AnalysisExecution, AnalysisExecutionFailure>
         + Send
         + Sync,
 >;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct AnalysisExecution {
+    pub(super) report: AnalysisReport,
+    pub(super) attempt_observations: Vec<SearchAttemptObservation>,
+}
+
+impl AnalysisExecution {
+    #[cfg(test)]
+    fn report_only(report: AnalysisReport) -> Self {
+        Self {
+            report,
+            attempt_observations: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum AnalysisExecutionFailure {
     BeforeExecution,
-    Uncertain,
+    UncertainWithObservations(Vec<SearchAttemptObservation>),
 }
 
 #[cfg(test)]
@@ -174,13 +208,40 @@ impl AnalysisHttpService {
         }
         #[cfg(test)]
         tests::ticket_return_checkpoint(&ticket);
+        let receipt_context = match self.coordinator.attempt_receipt_context(&ticket) {
+            Ok(context) => context,
+            Err(error) => {
+                let _ = self.coordinator.stop_dispatch();
+                return Err(error);
+            }
+        };
+        let mut journal = |event: SearchAttemptJournalEvent| {
+            let event =
+                AttemptReceiptEventV1::try_from(event).map_err(|error| error.code().to_owned())?;
+            self.coordinator
+                .append_attempt_receipt(&ticket, &receipt_context, event.clone())
+                .map_err(|error| error.code().to_owned())?;
+            #[cfg(test)]
+            if matches!(&event, AttemptReceiptEventV1::Started { .. }) {
+                tests::attempt_start_checkpoint(&ticket, &receipt_context, &event);
+            }
+            Ok(())
+        };
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            executor(ticket.input(), &self.context.scoring)
+            executor(ticket.input(), &self.context.scoring, &mut journal)
         }));
         #[cfg(test)]
         tests::executor_return_checkpoint(&ticket, &outcome);
         match outcome {
-            Ok(Ok(report)) => {
+            Ok(Ok(execution)) => {
+                // Keep the observations alongside report publication. This
+                // batch collects them in memory; durable receipt publication
+                // remains a separate gate, so they never enter this report's
+                // JSON contract.
+                let AnalysisExecution {
+                    report,
+                    attempt_observations: _attempt_observations,
+                } = execution;
                 let bytes = match serde_json::to_vec(&report) {
                     Ok(bytes) => bytes,
                     Err(_) => {
@@ -203,7 +264,12 @@ impl AnalysisHttpService {
                 }
                 Ok(())
             }
-            Ok(Err(AnalysisExecutionFailure::Uncertain)) | Err(_) => {
+            Ok(Err(AnalysisExecutionFailure::UncertainWithObservations(attempt_observations))) => {
+                self.mark_unknown(&ticket)?;
+                drop(attempt_observations);
+                Ok(())
+            }
+            Err(_) => {
                 self.mark_unknown(&ticket)?;
                 Ok(())
             }
@@ -470,20 +536,29 @@ fn durable_now() -> Result<u64, DurableCoordinatorError> {
 }
 
 fn process_analysis_executor() -> AnalysisExecutor {
-    Arc::new(|input, scoring| {
+    Arc::new(|input, scoring, journal| {
         input
             .request
             .search
             .validate()
             .map_err(|_| AnalysisExecutionFailure::BeforeExecution)?;
         let adapter = ProcessEngineAdapter::new(input.runtime_request.engine.clone());
-        let search = ygo_search::combo::search(
+        let observed = ygo_search::combo::search_with_receipts(
             &adapter,
             &input.runtime_request,
             &input.request.search,
             scoring,
-        )
-        .map_err(|_| AnalysisExecutionFailure::Uncertain)?;
+            || ygo_storage::secure_random_hex(16),
+            |event| journal.record(event),
+        );
+        let search = match observed.report {
+            Ok(search) => search,
+            Err(_) => {
+                return Err(AnalysisExecutionFailure::UncertainWithObservations(
+                    observed.attempts,
+                ));
+            }
+        };
         let card_names = input
             .catalog
             .values()
@@ -506,12 +581,15 @@ fn process_analysis_executor() -> AnalysisExecutor {
             })
             .map(|card| (card.id.0, card.name.clone()))
             .collect();
-        Ok(AnalysisReport {
-            schema_version: 2,
-            request: input.request.clone(),
-            runtime_request: input.runtime_request.clone(),
-            search,
-            card_names,
+        Ok(AnalysisExecution {
+            report: AnalysisReport {
+                schema_version: 2,
+                request: input.request.clone(),
+                runtime_request: input.runtime_request.clone(),
+                search,
+                card_names,
+            },
+            attempt_observations: observed.attempts,
         })
     })
 }
@@ -530,6 +608,12 @@ pub(super) fn route(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ygo_engine_adapter::ProcessRunObservation;
+    use ygo_search::combo::{
+        SearchAttemptFfiDirection, SearchAttemptFfiEntry, SearchAttemptFfiReturn,
+        SearchAttemptFfiReturnStatus, SearchAttemptJournalEvent, SearchAttemptPhase,
+        SearchAttemptResult, SearchAttemptStart,
+    };
     include!("analysis_query_fault_tests.rs");
     use crate::{
         workbench::{WorkbenchConfig, WorkbenchServer},
@@ -1419,52 +1503,9 @@ mod tests {
         crate::workbench_analysis::jobs::AnalysisJobRecordV1,
         std::path::PathBuf,
     ) {
-        std::fs::create_dir_all(root).unwrap();
-        let (drafts, snapshots, engine, catalog, banlist, draft) = fixtures(root);
-        std::fs::write(&engine.script_manifest_path, b"{}").unwrap();
-        let saved = drafts.create(draft.clone()).unwrap();
-        let frozen = crate::workbench_analysis::freeze_analysis_input(
-            &drafts,
-            crate::workbench_analysis::AnalysisFreezeSpec {
-                draft_id: saved.id,
-                expected_revision: saved.revision,
-                opening_hand: draft.main[..5].to_vec(),
-                seed: 1,
-                rules: "ocg-mr5".into(),
-                catalog_id: None,
-                banlist_id: banlist,
-                as_of: "2026-10-30".into(),
-                search: Default::default(),
-            },
-            engine.clone(),
-            &snapshots,
-            &catalog,
-        )
-        .unwrap();
-        let store = root.join("jobs-store");
-        let coordinator =
-            Arc::new(DurableAnalysisCoordinator::open_operations(store.clone()).unwrap());
-        let record = coordinator.submit(frozen, Default::default(), 100).unwrap();
-        let context = AnalysisOperationContext {
-            scoring: Default::default(),
-            default_catalog_id: catalog,
-            configuration_sha256: "a".repeat(64),
-        };
-        let service = Arc::new(AnalysisHttpService {
-            coordinator: coordinator.clone(),
-            context,
-            drafts: Arc::new(drafts),
-            snapshots,
-            engine,
-            admission: None,
-            executor: Some(executor),
-            dispatch_lock: Mutex::new(()),
-            accepting: AtomicBool::new(true),
-            background: Mutex::new(Vec::new()),
-            freeze_gate: None,
-            response_fault: Mutex::new(None),
-            freeze_control: None,
-        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(root, executor);
+        let record = coordinator.inspect_job(&job_id).unwrap().remove(0);
         (service, coordinator, record, store)
     }
 
@@ -1475,22 +1516,24 @@ mod tests {
             .join(ygo_storage::secure_random_hex(16).unwrap());
         let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let executor_calls = calls.clone();
-        let executor: AnalysisExecutor = Arc::new(move |input, scoring| {
+        let executor: AnalysisExecutor = Arc::new(move |input, scoring, _journal| {
             executor_calls.fetch_add(1, Ordering::SeqCst);
-            Ok(ygo_api::combo::AnalysisReport {
-                schema_version: 2,
-                request: input.request.clone(),
-                runtime_request: input.runtime_request.clone(),
-                search: ygo_search::combo::SearchReport {
-                    termination: "exhausted".into(),
-                    lines: Vec::new(),
-                    stats: Default::default(),
-                    diagnostics: Vec::new(),
-                    scoring: scoring.clone(),
-                    budget: input.request.search.clone(),
+            Ok(AnalysisExecution::report_only(
+                ygo_api::combo::AnalysisReport {
+                    schema_version: 2,
+                    request: input.request.clone(),
+                    runtime_request: input.runtime_request.clone(),
+                    search: ygo_search::combo::SearchReport {
+                        termination: "exhausted".into(),
+                        lines: Vec::new(),
+                        stats: Default::default(),
+                        diagnostics: Vec::new(),
+                        scoring: scoring.clone(),
+                        budget: input.request.search.clone(),
+                    },
+                    card_names: Default::default(),
                 },
-                card_names: Default::default(),
-            })
+            ))
         });
         let (service, coordinator, queued, _) = dispatch_test_service(&root, executor);
 
@@ -1511,15 +1554,730 @@ mod tests {
     }
 
     #[test]
+    fn search_attempt_journal_is_job_bound_durable_and_byte_stable_on_reopen() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-attempt-journal-tests")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let attempt_id = "d".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |input, scoring, journal| {
+            journal
+                .record(SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                }))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            let observation = SearchAttemptObservation {
+                ordinal: 1,
+                attempt_id: attempt_id.clone(),
+                phase: SearchAttemptPhase::Initial,
+                result: SearchAttemptResult::DuelResult {
+                    status: ygo_engine_adapter::DuelStatus::DecisionRequired,
+                },
+                process_observation: ProcessRunObservation::default(),
+            };
+            journal
+                .record(SearchAttemptJournalEvent::Finished(observation.clone()))
+                .map_err(|_| {
+                    AnalysisExecutionFailure::UncertainWithObservations(vec![observation.clone()])
+                })?;
+            Ok(AnalysisExecution {
+                report: ygo_api::combo::AnalysisReport {
+                    schema_version: 2,
+                    request: input.request.clone(),
+                    runtime_request: input.runtime_request.clone(),
+                    search: ygo_search::combo::SearchReport {
+                        termination: "exhausted".into(),
+                        lines: Vec::new(),
+                        stats: Default::default(),
+                        diagnostics: Vec::new(),
+                        scoring: scoring.clone(),
+                        budget: input.request.search.clone(),
+                    },
+                    card_names: Default::default(),
+                },
+                attempt_observations: vec![observation],
+            })
+        });
+        let (service, coordinator, operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+
+        service.dispatch_pending().unwrap();
+
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        let first_bytes = std::fs::read(receipt_dir.join("1.json")).unwrap();
+        let second_bytes = std::fs::read(receipt_dir.join("2.json")).unwrap();
+        let first: Value = serde_json::from_slice(&first_bytes).unwrap();
+        let second: Value = serde_json::from_slice(&second_bytes).unwrap();
+        assert_eq!(first["context"]["operation_id"], operation_id);
+        assert_eq!(first["context"]["job_id"], job_id);
+        assert_eq!(first["context"]["source_bundle_identity"], Value::Null);
+        assert_eq!(first["context"]["build_record_identity"], Value::Null);
+        assert_eq!(first["sequence"], 1);
+        assert_eq!(second["sequence"], 2);
+        assert_eq!(second["previous_sha256"], first["event_sha256"]);
+        let completed = coordinator.inspect_job(&job_id).unwrap().pop().unwrap();
+        let report_id = &completed.report().unwrap().report_id;
+        let report_bytes =
+            std::fs::read(store.join("reports").join(format!("{report_id}.json"))).unwrap();
+        let report_value: Value = serde_json::from_slice(&report_bytes).unwrap();
+        assert!(report_value.get("attempt_observations").is_none());
+        assert!(report_value.get("attempts").is_none());
+
+        drop(service);
+        drop(coordinator);
+        let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Completed
+        );
+        assert!(reopened.inspect_report(&job_id).is_ok());
+        drop(reopened);
+        let reopened_again = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            std::fs::read(receipt_dir.join("1.json")).unwrap(),
+            first_bytes
+        );
+        assert_eq!(
+            std::fs::read(receipt_dir.join("2.json")).unwrap(),
+            second_bytes
+        );
+        drop(reopened_again);
+
+        let mut tampered: Value = serde_json::from_slice(&first_bytes).unwrap();
+        tampered["event_sha256"] = Value::String("a".repeat(64));
+        std::fs::write(
+            receipt_dir.join("1.json"),
+            serde_json::to_vec(&tampered).unwrap(),
+        )
+        .unwrap();
+        assert!(matches!(
+            DurableAnalysisCoordinator::open_operations(store),
+            Err(DurableCoordinatorError::Persistence(
+                crate::workbench_analysis::persistence::PersistenceError::InvalidChain
+            ))
+        ));
+    }
+
+    #[test]
+    fn attempt_receipt_write_failure_stops_dispatch_and_restart_keeps_unknown() {
+        for (successful_receipts, after_publish, expected_adapter_calls, expected_receipt_events) in [
+            (0, false, 0, 0),
+            (0, true, 0, 1),
+            (1, false, 1, 1),
+            (1, true, 1, 2),
+        ] {
+            let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../target/w1c-attempt-journal-failures")
+                .join(ygo_storage::secure_random_hex(16).unwrap());
+            let adapter_calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+            let observed_calls = adapter_calls.clone();
+            let attempt_id = if successful_receipts == 0 {
+                "f".repeat(32)
+            } else {
+                "e".repeat(32)
+            };
+            let executor: AnalysisExecutor = Arc::new(move |_, _, journal| {
+                journal
+                    .record(SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                        ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        phase: SearchAttemptPhase::Initial,
+                    }))
+                    .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+                observed_calls.fetch_add(1, Ordering::SeqCst);
+                let observation = SearchAttemptObservation {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                    result: SearchAttemptResult::AdapterError {
+                        code: "synthetic_result".into(),
+                        stage: "test".into(),
+                    },
+                    process_observation: ProcessRunObservation::default(),
+                };
+                journal
+                    .record(SearchAttemptJournalEvent::Finished(observation.clone()))
+                    .map_err(|_| {
+                        AnalysisExecutionFailure::UncertainWithObservations(vec![
+                            observation.clone()
+                        ])
+                    })?;
+                Err(AnalysisExecutionFailure::UncertainWithObservations(vec![
+                    observation,
+                ]))
+            });
+            let (service, coordinator, _operation_id, job_id, store) =
+                prepare_operation_dispatch_service(&root, executor);
+            coordinator.inject_attempt_receipt_failure_after(successful_receipts, after_publish);
+
+            assert!(service.dispatch_pending().is_err());
+            assert!(coordinator.is_stopped().unwrap());
+            assert_eq!(adapter_calls.load(Ordering::SeqCst), expected_adapter_calls);
+            drop(service);
+            drop(coordinator);
+
+            let before_recovery = persistent_store_material(&store);
+            let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+            let unknown = reopened.inspect_job(&job_id).unwrap().pop().unwrap();
+            assert_eq!(
+                unknown.state(),
+                crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+            );
+            assert!(unknown.report().is_none());
+            assert!(reopened.claim_next(102).unwrap().is_none());
+            let receipts = store.join("jobs").join(&job_id).join("attempt_receipts");
+            let event_count = std::fs::read_dir(&receipts).unwrap().count();
+            assert_eq!(event_count, expected_receipt_events);
+            drop(reopened);
+            let after_recovery = persistent_store_material(&store);
+            assert_eq!(after_recovery.len(), before_recovery.len() + 1);
+            for (path, bytes) in &before_recovery {
+                assert_eq!(after_recovery.get(path), Some(bytes));
+            }
+            let reopened_again =
+                DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+            assert_eq!(
+                std::fs::read_dir(&receipts).unwrap().count(),
+                expected_receipt_events
+            );
+            drop(reopened_again);
+            assert_eq!(persistent_store_material(&store), after_recovery);
+        }
+    }
+
+    #[test]
+    fn nested_ffi_events_are_bound_to_attempt_and_lifo_paired_before_host_result() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-ffi-journal")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let attempt_id = "a".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |input, scoring, journal| {
+            let start = SearchAttemptStart {
+                ordinal: 1,
+                attempt_id: attempt_id.clone(),
+                phase: SearchAttemptPhase::Initial,
+            };
+            journal
+                .record(SearchAttemptJournalEvent::Started(start))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            for event in [
+                SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: "b".repeat(32),
+                    direction: SearchAttemptFfiDirection::HostToOcgcore,
+                    name: "OCG_DuelProcess".into(),
+                    ffi_ordinal: 1,
+                }),
+                SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: "c".repeat(32),
+                    direction: SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+                    name: "card_reader".into(),
+                    ffi_ordinal: 2,
+                }),
+                SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: "c".repeat(32),
+                    status: SearchAttemptFfiReturnStatus::Returned,
+                    result_sha256: Some("d".repeat(64)),
+                }),
+                SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: "b".repeat(32),
+                    status: SearchAttemptFfiReturnStatus::Returned,
+                    result_sha256: Some("e".repeat(64)),
+                }),
+            ] {
+                journal
+                    .record(event)
+                    .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            }
+            journal
+                .record(SearchAttemptJournalEvent::Finished(
+                    SearchAttemptObservation {
+                        ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        phase: SearchAttemptPhase::Initial,
+                        result: SearchAttemptResult::DuelResult {
+                            status: ygo_engine_adapter::DuelStatus::Failed,
+                        },
+                        process_observation: ProcessRunObservation::default(),
+                    },
+                ))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            Ok(AnalysisExecution::report_only(AnalysisReport {
+                schema_version: 2,
+                request: input.request.clone(),
+                runtime_request: input.runtime_request.clone(),
+                search: ygo_search::combo::SearchReport {
+                    termination: "exhausted".into(),
+                    lines: Vec::new(),
+                    stats: Default::default(),
+                    diagnostics: Vec::new(),
+                    scoring: scoring.clone(),
+                    budget: input.request.search.clone(),
+                },
+                card_names: Default::default(),
+            }))
+        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+
+        service
+            .dispatch_pending()
+            .unwrap_or_else(|error| panic!("ffi journal dispatch failed: {error:?}"));
+
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        let receipt_bytes = (1..=6)
+            .map(|sequence| std::fs::read(receipt_dir.join(format!("{sequence}.json"))).unwrap())
+            .collect::<Vec<_>>();
+        let events = (1..=6)
+            .map(|sequence| {
+                let value: Value = serde_json::from_slice(
+                    &std::fs::read(receipt_dir.join(format!("{sequence}.json"))).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(value["sequence"], sequence);
+                value["event"].clone()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(events[0]["event_type"], "started");
+        assert_eq!(events[1]["event_type"], "ffi_entered");
+        assert_eq!(events[1]["direction"], "host_to_ocgcore");
+        assert_eq!(events[1]["name"], "OCG_DuelProcess");
+        assert_eq!(events[2]["event_type"], "ffi_entered");
+        assert_eq!(events[2]["direction"], "ocgcore_callback_to_host");
+        assert_eq!(events[3]["event_type"], "ffi_returned");
+        assert_eq!(events[3]["call_id"], "c".repeat(32));
+        assert_eq!(events[4]["event_type"], "ffi_returned");
+        assert_eq!(events[4]["call_id"], "b".repeat(32));
+        assert_eq!(events[5]["event_type"], "host_result");
+        assert!(coordinator.inspect_report(&job_id).is_ok());
+        drop(service);
+        drop(coordinator);
+
+        let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Completed
+        );
+        drop(reopened);
+        let reopened_again = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        for (index, expected) in receipt_bytes.iter().enumerate() {
+            assert_eq!(
+                std::fs::read(receipt_dir.join(format!("{}.json", index + 1))).unwrap(),
+                *expected
+            );
+        }
+        drop(reopened_again);
+    }
+
+    #[test]
+    fn outer_ffi_return_before_nested_callback_is_rejected() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-ffi-journal-order")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let attempt_id = "a".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |_, _, journal| {
+            for event in [
+                SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                }),
+                SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: "b".repeat(32),
+                    direction: SearchAttemptFfiDirection::HostToOcgcore,
+                    name: "OCG_DuelProcess".into(),
+                    ffi_ordinal: 1,
+                }),
+                SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: "c".repeat(32),
+                    direction: SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+                    name: "card_reader".into(),
+                    ffi_ordinal: 2,
+                }),
+            ] {
+                journal
+                    .record(event)
+                    .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            }
+            assert!(journal
+                .record(SearchAttemptJournalEvent::FfiReturned(
+                    SearchAttemptFfiReturn {
+                        attempt_ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        call_id: "b".repeat(32),
+                        status: SearchAttemptFfiReturnStatus::Returned,
+                        result_sha256: None,
+                    }
+                ))
+                .is_err());
+            Err(AnalysisExecutionFailure::UncertainWithObservations(
+                Vec::new(),
+            ))
+        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+
+        assert!(service.dispatch_pending().is_err());
+        assert!(coordinator.is_stopped().unwrap());
+        drop(service);
+        drop(coordinator);
+        let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+        );
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        assert_eq!(std::fs::read_dir(&receipt_dir).unwrap().count(), 3);
+        assert!(reopened.claim_next(107).unwrap().is_none());
+    }
+
+    #[test]
+    fn dangling_ffi_entry_is_preserved_as_unknown_across_reopen() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-ffi-journal-interrupted")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let attempt_id = "f".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |_, _, journal| {
+            journal
+                .record(SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                }))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            journal
+                .record(SearchAttemptJournalEvent::FfiEntered(
+                    SearchAttemptFfiEntry {
+                        attempt_ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        call_id: "9".repeat(32),
+                        direction: SearchAttemptFfiDirection::HostToOcgcore,
+                        name: "OCG_DuelProcess".into(),
+                        ffi_ordinal: 1,
+                    },
+                ))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            Err(AnalysisExecutionFailure::UncertainWithObservations(
+                Vec::new(),
+            ))
+        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+
+        service.dispatch_pending().unwrap();
+        let history = coordinator.inspect_job(&job_id).unwrap();
+        assert_eq!(
+            history.last().unwrap().state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+        );
+        assert!(coordinator.inspect_report(&job_id).is_err());
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        assert_eq!(std::fs::read_dir(&receipt_dir).unwrap().count(), 2);
+        let entered: Value =
+            serde_json::from_slice(&std::fs::read(receipt_dir.join("2.json")).unwrap()).unwrap();
+        assert_eq!(entered["event"]["event_type"], "ffi_entered");
+        drop(service);
+        drop(coordinator);
+
+        let first_reopen = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert!(first_reopen.claim_next(103).unwrap().is_none());
+        drop(first_reopen);
+        let stable_bytes = std::fs::read(receipt_dir.join("2.json")).unwrap();
+        let second_reopen = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            second_reopen
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+        );
+        assert!(second_reopen.claim_next(104).unwrap().is_none());
+        drop(second_reopen);
+        assert_eq!(
+            std::fs::read(receipt_dir.join("2.json")).unwrap(),
+            stable_bytes
+        );
+    }
+
+    #[test]
+    fn host_result_cannot_close_an_unreturned_ffi_call() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-ffi-journal-invalid-close")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let attempt_id = "f".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |_input, _scoring, journal| {
+            journal
+                .record(SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                }))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            journal
+                .record(SearchAttemptJournalEvent::FfiEntered(
+                    SearchAttemptFfiEntry {
+                        attempt_ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        call_id: "9".repeat(32),
+                        direction: SearchAttemptFfiDirection::HostToOcgcore,
+                        name: "OCG_DuelProcess".into(),
+                        ffi_ordinal: 1,
+                    },
+                ))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            let invalid_close = journal.record(SearchAttemptJournalEvent::Finished(
+                SearchAttemptObservation {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                    result: SearchAttemptResult::DuelResult {
+                        status: ygo_engine_adapter::DuelStatus::Failed,
+                    },
+                    process_observation: ProcessRunObservation::default(),
+                },
+            ));
+            assert!(invalid_close.is_err());
+            Err(AnalysisExecutionFailure::UncertainWithObservations(
+                Vec::new(),
+            ))
+        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+
+        assert!(service.dispatch_pending().is_err());
+        assert!(coordinator.is_stopped().unwrap());
+        drop(service);
+        drop(coordinator);
+
+        let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+        );
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        assert_eq!(std::fs::read_dir(&receipt_dir).unwrap().count(), 2);
+        let last: Value =
+            serde_json::from_slice(&std::fs::read(receipt_dir.join("2.json")).unwrap()).unwrap();
+        assert_eq!(last["event"]["event_type"], "ffi_entered");
+        assert!(reopened.claim_next(105).unwrap().is_none());
+    }
+
+    #[test]
+    fn ffi_call_ids_cannot_be_reused_across_attempts_in_one_job() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-ffi-journal-duplicate-call-id")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let first_attempt_id = "a".repeat(32);
+        let second_attempt_id = "c".repeat(32);
+        let expected_second_attempt_id = second_attempt_id.clone();
+        let duplicate_call_id = "b".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |_, _, journal| {
+            for event in [
+                SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: first_attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                }),
+                SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+                    attempt_ordinal: 1,
+                    attempt_id: first_attempt_id.clone(),
+                    call_id: duplicate_call_id.clone(),
+                    direction: SearchAttemptFfiDirection::HostToOcgcore,
+                    name: "OCG_DuelProcess".into(),
+                    ffi_ordinal: 1,
+                }),
+                SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+                    attempt_ordinal: 1,
+                    attempt_id: first_attempt_id.clone(),
+                    call_id: duplicate_call_id.clone(),
+                    status: SearchAttemptFfiReturnStatus::Returned,
+                    result_sha256: None,
+                }),
+                SearchAttemptJournalEvent::Finished(SearchAttemptObservation {
+                    ordinal: 1,
+                    attempt_id: first_attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                    result: SearchAttemptResult::DuelResult {
+                        status: ygo_engine_adapter::DuelStatus::Failed,
+                    },
+                    process_observation: ProcessRunObservation::default(),
+                }),
+                SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 2,
+                    attempt_id: second_attempt_id.clone(),
+                    phase: SearchAttemptPhase::Replay,
+                }),
+            ] {
+                journal
+                    .record(event)
+                    .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            }
+            assert!(journal
+                .record(SearchAttemptJournalEvent::FfiEntered(
+                    SearchAttemptFfiEntry {
+                        attempt_ordinal: 2,
+                        attempt_id: second_attempt_id.clone(),
+                        call_id: duplicate_call_id.clone(),
+                        direction: SearchAttemptFfiDirection::HostToOcgcore,
+                        name: "OCG_DuelProcess".into(),
+                        ffi_ordinal: 1,
+                    }
+                ))
+                .is_err());
+            Err(AnalysisExecutionFailure::UncertainWithObservations(
+                Vec::new(),
+            ))
+        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+
+        assert!(service.dispatch_pending().is_err());
+        assert!(coordinator.is_stopped().unwrap());
+        drop(service);
+        drop(coordinator);
+        let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+        );
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        assert_eq!(std::fs::read_dir(&receipt_dir).unwrap().count(), 5);
+        let last: Value =
+            serde_json::from_slice(&std::fs::read(receipt_dir.join("5.json")).unwrap()).unwrap();
+        assert_eq!(last["event"]["event_type"], "started");
+        assert_eq!(last["event"]["attempt_id"], expected_second_attempt_id);
+        assert!(reopened.claim_next(106).unwrap().is_none());
+    }
+
+    #[test]
+    fn ffi_receipt_write_failure_stops_before_following_ffi_event() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-ffi-journal-write-failure")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        let attempt_id = "a".repeat(32);
+        let executor: AnalysisExecutor = Arc::new(move |_, _, journal| {
+            journal
+                .record(SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                }))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            journal
+                .record(SearchAttemptJournalEvent::FfiEntered(
+                    SearchAttemptFfiEntry {
+                        attempt_ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        call_id: "b".repeat(32),
+                        direction: SearchAttemptFfiDirection::HostToOcgcore,
+                        name: "OCG_DuelProcess".into(),
+                        ffi_ordinal: 1,
+                    },
+                ))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            journal
+                .record(SearchAttemptJournalEvent::FfiEntered(
+                    SearchAttemptFfiEntry {
+                        attempt_ordinal: 1,
+                        attempt_id: attempt_id.clone(),
+                        call_id: "c".repeat(32),
+                        direction: SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+                        name: "card_reader".into(),
+                        ffi_ordinal: 2,
+                    },
+                ))
+                .map_err(|_| AnalysisExecutionFailure::UncertainWithObservations(Vec::new()))?;
+            Err(AnalysisExecutionFailure::UncertainWithObservations(
+                Vec::new(),
+            ))
+        });
+        let (service, coordinator, _operation_id, job_id, store) =
+            prepare_operation_dispatch_service(&root, executor);
+        coordinator.inject_attempt_receipt_failure_after(1, false);
+
+        assert!(service.dispatch_pending().is_err());
+        assert!(coordinator.is_stopped().unwrap());
+        drop(service);
+        drop(coordinator);
+
+        let reopened = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            crate::workbench_analysis::jobs::AnalysisJobState::Unknown
+        );
+        let receipt_dir = store.join("jobs").join(&job_id).join("attempt_receipts");
+        assert_eq!(std::fs::read_dir(&receipt_dir).unwrap().count(), 1);
+        let first: Value =
+            serde_json::from_slice(&std::fs::read(receipt_dir.join("1.json")).unwrap()).unwrap();
+        assert_eq!(first["event"]["event_type"], "started");
+        assert!(reopened.claim_next(108).unwrap().is_none());
+    }
+
+    #[test]
     fn uncertain_executor_result_is_persisted_unknown_and_stops_dispatch() {
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/w1c-dispatch-tests")
             .join(ygo_storage::secure_random_hex(16).unwrap());
         let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let executor_calls = calls.clone();
-        let executor: AnalysisExecutor = Arc::new(move |_, _| {
+        let executor: AnalysisExecutor = Arc::new(move |_, _, _journal| {
             executor_calls.fetch_add(1, Ordering::SeqCst);
-            Err(AnalysisExecutionFailure::Uncertain)
+            Err(AnalysisExecutionFailure::UncertainWithObservations(vec![
+                SearchAttemptObservation {
+                    ordinal: 1,
+                    attempt_id: "c".repeat(32),
+                    phase: SearchAttemptPhase::Initial,
+                    result: SearchAttemptResult::AdapterError {
+                        code: "timeout".into(),
+                        stage: "process".into(),
+                    },
+                    process_observation: ProcessRunObservation::default(),
+                },
+            ]))
         });
         let (service, coordinator, queued, store) = dispatch_test_service(&root, executor);
 
@@ -1632,9 +2390,70 @@ mod tests {
         file.sync_all().unwrap();
     }
 
+    pub(super) fn attempt_start_checkpoint(
+        ticket: &crate::workbench_analysis::queue::DispatchTicket,
+        context: &AttemptReceiptContextV1,
+        event: &AttemptReceiptEventV1,
+    ) {
+        let AttemptReceiptEventV1::Started {
+            ordinal,
+            attempt_id,
+            phase,
+        } = event
+        else {
+            return;
+        };
+        let Some(marker) = std::env::var_os(RUNNING_EXECUTOR_CRASH_MARKER) else {
+            return;
+        };
+        assert_eq!(context.job_id, ticket.record().job_id());
+        assert_eq!(context.running_job_revision, ticket.record().revision());
+        let root = std::path::PathBuf::from(
+            std::env::var_os(RUNNING_EXECUTOR_CRASH_ROOT).expect("attempt crash root"),
+        );
+        let receipt_path = root
+            .join("jobs-store")
+            .join("jobs")
+            .join(&context.job_id)
+            .join("attempt_receipts")
+            .join("1.json");
+        let receipt_bytes = std::fs::read(&receipt_path).expect("durable attempt-start receipt");
+        let receipt: Value = serde_json::from_slice(&receipt_bytes).unwrap();
+        assert_eq!(receipt["event"]["event_type"], "started");
+        assert_eq!(receipt["event"]["attempt_id"], attempt_id.as_str());
+        append_executor_crash_event("attempt_start_persisted");
+        publish_executor_checkpoint(
+            &std::path::PathBuf::from(marker),
+            &serde_json::json!({
+                "schema_version": 1,
+                "kind": "h3_running_attempt_start_before_adapter_checkpoint",
+                "pid": std::process::id(),
+                "operation_id": context.operation_id,
+                "job_id": context.job_id,
+                "running_job_revision": context.running_job_revision,
+                "command_sha256": context.command_sha256,
+                "job_input_binding_sha256": context.job_input_binding_sha256,
+                "input_sha256": context.input_sha256,
+                "receipt_sequence": receipt["sequence"],
+                "receipt_event_sha256": receipt["event_sha256"],
+                "receipt_file_sha256": ygo_storage::hash(&receipt_bytes),
+                "attempt_ordinal": ordinal,
+                "attempt_id": attempt_id,
+                "attempt_phase": phase,
+                "executor_invocations": 1,
+                "adapter_calls": 0,
+                "worker_spawned": false,
+                "engine_or_ffi_called": false,
+            }),
+        );
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+    }
+
     pub(super) fn executor_return_checkpoint(
         ticket: &crate::workbench_analysis::queue::DispatchTicket,
-        outcome: &std::thread::Result<Result<AnalysisReport, AnalysisExecutionFailure>>,
+        outcome: &std::thread::Result<Result<AnalysisExecution, AnalysisExecutionFailure>>,
     ) {
         let Some(marker) = std::env::var_os(EXECUTOR_RETURN_CRASH_MARKER) else {
             return;
@@ -1796,7 +2615,7 @@ mod tests {
 
     fn execute_child_until_dispatch_asset_mismatch_checkpoint(root: &std::path::Path) {
         let admission = Arc::new(W1cAdmission::fixture_policy());
-        let executor: AnalysisExecutor = Arc::new(|_, _| {
+        let executor: AnalysisExecutor = Arc::new(|_, _, _journal| {
             append_executor_crash_event("executor_entered");
             panic!("executor must not run after dispatch admission rejects frozen input");
         });
@@ -1813,38 +2632,22 @@ mod tests {
     }
 
     fn execute_child_until_fake_executor_checkpoint(root: &std::path::Path) {
-        let marker = std::path::PathBuf::from(
-            std::env::var_os(RUNNING_EXECUTOR_CRASH_MARKER).expect("executor marker path"),
-        );
-        let ids = Arc::new(Mutex::new(None::<(String, String)>));
-        let executor_ids = ids.clone();
-        let executor: AnalysisExecutor = Arc::new(move |_, _| {
+        let executor: AnalysisExecutor = Arc::new(move |_, _, journal| {
             append_executor_crash_event("fake_executor_entered");
-            let (operation_id, job_id) = executor_ids
-                .lock()
-                .unwrap()
-                .clone()
-                .expect("accepted operation and job ids are available");
-            publish_executor_checkpoint(
-                &marker,
-                &serde_json::json!({
-                    "schema_version": 1,
-                    "kind": "h3_running_executor_checkpoint",
-                    "pid": std::process::id(),
-                    "operation_id": operation_id,
-                    "job_id": job_id,
-                    "executor_invocations": 1,
-                    "worker_spawned": false,
-                    "engine_or_ffi_called": false,
-                }),
-            );
+            journal
+                .record(SearchAttemptJournalEvent::Started(SearchAttemptStart {
+                    ordinal: 1,
+                    attempt_id: "a".repeat(32),
+                    phase: SearchAttemptPhase::Initial,
+                }))
+                .expect("attempt start must be durable before the fake adapter step");
+            append_executor_crash_event("fake_adapter_entered");
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
         });
-        let (service, _coordinator, operation_id, job_id, _store) =
+        let (service, _coordinator, _operation_id, _job_id, _store) =
             prepare_operation_dispatch_service(root, executor);
-        *ids.lock().unwrap() = Some((operation_id, job_id));
         service.dispatch_pending().unwrap();
         panic!("fake executor checkpoint unexpectedly returned");
     }
@@ -1999,8 +2802,12 @@ mod tests {
         assert!(marker.is_file(), "child missed fake executor checkpoint");
         let checkpoint: Value = serde_json::from_slice(&std::fs::read(&marker).unwrap()).unwrap();
         assert_eq!(checkpoint["schema_version"], 1);
-        assert_eq!(checkpoint["kind"], "h3_running_executor_checkpoint");
+        assert_eq!(
+            checkpoint["kind"],
+            "h3_running_attempt_start_before_adapter_checkpoint"
+        );
         assert_eq!(checkpoint["executor_invocations"], 1);
+        assert_eq!(checkpoint["adapter_calls"], 0);
         assert_eq!(checkpoint["worker_spawned"], false);
         assert_eq!(checkpoint["engine_or_ffi_called"], false);
         let operation_id = checkpoint["operation_id"].as_str().unwrap();
@@ -2027,6 +2834,126 @@ mod tests {
             jobs[0].input().binding_sha256,
             operations[3].frozen_input().unwrap().binding_sha256
         );
+        let receipt_path = store
+            .join("jobs")
+            .join(job_id)
+            .join("attempt_receipts")
+            .join("1.json");
+        let receipt_bytes = std::fs::read(&receipt_path).unwrap();
+        let receipt: Value = serde_json::from_slice(&receipt_bytes).unwrap();
+        assert_eq!(receipt["kind"], "w1c_search_attempt_journal_event");
+        assert_eq!(receipt["sequence"], 1);
+        assert_eq!(receipt["previous_sha256"], "0".repeat(64));
+        assert_eq!(receipt["context"]["operation_id"], operation_id);
+        assert_eq!(receipt["context"]["job_id"], job_id);
+        assert_eq!(
+            receipt["context"]["running_job_revision"],
+            jobs[1].revision()
+        );
+        assert_eq!(
+            receipt["context"]["command_sha256"],
+            operations[3].command_sha256().unwrap()
+        );
+        assert_eq!(
+            receipt["context"]["job_input_binding_sha256"],
+            jobs[1].input().binding_sha256
+        );
+        assert_eq!(
+            receipt["context"]["input_sha256"],
+            jobs[1].input().identity.input_sha256
+        );
+        assert_eq!(
+            receipt["context"]["assets"]["engine_sha256"],
+            jobs[1].input().identity.engine_sha256
+        );
+        assert_eq!(
+            receipt["context"]["assets"]["worker_sha256"],
+            jobs[1].input().identity.worker_sha256
+        );
+        assert_eq!(
+            receipt["context"]["assets"]["cdb_sha256"],
+            jobs[1].input().identity.cdb_sha256
+        );
+        assert_eq!(
+            receipt["context"]["assets"]["scripts_sha256"],
+            jobs[1].input().identity.scripts_sha256
+        );
+        assert_eq!(
+            receipt["context"]["assets"]["engine_manifest_sha256"],
+            jobs[1].input().identity.engine_manifest_sha256
+        );
+        assert_eq!(receipt["context"]["source_bundle_identity"], Value::Null);
+        assert_eq!(receipt["context"]["build_record_identity"], Value::Null);
+        let context_sha256 = ygo_storage::hash(&serde_json::to_vec(&receipt["context"]).unwrap());
+        assert_eq!(receipt["context_sha256"], context_sha256);
+        let receipt_event_body = serde_json::json!({
+            "context_sha256": context_sha256,
+            "sequence": receipt["sequence"],
+            "previous_sha256": receipt["previous_sha256"],
+            "event": receipt["event"],
+        });
+        let receipt_event_sha256 =
+            ygo_storage::hash(&serde_json::to_vec(&receipt_event_body).unwrap());
+        assert_eq!(receipt["event_sha256"], receipt_event_sha256);
+        assert_eq!(receipt["event"]["event_type"], "started");
+        assert_eq!(receipt["event"]["ordinal"], checkpoint["attempt_ordinal"]);
+        assert_eq!(receipt["event"]["attempt_id"], checkpoint["attempt_id"]);
+        assert_eq!(receipt["event"]["attempt_id"], "a".repeat(32));
+        assert_eq!(checkpoint["receipt_event_sha256"], receipt["event_sha256"]);
+        assert_eq!(
+            checkpoint["receipt_file_sha256"],
+            ygo_storage::hash(&receipt_bytes)
+        );
+        assert_eq!(
+            checkpoint["job_input_binding_sha256"],
+            receipt["context"]["job_input_binding_sha256"]
+        );
+        assert_eq!(
+            checkpoint["input_sha256"],
+            receipt["context"]["input_sha256"]
+        );
+        assert_eq!(
+            checkpoint["command_sha256"],
+            receipt["context"]["command_sha256"]
+        );
+        assert_eq!(
+            checkpoint["running_job_revision"],
+            receipt["context"]["running_job_revision"]
+        );
+        assert_eq!(checkpoint["receipt_sequence"], 1);
+        assert_eq!(checkpoint["attempt_phase"], "initial");
+        let mut marker_keys = checkpoint
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        marker_keys.sort();
+        let mut expected_marker_keys = [
+            "adapter_calls",
+            "attempt_id",
+            "attempt_ordinal",
+            "attempt_phase",
+            "command_sha256",
+            "engine_or_ffi_called",
+            "executor_invocations",
+            "input_sha256",
+            "job_id",
+            "job_input_binding_sha256",
+            "kind",
+            "operation_id",
+            "pid",
+            "receipt_event_sha256",
+            "receipt_file_sha256",
+            "receipt_sequence",
+            "running_job_revision",
+            "schema_version",
+            "worker_spawned",
+        ];
+        expected_marker_keys.sort();
+        assert_eq!(marker_keys, expected_marker_keys);
+        assert!(checkpoint["pid"].as_u64().is_some_and(|pid| pid > 0));
+        assert_eq!(checkpoint["pid"].as_u64(), Some(u64::from(child.0.id())));
         assert_eq!(std::fs::read_dir(store.join("jobs")).unwrap().count(), 1);
         assert_eq!(std::fs::read_dir(store.join("reports")).unwrap().count(), 0);
         let pre_kill = persistent_store_material(&store);
@@ -2048,6 +2975,16 @@ mod tests {
                 .count(),
             1
         );
+        assert_eq!(
+            events_before_recovery
+                .lines()
+                .filter(|line| *line == "attempt_start_persisted")
+                .count(),
+            1
+        );
+        assert!(!events_before_recovery
+            .lines()
+            .any(|line| line == "fake_adapter_entered"));
         assert_eq!(persistent_store_material(&store), pre_kill);
 
         let recovered = DurableAnalysisCoordinator::open_operations(store.clone()).unwrap();
@@ -2103,6 +3040,9 @@ mod tests {
                 "job_state_before_kill": "running",
                 "job_state_after_reopen": "unknown",
                 "unknown_revision_count": 3,
+                "attempt_receipt_count_before_and_after": 1,
+                "attempt_start_persisted_before_kill": true,
+                "adapter_calls_before_kill": 0,
                 "report_count_before_and_after": 0,
                 "pre_kill_store_sha256": hash_map(&pre_kill),
                 "recovered_store_sha256": hash_map(&after_recovery),
@@ -2124,9 +3064,9 @@ mod tests {
     }
 
     fn execute_child_until_executor_return_checkpoint(root: &std::path::Path) {
-        let executor: AnalysisExecutor = Arc::new(|input, scoring| {
+        let executor: AnalysisExecutor = Arc::new(|input, scoring, _journal| {
             append_executor_crash_event("fake_executor_entered");
-            Ok(AnalysisReport {
+            Ok(AnalysisExecution::report_only(AnalysisReport {
                 schema_version: 2,
                 request: input.request.clone(),
                 runtime_request: input.runtime_request.clone(),
@@ -2139,7 +3079,7 @@ mod tests {
                     budget: input.request.search.clone(),
                 },
                 card_names: Default::default(),
-            })
+            }))
         });
         let (service, _coordinator, _operation_id, _job_id, _store) =
             prepare_operation_dispatch_service(root, executor);
@@ -2372,7 +3312,7 @@ mod tests {
     }
 
     fn execute_child_until_report_temp_sync(root: &std::path::Path) {
-        let executor: AnalysisExecutor = Arc::new(|input, scoring| {
+        let executor: AnalysisExecutor = Arc::new(|input, scoring, _journal| {
             append_executor_crash_event("fake_executor_entered");
             let report = AnalysisReport {
                 schema_version: 2,
@@ -2389,7 +3329,7 @@ mod tests {
                 card_names: Default::default(),
             };
             append_executor_crash_event("fake_executor_returned");
-            Ok(report)
+            Ok(AnalysisExecution::report_only(report))
         });
         let (service, _coordinator, _operation_id, _job_id, _store) =
             prepare_operation_dispatch_service(root, executor);
@@ -2398,7 +3338,7 @@ mod tests {
     }
 
     fn execute_child_until_ticket_return_checkpoint(root: &std::path::Path) {
-        let executor: AnalysisExecutor = Arc::new(|_, _| {
+        let executor: AnalysisExecutor = Arc::new(|_, _, _journal| {
             append_executor_crash_event("fake_executor_entered");
             panic!("executor must not be entered before the ticket-return checkpoint");
         });
