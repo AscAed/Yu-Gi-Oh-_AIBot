@@ -2,6 +2,12 @@
 
 本页是本机安全扫描发现及其处置状态的当前事实源。逐次执行证据见[TESTING](TESTING.md)；主机ACL和部署现场见[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)与[DEPLOYMENT](DEPLOYMENT.md)。
 
+## 2026-11-05 全仓扫描重试未完成
+
+用户提供的扫描界面截图显示：以`622546c`为目标、覆盖731个文件的Deep Scan因Responses API返回HTTP 403 `insufficient_user_quota`，连续3个discovery worker失败后停止；结果为0项。该结果表示扫描未完成，不表示无发现，也没有可恢复的scanId/handoff token。用户要求后续仅在必要时使用Deep Scan，以减少耗时和token开销。
+
+同一改动批次另有最终Diff Scan `c8484c40-59c5-440f-a758-6ad8f94daa01`：17个源码/schema条目审阅完成、0项确认可报告发现，覆盖为`partial`，三项本地路径竞态仍deferred。它与已完成的`50c279b`基线Deep Scan及其修复后定向验证共同构成现有证据；不因Deep Scan配额失败自动重试。若后续代码或部署发生实质性安全相关变化，再按变更风险选择定向审查或扫描。
+
 ## 2026-11-05 当前工作树差异审查
 
 Codex Security Diff Scan `08cd98e2-89e5-4903-9544-212440640450`完成了`622546c`之后工作树差异快照`codex-security-snapshot/v1:sha256:7066e237e5b6940d462847261d8c44928b0b64c2f2fd470c9e9c6d5e52047bf5`中17个源码/schema条目的审阅，结果为0项确认可报告发现，覆盖为`partial`。候选验证保留三项待补证路径竞态：
