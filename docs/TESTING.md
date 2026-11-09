@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-09 W1-C worker FFI 宿主确认流
+
+复核基线为隔离worktree `ec83badb3b395a90ca61f2257b957caf0fd21a4e`。新增严格版本化 `ffi-receipt-stream-v1` 双向行协议；worker在每个FFI入口调用前及返回后发送事件，并等待host先持久化job回执再确认。旧单行协议仍可用。Rust适配器与搜索集成、假worker故障矩阵和协议单元测试均通过。实现范围与未关闭证据门禁见[实施记录](superpowers/plans/2026-11-04-w1c-worker-ffi-ack-stream-plan.md)。
+
+`cargo test --workspace --offline --locked --target-dir target/w1c-ffi-stream-rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets --skip event49_gate_compares_public_witness_not_private_checkpoint_encoding --skip prepare_only_does_not_create_scope_or_charge_calls --skip prepare_only_rejects_changed_fixture_assets_or_route`退出码0。三个被过滤的P4-R1b3 harness用例需要本机冻结赛事运行资产；本隔离worktree没有`data/runtime/tournament-2026`，未复制这些资产。首次未过滤尝试还因`data/snapshots`未提供导致一个工作台用例失败；从主工作区仅复制两份固定快照到本worktree忽略目录后，该用例单独通过并纳入成功复跑。doctor诊断用例由命令显式过滤。已知36个`ignored` opt-in用例保留默认状态。聚焦的adapter、search、CLI及Python receipt/schema测试见本批运行记录；Python schema/执行回执共31 passed、2 skipped。
+
+`cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-ffi-stream-rust -- -D warnings`及`git diff --check`均通过。Python `tests/test_schemas.py`与`tests/test_execution_receipts.py`共31 passed、2 skipped；禁用pytest cacheprovider时有既有`cache_dir`未知配置warning。忽略目录`target/w1c-ffi-stream-20261109/`中的source bundle（732个文件）及绑定的workspace-state bundle均创建并离线校验通过。该批没有启动生产worker、ocgcore/FFI、doctor、runner、真实分析、研究scope或Deep Scan；没有切换部署。真实进程映像认证、真实FFI调用证据、报告来源和研究消费仍未通过。本次不以合成成功提升这些门禁。
+
 ## 2026-11-09 HEAD默认离线自检
 
 基线为`main / 8c7afe60e226fb0483968c6504ea679cdb36b0e3`，测试开始前工作区干净。仅执行默认离线软件验证；测试期间没有改源码、schema、配置、部署资产或ACL，没有运行doctor、生产worker、ocgcore/FFI、runner、真实分析或研究scope，也没有启动Deep Scan。旧`dist/ygo-local`未切换，P4-R5及TASKS中其他开放门禁保持不变。

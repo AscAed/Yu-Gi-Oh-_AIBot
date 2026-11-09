@@ -121,6 +121,7 @@ fn request() -> RunDuelRequest {
 struct ObservedTree {
     calls: AtomicUsize,
     error_stage: &'static str,
+    emit_ffi: bool,
 }
 
 impl ObservedTree {
@@ -128,6 +129,7 @@ impl ObservedTree {
         Self {
             calls: AtomicUsize::new(0),
             error_stage: "process",
+            emit_ffi: false,
         }
     }
 
@@ -135,6 +137,15 @@ impl ObservedTree {
         Self {
             calls: AtomicUsize::new(0),
             error_stage,
+            emit_ffi: false,
+        }
+    }
+
+    fn with_ffi() -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: true,
         }
     }
 }
@@ -189,6 +200,54 @@ impl ProcessObservedAdapter for ObservedTree {
                 elapsed_ms: call as u64,
             },
         }
+    }
+
+    fn run_process_observed_with_ffi(
+        &self,
+        r: &RunDuelRequest,
+        attempt_id: &str,
+        record: &mut dyn FnMut(ygo_engine_adapter::FfiReceiptEvent) -> Result<(), String>,
+    ) -> ProcessObservedOutcome {
+        if !self.emit_ffi {
+            return self.run_process_observed(r);
+        }
+        let outer = "0".repeat(32);
+        let inner = "1".repeat(32);
+        assert_eq!(attempt_id.len(), 32);
+        for event in [
+            ygo_engine_adapter::FfiReceiptEvent::Entered {
+                sequence: 1,
+                call_id: outer.clone(),
+                direction: "into_core".into(),
+                name: "OCG_DuelProcess".into(),
+            },
+            ygo_engine_adapter::FfiReceiptEvent::Entered {
+                sequence: 2,
+                call_id: inner.clone(),
+                direction: "out_of_core".into(),
+                name: "card_reader".into(),
+            },
+            ygo_engine_adapter::FfiReceiptEvent::Returned {
+                sequence: 2,
+                call_id: inner,
+            },
+            ygo_engine_adapter::FfiReceiptEvent::Returned {
+                sequence: 1,
+                call_id: outer,
+            },
+        ] {
+            if let Err(error) = record(event) {
+                return ProcessObservedOutcome {
+                    result: Err(WorkerError::new(
+                        "receipt_write_failed",
+                        "attempt_receipt",
+                        error,
+                    )),
+                    observation: ProcessRunObservation::default(),
+                };
+            }
+        }
+        self.run_process_observed(r)
     }
 }
 
@@ -370,6 +429,63 @@ fn receipt_callbacks_bracket_adapter_calls_and_stop_on_persistence_failure() {
     assert!(finish_failure.report.is_err());
     assert_eq!(finish_failure_adapter.calls.load(Ordering::SeqCst), 1);
     assert_eq!(finish_failure.attempts.len(), 1);
+}
+
+#[test]
+fn ffi_receipts_are_persisted_between_started_and_host_result() {
+    let adapter = ObservedTree::with_ffi();
+    let mut events = Vec::new();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 1,
+            node_budget: 1,
+            max_depth: 1,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || Ok("a".repeat(32)),
+        |event| {
+            events.push(event);
+            Ok(())
+        },
+    );
+
+    assert_eq!(outcome.attempts.len(), 1);
+    assert_eq!(events.len(), 6);
+    assert!(matches!(events[0], SearchAttemptJournalEvent::Started(_)));
+    assert!(matches!(
+        events[1],
+        SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+            ffi_ordinal: 1,
+            direction: SearchAttemptFfiDirection::HostToOcgcore,
+            ..
+        })
+    ));
+    assert!(matches!(
+        events[2],
+        SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+            ffi_ordinal: 2,
+            direction: SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+            ..
+        })
+    ));
+    assert!(matches!(
+        events[3],
+        SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+            status: SearchAttemptFfiReturnStatus::Returned,
+            ..
+        })
+    ));
+    assert!(matches!(
+        events[4],
+        SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+            status: SearchAttemptFfiReturnStatus::Returned,
+            ..
+        })
+    ));
+    assert!(matches!(events[5], SearchAttemptJournalEvent::Finished(_)));
 }
 
 #[test]

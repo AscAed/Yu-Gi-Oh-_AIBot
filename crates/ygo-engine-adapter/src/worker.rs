@@ -1,3 +1,7 @@
+use crate::stream_protocol::{
+    ffi_call_shared, read_frame, shared_worker_stream, FfiDirection, StreamRequest, StreamResult,
+    WorkerSession, STREAM_VERSION,
+};
 use crate::{codec::Reader, ffi::*, *};
 use rusqlite::{Connection, OpenFlags};
 use std::{
@@ -19,6 +23,20 @@ struct Context<'a> {
     errors: Vec<String>,
 }
 unsafe extern "C" fn card_reader(payload: *mut c_void, code: u32, out: *mut CardData) {
+    let ctx = &mut *(payload as *mut Context<'_>);
+    let stream = ctx.api.stream.clone();
+    if let Err(error) = ffi_call_shared(
+        stream.as_ref(),
+        FfiDirection::OutOfCore,
+        "card_reader",
+        || card_reader_inner(payload, code, out),
+    ) {
+        eprintln!("fatal FFI receipt failure in card_reader: {error}");
+        std::process::abort();
+    }
+}
+
+unsafe fn card_reader_inner(payload: *mut c_void, code: u32, out: *mut CardData) {
     let ctx = &mut *(payload as *mut Context<'_>);
     let row = ctx.db.query_row(
         "SELECT alias,setcode,type,level,attribute,race,atk,def FROM datas WHERE id=?1",
@@ -65,15 +83,47 @@ unsafe extern "C" fn card_reader(payload: *mut c_void, code: u32, out: *mut Card
         }
     }
 }
-unsafe extern "C" fn card_done(_: *mut c_void, _: *mut CardData) {}
+unsafe extern "C" fn card_done(payload: *mut c_void, _: *mut CardData) {
+    let ctx = &mut *(payload as *mut Context<'_>);
+    let stream = ctx.api.stream.clone();
+    if let Err(error) =
+        ffi_call_shared(stream.as_ref(), FfiDirection::OutOfCore, "card_done", || ())
+    {
+        eprintln!("fatal FFI receipt failure in card_done: {error}");
+        std::process::abort();
+    }
+}
 unsafe extern "C" fn logger(payload: *mut c_void, message: *const c_char, kind: i32) {
-    if kind == 0 {
-        let ctx = &mut *(payload as *mut Context<'_>);
-        ctx.errors
-            .push(CStr::from_ptr(message).to_string_lossy().into_owned());
+    let ctx = &mut *(payload as *mut Context<'_>);
+    let stream = ctx.api.stream.clone();
+    let result = ffi_call_shared(stream.as_ref(), FfiDirection::OutOfCore, "logger", || {
+        if kind == 0 {
+            ctx.errors
+                .push(CStr::from_ptr(message).to_string_lossy().into_owned());
+        }
+    });
+    if let Err(error) = result {
+        eprintln!("fatal FFI receipt failure in logger: {error}");
+        std::process::abort();
     }
 }
 unsafe extern "C" fn script_reader(payload: *mut c_void, duel: Duel, name: *const c_char) -> i32 {
+    let ctx = &mut *(payload as *mut Context<'_>);
+    let stream = ctx.api.stream.clone();
+    match ffi_call_shared(
+        stream.as_ref(),
+        FfiDirection::OutOfCore,
+        "script_reader",
+        || script_reader_inner(payload, duel, name),
+    ) {
+        Ok(result) => result,
+        Err(error) => {
+            eprintln!("fatal FFI receipt failure in script_reader: {error}");
+            std::process::abort();
+        }
+    }
+}
+unsafe fn script_reader_inner(payload: *mut c_void, duel: Duel, name: *const c_char) -> i32 {
     let ctx = &mut *(payload as *mut Context<'_>);
     let name = CStr::from_ptr(name).to_string_lossy().into_owned();
     if name == "c0.lua" {
@@ -104,14 +154,22 @@ unsafe extern "C" fn script_reader(payload: *mut c_void, duel: Duel, name: *cons
             return Err("script content hash mismatch".into());
         }
         ctx.loaded.insert(relative.clone(), hash);
-        Ok((ctx.api.load_script)(
-            duel,
-            bytes.as_ptr() as *const c_char,
-            bytes.len() as u32,
-            CString::new(name.clone())
-                .map_err(|e| e.to_string())?
-                .as_ptr(),
-        ))
+        let script_name = CString::new(name.clone()).map_err(|e| e.to_string())?;
+        let value = ffi_call_shared(
+            ctx.api.stream.as_ref(),
+            FfiDirection::IntoCore,
+            "OCG_LoadScript",
+            || {
+                (ctx.api.load_script)(
+                    duel,
+                    bytes.as_ptr() as *const c_char,
+                    bytes.len() as u32,
+                    script_name.as_ptr(),
+                )
+            },
+        )
+        .map_err(str::to_owned)?;
+        Ok(value)
     })();
     match result {
         Ok(1) => 1,
@@ -398,7 +456,12 @@ fn checkpoint(
     };
     unsafe {
         let mut len = 0;
-        let ptr = (api.field)(duel, &mut len);
+        let ptr = ffi_call_shared(
+            api.stream.as_ref(),
+            FfiDirection::IntoCore,
+            "OCG_DuelQueryField",
+            || (api.field)(duel, &mut len),
+        )?;
         let raw = buffer(ptr, len)?;
         let mut r = Reader::new(&raw);
         r.u32()?;
@@ -427,7 +490,12 @@ fn checkpoint(
                 } else if zone == 8 {
                     8
                 } else {
-                    (api.query_count)(duel, p, zone)
+                    ffi_call_shared(
+                        api.stream.as_ref(),
+                        FfiDirection::IntoCore,
+                        "OCG_DuelQueryCount",
+                        || (api.query_count)(duel, p, zone),
+                    )?
                 };
                 if count > 4096 {
                     return Err("invalid card count".into());
@@ -452,7 +520,12 @@ fn checkpoint(
                         overlay_sequence: 0,
                     };
                     let mut len = 0;
-                    let ptr = (api.query)(duel, &mut len, &query);
+                    let ptr = ffi_call_shared(
+                        api.stream.as_ref(),
+                        FfiDirection::IntoCore,
+                        "OCG_DuelQuery",
+                        || (api.query)(duel, &mut len, &query),
+                    )?;
                     let bytes = buffer(ptr, len)?;
                     if bytes.is_empty() {
                         continue;
@@ -529,10 +602,17 @@ fn shuffle_initial_deck(cards: &mut [CardId], mut seed: u64) {
     }
 }
 fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
+    execute_stream(request, None)
+}
+
+fn execute_stream(
+    request: RunDuelRequest,
+    stream: Option<WorkerSession>,
+) -> Result<DuelResult, WorkerError> {
     validate_research_capture(&request)
         .map_err(|e| WorkerError::new("research_capture_policy", "input", e))?;
     verify(&request)?;
-    let api = Api::load(&request.engine.ocgcore_path)?;
+    let api = Api::load_with_stream(&request.engine.ocgcore_path, stream)?;
     let mut result = DuelResult::failure(WorkerError::new("not_started", "create", ""));
     result.error = None;
     result.versions = request.versions.clone();
@@ -630,7 +710,13 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
     };
     let mut duel = ptr::null_mut();
     unsafe {
-        let code = (api.create)(&mut duel, &options);
+        let code = ffi_call_shared(
+            api.stream.as_ref(),
+            FfiDirection::IntoCore,
+            "OCG_CreateDuel",
+            || (api.create)(&mut duel, &options),
+        )
+        .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
         if code != 0 || duel.is_null() {
             return Err(WorkerError::new(
                 "create_failed",
@@ -654,35 +740,57 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 (1, 2, &opponent_hand),
             ] {
                 for (seq, id) in cards.iter().enumerate() {
-                    (api.new_card)(
-                        duel,
-                        &NewCard {
-                            team: p,
-                            duelist: 0,
-                            code: id.0,
-                            controller: p,
-                            location: zone,
-                            sequence: seq as u32,
-                            position: if zone == 2 { 1 } else { 8 },
+                    ffi_call_shared(
+                        api.stream.as_ref(),
+                        FfiDirection::IntoCore,
+                        "OCG_DuelNewCard",
+                        || {
+                            (api.new_card)(
+                                duel,
+                                &NewCard {
+                                    team: p,
+                                    duelist: 0,
+                                    code: id.0,
+                                    controller: p,
+                                    location: zone,
+                                    sequence: seq as u32,
+                                    position: if zone == 2 { 1 } else { 8 },
+                                },
+                            )
                         },
-                    );
+                    )
+                    .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
                 }
             }
             if request.scenario.is_some() {
-                (api.new_card)(
-                    duel,
-                    &NewCard {
-                        team: 1,
-                        duelist: 0,
-                        code: 2964201,
-                        controller: 1,
-                        location: 4,
-                        sequence: 0,
-                        position: 1,
+                ffi_call_shared(
+                    api.stream.as_ref(),
+                    FfiDirection::IntoCore,
+                    "OCG_DuelNewCard",
+                    || {
+                        (api.new_card)(
+                            duel,
+                            &NewCard {
+                                team: 1,
+                                duelist: 0,
+                                code: 2964201,
+                                controller: 1,
+                                location: 4,
+                                sequence: 0,
+                                position: 1,
+                            },
+                        )
                     },
-                );
+                )
+                .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
             }
-            (api.start)(duel);
+            ffi_call_shared(
+                api.stream.as_ref(),
+                FfiDirection::IntoCore,
+                "OCG_StartDuel",
+                || (api.start)(duel),
+            )
+            .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
         }
         let (mut turn, mut player, mut phase, mut used) = (0, 0, 0, 0usize);
         let start = std::time::Instant::now();
@@ -691,9 +799,25 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
             if start.elapsed().as_millis() >= request.engine.timeout_ms as u128 {
                 return Err(WorkerError::new("timeout", "duel", "worker deadline"));
             }
-            let status = unsafe { (api.process)(duel) };
+            let status = unsafe {
+                ffi_call_shared(
+                    api.stream.as_ref(),
+                    FfiDirection::IntoCore,
+                    "OCG_DuelProcess",
+                    || (api.process)(duel),
+                )
+            }
+            .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
             let mut length = 0;
-            let ptr = unsafe { (api.message)(duel, &mut length) };
+            let ptr = unsafe {
+                ffi_call_shared(
+                    api.stream.as_ref(),
+                    FfiDirection::IntoCore,
+                    "OCG_DuelGetMessage",
+                    || (api.message)(duel, &mut length),
+                )
+            }
+            .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
             let bytes = unsafe { buffer(ptr, length) }
                 .map_err(|e| WorkerError::new("native_buffer", "messages", e))?;
             let mut prompt = None;
@@ -711,12 +835,7 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                 }
             };
             if request.research_capture.is_some() {
-                capture.batch(
-                    &bytes,
-                    status as i32,
-                    result.events.len() as u64 + 1,
-                    &frames,
-                );
+                capture.batch(&bytes, status, result.events.len() as u64 + 1, &frames);
                 result.terminal_observation = Some(capture.observation(&request, &result.events));
             }
             for raw in frames {
@@ -795,7 +914,15 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                             overlay_sequence: 0,
                         };
                         let mut len = 0;
-                        let ptr = unsafe { (api.query)(duel, &mut len, &query) };
+                        let ptr = unsafe {
+                            ffi_call_shared(
+                                api.stream.as_ref(),
+                                FfiDirection::IntoCore,
+                                "OCG_DuelQuery",
+                                || (api.query)(duel, &mut len, &query),
+                            )
+                        }
+                        .map_err(str::to_owned)?;
                         unsafe { buffer(ptr, len) }
                     });
                 observation["capture_query_count"] = queries.len().into();
@@ -896,7 +1023,13 @@ fn execute(request: RunDuelRequest) -> Result<DuelResult, WorkerError> {
                         .clone(),
                 );
                 unsafe {
-                    (api.response)(duel, bytes.as_ptr(), bytes.len() as u32);
+                    ffi_call_shared(
+                        api.stream.as_ref(),
+                        FfiDirection::IntoCore,
+                        "OCG_DuelSetResponse",
+                        || (api.response)(duel, bytes.as_ptr(), bytes.len() as u32),
+                    )
+                    .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
                 }
                 result.prompt = None;
             } else if status == 1 {
@@ -952,7 +1085,40 @@ pub fn run_worker<R: BufRead, W: Write>(mut input: R, mut output: W) -> std::io:
     output.flush()
 }
 pub fn worker_main() -> std::io::Result<()> {
-    run_worker(std::io::stdin().lock(), std::io::stdout().lock())
+    if std::env::var("YGO_WORKER_PROTOCOL").as_deref() == Ok("ffi-receipt-stream-v1") {
+        run_worker_stream()
+    } else {
+        run_worker(std::io::stdin().lock(), std::io::stdout().lock())
+    }
+}
+
+pub fn run_worker_stream() -> std::io::Result<()> {
+    let mut input = std::io::BufReader::new(std::io::stdin());
+    let request: StreamRequest = match read_frame::<_, StreamRequest>(&mut input) {
+        Ok(request) if request.validate().is_ok() => request,
+        _ => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "invalid stream request",
+            ));
+        }
+    };
+    let attempt_id = request.attempt_id;
+    let stream = shared_worker_stream(attempt_id.clone(), input, std::io::stdout())
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))?;
+    let result =
+        execute_stream(request.request, Some(stream.clone())).unwrap_or_else(DuelResult::failure);
+    let response = StreamResult {
+        version: STREAM_VERSION,
+        attempt_id,
+        result,
+    };
+    let write_result = stream
+        .lock()
+        .map_err(|_| std::io::Error::other("worker stream poisoned"))?
+        .send_result(&response)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error));
+    write_result
 }
 fn automatic_choice(prompt: &Prompt, protocol: u16, resolved: usize) -> Option<Choice> {
     if prompt.actions.len() == 1 && resolved < 1024 && !(protocol >= 5 && prompt.opcode == 11) {

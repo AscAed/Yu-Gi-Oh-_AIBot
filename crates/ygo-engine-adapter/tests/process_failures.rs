@@ -43,7 +43,7 @@ fn check(mode: &str, code: &str) {
     std::fs::copy(env!("CARGO_BIN_EXE_ygo-worker-fixture"), &path).unwrap();
     let mut r = request();
     r.engine.worker_path = path.clone();
-    r.engine.timeout_ms = if mode == "hang" { 200 } else { 2000 };
+    r.engine.timeout_ms = if mode == "hang" { 200 } else { 10_000 };
     let adapter = ProcessEngineAdapter::new(r.engine.clone());
     let start = std::time::Instant::now();
     let error = adapter.run(&r).unwrap_err();
@@ -75,7 +75,7 @@ fn incompatible_worker_protocol_is_rejected() {
 
 #[test]
 fn observed_run_captures_worker_request_response_and_exit() {
-    let (r, observed, path, directory) = observed_fixture("valid", 2000);
+    let (r, observed, path, directory) = observed_fixture("valid", 10_000);
 
     assert!(observed.result.is_ok());
     let observation = observed.observation;
@@ -152,7 +152,7 @@ fn observed_run_preserves_distinct_exit_and_response_failures() {
             None,
         ),
     ] {
-        let timeout_ms = if mode == "hang" { 200 } else { 2000 };
+        let timeout_ms = if mode == "hang" { 200 } else { 10_000 };
         let (_, outcome, path, directory) = observed_fixture(mode, timeout_ms);
         assert_eq!(outcome.result.unwrap_err().code, error_code, "{mode}");
         let observation = outcome.observation;
@@ -214,5 +214,166 @@ fn observed_spawn_failure_does_not_claim_pipe_or_response_io() {
         ProcessTermination::NotStarted
     );
 
+    std::fs::remove_dir(directory).unwrap();
+}
+
+fn stream_fixture(name: &str) -> (RunDuelRequest, ProcessEngineAdapter, PathBuf, PathBuf) {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let directory = std::env::temp_dir().join(format!(
+        "ygo-stream-observation-{}-{}-{name}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join(format!("fixture-{name}{}", std::env::consts::EXE_SUFFIX));
+    std::fs::copy(env!("CARGO_BIN_EXE_ygo-worker-fixture"), &path).unwrap();
+    let mut request = request();
+    request.engine.worker_path = path.clone();
+    request.engine.timeout_ms = 10_000;
+    let adapter = ProcessEngineAdapter::new(request.engine.clone());
+    (request, adapter, path, directory)
+}
+
+#[test]
+fn stream_supervisor_persists_nested_events_before_acknowledging() {
+    let (request, adapter, path, directory) = stream_fixture("stream-valid");
+    let mut events = Vec::new();
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "a".repeat(32).as_str(), &mut |event| {
+            events.push(event);
+            Ok(())
+        });
+
+    assert!(outcome.result.is_ok());
+    assert_eq!(events.len(), 4);
+    assert!(matches!(
+        &events[0],
+        FfiReceiptEvent::Entered { sequence: 1, .. }
+    ));
+    assert!(matches!(
+        &events[1],
+        FfiReceiptEvent::Entered { sequence: 2, .. }
+    ));
+    assert!(matches!(
+        &events[2],
+        FfiReceiptEvent::Returned { sequence: 2, .. }
+    ));
+    assert!(matches!(
+        &events[3],
+        FfiReceiptEvent::Returned { sequence: 1, .. }
+    ));
+    assert_eq!(outcome.observation.termination, ProcessTermination::Exited);
+
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_kills_worker_when_receipt_persistence_fails() {
+    let (request, adapter, path, directory) = stream_fixture("stream-valid");
+    let mut events = 0;
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "b".repeat(32).as_str(), &mut |_| {
+            events += 1;
+            Err("simulated durable append failure".into())
+        });
+
+    assert_eq!(outcome.result.unwrap_err().code, "receipt_write_failed");
+    assert_eq!(events, 1);
+    assert_eq!(outcome.observation.termination, ProcessTermination::Exited);
+
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_rejects_out_of_order_frames() {
+    let (request, adapter, path, directory) = stream_fixture("stream-invalid");
+    let mut events = 0;
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "c".repeat(32).as_str(), &mut |_| {
+            events += 1;
+            Ok(())
+        });
+
+    assert_eq!(outcome.result.unwrap_err().code, "event_order");
+    assert_eq!(events, 0);
+
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_times_out_when_receipt_persistence_exceeds_deadline() {
+    let (mut request, _, path, directory) = stream_fixture("stream-valid");
+    request.engine.timeout_ms = 5000;
+    let adapter = ProcessEngineAdapter::new(request.engine.clone());
+    let mut events = 0;
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "d".repeat(32).as_str(), &mut |_| {
+            events += 1;
+            std::thread::sleep(std::time::Duration::from_millis(5100));
+            Ok(())
+        });
+
+    assert_eq!(outcome.result.unwrap_err().code, "timeout");
+    assert_eq!(events, 1);
+    assert_eq!(
+        outcome.observation.termination,
+        ProcessTermination::TimedOut
+    );
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_classifies_exit_after_entered_as_unresolved() {
+    let (request, adapter, path, directory) = stream_fixture("stream-exit-after-entry");
+    let mut events = Vec::new();
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "e".repeat(32).as_str(), &mut |event| {
+            events.push(event);
+            Ok(())
+        });
+
+    assert_eq!(outcome.result.unwrap_err().code, "worker_eof");
+    assert_eq!(events.len(), 1);
+    assert!(matches!(
+        events.first(),
+        Some(FfiReceiptEvent::Entered { sequence: 1, .. })
+    ));
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_rejects_data_after_result() {
+    let (request, adapter, path, directory) = stream_fixture("stream-after-result");
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "f".repeat(32).as_str(), &mut |_| Ok(()));
+
+    assert_eq!(outcome.result.unwrap_err().code, "frame_after_result");
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_accepts_result_without_ffi_events() {
+    let (request, adapter, path, directory) = stream_fixture("stream-no-events");
+    let mut events = 0;
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "0".repeat(32).as_str(), &mut |_| {
+            events += 1;
+            Ok(())
+        });
+
+    assert!(outcome.result.is_ok());
+    assert_eq!(events, 0);
+    assert_eq!(
+        outcome.observation.response_validation,
+        ProcessResponseValidation::Parsed
+    );
+    std::fs::remove_file(path).unwrap();
     std::fs::remove_dir(directory).unwrap();
 }

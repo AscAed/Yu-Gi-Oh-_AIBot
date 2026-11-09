@@ -1,6 +1,6 @@
 # W1-C worker FFI 宿主确认流实施计划（2026-11-04）
 
-状态：下一独立实现批次，未接入生产worker。当前attempt日志已经能保存合成FFI entered/returned事件；Rust磁盘验证器和Python离线验证器都要求同一attempt内LIFO返回，并拒绝job范围的重复call ID。两边的事件由合成executor提供，尚不能证明worker或ocgcore实际调用。
+状态：协议、worker调用包装、host supervisor与合成子进程矩阵已实现；旧单行协议保持可用。Rust磁盘验证器和Python离线验证器都要求同一attempt内LIFO返回，并拒绝job范围的重复call ID。当前证据只来自合成worker，不证明生产worker或ocgcore实际调用；真实worker接线、映像来源绑定和消费验收仍开放。测试范围见[TESTING](../../TESTING.md#2026-11-09-w1-c-worker-ffi-宿主确认流)。
 
 ## 当前缺口
 

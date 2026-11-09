@@ -836,7 +836,41 @@ where
                     error,
                 ))
             })?;
-            let outcome = adapter.run_process_observed(run_request);
+            let mut record_ffi = |event: ygo_engine_adapter::FfiReceiptEvent| match event {
+                ygo_engine_adapter::FfiReceiptEvent::Entered {
+                    sequence,
+                    call_id,
+                    direction,
+                    name,
+                } => record_event(SearchAttemptJournalEvent::FfiEntered(
+                    SearchAttemptFfiEntry {
+                        attempt_ordinal: ordinal,
+                        attempt_id: attempt_id.clone(),
+                        call_id,
+                        direction: match direction.as_str() {
+                            "into_core" => SearchAttemptFfiDirection::HostToOcgcore,
+                            "out_of_core" => SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+                            _ => return Err("invalid FFI direction".into()),
+                        },
+                        name,
+                        ffi_ordinal: sequence,
+                    },
+                )),
+                ygo_engine_adapter::FfiReceiptEvent::Returned {
+                    sequence: _,
+                    call_id,
+                } => record_event(SearchAttemptJournalEvent::FfiReturned(
+                    SearchAttemptFfiReturn {
+                        attempt_ordinal: ordinal,
+                        attempt_id: attempt_id.clone(),
+                        call_id,
+                        status: SearchAttemptFfiReturnStatus::Returned,
+                        result_sha256: None,
+                    },
+                )),
+            };
+            let outcome =
+                adapter.run_process_observed_with_ffi(run_request, &attempt_id, &mut record_ffi);
             let result = match &outcome.result {
                 Ok(result) => SearchAttemptResult::DuelResult {
                     status: result.status.clone(),

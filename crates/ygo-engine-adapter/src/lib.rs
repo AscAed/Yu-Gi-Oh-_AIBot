@@ -12,6 +12,7 @@ mod prompt_corpus;
 mod prompt_probe;
 mod regression;
 mod research;
+pub mod stream_protocol;
 mod tenki_placement_probe;
 mod terminal_capture;
 mod terminal_validation;

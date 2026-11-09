@@ -1,5 +1,7 @@
 # Windows 本机部署与验收
 
+2026-11-09：W1-C `ffi-receipt-stream-v1`在隔离worktree完成验证并提交；未部署。`dist/ygo-local`未切换，其既有2026-10-19身份记录继续适用。合成worker协议测试不证明发布包包含新代码、生产worker映像身份或真实ocgcore/FFI执行。完整范围见[本次验证](TESTING.md#2026-11-09-w1-c-worker-ffi-宿主确认流)。
+
 2026-11-04路线复核基线为`main / 622546c`，开始时工作区干净；本轮沿用同日旧包只读哈希记录，不重跑包内程序。旧包清单只绑定CLI/worker，缺完整manifest及workbench入口；隔离候选与旧包均不证明该HEAD已部署，P4-R5仍开放。
 
 2026-11-04只读复核：检查时HEAD为`main / b35b12dec226b3b71eb36896e27452ec7fd12015`；代码与文档整改尚未部署。`dist/ygo-local`中的`ygo.exe`和`ygo-engine-worker.exe`时间戳为2026-10-19，SHA-256分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内只列这两个文件的`build-hashes.json`一致。包内没有`manifest.json`或`workbench/`；只读检查未运行任何包内程序。因此这些哈希只确认旧包与自身清单一致，不能证明当前源码已部署。ACL于2026-11-04再次只读复核；用户选择保留当前ACL，本轮未改权限。默认工作台仍返回`analysis_not_configured`；只有源码CLI显式传入`--analysis-config`才构造固定Rabbit分析执行器并调用worker。旧发布包不含该工作台入口。
