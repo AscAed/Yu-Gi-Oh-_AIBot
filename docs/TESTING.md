@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-09 HEAD默认离线自检
+
+基线为`main / 8c7afe60e226fb0483968c6504ea679cdb36b0e3`，测试开始前工作区干净。仅执行默认离线软件验证；测试期间没有改源码、schema、配置、部署资产或ACL，没有运行doctor、生产worker、ocgcore/FFI、runner、真实分析或研究scope，也没有启动Deep Scan。旧`dist/ygo-local`未切换，P4-R5及TASKS中其他开放门禁保持不变。
+
+Rust workspace命令`cargo test --workspace --offline --locked --target-dir target/audit-20261109/rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`退出码0，共92个结果组，**495 passed、0 failed、36 ignored**；忽略项为显式本机资产、原生执行、研究准备或报告opt-in。日志SHA-256=`D90F6AD780DD03A058631DD64283EA75EA1E87E5F157B1A067F459C184F67A7D`。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/audit-20261109/rust -- -D warnings`、`cargo fmt --all -- --check`及`git diff --check`均通过。
+
+Python顶层套件使用PowerShell枚举`tests/test_*.py`后运行`py -m pytest @files -p no:cacheprovider -q --basetemp target/audit-20261109/pytest`，退出码0：**821 passed、9 skipped、219 subtests passed**，耗时1893.11秒。9项为Windows目录链接能力限制或明确opt-in的本机资产/报告用例；pytest报告既有`cache_dir`未知配置警告。未发现需要本次修复的默认回归。此批不验证生产FFI确认流、当前源码部署或未决本地路径竞态；安全扫描结论和未决项见[SECURITY_AUDIT](SECURITY_AUDIT.md)，实施状态与开放门禁见[TASKS](../TASKS.md)。
+
 ## 2026-11-05 当前工作树回归与安全差异审查
 
 针对`622546c144604f36620deebe7f0f57e72271501f`之后的工作树差异，修复并回归了四项输入/边界问题：Rust搜索回执门禁改用内部错误类型，避免adapter通过stage字符串触发错误分类；Python回执枚举值非字符串时返回合同诊断；source-bound build verifier将非字符串状态拒为诊断而不抛出`TypeError`；`source_bundle_changed`记录按实际前后身份差异验收，保留`observed_command_only`边界。

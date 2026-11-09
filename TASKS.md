@@ -2,6 +2,8 @@
 
 当前实施路线：[2026-11-04复核的项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
+2026-11-09按HEAD`8c7afe60e226fb0483968c6504ea679cdb36b0e3`完成默认离线Rust/Python回归、格式和Clippy复核；本次没有发现需修复的默认回归，也未改变以下任务门禁。W1-C worker FFI宿主确认流仍是未实施计划，真实worker/ocgcore/FFI、报告来源、消费和发布验收不由合成或默认测试替代；范围与命令见[本次验证记录](docs/TESTING.md#2026-11-09-head默认离线自检)。
+
 H3恢复的逻辑窗口、证据层级和未覆盖边界见[H3.1证据门禁映射](docs/superpowers/plans/2026-11-02-h3-evidence-gate-map.md)及[HISTORY_INDEX](docs/HISTORY_INDEX.md)。所有窗口验收均按具体提交点限定；它们不关闭其他调度、逐syscall、断电或介质故障门禁。
 
 部署身份、隔离候选和本机资产权限见[DEPLOYMENT](docs/DEPLOYMENT.md)与[ENVIRONMENT_AUDIT](docs/ENVIRONMENT_AUDIT.md)。普通启动保持`analysis_not_configured`；局部测试或预算截断运行不表示完整搜索、全局最优或发布通过。
