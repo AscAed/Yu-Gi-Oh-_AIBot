@@ -14,3 +14,6 @@ ygo-storage = { path = "../ygo-storage" }
 ygo-search = { path = "../ygo-search" }
 ygo-api = { path = "../ygo-api" }
 ygo-knowledge = { path = "../ygo-knowledge" }
+
+[dev-dependencies]
+ygo-storage = { path = "../ygo-storage", features = ["h3-crash-test-hook"] }

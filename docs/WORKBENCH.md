@@ -1,8 +1,18 @@
 # 本机牌组草稿工作台
 
-W1-B2进程内队列与W1-B3任务/报告持久存储、DurableAnalysisCoordinator及内部合成故障矩阵已实现；这些Rust内部能力未接入工作台分析HTTP，当前网页仍只管理草稿、卡片查询和字段状态。矩阵不认证真实执行、逐syscall崩溃或断电持久性。任务和报告合同见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+当前工作台状态与分析恢复门禁见[TASKS](../TASKS.md)和[TESTING](TESTING.md)。H3.2-2a、2b-1四个限定进程终止窗口及2b-2 accepting保存后冻结前窗口已验收；其余2b窗口/调度、syscall/断电/介质故障仍开放。W1-C固定Rabbit单次本机有限分析已在隔离scope下以`budget_limited/time_budget`完成；FFI/消费未独立计量、报告来源未独立认证。普通启动保持`analysis_not_configured`；后续运行须另有执行范围。以下历史段落保留原时点。
 
-工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查，也不调用引擎、worker或研究入口。
+2026-11-03：隔离工作台候选包通过同机空profile启动、catalog检索、草稿和JSON/YDK往返、重启重开验收；旧发布包不含workbench，升级和干净Windows环境仍开放。见[W2验收记录](superpowers/plans/2026-11-03-w2-offline-clean-environment-plan.md)。
+
+历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见本文顶部与[当前任务](../TASKS.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。现有跨链认证/分类可复用；新增完整恢复与响应丢失矩阵尚未实现／尚未运行，留待H3.2。普通启动仍为`analysis_not_configured`。
+
+H2.2-A/B所列合成HTTP验收已关闭，但普通启动仍未配置分析后端，真实分析与H3开放。取消先完成的顺序分支有既有用例，16轮并发竞争均由claim获胜；早期TCP重置根因未知。
+
+当前HTTP v1源码包含六个分析端点及无路径DTO；显式配置下还会启用持久单任务派发器，结果先落盘再提交终态。Rabbit固定参数/资产准入已接入显式生产入口，2026-11-03一次本机有限分析运行到`budget_limited/time_budget`并经受控重开复核。普通`workbench serve`仍未配置分析后端，分析请求返回`analysis_not_configured`；网页没有任务操作界面。H3.2-2b其他窗口/调度、FFI/消费独立计量、报告来源认证和P4-R5仍开放；接口见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)，实现与证据见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[TESTING](TESTING.md)及[2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
+
+工作台提供离线的中文单页界面，用于新建、编辑、保存、重开和导入/导出牌组草稿。它消费`DeckDocumentV1`，允许空/残缺牌组、重复卡号和有序分区；不替代完整牌组合法性检查。默认草稿流程不调用引擎或worker；显式配置`--analysis-config`会启用固定Rabbit分析，并通过worker执行。该配置不开放研究runner。
 
 W1-A冻结对象仍仅驻留内存，包含本机路径及完整catalog，不实现序列化；B1持久化的是独立无路径任务记录。B3另有内部任务revision存储、私有报告文件和持久先行协调器，并在claim时核对冻结资产角色哈希。草稿目录存储与分析任务存储是不同子系统；实际执行接入仍需在调用边界再次核验资产。
 
@@ -23,14 +33,24 @@ cargo run -p ygo-cli --offline --locked -- workbench serve
 --store DIR       快照根目录，默认 data/snapshots
 --catalog-id ID   已导入本地catalog快照ID；不提供时卡名未核验
 --language-status FILE  C1字段状态报告；只读取状态和哈希，不读取候选正文
+--analysis-config FILE  显式启用分析执行；读取ProcessEngineConfig TOML，默认不启用
+--analysis-store DIR    分析任务/报告存储目录；仅能与--analysis-config一起使用
 --port PORT       固定本机端口；不提供时由系统分配
+```
+
+启用`--analysis-config`时还必须提供`--catalog-id`，且该ID必须能在`--store`指定的快照根目录（默认`data/snapshots`）中读取。固定W1-C入口要求固定catalog `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`、匹配的本地快照及`target/w1c-executor/cargo`隔离target内构建的CLI和worker；两者必须位于同一Cargo profile目录。普通`cargo run`会启动`target/debug`中的CLI，不满足该准入条件。只有本机固定快照、配置及引擎资产均通过身份校验时，以下命令才会启动显式固定Rabbit分析入口：
+
+```powershell
+cargo build -p ygo-cli --offline --locked --target-dir target/w1c-executor/cargo
+cargo build -p ygo-engine-adapter --bin ygo-engine-worker --offline --locked --target-dir target/w1c-executor/cargo
+& .\target\w1c-executor\cargo\debug\ygo-cli.exe workbench serve --store data/snapshots --catalog-id catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d --analysis-config configs/w1c-analysis.example.toml --analysis-store data/runtime/workbench/analysis
 ```
 
 指定catalog时，启动过程通过`SnapshotStore`读取并验证快照。检索只使用该快照的卡号和原始名称；界面始终标示中文译文未核验。未指定catalog也可编辑任意非零u32卡号。
 
 ## HTTP接口
 
-API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌访问API；所有API非GET请求（包含当前未注册的DELETE）在路由分派前还要求精确同源Origin。服务检查Host为当前`127.0.0.1:port`，不设置跨域许可。请求体上限1 MiB，头部上限16 KiB，读写超时5秒，最多并发处理32个连接。不接受chunked请求。草稿由生成的随机标识寻址，浏览器不能指定本机路径。
+API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌访问API；所有API非GET请求（包括分析任务DELETE）在路由分派前都要求精确同源Origin。服务检查Host为当前`127.0.0.1:port`，不设置跨域许可。请求体上限1 MiB，头部上限16 KiB；从接受连接起，请求头和请求体共用15秒绝对读取期限，写超时为5秒；最多并发处理32个连接。不接受chunked请求。草稿和分析任务由服务生成的随机标识寻址，浏览器不能指定本机路径。
 
 | 方法与路径 | 用途 |
 |---|---|
@@ -43,13 +63,15 @@ API仅为内嵌单页服务。浏览器获得启动令牌后通过Bearer令牌�
 | `GET /api/cards?q=...` | 可选catalog中的卡号或原始名称检索 |
 | `GET /api/language-status?ids=...` | 可选C1报告中的逐字段状态；不返回候选译文 |
 
-文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。工作台不提供分析、自动构筑或已认证中文搜索。
+文件JSON导入支持`DeckDocumentV1`和既有裸`Deck`。YDK只表达分区、卡号和数量，不保留标题。未知卡号及无译文不丢弃；没有catalog时显示名称未核验，检索到本地原始名称时显示来源和中文未核验。自动构筑和已认证中文搜索也未提供。
 
-## 分析接入设计状态
+分析端点完整请求/响应合同见[分析HTTP v1合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
-工作台目前没有分析任务端点，也不调用`combo analyze`。W1-A已提供Rust库内部`ygo_cli::workbench_analysis::freeze_analysis_input`：以草稿ID和revision在同一存储锁内读取牌组，然后调用现有`prepare`验证完整牌组、五张起手、规则、禁限日期、预算及catalog/CDB一致性。它返回自有输入和版本身份，错误只暴露稳定代码；该函数不创建任务、不构造adapter、不启动worker。保留的总体设计见[受限分析接入设计](superpowers/plans/2026-10-30-w1-workbench-limited-analysis-design.md)，本阶段交接见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)。
+## 分析 HTTP 接入与运行状态
 
-W1-B1的Rust内部记录从revision 1/queued开始，定义队列启动/取消、重启分类和运行结果终态。W1-B2实现进程内队列；W1-B3提供持久先行协调器及报告文件绑定/验证。内部合成故障矩阵覆盖发布前后失败、协调器停派发、重开恢复、重复终态、资产角色和脚本路径漂移及进程强杀。协调器claim对冻结worker/DLL/CDB/script/manifest执行实时一致性检查；不匹配时先持久记录failed/asset_mismatch，再返回错误且不下发执行票据。详情见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)和[持久化设计/实现状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)。之后若执行冻结输入，必须在实际运行前重新核验引擎资产；持有冻结对象不表示实时资产仍与冻结身份相同。逐syscall崩溃/断电、HTTP及真实分析尚未验收。Rabbit走查和任务场景不是本批真实分析结果。
+H2.2源码实现六个端点：分配/提交/查询操作、查询任务、读取结果及取消排队任务。提交先持久保存`accepting`再返回202，后台锁外完成W1-A冻结；结果经无路径白名单投影，历史读取使用已认证的持久记录。完整请求/响应合同见[WORKBENCH_ANALYSIS_HTTP.md](WORKBENCH_ANALYSIS_HTTP.md)。
+
+默认启动没有配置分析协调器，以上端点返回`analysis_not_configured`。仅显式传入`--analysis-config FILE`才会构造持久协调器和生产执行器；成功冻结后每次派发调用至多领取一个任务，任务执行串行。该显式入口仅接受固定Rabbit牌组/起手/seed/rules/snapshot/date/budget及绑定资产与隔离包身份；一次真实本机有限分析已到`budget_limited/time_budget`，不是完整搜索或最优性证明。预算/引擎调用前可认证的失败提交为`analysis_failed`；调用后错误、panic或报告编码不确定会持久化为`unknown`并停止派发，重开不自动重试。成功报告先持久化，再提交completed或budget-limited终态。报告来源独立认证、FFI/消费独立计量及H3.2-2b其他窗口/调度仍开放；逐syscall、断电和介质故障未认证。任务进程内冻结对象含本机路径与完整catalog，不可直接序列化。部署包状态见[DEPLOYMENT.md](DEPLOYMENT.md)。
 
 ## 保存与本机数据
 
@@ -64,5 +86,5 @@ CLI和工作台复用`ygo-storage`的草稿读写能力。草稿目录含服务�
 - 中文卡名、别名及正文没有通过C1语义/来源核验；本地snapshot名称不能作为中文资格。
 - 可通过`--language-status`显示C1冻结候选的字段状态；状态文件缺失/损坏时继续按未核验显示。报告和使用边界见[LANGUAGE_REVIEW](LANGUAGE_REVIEW.md)。
 - 草稿不做禁限、主卡组张数、额外卡组、卡片支持或脚本语义检查。
-- 工作台不启动游戏引擎，不规划线路，不自动构筑，也不写研究账本。
+- 默认草稿模式不启动游戏引擎；显式`--analysis-config`可通过worker执行固定Rabbit分析。工作台不自动构筑，也不写研究账本。
 - B2验收只覆盖本机工作台流程和合成卡表。它不是通用远程服务或发布部署包。

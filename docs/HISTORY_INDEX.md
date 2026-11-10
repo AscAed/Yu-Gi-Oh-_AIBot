@@ -2,6 +2,8 @@
 
 本文件承接[文档入口](INDEX.md)中的历史计划、交接与批次导航。**以下全部是历史资料，不是当前执行指令，也不授予运行旧命令、重试、续用窗口或新增调用的权限。** 当前状态与开放任务只看[任务表](../TASKS.md)，验证范围只看[TESTING](TESTING.md)对应记录；全卡与全局最优验收门槛以[产品愿景](PRODUCT_VISION.md)为准。
 
+当前日期化项目评估与双轨路线见[2026-11-09路线快照](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)；以下路线/交接继续按各自日期阅读，不覆盖当前任务状态。
+
 2026-10-27环境自检将原任务表与验证记录的完整正文分别逐字保存为[任务历史快照](../TASKS_HISTORY.md)和[验证历史快照](TESTING_HISTORY.md)。原入口保留原有历史标题及锚点，并链接到快照；快照是拆分时的工作区副本，不是先前原生源码归档。拆分清单和哈希见[TESTING](TESTING.md)。
 
 ## 历史资料的读取边界
@@ -84,6 +86,60 @@
 | 历史条目 | 原链接（保持原目标） | 当时状态与消费边界 |
 |---|---|---|
 | 历史：Curry V3恢复证据绑定的Curry七阶段再验真（历史） | [`本批交接`](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)、[`历史验证`](TESTING.md)、[`最终交付`](../data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json) | 新scope七阶段及两个独立重放通过，7/7消费、unknown 0；认证子集40、规划47；历史实际总消费仍未知，四项资格为false |
+
+## 2026-11-01：工作台分析接入与H3恢复验收
+
+以下交接记录限定范围的内部/合成实现与测试。每项真实分析、原生调用及进程故障资格仍以对应TESTING证据与TASKS开放门禁为准；H3.2-2b-1只关闭其声明的四个子进程终止窗口，不覆盖其余窗口、全部调度或系统级故障。
+
+| 历史条目 | 原链接 | 当时状态与范围 |
+|---|---|---|
+| 历史：H2.2 HTTP持久故障矩阵 | [H2.2-A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)、[验证记录](TESTING.md) | 42个逻辑提交组合、同步/后台TCP故障与停止后只读查询；不认证逐syscall、断电或真实执行 |
+| 历史：H2.2并发/容量矩阵及阶段路线 | [H2.2-B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)、[H2.2-A/B后路线](superpowers/plans/2026-11-01-post-w1h22-ab-project-route.md) | 重复提交、容量拒绝和取消/claim竞争；保留实测竞争胜者单一方向的限制 |
+| 历史：H3.1跨链恢复与响应丢失设计 | [设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md) | 静态设计，未证明完整H3运行恢复 |
+| 历史：H3.2-1认证恢复 | [交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)、[H3.2-1后路线](superpowers/plans/2026-11-01-post-w1h321-project-route.md) | 跨链认证、全候选验证后提交及受控重开合成验收；不替代强杀 |
+| 历史：H3.2-2a响应丢失与受控重开 | [交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)、[H3.2-2a后路线](superpowers/plans/2026-11-01-post-w1h322a-project-route.md)、[验证记录](TESTING.md) | TCP零字节/正文截断、幂等查询和受控重开；H3.2-2b、W1-C和P4-R5仍开放 |
+| 历史：H3.2-2b-1跨链窗口进程终止 | [H3.2-2b-1交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)、[验证记录](TESTING.md) | 四个提交窗口、跨链认证恢复、重复重开稳定及绑定冲突负例；H3.2-2b余项仍开放 |
+| 2026-11-03：running队列更新后、领取票据返回前单点K | [窗口交接](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)、[验证记录](TESTING.md) | running修订已持久化且内存队列已更新；在票据返回前终止，真实目录锁恢复只追加一次unknown，重复重开稳定；不覆盖其他调度或真实执行 |
+| 2026-11-03：AssetMismatch持久化后、内存队列结算前单点K | [窗口交接](superpowers/plans/2026-11-03-asset-mismatch-persisted-before-queue-update-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)、[验证记录](TESTING.md) | 子进程在failed/AssetMismatch revision保存后终止；真实锁重开保留唯一failed终态，队列无工作，第二次重开字节稳定；不覆盖HTTP派发准入失败分支 |
+| 2026-11-03：HTTP派发准入AssetMismatch持久化后、队列结算前单点K | [窗口交接](superpowers/plans/2026-11-03-dispatch-admission-asset-mismatch-crash-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)、[验证记录](TESTING.md) | 经`dispatch_pending`进入准入拒绝，failed修订已保存、内存队列未结算时终止；认证恢复保留failed且无报告/执行器调用，重复重开字节稳定；不覆盖其他调度或真实执行 |
+| 2026-11-03：running领取后四个细分K窗口 | [票据返回后、执行器调用前](superpowers/plans/2026-11-03-ticket-return-crash-handoff.md)、[执行器进入后](superpowers/plans/2026-11-03-running-executor-crash-handoff.md)、[执行器返回后、报告发布前](superpowers/plans/2026-11-03-executor-return-crash-handoff.md)、[报告临时文件同步后、正式发布前](superpowers/plans/2026-11-03-report-temp-crash-window-map.md)、[验证记录](TESTING.md) | 四个测试专用进程终止点均通过持久认证恢复追加一次unknown；报告临时文件发布前失败已复现并以保留孤立临时件的最小修复通过；真实执行副作用及其他H3窗口仍开放 |
+| 2026-11-04：`time_budget`原因分类复核 | [原因分类交接](superpowers/plans/2026-11-04-time-budget-recovery-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)、[验证记录](TESTING.md) | 新增time_budget报告输入场景，和node_budget共享同一budget_limited持久化后K检查点；仅证明该原因字节的保留，不增加逻辑K窗口 |
+| 2026-11-04：显式mark_unknown终态保存后、队列结算前单点K | [窗口交接](superpowers/plans/2026-11-04-unknown-terminal-persisted-before-queue-update.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)、[验证记录](TESTING.md) | CompletionUncertain revision 3保存后终止；真实锁重开保留unknown且不追加，报告为0，队列空、二次重开材料字节稳定；不认证真实worker、FFI或消费 |
+| 2026-11-03：MyCard双locale来源与使用依据复核 | [审计记录](superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)、[验证记录](TESTING.md)、[语言状态](LANGUAGE_REVIEW.md) | 两份冻结CDB与固定提交对象身份匹配；检查路径未发现明确使用/再分发许可，权利状态保持unknown |
+| 2026-11-03：Ground离线准备报告文档更新后身份复核 | [路线交接](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)、[验证记录](TESTING.md) | verify-only通过，固定19成员与当前工具源码匹配；完整工作树身份另存于忽略target，执行准入仍false |
+| 2026-11-03：Ground Collapse候选执行清单离线评审 | [候选清单评审](superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)、[验证记录](TESTING.md)、[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md) | 隔离runner/worker build与输入、资产身份绑定；候选manifest保持hold，未创建scope或执行原生请求 |
+
+## 2026-11-02—2026-11-04：H3窗口、研究批次与工作台交接
+
+### H3.1窗口图与恢复交接
+
+H3.1逐逻辑窗口证据映射：[H3证据门禁图](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)。以下都是单点合成故障/恢复证据；每个handoff中的受测窗口、触发时点、持久状态和未覆盖边界需要一起读取。
+
+- **2026-11-02**：[allocated保存后](superpowers/plans/2026-11-02-allocated-crash-handoff.md)、[容量拒绝保存后](superpowers/plans/2026-11-02-capacity-rejection-crash-handoff.md)、[配置身份拒绝保存后](superpowers/plans/2026-11-02-context-rejection-crash-handoff.md)、[准备拒绝保存后](superpowers/plans/2026-11-02-preparation-rejection-crash-handoff.md)、[取消保存后](superpowers/plans/2026-11-02-cancelled-crash-handoff.md)、[领取running后](superpowers/plans/2026-11-02-running-crash-handoff.md)。
+- **终态和部分恢复分类**：[failed保存后](superpowers/plans/2026-11-02-failed-crash-handoff.md)、[completed保存后](superpowers/plans/2026-11-02-completed-crash-handoff.md)、[budget-limited保存后](superpowers/plans/2026-11-02-budget-crash-handoff.md)、[部分任务恢复](superpowers/plans/2026-11-02-partial-task-recovery-handoff.md)、[混合任务恢复](superpowers/plans/2026-11-02-mixed-task-recovery-handoff.md)、[部分操作恢复](superpowers/plans/2026-11-02-partial-operation-recovery-handoff.md)、[accepted关联保存后](superpowers/plans/2026-11-02-accepted-crash-handoff.md)、[unknown先分类](superpowers/plans/2026-11-02-unknown-first-recovery-handoff.md)。
+- **unknown操作与排序**：[unknown追加持久故障](superpowers/plans/2026-11-02-unknown-operation-fault-handoff.md)、[混合恢复顺序图](superpowers/plans/2026-11-02-mixed-operation-recovery-map.md)、[混合恢复进程终止](superpowers/plans/2026-11-02-mixed-operation-recovery-handoff.md)。
+- **2026-11-03 asset mismatch及running细分点**：[claim资产失配后](superpowers/plans/2026-11-03-asset-mismatch-persisted-before-queue-update-handoff.md)、[HTTP准入失配后](superpowers/plans/2026-11-03-dispatch-admission-asset-mismatch-crash-handoff.md)、[队列更新后/票据返回前](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)、[票据返回后/执行器前](superpowers/plans/2026-11-03-ticket-return-crash-handoff.md)、[执行器进入后](superpowers/plans/2026-11-03-running-executor-crash-handoff.md)、[执行器返回后](superpowers/plans/2026-11-03-executor-return-crash-handoff.md)、[报告临时文件同步后/正式发布前](superpowers/plans/2026-11-03-report-temp-crash-window-map.md)。
+- **2026-11-04报告原因及unknown终态**：[time_budget原因分类](superpowers/plans/2026-11-04-time-budget-recovery-handoff.md)与[显式mark_unknown保存后](superpowers/plans/2026-11-04-unknown-terminal-persisted-before-queue-update.md)。前者共用既有budget_limited K点；后者覆盖不同的unknown终态提交，不关闭其他H3状态、调度或系统故障门禁。
+
+### P1、P4和Ground Collapse
+
+- P1材料：[观察边界合成实验](superpowers/plans/2026-11-02-p1-observation-boundary-experiment.md)、[opcode24生产菜单交叉核验](superpowers/plans/2026-11-03-p1-opcode24-menu-crosscheck.md)、[真实opcode24实验设计](superpowers/plans/2026-11-03-ground-collapse-opcode24-experiment-design.md)、[Ground候选manifest评审](superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)。这些材料不证明真实提示可达、响应接受或完整动作覆盖。
+- P4恢复边界：[R1b-3 scope复核](superpowers/plans/2026-11-03-p4-r1b3-scope-review.md)、[R1b-3 native resume设计](superpowers/plans/2026-11-02-p4-r1b3-native-resume-experiment-design.md)。准备与合成门禁不能代替真实恢复/独立重放。
+- Ground离线来源及driver：[准备工具来源复核](superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)、[固定Rabbit执行范围](superpowers/plans/2026-11-03-w1c-single-rabbit-execution-scope.md)。候选保持hold；本地CLI布尔字段是就绪断言，不是签名授权。
+
+### P2 L1人工卡片复核批次
+
+批次记录保存逐卡来源、字段和语言对照；批次完成只表示该批人工对照做完，不证明全语言资格或授权使用/再分发。
+
+**zh-CN批次1—13：**[1](superpowers/plans/2026-11-02-l1-card-review-batch-1.md)、[2](superpowers/plans/2026-11-02-l1-card-review-batch-2.md)、[3](superpowers/plans/2026-11-02-l1-card-review-batch-3.md)、[4](superpowers/plans/2026-11-02-l1-card-review-batch-4.md)、[5](superpowers/plans/2026-11-02-l1-card-review-batch-5.md)、[6](superpowers/plans/2026-11-02-l1-card-review-batch-6.md)、[7](superpowers/plans/2026-11-02-l1-card-review-batch-7.md)、[8](superpowers/plans/2026-11-02-l1-card-review-batch-8.md)、[9](superpowers/plans/2026-11-02-l1-card-review-batch-9.md)、[10](superpowers/plans/2026-11-02-l1-card-review-batch-10.md)、[11](superpowers/plans/2026-11-02-l1-card-review-batch-11.md)、[12](superpowers/plans/2026-11-02-l1-card-review-batch-12.md)、[13](superpowers/plans/2026-11-02-l1-card-review-batch-13.md)。
+
+**zh-SC批次1—13：**[1](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-1.md)、[2](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-2.md)、[3](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-3.md)、[4](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-4.md)、[5](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-5.md)、[6](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-6.md)、[7](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-7.md)、[8](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-8.md)、[9](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-9.md)、[10](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-10.md)、[11](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-11.md)、[12](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-12.md)、[13](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-13.md)。单卡来源与双locale权利复核见[44088353来源审计](superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)和[MyCard双locale权利审计](superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)。
+
+### W1-C和W2本机工作台
+
+- [W1-C单次Rabbit范围](superpowers/plans/2026-11-03-w1c-single-rabbit-execution-scope.md)：一次本机有限分析以`budget_limited/time_budget`停止；完整搜索、报告来源认证及FFI/消费独立计量仍未完成。
+- [W1-C来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)：记录当前host attempt持久日志与来源/消费边界。下一步worker宿主确认通道见[FFI worker stream计划](superpowers/plans/2026-11-04-w1c-worker-ffi-ack-stream-plan.md)；真实worker/ocgcore、报告来源和消费资格仍开放。
+- [W2隔离包验收](superpowers/plans/2026-11-03-w2-offline-clean-environment-plan.md)和[草稿迁移合同](superpowers/plans/2026-11-03-w2-draft-migration-contract.md)：同机候选通过限定的空profile和往返检查；真实升级、干净Windows环境与回滚仍开放。
 
 ## 更早设计与验证的追溯
 

@@ -22,6 +22,128 @@ def validator(name):
 
 
 class Schemas(unittest.TestCase):
+    def test_w1c_search_attempt_journal_event_contract(self):
+        check = validator('w1c-search-attempt-journal-v1.schema.json')
+        value = json.loads(
+            (ROOT / 'tests' / 'fixtures' / 'w1c-search-attempt-journal-event-v1.json')
+            .read_text(encoding='utf-8')
+        )
+        check.validate(value)
+        invalid = json.loads(json.dumps(value))
+        invalid['context']['build_record_identity'] = 'not-a-hash'
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = json.loads(json.dumps(value))
+        invalid['event']['phase'] = 'unknown'
+        self.assertTrue(list(check.iter_errors(invalid)))
+        ffi = json.loads(json.dumps(value))
+        ffi['event'] = {
+            'event_type': 'ffi_entered',
+            'attempt_ordinal': 1,
+            'attempt_id': 'c' * 32,
+            'call_id': 'd' * 32,
+            'direction': 'host_to_ocgcore',
+            'name': 'OCG_DuelProcess',
+            'ffi_ordinal': 1,
+        }
+        check.validate(ffi)
+        invalid = json.loads(json.dumps(ffi))
+        invalid['event']['call_id'] = 'bad'
+        self.assertTrue(list(check.iter_errors(invalid)))
+        returned = json.loads(json.dumps(value))
+        returned['event'] = {
+            'event_type': 'ffi_returned',
+            'attempt_ordinal': 1,
+            'attempt_id': 'c' * 32,
+            'call_id': 'd' * 32,
+            'status': 'returned',
+            'result_sha256': 'e' * 64,
+        }
+        check.validate(returned)
+
+    def test_workspace_state_bundle_manifest_contract(self):
+        check = validator('workspace-state-bundle.schema.json')
+        payload = {'bytes': 0, 'sha256': 'a' * 64}
+        value = {
+            'schema_version': 1, 'kind': 'workspace_state_bundle',
+            'source_bundle_identity': 'b' * 64, 'source_identity': 'c' * 64,
+            'git': {
+                'head': 'd' * 40, 'version': 'git version 2.0',
+                'core_filemode': False, 'index_sha256': 'e' * 64,
+                'index_bytes': 12, 'index_entry_count': 1,
+            },
+            'payloads': {name: payload for name in (
+                'git-index.bin', 'staged.patch', 'unstaged.patch',
+                'index-entries.bin', 'status.porcelain-v2', 'file-modes.json',
+            )},
+            'archive': {'name': 'workspace-state.zip', 'bytes': 10, 'sha256': 'f' * 64},
+            'identity': '1' * 64,
+        }
+        check.validate(value)
+        invalid = json.loads(json.dumps(value))
+        invalid['payloads']['extra'] = payload
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = json.loads(json.dumps(value))
+        invalid['git']['core_filemode'] = 'false'
+        self.assertTrue(list(check.iter_errors(invalid)))
+
+    def test_workspace_source_bundle_manifest_contract(self):
+        check = validator('workspace-source-bundle.schema.json')
+        value = {
+            'schema_version': 1, 'kind': 'workspace_source_bundle',
+            'source': {
+                'head': 'a' * 40, 'identity': 'b' * 64,
+                'files': {'src/main.rs': 'c' * 64, 'removed.rs': None},
+            },
+            'archive': {'name': 'source.zip', 'bytes': 12, 'sha256': 'd' * 64},
+            'archived_file_count': 1, 'deleted_tracked_file_count': 1,
+            'identity': 'e' * 64,
+        }
+        check.validate(value)
+        invalid = json.loads(json.dumps(value))
+        invalid['unverified_report_origin'] = True
+        self.assertTrue(list(check.iter_errors(invalid)))
+        invalid = json.loads(json.dumps(value))
+        invalid['source']['files']['src/main.rs'] = 'not-a-sha256'
+        self.assertTrue(list(check.iter_errors(invalid)))
+
+    def test_source_bound_build_record_contract(self):
+        check = validator('source-bound-build-record.schema.json')
+        source = {
+            'head': 'a' * 40, 'identity': 'b' * 64,
+            'files': {'Cargo.lock': 'c' * 64},
+        }
+        bundle = {
+            'identity': 'd' * 64, 'source_identity': source['identity'],
+            'archive_sha256': 'e' * 64, 'archive_bytes': 10,
+        }
+        build = {
+            'schema_version': 1, 'kind': 'build_record', 'identity': 'f' * 64,
+            'source_before': source, 'source_after': source,
+            'command': ['cargo', 'build', '--offline', '--locked'],
+            'command_sha256': '1' * 64,
+            'toolchain': {'python': '3.14', 'rustc': 'stable', 'cargo': 'stable', 'git': '2.0'},
+            'exit_code': 0, 'artifacts': {'cli': '2' * 64}, 'status': 'recorded',
+            'provenance': 'observed_command_only', 'reproducible_build_proven': False,
+        }
+        value = {
+            'schema_version': 1, 'kind': 'source_bound_build_record',
+            'source_bundle_before': bundle, 'source_bundle_after': bundle,
+            'asset_inputs_before': {'engine': {'sha256': '3' * 64, 'bytes': 20}},
+            'asset_inputs_after': {'engine': {'sha256': '3' * 64, 'bytes': 20}},
+            'artifact_outputs_before': {'cli': None},
+            'build_record': build, 'status': 'recorded',
+            'provenance': 'observed_command_only', 'reproducible_build_proven': False,
+            'identity': '4' * 64,
+        }
+        check.validate(value)
+        invalid = json.loads(json.dumps(value))
+        invalid['asset_inputs_after']['engine'] = None
+        invalid['status'] = 'recorded'
+        check.validate(invalid)
+        invalid = json.loads(json.dumps(value))
+        invalid['source_bundle_before']['source_identity'] = 'not-a-hash'
+        self.assertTrue(list(check.iter_errors(invalid)))
+
     def test_planning_request_limits_and_unknown_fields(self):
         import copy
         request = json.loads((ROOT / 'tests/fixtures/phantom.request.json').read_text())
@@ -97,6 +219,16 @@ class Schemas(unittest.TestCase):
             invalid = dict(draft)
             invalid.update(mutation)
             self.assertTrue(list(check.iter_errors(invalid)), mutation)
+
+    def test_legacy_deck_fixture_expected_migration_output_matches_v1_schema(self):
+        fixture_dir = ROOT / 'tests/fixtures'
+        legacy = json.loads((fixture_dir / 'deck-draft-legacy-bare-v0.json').read_text())
+        migrated = json.loads((fixture_dir / 'deck-draft-legacy-bare-v0.expected-v1.json').read_text())
+        self.assertEqual(set(legacy), {'main', 'extra', 'side'})
+        self.assertNotIn('schema_version', legacy)
+        self.assertEqual(migrated['schema_version'], 1)
+        self.assertEqual(migrated['kind'], 'deck_draft')
+        validator('deck-document-v1.schema.json').validate(migrated)
 
     def test_language_field_review_contract_is_non_qualifying_and_contains_no_candidate_text(self):
         from ygo_data.language_review import audit_language_fields

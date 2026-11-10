@@ -413,6 +413,13 @@ impl AnalysisJobRecordV1 {
             }
             (
                 AnalysisJobState::Running,
+                AnalysisJobEvent::Fail(AnalysisJobFailure::CompletionUncertain),
+            ) => {
+                w.state = AnalysisJobState::Unknown;
+                w.error_code = Some(AnalysisJobFailure::CompletionUncertain);
+            }
+            (
+                AnalysisJobState::Running,
                 AnalysisJobEvent::Fail(
                     failure @ (AnalysisJobFailure::AnalysisFailed
                     | AnalysisJobFailure::AssetMismatch),

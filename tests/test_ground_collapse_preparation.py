@@ -154,6 +154,27 @@ class GroundCollapsePreparationContractTests(unittest.TestCase):
         self.assertEqual(PRODUCTION_PROFILE.policy_reserved, 7)
         self.assertEqual(PRODUCTION_PROFILE.planning_total, 47)
 
+    def test_production_bundle_binds_ground_driver_and_uses_fresh_output_root(self):
+        required = {
+            "Cargo.toml",
+            "Cargo.lock",
+            "crates/ygo-engine-adapter/Cargo.toml",
+            "crates/ygo-engine-adapter/src/lib.rs",
+            "crates/ygo-engine-adapter/src/ground_collapse_probe.rs",
+            "crates/ygo-engine-adapter/examples/ground-collapse-probe.rs",
+            "python/ygo_eval/ground_collapse_stage_driver.py",
+            "tests/test_ground_collapse_stage_driver.py",
+        }
+        self.assertTrue(required.issubset(set(PRODUCTION_PROFILE.tool_files)))
+        self.assertEqual(
+            PRODUCTION_PROFILE.output_root,
+            Path("data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2"),
+        )
+        self.assertNotEqual(
+            PRODUCTION_PROFILE.output_root,
+            Path("data/runtime/p1-ground-collapse-preparation-offline-2026-10-27"),
+        )
+
     def test_report_schema_and_python_validator_reject_execution_qualification(self):
         schema_path = Path(__file__).resolve().parents[1] / "schemas" / "ground-collapse-preparation-v1.schema.json"
         schema = json.loads(schema_path.read_bytes())
@@ -186,7 +207,8 @@ class GroundCollapsePreparationContractTests(unittest.TestCase):
             "candidate": None,
             "input_sha256": {},
             "tool_bundle": {"archive_sha256": "0" * 64, "file_list_sha256": "0" * 64,
-                            "source_identity": "0" * 64, "file_count": 11},
+                            "source_identity": "0" * 64,
+                            "file_count": len(PRODUCTION_PROFILE.tool_files)},
             "checks": [],
             "diagnostics": [{"checkpoint": "sources", "code": "core_source_file_missing", "role": "core/libduel.cpp"}],
             "accounting": {
@@ -198,6 +220,11 @@ class GroundCollapsePreparationContractTests(unittest.TestCase):
             },
         }
         validate_report(report, schema=schema)
+        historical_v1_report = copy.deepcopy(report)
+        historical_v1_report["tool_bundle"]["file_count"] = 11
+        Draft202012Validator(schema).validate(historical_v1_report)
+        with self.assertRaisesRegex(ValueError, "report_tool_identity_binding_invalid"):
+            validate_report(historical_v1_report, schema=schema)
         report["execution_ready"] = True
         with self.assertRaises(ValueError):
             validate_report(report, schema=schema)

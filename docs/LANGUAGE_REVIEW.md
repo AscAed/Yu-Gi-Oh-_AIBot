@@ -45,3 +45,9 @@ cargo run -p ygo-cli --offline --locked -- workbench serve --language-status dat
 `GET /api/language-status?ids=...`只返回卡号、来源ID、字段状态、稳定原因和候选哈希，不返回候选文字。缺少、损坏或格式不受支持的状态文件会退化为未核验状态，不阻止草稿编辑。工作台始终提示候选未经语义核验。
 
 39卡的候选仍不能作为正式中文搜索、自动选择或卡片效果知识。完成语义准确性、语言类别及使用/分发依据核验后，才可另行评估有限字段资格。
+
+2026-11-03对人偶之锤（44088353）单独复核来源与使用依据：Konami官方日文页确认卡号、日文名称和收录信息；本地日文收录归档的SHA-256与`configs/tournament-2026.source.json`登记值相符。同卡号官方简中查询仍返回无卡片信息。冻结C1中zh-CN名称/正文仍为`candidate`、语义`not_reviewed`，使用依据和再分发均为`unknown`。上游`mycard/ygopro-database`来源链已定位，但未发现覆盖本项目使用/再分发的许可文本；不改C1或候选状态。详见[单卡来源与使用依据复核](superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)。
+
+2026-11-03将来源身份与权利线索复核扩展到冻结清单中的zh-CN和zh-SC两份CDB：本地字节数、SHA-256及Git blob身份均与同一MyCard固定提交对象匹配；检查的固定提交根目录和locale目录未列出许可文件，README只称数据库用于测试。此次未找到覆盖本项目使用或再分发的明确授权，两个来源的使用依据和再分发状态继续为`unknown`；没有修改冻结配置、C1报告、候选数据或资格。详情见[双locale来源与使用依据复核](superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)。
+
+2026-11-02 L1已完成十三批共39张zh-CN名称/效果人工对照；其中38张找到官方简中详情页，1张目前仅找到官方日文详情页（人偶之锤44088353）。在38张可直接与简中页面比较的卡中，29张候选标题不同，另有21张正文类别称谓映射未确认；名称/类别映射仍需依据，不能直接确认为别名或正式本地化映射。卡号91279700的官方简中页标题为“邪蚀俄菲翁”，页面列出简中收录LOCR-SC067（2026-04-18）；zh-CN候选“入魔龙主 俄菲翁”与官方标题不同，正文“入魔/邪蚀”类别映射仍未确认。另已完成zh-SC前十三批38/38张有候选值记录的人工对照；39卡样本中zh-SC源有38行，人偶之锤（44088353）字段缺失。在38张两源都有行的卡中，29张名称字符串、38张正文字符串与zh-CN不同；字符串差异统计不等于语义差异。38张有字段的人工对照记录仍为C1 `candidate`、`not_reviewed`和`und`/`unknown`；报告仍为`qualified=false`，没有改动候选源或工作台行为。zh-SC全部38张有值候选均有人工对照记录，别名、语言类别及权利依据均仍开放。逐卡字段哈希和边界见[zh-CN批次1](superpowers/plans/2026-11-02-l1-card-review-batch-1.md)至[zh-CN批次13](superpowers/plans/2026-11-02-l1-card-review-batch-13.md)、[zh-SC批次1](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-1.md)至[zh-SC批次13](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-13.md)。

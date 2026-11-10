@@ -1,3 +1,8 @@
+#[path = "workbench/analysis_http.rs"]
+mod analysis_http;
+#[cfg(test)]
+#[path = "workbench/response_loss.rs"]
+mod response_loss;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -10,15 +15,18 @@ use std::{
         Arc,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use ygo_domain::{Catalog, DeckDocumentV1};
+use ygo_engine_adapter::ProcessEngineConfig;
+use ygo_search::combo::ScoringConfig;
 use ygo_storage::{secure_random_hex, DeckDraftStore, SnapshotStore};
 
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 const MAX_CARD_RESULTS: usize = 50;
 const MAX_CONNECTIONS: usize = 32;
+const MAX_REQUEST_DURATION: Duration = Duration::from_secs(15);
 
 #[derive(Clone, Debug)]
 pub struct WorkbenchConfig {
@@ -42,6 +50,7 @@ impl WorkbenchConfig {
 }
 
 pub struct WorkbenchServer {
+    analysis: Option<Arc<analysis_http::AnalysisHttpService>>,
     listener: TcpListener,
     address: SocketAddr,
     token: String,
@@ -53,14 +62,74 @@ pub struct WorkbenchServer {
 
 impl WorkbenchServer {
     pub fn start(config: WorkbenchConfig) -> Result<Self, String> {
+        Self::start_with_analysis(config, None, None)
+    }
+
+    fn start_with_analysis(
+        config: WorkbenchConfig,
+        analysis_config_path: Option<PathBuf>,
+        analysis_store_dir: Option<PathBuf>,
+    ) -> Result<Self, String> {
         if config.bind.ip() != IpAddr::V4(Ipv4Addr::LOCALHOST) {
             return Err("workbench_bind_must_be_127_0_0_1".into());
         }
         let drafts = Arc::new(DeckDraftStore::open(config.drafts_dir)?);
-        let catalog = match config.catalog_id {
+        let catalog = match config.catalog_id.as_deref() {
             Some(id) => {
-                let snapshot = SnapshotStore::new(config.snapshots_dir).catalog(&id)?;
+                let snapshot = SnapshotStore::new(config.snapshots_dir.clone()).catalog(id)?;
                 Some((snapshot.id, Arc::new(snapshot.data)))
+            }
+            None => None,
+        };
+        let analysis = match &analysis_config_path {
+            Some(path) => {
+                let Some((catalog_id, _)) = catalog.as_ref() else {
+                    return Err("workbench_analysis_requires_catalog_id".into());
+                };
+                let bytes = std::fs::read(path)
+                    .map_err(|_| "workbench_analysis_config_unavailable".to_owned())?;
+                if bytes.is_empty() || bytes.len() > 64 * 1024 {
+                    return Err("workbench_analysis_config_invalid".into());
+                }
+                let text = std::str::from_utf8(&bytes)
+                    .map_err(|_| "workbench_analysis_config_invalid".to_owned())?;
+                let engine = ProcessEngineConfig::from_toml(text)
+                    .map_err(|_| "workbench_analysis_config_invalid".to_owned())?;
+                let admission = {
+                    #[cfg(test)]
+                    {
+                        None
+                    }
+                    #[cfg(not(test))]
+                    {
+                        Some(Arc::new(crate::workbench_analysis::W1cAdmission::load(
+                            path,
+                            &bytes,
+                            &config.snapshots_dir,
+                            catalog_id,
+                            &engine,
+                        )?))
+                    }
+                };
+                let context = crate::workbench_analysis::operations::AnalysisOperationContext {
+                    scoring: ScoringConfig::default(),
+                    default_catalog_id: catalog_id.clone(),
+                    configuration_sha256: ygo_storage::hash(&bytes),
+                };
+                let store_dir = analysis_store_dir
+                    .clone()
+                    .unwrap_or_else(|| PathBuf::from("data/runtime/workbench/analysis"));
+                Some(Arc::new(analysis_http::AnalysisHttpService::open(
+                    store_dir,
+                    context,
+                    drafts.clone(),
+                    SnapshotStore::new(config.snapshots_dir.clone()),
+                    engine,
+                    admission,
+                )?))
+            }
+            None if analysis_store_dir.is_some() => {
+                return Err("workbench_analysis_store_requires_config".into());
             }
             None => None,
         };
@@ -78,6 +147,7 @@ impl WorkbenchServer {
             .map_err(|error| format!("workbench_listener_failed: {error}"))?;
         let token = secure_random_hex(32)?;
         Ok(Self {
+            analysis,
             listener,
             address,
             token,
@@ -105,6 +175,7 @@ impl WorkbenchServer {
     }
 
     pub fn serve_until(self, stop: &AtomicBool) -> Result<(), String> {
+        let analysis = self.analysis;
         let drafts = self.drafts;
         let catalog = self.catalog;
         let language_status = self.language_status;
@@ -112,6 +183,7 @@ impl WorkbenchServer {
         while !stop.load(Ordering::SeqCst) {
             match self.listener.accept() {
                 Ok((stream, _peer)) => {
+                    let request_deadline = Instant::now() + MAX_REQUEST_DURATION;
                     let active = self.active_connections.fetch_add(1, Ordering::SeqCst);
                     if active >= MAX_CONNECTIONS {
                         self.active_connections.fetch_sub(1, Ordering::SeqCst);
@@ -120,6 +192,7 @@ impl WorkbenchServer {
                             write_json(&mut stream, 503, json!({"error":{"code":"server_busy"}}));
                         continue;
                     }
+                    let analysis = analysis.clone();
                     let drafts = drafts.clone();
                     let catalog = catalog.clone();
                     let language_status = language_status.clone();
@@ -130,11 +203,15 @@ impl WorkbenchServer {
                         let _guard = ConnectionGuard(active_connections);
                         let _ = handle_connection(
                             stream,
-                            port,
-                            &token,
-                            &drafts,
-                            catalog.as_ref(),
-                            language_status.as_ref(),
+                            ConnectionContext {
+                                port,
+                                request_deadline,
+                                token: &token,
+                                drafts: &drafts,
+                                catalog: catalog.as_ref(),
+                                language_status: language_status.as_ref(),
+                                analysis: analysis.as_ref(),
+                            },
                         );
                     });
                 }
@@ -143,6 +220,9 @@ impl WorkbenchServer {
                 }
                 Err(error) => return Err(format!("workbench_accept_failed: {error}")),
             }
+        }
+        if let Some(analysis) = analysis {
+            analysis.shutdown();
         }
         Ok(())
     }
@@ -158,7 +238,7 @@ impl Drop for ConnectionGuard {
 
 pub fn execute(args: &[String]) -> Result<(), String> {
     if args.first().map(String::as_str) != Some("serve") {
-        return Err("usage: ygo workbench serve [--drafts DIR] [--store DIR] [--catalog-id ID] [--language-status FILE] [--port PORT]".into());
+        return Err("usage: ygo workbench serve [--drafts DIR] [--store DIR] [--catalog-id ID] [--language-status FILE] [--analysis-config FILE] [--analysis-store DIR] [--port PORT]".into());
     }
     let values = parse_options(&args[1..])?;
     for key in values.keys() {
@@ -167,6 +247,8 @@ pub fn execute(args: &[String]) -> Result<(), String> {
             "--store",
             "--catalog-id",
             "--language-status",
+            "--analysis-config",
+            "--analysis-store",
             "--port",
         ]
         .contains(&key.as_str())
@@ -183,13 +265,19 @@ pub fn execute(args: &[String]) -> Result<(), String> {
     }
     config.catalog_id = values.get("--catalog-id").cloned();
     config.language_status_path = values.get("--language-status").map(PathBuf::from);
+    let analysis_config_path = values.get("--analysis-config").map(PathBuf::from);
+    let analysis_store_dir = values.get("--analysis-store").map(PathBuf::from);
+    if analysis_store_dir.is_some() && analysis_config_path.is_none() {
+        return Err("--analysis-store requires --analysis-config".into());
+    }
     if let Some(port) = values.get("--port") {
         let port = port
             .parse::<u16>()
             .map_err(|_| "--port must be a valid u16")?;
         config.bind.set_port(port);
     }
-    let server = WorkbenchServer::start(config)?;
+    let server =
+        WorkbenchServer::start_with_analysis(config, analysis_config_path, analysis_store_dir)?;
     println!("工作台已启动：{}", server.browser_url());
     println!("按 Ctrl+C 停止。草稿目录由本服务独占锁定。\n");
     server.serve_until(&AtomicBool::new(false))
@@ -218,20 +306,45 @@ fn parse_options(args: &[String]) -> Result<BTreeMap<String, String>, String> {
 struct HttpRequest {
     method: String,
     target: String,
-    headers: BTreeMap<String, String>,
     body: Vec<u8>,
 }
 
-fn read_http_request(stream: &mut TcpStream) -> Result<HttpRequest, HttpFailure> {
+#[derive(Debug)]
+struct HttpRequestHead {
+    method: String,
+    target: String,
+    headers: BTreeMap<String, String>,
+    content_length: usize,
+}
+
+fn set_read_timeout_until(stream: &TcpStream, deadline: Instant) -> Result<(), HttpFailure> {
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    if remaining.is_zero() {
+        return Err(HttpFailure::new(408, "request_timeout"));
+    }
     stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .map_err(|_| HttpFailure::new(400, "request_timeout"))?;
+        .set_read_timeout(Some(remaining))
+        .map_err(|_| HttpFailure::new(400, "request_read_failed"))
+}
+
+fn read_http_request_head(
+    stream: &mut TcpStream,
+    deadline: Instant,
+) -> Result<HttpRequestHead, HttpFailure> {
     let mut header_bytes = Vec::new();
     let mut byte = [0u8; 1];
     while header_bytes.len() < MAX_HEADER_BYTES {
-        let count = stream
-            .read(&mut byte)
-            .map_err(|_| HttpFailure::new(400, "request_read_failed"))?;
+        set_read_timeout_until(stream, deadline)?;
+        let count = stream.read(&mut byte).map_err(|error| {
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+            ) {
+                HttpFailure::new(408, "request_timeout")
+            } else {
+                HttpFailure::new(400, "request_read_failed")
+            }
+        })?;
         if count == 0 {
             return Err(HttpFailure::new(400, "request_headers_truncated"));
         }
@@ -283,16 +396,39 @@ fn read_http_request(stream: &mut TcpStream) -> Result<HttpRequest, HttpFailure>
     if matches!(method, "POST" | "PUT") && !headers.contains_key("content-length") {
         return Err(HttpFailure::new(411, "content_length_required"));
     }
-    let mut body = vec![0u8; content_length];
-    stream
-        .read_exact(&mut body)
-        .map_err(|_| HttpFailure::new(400, "request_body_truncated"))?;
-    Ok(HttpRequest {
+    Ok(HttpRequestHead {
         method: method.to_owned(),
         target: target.to_owned(),
         headers,
-        body,
+        content_length,
     })
+}
+
+fn read_http_body(
+    stream: &mut TcpStream,
+    content_length: usize,
+    deadline: Instant,
+) -> Result<Vec<u8>, HttpFailure> {
+    let mut body = vec![0u8; content_length];
+    let mut offset = 0;
+    while offset < body.len() {
+        set_read_timeout_until(stream, deadline)?;
+        let count = stream.read(&mut body[offset..]).map_err(|error| {
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+            ) {
+                HttpFailure::new(408, "request_timeout")
+            } else {
+                HttpFailure::new(400, "request_body_truncated")
+            }
+        })?;
+        if count == 0 {
+            return Err(HttpFailure::new(400, "request_body_truncated"));
+        }
+        offset += count;
+    }
+    Ok(body)
 }
 
 #[derive(Debug)]
@@ -307,19 +443,40 @@ impl HttpFailure {
     }
 }
 
-fn handle_connection(
-    mut stream: TcpStream,
-    port: u16,
-    token: &str,
-    drafts: &DeckDraftStore,
-    catalog: Option<&(String, Arc<Catalog>)>,
-    language_status: Option<&BTreeMap<u32, Value>>,
-) -> Result<(), String> {
+fn configure_connection(stream: &TcpStream) -> Result<(), String> {
+    // Windows accepted sockets can inherit the nonblocking listener mode.
+    // Request framing uses bounded blocking reads, including fragmented sends.
+    stream
+        .set_nonblocking(false)
+        .map_err(|error| error.to_string())?;
     stream
         .set_write_timeout(Some(Duration::from_secs(5)))
-        .map_err(|error| error.to_string())?;
-    let request = match read_http_request(&mut stream) {
-        Ok(request) => request,
+        .map_err(|error| error.to_string())
+}
+
+struct ConnectionContext<'a> {
+    port: u16,
+    request_deadline: Instant,
+    token: &'a str,
+    drafts: &'a DeckDraftStore,
+    catalog: Option<&'a (String, Arc<Catalog>)>,
+    language_status: Option<&'a BTreeMap<u32, Value>>,
+    analysis: Option<&'a Arc<analysis_http::AnalysisHttpService>>,
+}
+
+fn handle_connection(mut stream: TcpStream, context: ConnectionContext<'_>) -> Result<(), String> {
+    let ConnectionContext {
+        port,
+        request_deadline,
+        token,
+        drafts,
+        catalog,
+        language_status,
+        analysis,
+    } = context;
+    configure_connection(&stream)?;
+    let head = match read_http_request_head(&mut stream, request_deadline) {
+        Ok(head) => head,
         Err(failure) => {
             return write_json(
                 &mut stream,
@@ -329,10 +486,10 @@ fn handle_connection(
         }
     };
     let host = format!("127.0.0.1:{port}");
-    if request.headers.get("host").map(String::as_str) != Some(host.as_str()) {
+    if head.headers.get("host").map(String::as_str) != Some(host.as_str()) {
         return write_json(&mut stream, 400, json!({"error":{"code":"host_not_local"}}));
     }
-    if request.target == "/" && request.method == "GET" {
+    if head.target == "/" && head.method == "GET" {
         return write_asset(
             &mut stream,
             200,
@@ -340,7 +497,7 @@ fn handle_connection(
             include_str!("workbench/index.html"),
         );
     }
-    if request.target == "/app.js" && request.method == "GET" {
+    if head.target == "/app.js" && head.method == "GET" {
         return write_asset(
             &mut stream,
             200,
@@ -348,7 +505,7 @@ fn handle_connection(
             include_str!("workbench/app.js"),
         );
     }
-    if request.target == "/style.css" && request.method == "GET" {
+    if head.target == "/style.css" && head.method == "GET" {
         return write_asset(
             &mut stream,
             200,
@@ -356,7 +513,7 @@ fn handle_connection(
             include_str!("workbench/style.css"),
         );
     }
-    if !request.target.starts_with("/api/") {
+    if !head.target.starts_with("/api/") {
         return write_json(
             &mut stream,
             404,
@@ -365,8 +522,7 @@ fn handle_connection(
     }
     let expected_auth = format!("Bearer {token}");
     if !constant_time_eq(
-        request
-            .headers
+        head.headers
             .get("authorization")
             .map(String::as_str)
             .unwrap_or(""),
@@ -378,9 +534,9 @@ fn handle_connection(
             json!({"error":{"code":"authorization_required"}}),
         );
     }
-    if request.method != "GET" {
+    if head.method != "GET" {
         let expected_origin = format!("http://127.0.0.1:{port}");
-        if request.headers.get("origin").map(String::as_str) != Some(expected_origin.as_str()) {
+        if head.headers.get("origin").map(String::as_str) != Some(expected_origin.as_str()) {
             return write_json(
                 &mut stream,
                 403,
@@ -388,7 +544,36 @@ fn handle_connection(
             );
         }
     }
+    let body = match read_http_body(&mut stream, head.content_length, request_deadline) {
+        Ok(body) => body,
+        Err(failure) => {
+            return write_json(
+                &mut stream,
+                failure.status,
+                json!({"error":{"code":failure.code}}),
+            );
+        }
+    };
+    let request = HttpRequest {
+        method: head.method,
+        target: head.target,
+        body,
+    };
     let (path, query) = split_target(&request.target);
+    if path == "/api/analysis-operations"
+        || path.starts_with("/api/analysis-operations/")
+        || path == "/api/analysis-jobs"
+        || path.starts_with("/api/analysis-jobs/")
+    {
+        let response = analysis_http::route(analysis, &request, path);
+        #[cfg(test)]
+        if let Some(service) = analysis {
+            if response_loss::apply(service, &request.method, path, &mut stream, &response)? {
+                return Ok(());
+            }
+        }
+        return write_response(&mut stream, response);
+    }
     let response = route_request(&request, path, query, drafts, catalog, language_status);
     match response {
         Ok(response) => write_response(&mut stream, response),
@@ -780,6 +965,10 @@ fn status_text(status: u16) -> &'static str {
     match status {
         200 => "OK",
         201 => "Created",
+        202 => "Accepted",
+        408 => "Request Timeout",
+        422 => "Unprocessable Entity",
+        503 => "Service Unavailable",
         400 => "Bad Request",
         403 => "Forbidden",
         404 => "Not Found",
@@ -844,4 +1033,105 @@ fn write_response(stream: &mut TcpStream, response: HttpResponse) -> Result<(), 
         .write_all(&response.body)
         .map_err(|error| error.to_string())?;
     stream.flush().map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::workbench_analysis::tests::fixtures;
+
+    #[test]
+    fn incomplete_request_head_obeys_absolute_deadline() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            read_http_request_head(&mut stream, Instant::now() + Duration::from_millis(100))
+                .unwrap_err()
+                .status
+        });
+        let _client = TcpStream::connect(address).unwrap();
+
+        assert_eq!(server.join().unwrap(), 408);
+        assert_eq!(status_text(408), "Request Timeout");
+    }
+
+    fn test_root(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/w1c-workbench-config-tests")
+            .join(name)
+            .join(secure_random_hex(12).unwrap())
+    }
+
+    #[test]
+    fn normal_workbench_start_keeps_analysis_unconfigured() {
+        let root = test_root("default");
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("drafts");
+
+        let server = WorkbenchServer::start(config).unwrap();
+
+        assert!(server.analysis.is_none());
+    }
+
+    #[test]
+    fn explicit_analysis_config_opens_durable_service_without_running_worker() {
+        let root = test_root("enabled");
+        std::fs::create_dir_all(&root).unwrap();
+        let (_, _, engine, catalog, _, _) = fixtures(&root);
+        let config_path = root.join("analysis.toml");
+        std::fs::write(&config_path, engine.to_toml().unwrap()).unwrap();
+
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("workbench-drafts");
+        config.snapshots_dir = root.join("snapshots");
+        let expected_catalog = catalog.clone();
+        config.catalog_id = Some(catalog);
+        let expected_config_hash = ygo_storage::hash(&std::fs::read(&config_path).unwrap());
+        let server = WorkbenchServer::start_with_analysis(
+            config,
+            Some(config_path),
+            Some(root.join("analysis-store")),
+        )
+        .unwrap();
+
+        let service = server.analysis.as_ref().unwrap();
+        assert!(!service.coordinator.is_stopped().unwrap());
+        assert_eq!(service.context.configuration_sha256, expected_config_hash);
+        assert_eq!(service.context.default_catalog_id, expected_catalog);
+        let snapshot = service.coordinator.snapshot().unwrap();
+        assert!(snapshot.queued.is_none());
+        assert!(snapshot.running.is_none());
+    }
+
+    #[test]
+    fn explicit_analysis_config_requires_a_selected_catalog() {
+        let root = test_root("catalog-required");
+        std::fs::create_dir_all(&root).unwrap();
+        let (_, _, engine, _, _, _) = fixtures(&root);
+        let config_path = root.join("analysis.toml");
+        std::fs::write(&config_path, engine.to_toml().unwrap()).unwrap();
+        let mut config = WorkbenchConfig::local_default();
+        config.drafts_dir = root.join("workbench-drafts");
+        assert_eq!(
+            WorkbenchServer::start_with_analysis(config, Some(config_path), None)
+                .err()
+                .unwrap(),
+            "workbench_analysis_requires_catalog_id"
+        );
+    }
+
+    #[test]
+    fn analysis_store_cli_option_requires_analysis_config() {
+        let args = vec![
+            "serve".to_owned(),
+            "--analysis-store".to_owned(),
+            "target/analysis".to_owned(),
+        ];
+
+        assert_eq!(
+            execute(&args).unwrap_err(),
+            "--analysis-store requires --analysis-config"
+        );
+    }
 }

@@ -730,15 +730,21 @@ fn execute(args: &[String]) -> Result<(), String> {
                         .map(|id| {
                             format!(
                                 "{} ({id})",
-                                report
-                                    .card_names
-                                    .get(id)
-                                    .map(String::as_str)
-                                    .unwrap_or("未知卡")
+                                escape_terminal_controls(
+                                    report
+                                        .card_names
+                                        .get(id)
+                                        .map(String::as_str)
+                                        .unwrap_or("未知卡"),
+                                )
                             )
                         })
                         .collect::<Vec<_>>();
-                    eprintln!("  {} {}", step.label, names.join(", "));
+                    eprintln!(
+                        "  {} {}",
+                        escape_terminal_controls(&step.label),
+                        names.join(", ")
+                    );
                 }
                 let end = line
                     .result
@@ -749,11 +755,13 @@ fn execute(args: &[String]) -> Result<(), String> {
                     .map(|c| {
                         format!(
                             "{} ({})",
-                            report
-                                .card_names
-                                .get(&c.code)
-                                .map(String::as_str)
-                                .unwrap_or("未知卡"),
+                            escape_terminal_controls(
+                                report
+                                    .card_names
+                                    .get(&c.code)
+                                    .map(String::as_str)
+                                    .unwrap_or("未知卡"),
+                            ),
                             c.code
                         )
                     })
@@ -778,6 +786,19 @@ fn execute(args: &[String]) -> Result<(), String> {
     }
     Ok(())
 }
+
+fn escape_terminal_controls(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for character in value.chars() {
+        if character.is_control() {
+            escaped.extend(character.escape_default());
+        } else {
+            escaped.push(character);
+        }
+    }
+    escaped
+}
+
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if let Err(message) = execute(&args) {
@@ -791,5 +812,23 @@ fn main() {
             serde_json::json!({"error":{"code":code,"message":detail}})
         );
         std::process::exit(2);
+    }
+}
+
+#[cfg(test)]
+mod terminal_output_tests {
+    use super::escape_terminal_controls;
+
+    #[test]
+    fn terminal_control_characters_are_rendered_as_visible_escapes() {
+        assert_eq!(
+            escape_terminal_controls("Card\u{1b}[2J\u{7}\nName"),
+            "Card\\u{1b}[2J\\u{7}\\nName"
+        );
+    }
+
+    #[test]
+    fn printable_unicode_card_names_are_preserved() {
+        assert_eq!(escape_terminal_controls("青眼の白龍"), "青眼の白龍");
     }
 }

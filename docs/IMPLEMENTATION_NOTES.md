@@ -1,5 +1,44 @@
 # 实施取舍与交付边界
 
+**2026-11-09 交付与来源边界：**PR分支、main、远端main及dist是不同对象；大型Draft PR先核对完整提交范围再决定集成。主线持久attempt/合成FFI日志不证明worker实际执行；worker ACK必须与宿主持久化事件一一对应，失败就停派，未决事件保持unknown。`engine_calls`只表示adapter尝试数，不能推导worker spawn、真实FFI或ResearchBatch消费。报告结构/hash与输入绑定也不认证producer。详见[当前路线](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)、[测试记录](TESTING.md)及[部署记录](DEPLOYMENT.md)。
+
+**2026-11-04复核：**预算截断可产生有限线路，不证明搜索完整；未知调用或消费不能继承上一阶段的零值。R1b-3旧见证遗漏对手牌组/手牌计数，修正后须重新绑定冻结输入、driver及worker，旧run不能续跑。跨链恢复先认证再追加；报告临时文件窗口说明未发布临时件应按合同保留，不可误当终态。扫描和安全处置的范围、三个未证实路径竞态及用户选择保留ACL见[安全审计](SECURITY_AUDIT.md)；partial扫描不证明全仓安全。上述证据见[测试记录](TESTING.md)。
+
+2b-2复核：父进程必须先认证完整链与握手，再终止子进程；freeze/claim事件只证明合成路径所观测调用。最终版本补充断言后须重新验证，不能沿用更早结果；Windows同一测试程序仍运行时并发链接曾失败，须等待占用释放并重跑，不能当作行为红测。详见[验证记录](TESTING.md)和[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
+
+2026-11-02复核：握手须在临时文件同步后原子发布，避免父进程读到半标记；Windows接受socket的非阻塞继承及修复见[响应丢失交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)，旧TCP重置根因仍未知。未知消费不能推断为零；Tenki pin与Curry实际执行源码缺少来源链，不能用相似代码替代，见[E1诊断](superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)。合成、原生、会计与最优性证据分别判定；候选构建隔离且绑定资产，见[验证记录](TESTING.md)。历史证据归档仅覆盖清单所列文件，哈希清单不是备份，普通克隆不能取得私有索引，见[保留清单](EVIDENCE_RETENTION.md)。
+
+**H3.2-2b-1经验：**初版握手文件先创建再写入，父进程可能读到空或部分标记；改为同步临时文件后原子发布。四个限定窗口强杀后重新认证保存材料，核对空活动队列、重复重开和原始字节稳定；其他窗口及系统故障仍未认证。详见[交接](superpowers/plans/2026-11-01-w1h322b1-process-kill-handoff.md)。
+
+**H3.2-2b-2经验（2026-11-02）：**首次accepting持久化后、freeze前强杀后，恢复仅追加一次unknown且不建任务。跨进程测试必须认证所有操作修订、摘要和哈希，再用同步事件文件确认freeze/claim计数；旧测试计数器漏掉`submit_operation_core`直接调用的冻结闭包。事件仅证明该合成协调器窗口的调用边界，不覆盖worker、原生引擎、syscall或消费账本。详见[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)和[验证记录](TESTING.md)。
+
+**H3窗口选择经验（2026-11-04）：**先比较检查点所在的实际状态迁移，再判断是否是新窗口。`time_budget`与`node_budget`共享同一报告保存后`budget_limited`修订和队列结算回调；增加一个原因场景可验证原因字节恢复，不应重复计作新K边界。显式`mark_unknown`的`CompletionUncertain`修订落盘后、内存队列结算前则是与重开时分类running不同的实际迁移，故单独建立K并认证跨链与重复重开。证据见[原因分类交接](superpowers/plans/2026-11-04-time-budget-recovery-handoff.md)、[unknown终态交接](superpowers/plans/2026-11-04-unknown-terminal-persisted-before-queue-update.md)及[H3映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)。
+
+**running领取边界经验（2026-11-03）：**running修订持久化、内存队列更新、票据返回和执行器调用是不同的可观察边界；相邻强杀用例不能替代中间点。本批在队列更新后、票据返回前单独握手并认证，事件记录器只在目标checkpoint启用，避免污染既有事件顺序。补强父进程operation全链认证时，发现旧辅助函数虽然有accepted revision 4的转换校验，却在状态白名单中漏掉`Accepted`；修正后重新运行聚焦与workspace测试。该合成路径确认假执行器未被调用；恢复后的`unknown`仍不代表零消费。见[窗口交接](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)、[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)和[验证记录](TESTING.md)。
+
+**AssetMismatch恢复边界经验（2026-11-03）：**正向领取路径成功返回ticket的K证据不覆盖资产复核失败分支。新增单点K验证failed/AssetMismatch revision成功持久化、队列内存终态尚未应用时的进程终止；重开保留failed终态且不追加unknown。该协调器层合成检查不覆盖HTTP派发准入失败分支或真实资产/引擎，详见[交接](superpowers/plans/2026-11-03-asset-mismatch-persisted-before-queue-update-handoff.md)和[验证记录](TESTING.md)。
+
+**Ground候选构建身份边界（2026-11-03）：**离线候选清单必须分别绑定完整当前工作区源码、构建命令与产物、冻结输入、资产和最终阶段请求；准备报告的历史工作区摘要不能替代当前源码身份。候选review记录、构建成功或stage request摘要都不等于最终原生请求、scope授权或执行准入；保持hold时不得创建scope或启动runner/worker。机器记录和限制见[Ground候选清单评审](superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)与[验证记录](TESTING.md)。
+
+**H3.2-1 经验（2026-11-01）：**全量认证跨链材料并预先验证恢复候选，再依序提交；写后不确定即停止，重复重开不重复追加。原函数时间非法时曾提前追加 accepted，可靠串行红测记录于[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)；并发编译及 LNK1104 不能视为行为红测。目标窗口强杀、断电和介质故障仍未验收。
+
+**H3.1 设计经验（2026-11-01，尚待 H3.2 验证）：**先认证全部链和绑定，再规划修复，按操作关联、任务分类顺序提交；发布不确定时停派发。孤立报告不自动提升为完成，只读查询不触发恢复。目标逻辑窗口强杀不等于逐 syscall、断电或介质故障验收。详见[设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)。
+
+2026-11-01 H2.2并发经验：16次同ID并发提交只产生一个后台任务及一次冻结；16轮取消/领取竞争均由claim获胜，取消先完成仅有顺序用例。合成验收不能外推全部调度或响应丢失；早期TCP重置根因未知。范围与证据见[交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+
+2026-11-01 H2.2经验：异步提交先持久保存accepting，操作ID用于幂等；历史报告按保存字节和冻结身份校验，无路径投影不暴露内部配置。A/B合成故障与并发门禁已通过；此前TCP重置原因未认证，测试端完整写入和半关闭后复验通过不等于根因已查明。进程崩溃、响应丢失与逐syscall故障仍属于H3开放范围，见[H2.2交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)、[A交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)和[B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+
+## 2026-11-01 H2.1与候选部署经验
+
+- **问题与原因：**并发请求可能在冻结期间争夺唯一排队槽，操作链和任务链又不能假定跨文件原子提交。
+- **处理与代价：**先预占容量、认证操作与任务的跨链身份；写后不确定则停派发，保留停止状态的只读查询。恢复规则和锁内外顺序增加维护成本，不代表完整H3故障矩阵已验收。
+- **验证范围：**`contract-behavior-red.log`与`integrity-stop-red.log`是实际行为红测；早期`contract-red/coordinator-red`是接口缺失或并行开发编译阻断，不能称行为红测。详见[H2.1记录](TESTING.md#2026-10-31-w1-h21-内部操作持久化与幂等提交)。
+- **部署教训：**赛事候选首次smoke误用普通snapshot，因catalog/CDB不匹配被拒；显式改用赛事snapshot后重跑通过。两套smoke均受时间预算截断，不能据此推断全搜索、规则资格或账本等价；见[候选部署记录](TESTING.md#2026-11-01-e684f4e隔离候选双资产部署诊断)。
+
+2026-10-31 H1经验：操作链与任务链不能假装原子提交；预分配操作ID、双摘要及容量预占用于识别重复请求和提交缺口，写后不确定时停派发，不自动重发。代价是需要独立操作存储和重启核验；现有submit尚不具备该幂等能力。范围和证据见[HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)。
+
+2026-10-31 W1-B3经验：持久修订先于内存更新；报告先严格读取、绑定冻结输入、落盘并重读后发布。写后结果不确定时停派发，重启按已提交revision分类，实际调用前复核资产。代价是磁盘提交可能阻塞状态查询；子进程强杀不证明逐syscall或断电可靠性。范围和证据见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+
 2026-10-31 W1-B2经验：容量、领取、取消及结算同锁线性化，执行票据锁外使用，避免取消/领取竞争和重复结算；代价是持久化与重启需另设计。报告引用仅校验结构，不证明文件或实际执行；随机源失败和锁中毒注入尚未实测。范围及证据见[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 
 2026-10-31 W1-B1经验：无路径任务记录与包含本机路径和完整catalog的进程内冻结对象分离；双摘要分别绑定冻结身份和任务输入。有限浮点往返、非有限数字拒绝及严格JSON须用共享语料校验。报告引用只检查记录关系，不认证文件或实际执行；发布前必须验证报告、绑定冻结输入并完成落盘。代价是额外合同和重启时身份重验。范围和证据见[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
@@ -260,3 +299,25 @@
 - **处理：**W1-A移除该对象serde能力；W1-B须另设计无路径记录，执行前重建请求并重新核验资产身份。
 - **代价：**重启不能直接恢复内存对象，未知或中断任务须显示为相应状态，不自动重发。
 - **范围与证据：**W1工作台分析接口尚未实现，详见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)及[API](API.md)。
+
+### 27. 一个分析job可包含多个adapter调用
+
+- **问题：**初版W1-C合成回执合同把每个job限制为一次adapter attempt，无法表示搜索探索和线路replay产生的多次调用。
+- **根因：**合同先按单个worker请求建模，却未对照`combo::search`的调用路径；已验收的Rabbit分析包含165次应用层adapter调用。
+- **处理：**每个顺序调用绑定唯一attempt ID；完整协议响应后允许下一次计划调用，spawn/请求/响应未决后拒绝继续；replay失败后保存的部分report保持整体`incomplete`。
+- **代价：**多attempt链只证明记录可按调用序列校验；真实OS进程、FFI、报告producer和消费仍须独立观察及认证。
+- **范围与证据：**W1-C回执合同v1；17项聚焦回归见[验证记录](TESTING.md)和[计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+### 28. 持久化搜索attempt的开始和host结果
+
+- **问题：**内存观察在进程崩溃时消失，且无法判断崩溃发生在adapter调用之前还是之后。
+- **处理：**job绑定的私有日志在adapter调用前追加`Started`，返回后追加host结果；事件链绑定operation/job/running revision/command/input/资产摘要。提交前失败与写后不确定都会停止后续派发，重开把仍运行的任务分类为unknown。允许最后一条`Started`没有配对结果，作为未决调用现场保留。
+- **代价：**source/build身份当前为null；host摘要不认证OS worker、worker FFI、报告生产者或研究消费。unknown保持unknown，不从adapter次数推导零消费。
+- **范围与证据：**仅W1-C主机attempt日志及合成进程终止/写入故障；新增opt-in的Rust搜索回执API。workbench HTTP routes/DTO、job/schema和报告合同不变。测试与未关闭门禁见[验证记录](TESTING.md)和[计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+### 29. FFI事件必须独立配对
+
+- **问题：**只记录host结果无法说明某个ocgcore入口是否已经返回，尤其是回调嵌套或进程中断。
+- **处理：**attempt日志新增`ffi_entered`和`ffi_returned`。call ID在job内唯一，entered序号连续，returned必须对应未返回入口；HostResult会拒绝仍有未返回入口的attempt。孤立entered保留为unknown现场，并在重开后保持稳定。
+- **代价：**PR #17分支已加入可选的合成worker宿主确认流，但尚未集成进main，也没有认证生产worker/ocgcore执行、回调完整性或硬件结果；报告producer来源和ResearchBatch消费仍开放。
+- **范围与证据：**7项CLI FFI/回执聚焦回归覆盖嵌套LIFO配对、外层提前返回、孤立入口重开、错误关闭、跨attempt重复ID、写前失败和磁盘历史链唯一性；外层提前返回测试先RED再GREEN。Rust receipt Schema与Python离线验证器同步检查两类事件及嵌套LIFO顺序。Python回归18 passed；真实分析和FFI运行仍不在本批范围，workspace为494 passed/36 ignored，详见[验证记录](TESTING.md)。

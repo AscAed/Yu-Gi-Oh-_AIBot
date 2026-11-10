@@ -181,6 +181,29 @@ fn job_state_matrix_is_revision_checked_and_terminal_states_never_restart() {
 }
 
 #[test]
+fn uncertain_completion_becomes_unknown_without_a_report() {
+    let running = queued()
+        .transition(1, AnalysisJobEvent::Start, 101)
+        .unwrap();
+
+    let unknown = running
+        .transition(
+            2,
+            AnalysisJobEvent::Fail(AnalysisJobFailure::CompletionUncertain),
+            102,
+        )
+        .unwrap();
+
+    assert_eq!(unknown.state(), AnalysisJobState::Unknown);
+    assert_eq!(unknown.revision(), 3);
+    assert_eq!(
+        unknown.error_code(),
+        Some(AnalysisJobFailure::CompletionUncertain)
+    );
+    assert!(unknown.report().is_none());
+}
+
+#[test]
 fn job_report_outcomes_bind_termination_and_empty_verified_lines() {
     let running = queued()
         .transition(1, AnalysisJobEvent::Start, 101)
@@ -386,16 +409,21 @@ fn job_constructor_checks_runtime_binding_and_all_scoring_weights() {
     }
     let q = AnalysisJobRecordV1::new("1".repeat(32), &original, scoring, u64::MAX).unwrap();
     assert!(q.transition(1, AnalysisJobEvent::Start, u64::MAX).is_ok());
-    for invalid in [
-        AnalysisJobFailure::ServiceRestarted,
-        AnalysisJobFailure::CompletionUncertain,
-    ] {
-        assert!(q
-            .transition(1, AnalysisJobEvent::Start, u64::MAX)
-            .unwrap()
-            .transition(2, AnalysisJobEvent::Fail(invalid), u64::MAX)
-            .is_err());
-    }
+    let running = q.transition(1, AnalysisJobEvent::Start, u64::MAX).unwrap();
+    assert!(running
+        .transition(
+            2,
+            AnalysisJobEvent::Fail(AnalysisJobFailure::ServiceRestarted),
+            u64::MAX
+        )
+        .is_err());
+    assert!(q
+        .transition(
+            1,
+            AnalysisJobEvent::Fail(AnalysisJobFailure::CompletionUncertain),
+            u64::MAX
+        )
+        .is_err());
 }
 
 #[test]

@@ -1,6 +1,8 @@
 # 技术路线
 
-本文件定义阶段依赖与退出门槛，不复制当前进度。当前状态以[TASKS](../TASKS.md)为准，验证证据以[TESTING](TESTING.md)为准。W1产品线近期实施路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)；W1-B1及更早计划保留在各自日期，作为历史快照。
+当前路线：[2026-11-09项目现状评估与双轨路线](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)，已补记2026-11-10状态。H3若干提交点及调度窗口仅按各自限定范围验收，其他逻辑窗口/调度、逐syscall、断电及介质故障仍开放。W1-C固定Rabbit单次分析因`budget_limited/time_budget`结束；来源/计量与发布资格未认证。PR #17处于Draft且尚未合入本地main，最终head的CodeRabbit检查因Draft跳过、reviews列表为空。项目阶段依赖仍以本页为准，当前状态以[TASKS](../TASKS.md)为准。
+
+历史路线见[H3.2-1后项目路线](superpowers/plans/2026-11-01-post-w1h321-project-route.md)及[H3.1后项目路线](superpowers/plans/2026-11-01-post-w1h31-project-route.md)。当前状态以 [TASKS](../TASKS.md) 为准，历史验证以 [TESTING](TESTING.md) 为准；旧计划保留各自时点。
 
 ## 产品基础与研究基础
 

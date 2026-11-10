@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/workspace-state-bundle.schema.json",
+  "title": "Workspace Git state bundle manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "source_bundle_identity",
+    "source_identity",
+    "git",
+    "payloads",
+    "archive",
+    "identity"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "workspace_state_bundle"},
+    "source_bundle_identity": {"$ref": "#/$defs/hash"},
+    "source_identity": {"$ref": "#/$defs/hash"},
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["head", "version", "core_filemode", "index_sha256", "index_bytes", "index_entry_count"],
+      "properties": {
+        "head": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"}, {"type": "null"}]},
+        "version": {"type": "string", "minLength": 1},
+        "core_filemode": {"oneOf": [{"type": "boolean"}, {"type": "null"}]},
+        "index_sha256": {"$ref": "#/$defs/hash"},
+        "index_bytes": {"type": "integer", "minimum": 0},
+        "index_entry_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "payloads": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git-index.bin", "staged.patch", "unstaged.patch", "index-entries.bin", "status.porcelain-v2", "file-modes.json"],
+      "properties": {
+        "git-index.bin": {"$ref": "#/$defs/payload"},
+        "staged.patch": {"$ref": "#/$defs/payload"},
+        "unstaged.patch": {"$ref": "#/$defs/payload"},
+        "index-entries.bin": {"$ref": "#/$defs/payload"},
+        "status.porcelain-v2": {"$ref": "#/$defs/payload"},
+        "file-modes.json": {"$ref": "#/$defs/payload"}
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bytes", "sha256"],
+      "properties": {
+        "name": {"const": "workspace-state.zip"},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "identity": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "sha256"],
+      "properties": {
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/hash"}
+      }
+    }
+  }
+}

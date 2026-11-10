@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "w1c_search_attempt_journal_event",
+  "context": {
+    "operation_id": "11111111111111111111111111111111",
+    "job_id": "22222222222222222222222222222222",
+    "running_job_revision": 2,
+    "command_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+    "job_input_binding_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+    "input_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+    "source_bundle_identity": null,
+    "build_record_identity": null,
+    "assets": {
+      "engine_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "worker_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "cdb_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+      "scripts_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "engine_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "context_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "sequence": 1,
+  "previous_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "event": {
+    "event_type": "started",
+    "ordinal": 1,
+    "attempt_id": "cccccccccccccccccccccccccccccccc",
+    "phase": "initial"
+  },
+  "event_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+}

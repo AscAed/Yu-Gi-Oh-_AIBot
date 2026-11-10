@@ -1,0 +1,1192 @@
+{
+  "fixture_id": "ground-collapse-opcode24-canonical-menu-v1",
+  "classification": "synthetic_only",
+  "raw_prompt": [
+    24,
+    0,
+    2,
+    224,
+    255,
+    224,
+    255
+  ],
+  "disabled_mask": "ffe0ffe0",
+  "available_zones": 10,
+  "canonical_menu_pair_count": 45,
+  "distinct_ordered_encodings": 90,
+  "actions": [
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        0,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        0,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        0,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        0,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        1,
+        4,
+        0
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        1,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        0,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        0,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        0,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        0,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        1,
+        4,
+        0
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        1,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        1,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        0,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        0,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        1,
+        4,
+        0
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        1,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        2,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        3,
+        0,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        3,
+        1,
+        4,
+        0
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        3,
+        1,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        3,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        3,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        3,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        4,
+        1,
+        4,
+        0
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        4,
+        1,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        4,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        4,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 0,
+            "location": 4,
+            "sequence": 4
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        0,
+        4,
+        4,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        0,
+        1,
+        4,
+        1
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        0,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        0,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 0
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        0,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        1,
+        1,
+        4,
+        2
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        1,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 1
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        1,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        2,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 2
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        2,
+        1,
+        4,
+        4
+      ]
+    },
+    {
+      "choice": {
+        "kind": "place",
+        "zones": [
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 3
+          },
+          {
+            "player": 1,
+            "location": 4,
+            "sequence": 4
+          }
+        ]
+      },
+      "card_ids": [],
+      "bytes": [
+        1,
+        4,
+        3,
+        1,
+        4,
+        4
+      ]
+    }
+  ],
+  "native_reachability_verified": false,
+  "native_response_acceptance_verified": false,
+  "order_equivalence_verified": false
+}

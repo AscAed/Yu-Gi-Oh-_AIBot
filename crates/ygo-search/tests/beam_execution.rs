@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use ygo_engine_adapter::*;
 use ygo_search::combo::*;
 struct Tree;
@@ -116,6 +117,529 @@ fn request() -> RunDuelRequest {
         research_capture: None,
     }
 }
+
+#[derive(Clone, Copy)]
+enum FfiCallbackFailureBehavior {
+    CallbackError,
+    OtherAdapterError,
+    Success,
+}
+
+struct ObservedTree {
+    calls: AtomicUsize,
+    error_stage: &'static str,
+    emit_ffi: bool,
+    invalid_ffi_direction: bool,
+    ffi_callback_failure_behavior: FfiCallbackFailureBehavior,
+}
+
+impl ObservedTree {
+    fn new() -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: false,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
+        }
+    }
+
+    fn with_error_stage(error_stage: &'static str) -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage,
+            emit_ffi: false,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
+        }
+    }
+
+    fn with_ffi() -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: true,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
+        }
+    }
+
+    fn with_ffi_callback_failure_behavior(
+        ffi_callback_failure_behavior: FfiCallbackFailureBehavior,
+    ) -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: true,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior,
+        }
+    }
+
+    fn with_invalid_ffi_direction() -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: true,
+            invalid_ffi_direction: true,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
+        }
+    }
+
+    fn observed_result(&self, r: &RunDuelRequest, call: usize) -> ProcessObservedOutcome {
+        let result = self.run(r);
+        let failed = result.is_err();
+        ProcessObservedOutcome {
+            result,
+            observation: ProcessRunObservation {
+                worker_executable_sha256: Some("a".repeat(64)),
+                spawn_status: ProcessSpawnStatus::Spawned,
+                worker_pid: Some(1000 + call as u32),
+                request_status: ProcessIoStatus::Complete,
+                request_sha256: Some(format!("{call:064x}")),
+                request_bytes: Some(1),
+                response_status: ProcessIoStatus::Complete,
+                response_sha256: Some(format!("{:064x}", call + 1)),
+                response_bytes: Some(2),
+                response_validation: if failed {
+                    ProcessResponseValidation::NotAttempted
+                } else {
+                    ProcessResponseValidation::Parsed
+                },
+                termination: ProcessTermination::Exited,
+                exit_code: Some(if failed { 7 } else { 0 }),
+                elapsed_ms: call as u64,
+            },
+        }
+    }
+}
+
+impl EngineAdapter for ObservedTree {
+    fn doctor(&self) -> DoctorReport {
+        unreachable!("synthetic observed adapter does not probe a worker")
+    }
+
+    fn run(&self, r: &RunDuelRequest) -> Result<DuelResult, WorkerError> {
+        if r.decisions.last().is_some_and(|decision| {
+            decision.choice
+                == Choice::Command {
+                    command: 3,
+                    index: 0,
+                }
+        }) {
+            return Err(WorkerError::new(
+                "fixture_exit",
+                self.error_stage,
+                "synthetic exit",
+            ));
+        }
+        Tree.run(r)
+    }
+}
+
+impl ProcessObservedAdapter for ObservedTree {
+    fn run_process_observed(&self, r: &RunDuelRequest) -> ProcessObservedOutcome {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst);
+        self.observed_result(r, call)
+    }
+
+    fn run_process_observed_with_ffi(
+        &self,
+        r: &RunDuelRequest,
+        attempt_id: &str,
+        record: &mut dyn FnMut(ygo_engine_adapter::FfiReceiptEvent) -> Result<(), String>,
+    ) -> ProcessObservedOutcome {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst);
+        if !self.emit_ffi {
+            return self.observed_result(r, call);
+        }
+        let outer = "0".repeat(32);
+        let inner = "1".repeat(32);
+        assert_eq!(attempt_id.len(), 32);
+        for event in [
+            ygo_engine_adapter::FfiReceiptEvent::Entered {
+                sequence: 1,
+                call_id: outer.clone(),
+                direction: if self.invalid_ffi_direction {
+                    "invalid".into()
+                } else {
+                    "into_core".into()
+                },
+                name: "OCG_DuelProcess".into(),
+            },
+            ygo_engine_adapter::FfiReceiptEvent::Entered {
+                sequence: 2,
+                call_id: inner.clone(),
+                direction: "out_of_core".into(),
+                name: "card_reader".into(),
+            },
+            ygo_engine_adapter::FfiReceiptEvent::Returned {
+                sequence: 2,
+                call_id: inner,
+            },
+            ygo_engine_adapter::FfiReceiptEvent::Returned {
+                sequence: 1,
+                call_id: outer,
+            },
+        ] {
+            if let Err(error) = record(event) {
+                match self.ffi_callback_failure_behavior {
+                    FfiCallbackFailureBehavior::CallbackError => {
+                        return ProcessObservedOutcome {
+                            result: Err(WorkerError::new(
+                                "host_receipt_callback_failed",
+                                "receipt_callback",
+                                error,
+                            )),
+                            observation: ProcessRunObservation::default(),
+                        };
+                    }
+                    FfiCallbackFailureBehavior::OtherAdapterError => {
+                        return ProcessObservedOutcome {
+                            result: Err(WorkerError::new(
+                                "fixture_timeout",
+                                "worker_timeout",
+                                error,
+                            )),
+                            observation: ProcessRunObservation::default(),
+                        };
+                    }
+                    FfiCallbackFailureBehavior::Success => {
+                        return self.observed_result(r, call);
+                    }
+                }
+            }
+        }
+        self.observed_result(r, call)
+    }
+}
+
+#[test]
+fn observed_search_orders_unique_attempts_across_exploration_failure_and_replay() {
+    let adapter = ObservedTree::new();
+    let budget = SearchBudget {
+        beam_width: 4,
+        node_budget: 100,
+        max_depth: 5,
+        ..Default::default()
+    };
+    let mut next_id = 0u64;
+    let outcome = search_with_observations(
+        &adapter,
+        &request(),
+        &budget,
+        &ScoringConfig::default(),
+        || {
+            next_id += 1;
+            Ok(format!("{next_id:032x}"))
+        },
+    );
+
+    let report = outcome.report.expect("synthetic search completes");
+    assert!(report.lines.iter().any(|line| line.replay_verified));
+    assert_eq!(outcome.attempts.len(), report.stats.engine_calls);
+    assert_eq!(
+        outcome
+            .attempts
+            .iter()
+            .map(|attempt| attempt.ordinal)
+            .collect::<Vec<_>>(),
+        (1..=outcome.attempts.len() as u64).collect::<Vec<_>>()
+    );
+    let ids = outcome
+        .attempts
+        .iter()
+        .map(|attempt| attempt.attempt_id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(ids.len(), outcome.attempts.len());
+    assert_eq!(outcome.attempts[0].phase, SearchAttemptPhase::Initial);
+    assert!(outcome
+        .attempts
+        .iter()
+        .any(|attempt| attempt.phase == SearchAttemptPhase::Baseline));
+    let failed_exploration = outcome
+        .attempts
+        .iter()
+        .position(|attempt| {
+            attempt.phase == SearchAttemptPhase::Exploration
+                && matches!(
+                    attempt.result,
+                    SearchAttemptResult::AdapterError { ref code, .. } if code == "fixture_exit"
+                )
+        })
+        .expect("one exploratory adapter failure is recorded");
+    assert!(outcome.attempts[failed_exploration + 1..]
+        .iter()
+        .any(|attempt| attempt.phase == SearchAttemptPhase::Replay));
+    assert!(outcome.attempts.iter().all(|attempt| {
+        attempt.process_observation.worker_pid.is_some()
+            && attempt.process_observation.request_sha256.is_some()
+    }));
+}
+
+#[test]
+fn observed_search_rejects_reused_attempt_id_before_another_adapter_call() {
+    let adapter = ObservedTree::new();
+    let outcome = search_with_observations(
+        &adapter,
+        &request(),
+        &SearchBudget::default(),
+        &ScoringConfig::default(),
+        || Ok("b".repeat(32)),
+    );
+
+    assert!(outcome.report.is_err());
+    assert_eq!(outcome.attempts.len(), 1);
+    assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn observed_adapter_reserved_stage_is_not_misclassified_as_receipt_gate() {
+    let adapter = ObservedTree::with_error_stage("attempt_receipt");
+    let budget = SearchBudget {
+        beam_width: 4,
+        node_budget: 100,
+        max_depth: 5,
+        ..Default::default()
+    };
+    let mut next_id = 0u64;
+    let outcome = search_with_observations(
+        &adapter,
+        &request(),
+        &budget,
+        &ScoringConfig::default(),
+        || {
+            next_id += 1;
+            Ok(format!("{next_id:032x}"))
+        },
+    );
+
+    let report = outcome
+        .report
+        .expect("adapter errors are search diagnostics, not receipt failures");
+    assert!(report.stats.failed_branches > 0);
+    assert_eq!(report.stats.engine_calls, outcome.attempts.len());
+    assert_eq!(adapter.calls.load(Ordering::SeqCst), outcome.attempts.len());
+    assert!(outcome.attempts.iter().any(|attempt| {
+        attempt.phase == SearchAttemptPhase::Exploration
+            && matches!(
+                attempt.result,
+                SearchAttemptResult::AdapterError { ref code, ref stage }
+                    if code == "fixture_exit" && stage == "attempt_receipt"
+            )
+    }));
+}
+
+#[test]
+fn receipt_callbacks_bracket_adapter_calls_and_stop_on_persistence_failure() {
+    let adapter = ObservedTree::new();
+    let mut next_id = 0u64;
+    let mut events = Vec::new();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 2,
+            node_budget: 20,
+            max_depth: 3,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || {
+            next_id += 1;
+            Ok(format!("{next_id:032x}"))
+        },
+        |event| {
+            events.push(event);
+            Ok(())
+        },
+    );
+
+    assert!(outcome.report.is_ok());
+    assert_eq!(events.len(), outcome.attempts.len() * 2);
+    for pair in events.chunks_exact(2) {
+        assert!(matches!(pair[0], SearchAttemptJournalEvent::Started(_)));
+        assert!(matches!(pair[1], SearchAttemptJournalEvent::Finished(_)));
+    }
+
+    let start_failure_adapter = ObservedTree::new();
+    let start_failure = search_with_receipts(
+        &start_failure_adapter,
+        &request(),
+        &SearchBudget::default(),
+        &ScoringConfig::default(),
+        || Ok("d".repeat(32)),
+        |_| Err("receipt start write failed".to_owned()),
+    );
+    assert!(start_failure.report.is_err());
+    assert_eq!(start_failure_adapter.calls.load(Ordering::SeqCst), 0);
+    assert!(start_failure.attempts.is_empty());
+
+    let finish_failure_adapter = ObservedTree::new();
+    let finish_failure = search_with_receipts(
+        &finish_failure_adapter,
+        &request(),
+        &SearchBudget::default(),
+        &ScoringConfig::default(),
+        || Ok("e".repeat(32)),
+        |event| match event {
+            SearchAttemptJournalEvent::Started(_)
+            | SearchAttemptJournalEvent::FfiEntered(_)
+            | SearchAttemptJournalEvent::FfiReturned(_) => Ok(()),
+            SearchAttemptJournalEvent::Finished(_) => Err("receipt result write failed".into()),
+        },
+    );
+    assert!(finish_failure.report.is_err());
+    assert_eq!(finish_failure_adapter.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(finish_failure.attempts.len(), 1);
+}
+
+#[test]
+fn ffi_receipts_are_persisted_between_started_and_host_result() {
+    let adapter = ObservedTree::with_ffi();
+    let mut events = Vec::new();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 1,
+            node_budget: 1,
+            max_depth: 1,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || Ok("a".repeat(32)),
+        |event| {
+            events.push(event);
+            Ok(())
+        },
+    );
+
+    assert_eq!(outcome.attempts.len(), 1);
+    assert_eq!(events.len(), 6);
+    assert!(matches!(events[0], SearchAttemptJournalEvent::Started(_)));
+    assert!(matches!(
+        events[1],
+        SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+            ffi_ordinal: 1,
+            direction: SearchAttemptFfiDirection::HostToOcgcore,
+            ..
+        })
+    ));
+    assert!(matches!(
+        events[2],
+        SearchAttemptJournalEvent::FfiEntered(SearchAttemptFfiEntry {
+            ffi_ordinal: 2,
+            direction: SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+            ..
+        })
+    ));
+    assert!(matches!(
+        events[3],
+        SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+            status: SearchAttemptFfiReturnStatus::Returned,
+            ..
+        })
+    ));
+    assert!(matches!(
+        events[4],
+        SearchAttemptJournalEvent::FfiReturned(SearchAttemptFfiReturn {
+            status: SearchAttemptFfiReturnStatus::Returned,
+            ..
+        })
+    ));
+    assert!(matches!(events[5], SearchAttemptJournalEvent::Finished(_)));
+}
+
+#[test]
+fn ffi_receipt_callback_failure_stops_search_after_one_adapter_call() {
+    let adapter = ObservedTree::with_ffi();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 4,
+            node_budget: 100,
+            max_depth: 5,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || Ok("c".repeat(32)),
+        |event| match event {
+            SearchAttemptJournalEvent::FfiEntered(_) => {
+                Err("simulated FFI receipt append failure".into())
+            }
+            _ => Ok(()),
+        },
+    );
+
+    assert!(outcome.report.is_err());
+    assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(outcome.attempts.len(), 1);
+    assert!(matches!(
+        outcome.attempts[0].result,
+        SearchAttemptResult::AdapterError {
+            ref code,
+            ref stage
+        } if code == "host_receipt_callback_failed" && stage == "receipt_callback"
+    ));
+}
+
+#[test]
+fn ffi_receipt_callback_failure_gates_other_adapter_outcomes() {
+    for behavior in [
+        FfiCallbackFailureBehavior::OtherAdapterError,
+        FfiCallbackFailureBehavior::Success,
+    ] {
+        let adapter = ObservedTree::with_ffi_callback_failure_behavior(behavior);
+        let outcome = search_with_receipts(
+            &adapter,
+            &request(),
+            &SearchBudget {
+                beam_width: 4,
+                node_budget: 100,
+                max_depth: 5,
+                ..Default::default()
+            },
+            &ScoringConfig::default(),
+            || Ok("f".repeat(32)),
+            |event| {
+                if matches!(event, SearchAttemptJournalEvent::FfiEntered(_)) {
+                    Err("simulated FFI receipt append failure".into())
+                } else {
+                    Ok(())
+                }
+            },
+        );
+
+        assert!(outcome.report.is_err());
+        assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+        assert_eq!(outcome.attempts.len(), 1);
+    }
+}
+
+#[test]
+fn invalid_ffi_direction_gates_later_adapter_calls() {
+    let adapter = ObservedTree::with_invalid_ffi_direction();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 4,
+            node_budget: 100,
+            max_depth: 5,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || Ok("d".repeat(32)),
+        |_| Ok(()),
+    );
+
+    assert!(outcome.report.is_err());
+    assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(outcome.attempts.len(), 1);
+}
+
 #[test]
 fn beam_keeps_a_costly_setup_branch_and_independently_replays_results() {
     let budget = SearchBudget {

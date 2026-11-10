@@ -1,0 +1,7 @@
+# cancelled保存后队列内存更新前：限定进程终止验收
+
+在已accepted的合成queued任务上调用取消，在cancelled修订持久提交后、内存队列更新前通过`cfg(test)`检查点发布同步原子握手。父进程检查任务两修订的封套、前驱和记录哈希、queued→cancelled转换以及其输入与操作冻结输入一致；确认强杀前一次冻结尝试、零领取及无报告后终止子进程。新协调器持锁完整认证链后，两次重开均保留accepted操作和cancelled任务，无运行、排队或可领取工作，所有持久文件字节不变。
+
+红测因检查点缺失失败；增加检查点后聚焦测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过。本批未重跑workspace全套。证据目录`target/w1h21-analysis-operation-tests/a415abac0d0d33cecfc38482c5430a5a/`保留握手、事件日志、终止状态及六项原材料哈希，已只读核对现存哈希及cancelled状态。原操作完整跨链认证发生在重开时；哈希记录不是逐阶段原始字节备份。
+
+仅覆盖取消已提交而内存队列尚未更新的合成窗口；不认证其他并发调度、HTTP传输期间强杀、逐syscall、断电或介质故障。没有启动真实runner、worker或FFI，不推断真实消费；普通启动仍为`analysis_not_configured`，W1-C和P4-R5开放。

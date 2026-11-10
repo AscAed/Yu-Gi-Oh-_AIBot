@@ -41,11 +41,74 @@ fn readonly_folder() -> PathBuf {
     std::fs::create_dir_all(&path).unwrap();
     path
 }
+
+fn create_directory_link(target: &std::path::Path, link: &std::path::Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_dir(target, link)
+    }
+}
+
 fn request() -> RunDuelRequest {
     serde_json::from_value(serde_json::json!({"protocol_version":2,"engine":{},
         "deck":{"main":[],"extra":[],"side":[]},"opening_hand":[],"seed":1,"decisions":[],
         "versions":{"rules":"ocg-mr5","catalog":"test","banlist":"test","engine_sha256":"engine","cdb_sha256":"cdb","scripts_sha256":"scripts","core_commit":"core"}})).unwrap()
 }
+
+#[test]
+fn journal_refuses_a_linked_sidecar_directory() {
+    let dir = folder();
+    let ledger = dir.join("calls.jsonl");
+    let outside = dir.join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    let sentinel = outside.join("sentinel.txt");
+    std::fs::write(&sentinel, b"preserve outside data").unwrap();
+    let sidecar = PathBuf::from(format!("{}.blobs", ledger.display()));
+
+    if let Err(error) = create_directory_link(&outside, &sidecar) {
+        if cfg!(windows)
+            && (matches!(
+                error.kind(),
+                std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::Unsupported
+            ) || error.raw_os_error() == Some(1314))
+        {
+            eprintln!("skipping linked-sidecar assertion: directory links unavailable: {error}");
+            std::fs::remove_dir_all(&dir).unwrap();
+            return;
+        }
+        panic!("create sidecar link failed: {error}");
+    }
+
+    let result = CallJournal::open(&ledger, "linked-sidecar", "fixed-context", 2);
+    assert!(result.is_err(), "linked sidecar must be rejected");
+    assert_eq!(std::fs::read(&sentinel).unwrap(), b"preserve outside data");
+
+    #[cfg(unix)]
+    std::fs::remove_file(&sidecar).unwrap();
+    #[cfg(windows)]
+    std::fs::remove_dir(&sidecar).unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn journal_refuses_a_non_directory_sidecar_root() {
+    let dir = folder();
+    let ledger = dir.join("calls.jsonl");
+    let sidecar = PathBuf::from(format!("{}.blobs", ledger.display()));
+    std::fs::write(&sidecar, b"preserve sidecar data").unwrap();
+
+    assert!(CallJournal::open(&ledger, "bad-sidecar", "fixed-context", 2).is_err());
+    assert_eq!(std::fs::read(&sidecar).unwrap(), b"preserve sidecar data");
+    assert!(!ledger.exists());
+
+    std::fs::remove_file(sidecar).unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 #[derive(Clone)]
 struct Fake(Arc<AtomicUsize>);
 impl EngineAdapter for Fake {

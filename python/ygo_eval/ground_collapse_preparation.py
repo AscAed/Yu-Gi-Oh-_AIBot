@@ -34,7 +34,7 @@ from ygo_eval.prompt_probe_logic import derive_candidates
 from ygo_eval.prompt_probe_prepare import encode, safe_path, strict_json
 
 
-OUTPUT_ROOT = Path("data/runtime/p1-ground-collapse-preparation-offline-2026-10-27")
+OUTPUT_ROOT = Path("data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2")
 OUTPUT_FILE = "preparation.json"
 PUBLICATION_DIAGNOSTIC_FILE = "publication-diagnostic.json"
 BASELINE_ROOT = Path("data/runtime/p1-curry-option-revalidation-native-2026-10-26")
@@ -83,16 +83,24 @@ ALLOWED_SOURCE_DIFFS = (
 )
 TOOL_FILES = (
     ".gitignore",
+    "Cargo.toml",
+    "Cargo.lock",
+    "crates/ygo-engine-adapter/Cargo.toml",
     "crates/ygo-engine-adapter/src/codec.rs",
+    "crates/ygo-engine-adapter/src/lib.rs",
+    "crates/ygo-engine-adapter/src/ground_collapse_probe.rs",
+    "crates/ygo-engine-adapter/examples/ground-collapse-probe.rs",
     "crates/ygo-engine-adapter/tests/protocol.rs",
     "python/ygo_eval/ground_collapse_preparation.py",
     "python/ygo_eval/ground_collapse_protocol.py",
+    "python/ygo_eval/ground_collapse_stage_driver.py",
     "python/ygo_eval/prompt_probe_logic.py",
     "python/ygo_eval/prompt_probe_prepare.py",
     "python/ygo_eval/research.py",
     "schemas/ground-collapse-preparation-v1.schema.json",
     "tests/test_ground_collapse_preparation.py",
     "tests/test_ground_collapse_protocol.py",
+    "tests/test_ground_collapse_stage_driver.py",
 )
 QUALIFICATIONS = {
     "proof_ready": False,

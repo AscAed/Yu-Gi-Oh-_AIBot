@@ -36,6 +36,19 @@ fn imports_legacy_bare_deck_json_and_rejects_duplicate_json_fields() {
 }
 
 #[test]
+fn legacy_bare_deck_fixture_migrates_to_versioned_v1_without_data_loss() {
+    let legacy = include_str!("../../../tests/fixtures/deck-draft-legacy-bare-v0.json");
+    let expected =
+        include_str!("../../../tests/fixtures/deck-draft-legacy-bare-v0.expected-v1.json");
+    let imported = DeckDocumentV1::import_json(legacy).unwrap();
+    let expected = DeckDocumentV1::from_json(expected).unwrap();
+
+    assert_eq!(imported, expected);
+    let versioned = imported.to_json().unwrap();
+    assert_eq!(DeckDocumentV1::from_json(&versioned).unwrap(), expected);
+}
+
+#[test]
 fn edit_changes_only_the_requested_zone_and_rejects_short_removal() {
     let mut doc = DeckDocumentV1::new("edit", vec![4, 4, 8], vec![4], vec![8]).unwrap();
     doc.edit(DeckZone::Main, "remove", 4, 1).unwrap();

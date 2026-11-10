@@ -1,6 +1,20 @@
 # CLI 与库接口
 
-当前已实现W1-B1无路径任务合同、W1-B2进程内队列及W1-B3内部持久任务/报告存储协调器；领取时校验冻结资产哈希，提交结果不确定时停止协调器。内部合成故障矩阵覆盖提交边界、终态重开分类、重复终态请求和冻结资产漂移；不认证报告来源、真实执行、逐syscall崩溃或断电持久性。内部能力尚未连接工作台分析HTTP或真实执行器。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
+当前接口和工作台状态以[TASKS](../TASKS.md)为准，逐次结果见[TESTING](TESTING.md)。截至2026-11-03，W1-C完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；报告来源与底层FFI/消费未独立认证，搜索不完整。H3还留有其他逻辑窗口、调度及系统级故障门禁。普通启动仍为`analysis_not_configured`。本机旧发布包不含当前workbench，且当前目录ACL审计发现配置执行资产可被Authenticated Users修改，详见[部署](DEPLOYMENT.md)和[环境审计](ENVIRONMENT_AUDIT.md)。以下历史段落保留其原时点。
+
+历史状态（H3.2-1交付时）：已实现共享跨链认证、全候选验证后提交及重复重开；当时H3.2-2响应丢失和目标窗口强杀仍开放。后续2a和当前开放门禁见本文顶部与[当前任务](../TASKS.md)。验收范围见[H3.2-1交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)、[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)。现有跨链认证/分类可复用；新增完整恢复与响应丢失矩阵尚未实现／尚未运行，留待H3.2。普通启动仍为`analysis_not_configured`。
+
+H2.2-A/B所列合成HTTP验收已关闭，测试服务装配分析协调器；普通启动仍为`analysis_not_configured`，H3和真实分析开放。16轮取消/领取竞争均由claim获胜，不证明两种并发胜者均已观察，见[交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+
+当前分析HTTP v1包含六端点、严格合同、操作幂等、异步接受、历史报告读取和无路径投影；显式配置下的单任务生产执行器已接入，普通启动仍返回`analysis_not_configured`。固定Rabbit参数/快照/资产/隔离包准入已实现；2026-11-03完成一次本机有限分析并以`budget_limited/time_budget`停止。底层FFI/消费未独立计量，报告来源未独立认证，结果不证明完整搜索或最优性。H2.2-A/B和列明的H3窗口只按各自合成范围验收；其他H3窗口及调度仍开放。接口与验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)、[TASKS](../TASKS.md)和[TESTING](TESTING.md)。
+
+历史记录：该段描述H2.1交付时点。H2.2现已实现HTTP路由、公开状态/结果DTO及路径安全边界；H3恢复验证与真实分析仍开放。详见本文开头的当前状态说明。
+
+历史状态：W1-B3交付时内部任务/报告存储与持久协调器已实现，任务HTTP和真实执行器尚未接入。H2.2随后接入HTTP与无路径DTO；真实执行器仍未配置。持久提交先于内存更新，报告严格读取、绑定冻结输入、落盘重读后发布；写后不确定时停派发，执行前复核资产。详见[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)。
+
+当前已实现W1-B1无路径任务合同、W1-B2进程内队列、W1-B3内部持久任务/报告存储协调器，以及H2.2分析HTTP与DTO；领取时校验冻结资产哈希，提交结果不确定时停止协调器。内部合成故障矩阵覆盖提交边界、终态重开分类、重复终态请求和冻结资产漂移；不认证报告来源、真实执行、逐syscall崩溃或断电持久性。普通启动仍未配置分析后端。详细合同分别见[任务记录](WORKBENCH_ANALYSIS_JOBS.md)、[持久化实现](WORKBENCH_ANALYSIS_PERSISTENCE.md)、[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)及[W1-B2交接](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)。
 
 当前交付面包括本机 CLI/Rust库，以及仅绑定`127.0.0.1`的本机草稿工作台。解析器与JSON schema是规范性合同；工作台接口只用于本机草稿，不是通用远程API。
 
@@ -10,7 +24,7 @@
 - `engine identity --config <toml> [--output <json>]`：只读资产身份及脚本清单差异；不运行决斗，不授予构建或规则资格。
 - `catalog`、`banlist`、`deck validate`：本地快照导入/查询和牌组合法性校验。
 - `deck draft create|show|edit|import|export`：独立可保存草稿工具；允许残缺草稿，YDK/JSON仅承诺卡号、分区及数量往返，不替代`deck validate`。
-- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；可通过`--language-status FILE`加载只读C1字段状态，不返回候选正文。参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
+- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；支持`--language-status FILE`读取只读C1字段状态，也可显式提供`--analysis-config FILE`和匹配的`--catalog-id ID`启用固定W1-C分析入口。参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
 - `combo analyze`、`combo replay`：通用引擎前缀搜索和独立重放。
 - `combo plan`、`combo plan-replay`：读取并分派规划合同 v1–v5；旧报告按各自版本验证。
 - `knowledge validate`、`knowledge verify`：知识来源/合同检查、独立原生规则案例验真。
@@ -38,11 +52,11 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 
 ## 工作台边界
 
-当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索，以及`GET /api/language-status?ids=...`只读字段状态。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。服务不执行shell、worker、FFI、分析或研究入口。中文语义、使用和再分发资格仍未核验。
+当前HTTP接口仅服务工作台：草稿列表/新建/读取/条件更新、导入解析、导出、可选本地catalog检索、`GET /api/language-status?ids=...`只读字段状态，以及H2.2分析任务路由。状态接口仅返回卡号、固定来源ID、候选/缺失/冲突/未知状态、稳定原因及候选哈希，不返回候选文字；状态文件缺失/损坏时返回未核验且不影响草稿编辑。草稿更新使用内容revision，过期revision返回冲突；浏览器不能传入文件路径。普通工作台启动未配置分析后端，不执行分析、shell、worker、FFI或研究入口。中文语义、使用和再分发资格仍未核验。
 
-工作台分析任务HTTP接口尚未实现。W1-A已增加Rust库内部能力`ygo_cli::workbench_analysis::freeze_analysis_input`：它只接受服务管理的草稿ID/revision与结构化分析参数，在同一草稿存储互斥锁内读取并核对revision，将草稿内容复制进拥有自身的`ComboAnalyzeRequest`，解析固定catalog和banlist ID，再复用现有`prepare`校验牌组、五张起手、规则、日期/禁限、搜索预算和catalog/CDB身份。返回对象记录请求及资产版本身份并使用稳定错误码，不包括HTTP路由、队列或运行执行；失败不会创建任务或启动adapter。进程内对象含runtime asset路径与完整本地catalog，不可serde或直接持久化。独立任务记录合同和W1-B3任务/报告文件存储另见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[存储设计/状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)；持久存储已接入内部协调器，但尚未接入HTTP服务。领取时会复核冻结资产哈希；实际调用前仍须针对当前资产重新核对，降低检查后的漂移风险；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
+历史记录（W1-A交付时）：工作台分析任务HTTP接口尚未实现。W1-A增加Rust库内部能力`ygo_cli::workbench_analysis::freeze_analysis_input`：它只接受服务管理的草稿ID/revision与结构化分析参数，在同一草稿存储互斥锁内读取并核对revision，将草稿内容复制进拥有自身的`ComboAnalyzeRequest`，解析固定catalog和banlist ID，再复用现有`prepare`校验牌组、五张起手、规则、日期/禁限、搜索预算和catalog/CDB身份。返回对象记录请求及资产版本身份并使用稳定错误码，不包括HTTP路由、队列或运行执行；失败不会创建任务或启动adapter。进程内对象含runtime asset路径与完整本地catalog，不可serde或直接持久化。独立任务记录合同和W1-B3任务/报告文件存储另见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[存储设计/状态](WORKBENCH_ANALYSIS_PERSISTENCE.md)；持久存储在当时只接入内部协调器。H2.2已接入HTTP路由，但普通启动未配置分析后端；完整验收见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。领取时会复核冻结资产哈希；实际调用前仍须针对当前资产重新核对，降低检查后的漂移风险；不改变既有`combo analyze` CLI、分析报告或规划v1–v5合同。
 
-W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, &frozen, scoring, now_ms)`复制无路径白名单；`validate/read_json/encode_json`校验和严格编解码；`transition(expected_revision, event, now_ms)`纯函数返回新记录。必须显式保留所有nullable字段，拒绝重复/未知/缺失字段、错误整数、无效身份/预算和摘要失配。完成事件只接受报告ID/hash、原始终止原因及验证线路数，不检查报告文件存在或授予执行资格。完整字段、摘要顺序和状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[schema](../schemas/workbench-analysis-job-v1.schema.json)。W1-B2进程内队列与W1-B3持久存储/报告发布/重启分类已接入内部DurableAnalysisCoordinator；尚未接入HTTP服务，没有新增任务HTTP路由。
+历史记录（W1-B3交付时）：`workbench_analysis::jobs::AnalysisJobRecordV1`的`new(job_id, &frozen, scoring, now_ms)`复制无路径白名单；`validate/read_json/encode_json`执行严格编解码；`transition(expected_revision, event, now_ms)`纯函数返回新记录。合同显式保留nullable字段，拒绝重复/未知/缺失字段、错误整数、无效身份/预算和摘要失配。完成事件只接受报告ID/hash、原始终止原因及验证线路数，不检查报告文件存在或授予执行资格。完整字段、摘要顺序和状态矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[schema](../schemas/workbench-analysis-job-v1.schema.json)。W1-B2进程内队列与W1-B3持久存储/报告发布/重启分类已接入内部`DurableAnalysisCoordinator`；当时尚未接HTTP。H2.2 HTTP实现及当前普通服务边界见本文开头和[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。
 
 ## 其他拟议能力接口
 
@@ -65,3 +79,6 @@ W1-B1新增内部`workbench_analysis::jobs::AnalysisJobRecordV1`：`new(job_id, 
 
 
 P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。
+# W1-H2.2 实施补充（2026-11-01）
+
+分析操作/任务六端点已按[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)接入。H2.2交付时普通启动统一返回分析未配置，尚无CLI启用参数；后续W1-C增加了显式`--analysis-config FILE`入口，并要求提供匹配的`--catalog-id ID`，默认启动仍不配置分析。首次提交持久保存accepting后立即返回202，冻结在后台完成；GET读取认证历史，结果仅返回白名单投影。见[本批交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)及[工作台参数](WORKBENCH.md#启动与停止)。以下历史设计描述按原时点保留。

@@ -1,8 +1,1181 @@
 # 本机验证记录
 
+## 2026-11-10 PR #17两项增量审查修复
+
+对远端 `c9455d577fc08c1e51663eed079f166d282ab61c` 至 `0aaf04b85f44e3cf72e87a5b1f30e779b922b74a` 的增量变更进行只读 CodeRabbit 审阅，发现两项并发/后台任务生命周期问题。候选修复分别让 job 初始 revision 发布与同一 store 的扫描互斥，避免扫描看到刚创建但尚未发布首条 revision 的目录；回收已结束的后台线程时显式 `join`，若线程 panic 则停止 dispatch，避免吞掉 panic 后继续接收任务。
+
+新增回归 `scan_waits_for_initial_job_revision_publication` 和 `reaping_panicked_background_job_stops_dispatch` 各 1 passed。`cargo test --workspace --offline --locked --target-dir target/pr17-final -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets` 退出码 0；只过滤需要本机 worker/assets 的 doctor 诊断。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/pr17-final -- -D warnings` 通过。首次格式检查发现两处 rustfmt 差异，执行 `cargo fmt --all` 后需复验 `cargo fmt --all -- --check` 与 `git diff --check`。
+
+本次只是对上个候选 head 的增量审阅和代码修复，并非对 PR 全部 190 个变更文件的完整独立审查。没有运行 Deep Scan；没有新增真实 worker、ocgcore/FFI、runner、真实分析、部署或 native 资格证据。候选当前尚未提交或推送，PR #17 对应 CI 和审阅需要在新 head 发布后更新。
+
+## 2026-11-10 PR #17隔离候选完整workspace复核
+
+针对当前42文件隔离候选，在修正Windows目录symlink回归的跳过语义后执行 `cargo test --workspace --offline --locked --target-dir target/pr17-final -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`，退出码0。该命令只过滤会执行本机doctor诊断的单项；赛事冻结资产用例和Windows symlink权限用例均由测试自身明确标为ignored。快照独立回归`package_recheck_detects_config_worker_and_snapshot_drift`另以定向命令执行，1 passed。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/pr17-final -- -D warnings`、`cargo fmt --all -- --check`及`git diff --check`通过。
+
+Windows账户未获目录symlink创建权限时，`read_checked_rejects_in_repository_symlink_components`现在在Windows测试框架中报告ignored；若显式运行该用例而创建失败，会报告失败，不再以普通返回伪装通过。此次验证仍不覆盖冻结赛事资产、真实worker/ocgcore/FFI、runner、真实分析或部署。隔离候选未提交、未推送；远端PR状态与候选集成决定见[PR审阅交接](superpowers/plans/2026-11-09-pr17-review.md)。
+
+## 2026-11-10 PR #17第八轮CodeRabbit远端审阅
+
+使用已安装并认证的CodeRabbit CLI 0.9.3，通过远端Deep Review审阅PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`，返回10项（4 major、6 minor）。本结果只对应远端已发布head，不覆盖隔离候选未提交修改，也不构成PR批准。
+
+其中一项major指出首次operation修订发布中断后留下空的`operations/<id>/revisions`目录会令重开失败。候选新增`empty_operation_revision_directory_can_resume_first_publication`回归，并调整空未发布链恢复：首次修订可重试发布；只读查询对已知空目录仍返回`InvalidChain`，保持HTTP不确定状态失败关闭；损坏的已发布修订链仍拒绝。测试确认未发布临时件保留。
+
+验证结果：新回归1 passed；`logical_publish_fault_matrix_stops_before_followup_and_preserves_reads` 1 passed；CLI库117 passed、0 failed、1 filtered。隔离候选的workspace全目标Clippy通过，格式检查通过。默认串行workspace命令使用`--offline --locked`退出0，显式过滤`doctor_reports_missing_worker_and_assets`与依赖忽略本机snapshot fixture的`package_recheck_detects_config_worker_and_snapshot_drift`；显式opt-in冻结资产/原生/收费测试仍按其标记忽略。`git diff --check`通过。
+
+PR仍为Open Draft，发布head未变；候选未提交或推送，因此没有候选级CodeRabbit复审或新CI。真实worker、ocgcore/FFI、runner、真实分析、部署及28提交PR集成决定继续开放。详细范围和回归见[PR审阅交接](superpowers/plans/2026-11-09-pr17-review.md)。
+
+## 2026-11-10 PR #17第七轮CodeRabbit远端审阅
+
+CodeRabbit CLI 0.9.3已安装并认证。通过受支持的远端Deep Review命令审阅PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`，返回15项（7 major、8 minor）。这是对远端发布head的审阅；隔离候选的未提交修改不在该head中。CLI本地审阅此前在启动阶段因`No Git repository found`失败。
+
+逐项映射后，15项均有候选代码或文档处置：worker预加载不再伪装为ocgcore回调；FFI回执写入失败会门禁搜索；stream校验协议和运行时版本；回执追加复用已认证内存尾部；HTTP 408及读取失败状态码明确；跨链读取器容忍精确命名且有大小上限的未发布临时件；Ground manifest哈希校验移除`context`后计算；资产依赖测试改为opt-in；证据链接和工作台锚点修正；路线更新为已实现host-ack后的下一状态；HTTP合同描述202之后保存的异步拒绝；P3区分HTTP接入、有限运行与未交付UI；环境审计路径和账号标识脱敏；Ground阶段回执仅在收费调用确实发生后保存。细节见[PR审阅交接](superpowers/plans/2026-11-09-pr17-review.md)。
+
+当前候选已有验证：CLI库117 passed；FFI回执写失败停派1 passed；adapter `process_failures` 19 passed；Ground Collapse探针5 passed；跨链未发布临时文件聚焦组2 passed。workspace全目标Clippy通过；默认串行workspace测试命令退出0，显式过滤`doctor_reports_missing_worker_and_assets`，其余本机资产/原生/收费opt-in仍按标记忽略。相关Python receipt、Ground stage-driver、HTTP operation/job schema回归为51 passed；pytest报告一条既有`cache_dir`未知配置警告。格式检查与`git diff --check`在最终文档修改前后均通过。此前回执分段改动的CLI全crate回归为141 passed、1 filtered；该计数早于本轮临时文件与HTTP代码修改，不替代以上workspace结果。
+
+Python定向测试首次运行时没有显式覆盖本机editable安装路径，6项测试从主工作树旧模块导入并失败；确认导入位置后，设置隔离候选的`python/`为`PYTHONPATH`重跑，51项全部通过。因此仅候选路径重跑结果计为本批Python验证。
+
+PR仍为Open Draft，发布head未变。候选未提交、未推送，因此没有候选级CodeRabbit结果或新CI。真实worker、ocgcore/FFI、runner、真实分析、部署、报告来源/消费认证和28提交PR范围的集成决定保持开放。
+
+## 2026-11-10 PR #17第六轮CodeRabbit远端审阅
+
+用户批准后通过官方Windows安装脚本安装CodeRabbit CLI 0.9.3；安装器验证签名和版本，`auth status --agent`为authenticated。CLI本地审阅对隔离克隆仍在启动前返回`No Git repository found`。使用受支持的远端Deep Review命令审阅GitHub PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`，返回12项（5 major、7 minor）；审阅结果不覆盖本地候选未提交修改。
+
+逐项核对后，11项已有候选修复或文档合同修正；剩余固定W1-C工作台启动示例使用普通`cargo run`，与准入要求的隔离CLI/worker目录不符。`WORKBENCH.md`现明确固定catalog ID、隔离target构建CLI/worker及直接运行隔离CLI的步骤。仅更新文档，没有执行示例或真实分析。候选聚焦回归：FFI回执失败停派1 passed、adapter `process_failures` 19 passed、Ground Collapse探针5 passed、CLI临时发布文件恢复1 passed，Ground Collapse只读检查5 passed；fmt、锚点/链接核对及`git diff --check`通过。没有运行全workspace测试或Clippy。
+
+PR仍Open，发布head和base未变；候选仍未提交/推送，因此没有候选CodeRabbit结果或新CI。真实worker、ocgcore/FFI、runner、真实分析、部署和PR范围兼容性审核保持开放。
+
+## 2026-11-10 PR #17回执分段候选回归
+
+在隔离PR候选`c9455d577fc08c1e51663eed079f166d282ab61c`上移除每job 20,000条回执硬上限。新写入前4,096条保留平铺路径，之后使用`segments/segment-<index>/<sequence>.json`，每段最多4,096条；读取器仍兼容旧版最多20,000条平铺历史。单事件256 KiB上限及严格链/上下文校验不变，整条历史仍载入内存验证，实际磁盘、内存或读取失败仍停止协调器并保留unknown恢复语义。没有改动公开API、schema或自动重试。
+
+`cargo test -p ygo-cli --lib --offline --locked --target-dir target/pr17-review legacy_flat_receipt_history_appends_to_segments_past_twenty_thousand_events -- --nocapture`为1 passed：先写入20,000条有效旧格式事件，经实际磁盘历史冷加载校验，再将后两条写入新分段，链与序号保持连续。`cargo test -p ygo-cli --offline --locked --target-dir target/pr17-review -- --test-threads=1 --skip package_recheck_detects_config_worker_and_snapshot_drift`为141 passed、0 failed、1 filtered；过滤项依赖隔离克隆未提供的本机snapshot fixture。receipt测试组3 passed。workspace全目标离线/locked Clippy、`cargo fmt --all -- --check`和`git diff --check`通过。完整workspace测试结果早于本次回执布局修改；本条记录的是修改后的完整CLI crate及workspace Clippy，不声称修改后全workspace测试重跑。
+
+此实现只解决PR候选中的人工事件数上限，不提供无界资源保证；整条历史的内存校验仍限制超大日志。远端PR head未变，候选未提交或推送，尚无CodeRabbit复审；生产worker、ocgcore/FFI执行、ResearchBatch消费、unknown消费、报告来源、28提交兼容审查和集成决定仍开放。未运行doctor、真实worker、runner、FFI、真实分析或部署。
+
+## 2026-11-09 W1-C worker FFI 宿主确认流
+
+复核基线为隔离worktree `ec83badb3b395a90ca61f2257b957caf0fd21a4e`。新增严格版本化 `ffi-receipt-stream-v1` 双向行协议；worker在每个FFI入口调用前及返回后发送事件，并等待host先持久化job回执再确认。旧单行协议仍可用。Rust适配器与搜索集成、假worker故障矩阵和协议单元测试均通过。实现范围与未关闭证据门禁见[实施记录](superpowers/plans/2026-11-04-w1c-worker-ffi-ack-stream-plan.md)。
+
+`cargo test --workspace --offline --locked --target-dir target/w1c-ffi-stream-rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets --skip event49_gate_compares_public_witness_not_private_checkpoint_encoding --skip prepare_only_does_not_create_scope_or_charge_calls --skip prepare_only_rejects_changed_fixture_assets_or_route`退出码0。三个被过滤的P4-R1b3 harness用例需要本机冻结赛事运行资产；本隔离worktree没有`data/runtime/tournament-2026`，未复制这些资产。首次未过滤尝试还因`data/snapshots`未提供导致一个工作台用例失败；从主工作区仅复制两份固定快照到本worktree忽略目录后，该用例单独通过并纳入成功复跑。doctor诊断用例由命令显式过滤。已知36个`ignored` opt-in用例保留默认状态。聚焦的adapter、search、CLI及Python receipt/schema测试见本批运行记录；Python schema/执行回执共31 passed、2 skipped。
+
+`cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-ffi-stream-rust -- -D warnings`及`git diff --check`均通过。Python `tests/test_schemas.py`与`tests/test_execution_receipts.py`共31 passed、2 skipped；禁用pytest cacheprovider时有既有`cache_dir`未知配置warning。忽略目录`target/w1c-ffi-stream-20261109/`中的source bundle（732个文件）及绑定的workspace-state bundle均创建并离线校验通过。该批没有启动生产worker、ocgcore/FFI、doctor、runner、真实分析、研究scope或Deep Scan；没有切换部署。真实进程映像认证、真实FFI调用证据、报告来源和研究消费仍未通过。本次不以合成成功提升这些门禁。
+## 2026-11-10 PR #17文档同步前head CI复核
+
+文档同步前，PR #17 head为`887e3430cff88704e8b8e183a3df1b94dfbb6960`，base为`577924bc0c2af06044b77c065eea769c465ff2fe`。GitHub Actions run `42767483602`通过，包含fmt、workspace Clippy、workspace tests、adapter examples及Python editable installation。该时点GitHub比较范围为30个提交、190个文件；后续分支提交会改变head和比较范围。该CI结果绑定原PR head，不证明普通部署、真实worker/ocgcore执行、消费计量或报告来源。
+
+CodeRabbit最新一次完成的远端审阅只覆盖`c9455d5..0aaf04b`增量；没有覆盖`887e343`或完整30提交范围。PR保持Draft，完整人工兼容性审阅仍开放。
+
+## 2026-11-10 CodeRabbit CLI用户级安装与候选审阅重试
+
+用户明确授权后，经仓库规定的本地代理执行官方Windows安装脚本`https://cli.coderabbit.ai/install.ps1`。首次运行因当前进程缺少`PROCESSOR_ARCHITECTURE`在平台预检处停止，未下载或写入；按当前x64环境设置`PROCESSOR_ARCHITECTURE=AMD64`后重试成功。安装器验证通过，版本`0.9.3`，路径为`%LOCALAPPDATA%\Programs\coderabbit\coderabbit.exe`，用户PATH已包含安装目录。独立检查得到Authenticode `Valid`，签名主体`CN=CodeRabbit Inc., O=CodeRabbit Inc., L=San Francisco, S=California, C=US`，SHA-256 `9853E9A9BE139D1782BE0AF244937B6C82418C9EEFCC7A88FB2EF5EC5C120F59`；`auth status --agent`为authenticated。
+
+在隔离PR候选worktree（HEAD `c9455d577fc08c1e51663eed079f166d282ab61c`，base `577924bc0c2af06044b77c065eea769c465ff2fe`）中，Git 2.40.0、`git rev-parse --show-toplevel`和`git status`均正常。CodeRabbit doctor仍为7 pass、1 warning、1 fail；唯一失败是`Git repository: Git is not available`（退出码1）。随后命令`coderabbit review --agent --base-commit 577924bc0c2af06044b77c065eea769c465ff2fe -c AGENTS.md`在审阅启动前立即返回`No Git repository found. Run inside a Git repository or use --dir to specify one.`（退出码1）。没有候选审阅结果；未改动候选文件，未手工替代CodeRabbit审阅。CLI Git发现故障原因未明，待解决后再启动候选审阅；PR范围及兼容性门禁保持开放。
+
+安装完成后的本次续接中，当前shell未解析用户PATH里的`coderabbit`命令，因此改用已安装二进制的绝对路径；版本和agent认证正常。再次从候选仓库运行`review --agent --base-commit 577924bc0c2af06044b77c065eea769c465ff2fe --dir <candidate> -c AGENTS.md --include-untracked`仍在审阅启动前返回相同的`No Git repository found`错误；随后在候选仓库根目录直接运行不带`--dir`的同范围命令，也得到相同错误。候选`git status`、`git rev-parse`正常，PowerShell解析到Git 2.40.0；`doctor`仍为7 pass、1 warning、Git检查失败。GitHub只读状态复核确认PR #17仍为Open Draft，base/head分别为`577924bc0c2af06044b77c065eea769c465ff2fe`和`c9455d577fc08c1e51663eed079f166d282ab61c`。对候选当前差异进行常见凭据模式扫描为0命中，`git diff --check`通过；此扫描不是完整秘密检测。候选42个已修改文件和1个未跟踪计划文件均未被本次修改或暂存，没有CodeRabbit候选审阅结果。
+
+## 2026-11-10 W1-H3.2-2b-2确认性复核
+
+对当前主工作树中已完成的accepting持久化后、freeze开始前合成进程终止窗口进行确认性复核；本次没有修改源码。测试仍在测试专用子进程中运行，父进程认证持久化链后终止子进程，并使用真实目录锁和恢复路径验证仅追加一次`unknown`、无任务/报告/可领取工作，以及第二次重开不再增长修订且材料字节稳定。该结果只确认此合成窗口，不扩展为其他H3调度、逐系统调用、断电/介质故障或真实执行资格。
+
+- `cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1`：1 passed，110 filtered。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`：136 passed、0 failed、0 ignored；该包内没有命中被排除的测试。
+- `cargo test --workspace --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`：92个测试结果组，495 passed、0 failed、36 ignored、1 filtered。过滤项为`doctor_reports_missing_worker_and_assets`；36项ignored仍是各测试声明的opt-in/环境依赖项，不计作通过。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-2b-2-cargo -- -D warnings`、`cargo fmt --all -- --check`及`py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short -p no:cacheprovider --basetemp target/h3-2b-2-cargo/pytest-final`均通过；schema为16 passed，并有pytest既有`cache_dir`未知配置warning。
+
+离线锁定构建日志保存在忽略目录`target/h3-2b-2-cargo/`：`focused.log`（404 bytes，SHA-256 `B5416BFCC1BC703F13E0D26FE7F755F91535002CFE5E8C1A9F497E4259E0065F`）；`cli-full.log`（16,620 bytes，`7C189B07F8BD2AB49ED8429EDC97AAB4719F0D794EBF775EBD8B56C005FC64F5`）；`workspace-serial.log`（70,089 bytes，`C7F36C885C8E65B1A2828B439D3CF26B5A554E036B7F54CD21167198D9074743`）；`clippy.log`（817 bytes，`C5CB6E37D0BA3ECF156F9DFAEBB2491C0757F4ACE180C91362CEF1DCD49EC156`）；`schema.log`（612 bytes，`F489EE6B7C025519A75DD89BFBEBB0401A0A3F6E18E558C27E9A48312E1D5C19`）。格式检查无输出并以退出码0完成。本条是对先前窗口验收的当前复核，不表示其他H3余项关闭。
+
+## 2026-11-10 PR #17本地审阅就绪诊断
+
+隔离候选`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\pr17-remediation-20261109`仍基于PR发布head `c9455d577fc08c1e51663eed079f166d282ab61c`，已有42个文件的未提交改动，本次未修改候选文件。CodeRabbit CLI `0.9.3`通过官方自更新命令检查后报告已是最新版本。对该候选工作树执行`coderabbit doctor`时，CLI runtime、用户存储、服务URL、认证、backend及WebSocket共7项通过；更新策略检查1项warning；Git repository检查失败并报告`Git is not available`，退出码1。
+
+同一PowerShell进程中显式设置`PROCESSOR_ARCHITECTURE=AMD64`，并将Git安装目录`D:\PUBLIC\Program\GIT\git\Git\cmd`置于PATH前端后，CodeRabbit诊断结果不变。`GIT_DIR`、`GIT_WORK_TREE`、`GIT_EXEC_PATH`及相关Git配置环境变量均未设置；`where.exe git`可找到两个可执行文件。直接运行Git则可用：`git version 2.40.0.windows.1`，`git status`及`git rev-parse --show-toplevel`在该候选目录成功。再设置`GIT_TRACE=1`和`GIT_TRACE_SETUP=1`后，直接Git检查输出正常trace，但doctor输出中没有Git trace，且仍报告Git不可用；这将问题限定在CLI的Git发现/调用阶段，尚不能确定具体原因。此次未启动候选CodeRabbit review，也未把针对远端发布head的审阅算作候选审阅。已记录的远端结果只覆盖原始发布head，不覆盖这42个未提交文件。
+
+诊断日志位于忽略目录`target/pr17-review-readiness-20261110/`：`coderabbit-doctor.log`（793 bytes，SHA-256 `A963867B68AF0B061A97BE0CF58FA3BA024824C1F0B6AFD4EA1B8B6000AE1BD1`）；`coderabbit-doctor-git-trace.log`（1,328 bytes，SHA-256 `607BFEBDE019C0975C8B9419FFE213B3FCD7806CC9C8C41DF44974F890F25AB0`）。没有安装或修改Git、没有更改持久PATH、没有修改PR候选、没有提交或推送。PR #17的候选自动审阅与28提交范围/兼容性门禁仍开放。
+
+## 2026-11-10 PR #17第六轮远端审阅
+
+经用户明确授权，下载并运行CodeRabbit官方Windows安装脚本`https://cli.coderabbit.ai/install.ps1`，安装至用户环境`%LOCALAPPDATA%\Programs\coderabbit`。安装脚本SHA-256为`2108A2647C76373327C72363495F73AE2E1E753C9AF7597237D0D991D4D4CD1A`；安装器验证二进制Authenticode签名及版本后报告安装成功，版本0.9.3，`auth status --agent`为authenticated。PowerShell当前进程缺少Git架构变量；确认运行时为X64后补齐`PROCESSOR_ARCHITECTURE=AMD64`才完成安装。
+
+CodeRabbit本地`review --agent --uncommitted`、显式`--dir`及设置`GIT_DIR`/`GIT_WORK_TREE`仍在审阅开始前返回`No Git repository found`。随后使用支持的`review --deep --remote AscAed/Yu-Gi-Oh-_AIBot --base main --source-branch codex/w1c-worker-ffi-ack-stream --agent`完成远端Deep Review：对PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`返回12项（5 major、7 minor）。该审阅只覆盖远端发布head，不包含隔离候选未提交修改；不能称为候选的CodeRabbit复审。
+
+逐项对照隔离候选源码和文档后，11项已有候选修复或合同修正；剩余的WORKBENCH启动示例仍使用普通`cargo run`，与生产准入要求的`target/w1c-executor/cargo`隔离CLI/worker及同目录约束不符。候选文档已补充匹配snapshot ID、隔离构建和CLI启动示例。该修正仅更新使用说明，没有运行示例命令或真实分析。候选定向回归：FFI回执失败停派1 passed、adapter `process_failures` 19 passed、Ground Collapse探针模块5 passed、probe示例5 passed、CLI临时发布文件恢复1 passed；fmt、双工作区`git diff --check`及合同链接/错误码核对通过。
+
+PR远端head仍为`c9455d577fc08c1e51663eed079f166d282ab61c`且保持Open；候选仍未提交/推送，因此没有候选自动审阅或新CI结果。未运行doctor、生产worker、ocgcore/FFI、runner、真实分析或部署。
+
+## 2026-11-10 PR #17第五轮审阅候选回归
+
+CodeRabbit CLI 0.9.3远端Deep Review针对GitHub PR #17原始发布head `c9455d577fc08c1e51663eed079f166d282ab61c`返回11项（5 major、6 minor）；该结果不覆盖隔离克隆的未提交候选。候选补修planner fixture路径检查、Ground Collapse stage intent时间门禁，并移除环境审计中的机器卷路径和账户名，详细问题映射见[PR #17审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+隔离候选命令使用`--offline --locked --target-dir target/pr17-review`：
+
+- `cargo test -p ygo-engine-adapter ground_collapse_probe::tests`：5 passed。
+- `cargo test -p ygo-planner --test p4_r1b3_harness`：3 passed、0 failed、3 ignored；忽略项依赖本机冻结赛事资产与仓库内worker构建。
+- harness新增符号链接断言在此Windows主机因创建链接返回Win32错误1314而走测试内的显式权限跳过分支；该结果没有验证实际符号链接拒绝逻辑，需在允许创建符号链接的环境复验。
+- `cargo clippy -p ygo-engine-adapter -p ygo-planner --all-targets --offline --locked --target-dir target/pr17-review -- -D warnings`、workspace fmt及候选`git diff --check`通过。
+
+以上仅是隔离候选的聚焦回归；没有运行全workspace测试或Clippy、CodeRabbit候选复审、doctor、生产worker、ocgcore/FFI、真实分析、runner或部署。PR远端head未更新，候选未提交/推送。真实分析、来源、消费及部署资格不变。
+
+## 2026-11-10 PR #17 contracts CI失败定位与候选修复
+
+只读GitHub诊断绑定PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`：required check `contracts`已完成但结论为failure（check run `129159346918`，Actions run `42617032368`）。单条annotation仅报告`.github`步骤以exit code 1结束；job日志定位到`workbench_analysis::admission::tests::package_recheck_detects_config_worker_and_snapshot_drift`在准备fixture时无法复制`data/snapshots/<id>.json`，Windows返回路径不存在。测试依赖的数据由`.gitignore`排除，干净GitHub checkout没有这些文件。远端head及失败检查均未重跑或改写。
+
+在隔离候选中作最小修复：真实`W1cAdmission::load()`继续要求catalog和banlist快照摘要等于固定pin，再将已验证摘要存入运行时身份；包复核比较该身份保存的摘要。合成漂移测试在临时目录创建自包含快照字节并绑定其摘要，不再依赖本机资产。未改公开API、schema、资产pin或自动重试语义。
+
+候选验证使用`target/pr17-remediation`：聚焦准入漂移测试1 passed；默认串行workspace测试92组、524 passed、0 failed、39 ignored、1项过滤（仅`doctor_reports_missing_worker_and_assets`）；workspace全目标离线/locked Clippy、`cargo fmt --all -- --check`和`git diff --check`通过。Python运行显式设置候选`PYTHONPATH=python`，schema与execution receipt测试为32 passed、2 skipped；pytest有既有`cache_dir`未知配置警告。首次遗漏`PYTHONPATH`时误导入主工作区已安装模块并出现1项失败；按CI环境修正路径后候选测试通过。
+
+用户明确批准安装CodeRabbit CLI；检查发现用户目录已有0.9.3且`auth status --agent`为authenticated，因此本轮未重复覆盖安装。当前PowerShell进程PATH未加载用户目录，使用绝对路径调用。候选本地审阅标准调用及显式`--dir`调用均在启动前返回`No Git repository found`，没有候选审阅结果；不得把人工源码核对称为CodeRabbit结果。远端`contracts`仍记录失败，因为本地未提交候选未推送且没有新CI运行。候选和主工作区均未提交或推送；未运行项目doctor、生产worker、ocgcore/FFI、runner、真实分析或部署。PR的28提交范围/兼容性审阅与集成决定仍开放。
+
+## 2026-11-10 PR #17六项远端发现候选回归
+
+在隔离PR克隆中核验CodeRabbit针对已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`返回的6项major；远端PR head仍未改变，本地候选仍未提交/推送。候选回归：adapter库67 passed（包含worker失败结果版本兼容单测）；`ground-collapse-probe`示例5 passed；P4-R1b3默认harness 2 passed、3 ignored（需缺失的冻结赛事资产及仓库内worker）；`ygo-cli --lib`首次运行116 passed、1项因缺少本机snapshot fixture失败，显式跳过该环境依赖项后116 passed、1 filtered；`process_failures`首次18 passed、1项3秒阻塞管道时限失败，单独复跑通过、随后整组19 passed；`beam_execution` 10 passed。相关适配器/CLI/搜索/规划器all-target Clippy、workspace fmt及`git diff --check`通过。完整CLI库回归中的attempt receipt旧格式跨20,000事件追加、未发布临时文件恢复等测试均在通过项内。隔离日志位于`target/pr17-remediation/`。
+
+本轮CodeRabbit远端审阅只针对原始PR head，不覆盖未提交候选；本地CLI模式仍在启动审阅前返回`No Git repository found`。因此以上是六项发现与本地修复的对照及定向测试，不是候选的CodeRabbit复审，也不是28提交的完整逐提交审阅。没有运行全workspace测试、doctor、生产worker、engine/FFI、真实分析、runner或部署；PR仍为Open Draft。详情见[PR #17审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+## 2026-11-10 PR #17隔离修复回归
+
+在可写隔离克隆中基于PR #17原head `c9455d577fc08c1e51663eed079f166d282ab61c`验证未提交候选修复；远端分支未变。此前`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/pr17-remediation -- --test-threads=1`通过；`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/pr17-remediation --test process_failures -- --test-threads=1`为18 passed；`cargo test -p ygo-search --offline --locked --target-dir target/pr17-remediation --test beam_execution -- --test-threads=1`为8 passed。第二轮问题核验后，`cargo test -p ygo-engine-adapter --example ground-collapse-probe --offline --locked --target-dir target/pr17-remediation -- --test-threads=1`为3 passed；`cargo test -p ygo-planner --test p4_r1b3_harness --offline --locked --target-dir target/pr17-remediation -- --test-threads=1`为2 passed、0 failed、3 ignored，忽略原因为冻结赛事资产与仓库内worker构建缺失；首次未忽略运行因缺少`data/runtime/tournament-2026/frozen/manifest.json`而3项失败，故不能视为覆盖。
+
+CLI库完整运行因隔离克隆缺少本机`data/snapshots/<id>.json`，唯一失败为`workbench_analysis::admission::tests::package_recheck_detects_config_worker_and_snapshot_drift`无法复制fixture。明确过滤该用例后，`cargo test -p ygo-cli --lib --offline --locked --target-dir target/pr17-remediation -- --test-threads=1 --skip package_recheck_detects_config_worker_and_snapshot_drift`退出码0：113 passed、0 failed、1 filtered。缺失fixture的用例没有被计作通过。`cargo clippy -p ygo-engine-adapter -p ygo-planner -p ygo-cli --all-targets --offline --locked --target-dir target/pr17-remediation -- -D warnings`、`cargo fmt --all -- --check`及`git diff --check`通过；本条未运行全workspace默认测试。
+
+CodeRabbit CLI 0.9.3已安装且认证成功；本地模式对隔离bundle克隆仍返回`No Git repository found`。此前远端Deep Review分别返回9项及15项，第二轮完整输出SHA-256为`B9ADC81E902D6343F065C6A19F3CB9575B17091BBFFB18032716660F094D7344`。随后一次远端Deep Review在未变化的PR head上完成并返回12项（4 major、8 minor）；第三轮问题逐项核验及候选处置见[PR #17审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。本地候选修复尚未推送，因此没有远端复审结论；截至第三轮记录时20,000事件硬上限仍未解决，后续隔离候选修复见下段。没有运行项目doctor、生产worker、ocgcore/FFI、真实分析、研究scope或部署。
+
+2026-11-10随后在隔离候选中移除20,000事件硬上限，改为每段4,096条的分段写入，并保留旧版最多20,000条平铺历史读取。旧格式20,000事件冷加载后追加至新分段的聚焦回归通过；完整CLI crate为141 passed、1个缺失本机snapshot用例过滤，workspace全目标Clippy、fmt及diff检查通过。尝试使用CLI本地Deep Review时，无参数和显式`--dir`两种方式均立即返回`No Git repository found`；usage报告billing inactive，未启用付费额度，未获得候选审阅结果。该候选没有推送，故远端审阅仍只覆盖原始head；PR整体兼容审查和W1-C执行/消费合同继续开放。详细边界见[审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+同日继续验证隔离候选中只读账本检查修复：`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/pr17-review -- --test-threads=1`退出码0，67个库单元测试及所有启用的集成测试通过；两个opt-in用例（冻结研究资产和真实引擎）保持忽略。`cargo test -p ygo-engine-adapter --example ground-collapse-probe --offline --locked --target-dir target/pr17-review -- --test-threads=1`为5 passed。`cargo clippy -p ygo-engine-adapter --all-targets --offline --locked --target-dir target/pr17-review -- -D warnings`、`cargo fmt --all -- --check`及候选`git diff --check`通过。新增只读API测试验证撕裂账本不修复、缺失checkpoint不创建；源码复核确认CLI的`--stats`/`--verify-recorded`路径使用该API。此验证不构成全workspace测试或PR最终候选复审。另修正文档对私有归档范围、首次202与后台准备失败时序的描述。
+
+## 2026-11-09 项目现状与路线文档复核
+
+基线为干净的本地`main / ec83bad`；较本地`origin/main / 577924b`领先27个提交。源码测试基线仍为`8c7afe6`，`ec83bad`只记录该批离线自检。只读复核Git分支、当前任务/路线、H3证据映射、部署目录与PR #17：PR为open Draft、28 commits、189 changed files，head `c9455d5`直接基于本地main；PR分支上的worker确认流未合入当前checkout。旧dist CLI/worker实际hash匹配包内清单，但包无manifest或workbench入口。没有重新运行测试、doctor、worker、engine、FFI、真实分析、Deep Scan或部署；未更改scope、资产或接口。
+
+文档验收：`git diff --check`及新增链接/锚点检查通过；本轮变更仅限Markdown。11月9日默认离线Rust/Python测试结果见本页顶部记录，不作为本轮代码复验；PR分支验证按PR描述及其独立日志理解，不转记为main验证。
+
+## 2026-11-09 HEAD默认离线自检
+
+基线为`main / 8c7afe60e226fb0483968c6504ea679cdb36b0e3`，测试开始前工作区干净。仅执行默认离线软件验证；测试期间没有改源码、schema、配置、部署资产或ACL，没有运行doctor、生产worker、ocgcore/FFI、runner、真实分析或研究scope，也没有启动Deep Scan。旧`dist/ygo-local`未切换，P4-R5及TASKS中其他开放门禁保持不变。
+
+Rust workspace命令`cargo test --workspace --offline --locked --target-dir target/audit-20261109/rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`退出码0，共92个结果组，**495 passed、0 failed、36 ignored**；忽略项为显式本机资产、原生执行、研究准备或报告opt-in。日志SHA-256=`D90F6AD780DD03A058631DD64283EA75EA1E87E5F157B1A067F459C184F67A7D`。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/audit-20261109/rust -- -D warnings`、`cargo fmt --all -- --check`及`git diff --check`均通过。
+
+Python顶层套件使用PowerShell枚举`tests/test_*.py`后运行`py -m pytest @files -p no:cacheprovider -q --basetemp target/audit-20261109/pytest`，退出码0：**821 passed、9 skipped、219 subtests passed**，耗时1893.11秒。9项为Windows目录链接能力限制或明确opt-in的本机资产/报告用例；pytest报告既有`cache_dir`未知配置警告。未发现需要本次修复的默认回归。此批不验证生产FFI确认流、当前源码部署或未决本地路径竞态；安全扫描结论和未决项见[SECURITY_AUDIT](SECURITY_AUDIT.md)，实施状态与开放门禁见[TASKS](../TASKS.md)。
+
+## 2026-11-05 当前工作树回归与安全差异审查
+
+针对`622546c144604f36620deebe7f0f57e72271501f`之后的工作树差异，修复并回归了四项输入/边界问题：Rust搜索回执门禁改用内部错误类型，避免adapter通过stage字符串触发错误分类；Python回执枚举值非字符串时返回合同诊断；source-bound build verifier将非字符串状态拒为诊断而不抛出`TypeError`；`source_bundle_changed`记录按实际前后身份差异验收，保留`observed_command_only`边界。
+
+当前验证结果：`cargo test --workspace --offline --locked --target-dir target/audit-20261105/rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`退出码0；按日志汇总为**495 passed、0 failed、36 ignored**，完整日志SHA-256=`B94D42D97212E93074D2CBFE615A7CE3E1FE59CDED21BCDF08B66878B975F652`。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/audit-20261105/rust -- -D warnings`通过；`cargo fmt --all -- --check`和`git diff --check`通过。Python默认套件为**821 passed、9 skipped、219 subtests passed**，最终日志SHA-256=`F98ECAC557E42119C3777903F0771CB5EE415A43C6FCAF66C03D9D53EEEC40C0`，另有一条既有`cache_dir`配置警告。Python跳过项为Windows目录链接能力限制或明确opt-in的本机资产/报告组。
+
+Codex Security Diff Scan `08cd98e2-89e5-4903-9544-212440640450`于2026-11-05完成，目标快照摘要`codex-security-snapshot/v1:sha256:7066e237e5b6940d462847261d8c44928b0b64c2f2fd470c9e9c6d5e52047bf5`对应相对`622546c`的工作树差异。17个源码/schema差异条目完成审阅，0项确认可报告发现，覆盖为`partial`。保留三项待补证候选：回执路径检查/读取竞态、worker路径哈希与实际加载映像不一致、来源包构建前后路径竞态。三项均缺少已证明的低权限写入者和跨权限边界影响。完成工具返回一条coverage receipt引用缺失警告；canonical coverage中的三项deferred仍保留，故记录该报告为部分覆盖结果，不称为完整安全认证。此扫描针对该快照；之后的工作树来源状态校验器非字符串状态守卫由定向回归复核。
+
+最终工作树的Codex Security Diff Scan `c8484c40-59c5-440f-a758-6ad8f94daa01`绑定快照摘要`codex-security-snapshot/v1:sha256:6b616d69ff48052c4654288ae6ac762b1f60d7df9a153b102959a1ed8efe610c`，在17个源码/schema条目上完成审阅，0项确认可报告发现，覆盖仍为`partial`。三项候选继续deferred；本次最终化没有coverage receipt引用警告。扫描没有执行真实engine、worker、doctor、runner、FFI或部署，不代表全仓/主机安全认证。canonical结果保存在Codex Security扫描目录。
+
+## 2026-11-04 W1-C job绑定持久attempt日志（历史批次）
+
+为搜索adapter调用增加job私有的追加事件链：每次调用前持久化`Started`，adapter返回后持久化host结果和`ProcessRunObservation`。事件上下文绑定operation/job ID、running修订、命令摘要、job input binding、输入摘要及冻结资产摘要；workbench无法自行认证的source bundle/build record身份显式为null。序号、前驱摘要、上下文摘要和事件摘要经严格复读及跨链重开验证。日志不进入既有HTTP或报告合同。
+
+新增写前和写后故障注入覆盖attempt-start与host-result两处：写入错误或提交结果不确定都会立即停派；已实际落盘的事件保留作证据，重开将running任务分类为unknown，不自动重试。一个测试子进程在attempt-start已持久化、fake adapter入口尚未到达时发布同步临时文件+原子重命名握手。父进程校验标记字段集合、PID与实际子进程一致、operation/job链、running revision、输入/命令和资产绑定、完整receipt摘要及adapter调用数0后才终止；真实存储锁重开后只追加一次unknown，无报告或可领取任务；第二次重开时持久材料逐字节稳定。此窗口是合成测试，不证明生产worker、FFI、报告来源或消费。
+
+聚焦回归：`ygo-search/tests/beam_execution.rs` **5 passed**；CLI attempt持久化写故障 **1 passed**、job绑定/重复重开 **1 passed**、attempt-start后进程终止恢复 **1 passed**。Python schema回归`tests/test_schemas.py` **12 passed、2 skipped**；两项skip要求显式启用本机快照/报告，未启用。pytest在禁用cacheprovider时报告既有`cache_dir`配置警告。
+
+最终workspace命令为`cargo test --workspace --offline --locked --target-dir target/w1c-attempt-journal -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`：92个结果组，**487 passed、0 failed、36 ignored**；36项是各测试显式标注的本机资产、原生执行、人工准备或本机报告opt-in，逐项名称/原因见[`target/w1c-attempt-journal/workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，SHA-256=`D6AE14D34445E402C93BBCFA1298232906CC7DF66C124EF3AEBE687EAEB3ECD3`。doctor诊断测试由命令过滤，不计入ignored。`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-attempt-journal -- -D warnings`通过，日志SHA-256=`0071ADBF57AD7A20901CAEA4E555B0B917DB0D433E03349BC0D8C7CA125A4268`。Python schema测试为12 passed/2 opt-in skipped。Cargo使用本机缓存，无联网构建。未运行doctor命令、生产worker、真实引擎、runner、FFI或真实分析；未创建新分析scope、部署、提交或推送。该批不改变workbench HTTP routes/DTO、job/report持久schema或自动重试语义，也不关闭W1-C来源/FFI/报告producer/消费门禁。
+
+本批为Rust搜索库新增opt-in的`search_with_receipts`及其事件类型，供调用方在搜索adapter边界提供持久化回调；这是新增的Rust crate API。workbench HTTP routes/DTO、job/report持久schema和自动重试行为保持不变。对应历史源码快照见target目录中v13版本；本节不再将其作为当前源码身份。
+
+## 2026-11-04 W1-C持久日志中的合成FFI调用事件
+
+当前实施状态以本节测试结果、TASKS中W1-C行及部署文档中本批快照为准。
+
+在job绑定attempt日志中新增`ffi_entered`与`ffi_returned`事件，可由opt-in Rust回调提交。每条记录绑定当前attempt ordinal/ID、job内唯一call ID、方向、入口名称及连续FFI ordinal；返回事件必须匹配尚未返回的入口。按嵌套调用顺序使用LIFO配对，外层ocgcore调用未返回时，内部回调必须先返回。HostResult拒绝存在任何未返回入口；日志末尾孤立的entered允许留作中断证据并在重开后保留unknown。相同call ID即使跨attempt重复也会拒绝，已认证的前缀留存，重开只分类unknown而不创建claimable工作。
+
+7项CLI FFI/回执聚焦测试通过：嵌套FFI配对与稳定重开、外层先返回拒绝、孤立entered重开、HostResult关闭未返回调用拒绝、跨attempt重用call ID拒绝、FFI receipt写前失败停派、磁盘历史链跨attempt重用call ID fail-closed。外层先返回用例先在移除LIFO校验时失败，再恢复校验后通过。search beam_execution 5项通过；schema全文件12 passed、2个本机fixture opt-in跳过。最终`ygo-cli` lib suite为**111 passed、0 failed、0 ignored**；workspace隔离离线串行为**92结果组494 passed、0 failed、36 ignored**，唯一额外过滤doctor诊断测试；fmt和workspace全目标Clippy通过。workspace日志SHA-256=`79EF7B8153C5A83297C39E3E28748DBDF3560B9C43E02699D7B9255B767D84FC`，Clippy日志=`4C2E60520679C557860D310B8F36CB4278AA7297CC41646E75C9688A2A4C599A`。36个ignored用例原因见[`target/w1c-ffi-final/workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+
+Python独立离线验证器也加入嵌套FFI返回顺序检查。新增测试先通过完整哈希重封链复现RED：外层`DuelProcess`在内层`card_reader` callback返回前被错误接受；实现LIFO校验后该用例转为GREEN。`tests/test_execution_receipts.py`全文件18 passed，退出码0，日志SHA-256=`D79E4F3857FB2D4FFF9B00D5C711CCABB5C7825E4E3BA900A3F1F4FBA082DC0B`；另报告禁用cacheprovider时既有`cache_dir`未知配置warning。Rust和Python两侧的事件仍由合成executor/记录产生，不能证明worker或ocgcore实际调用。生产worker尚无宿主确认通道：当前请求/响应是单次JSON行，worker若事后写stderr事件，宿主无法在每个FFI入口前持久化并确认。下一批的协议与合成验收顺序见[worker确认流计划](superpowers/plans/2026-11-04-w1c-worker-ffi-ack-stream-plan.md)。未运行worker、ocgcore/FFI或真实分析。
+
+来源与Git状态快照v19为历史快照，不代表2026-11-05当前工作树；历史attempt日志批次的v13链接保留在上方历史章节。当前工作树与v19差异由[部署状态](DEPLOYMENT.md)记录；完整修订后的来源包应在最终提交后重新生成。
+
+历史源码与Git状态快照v19：[`target/w1c-provenance-20261104/source-bundle-v19/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`target/w1c-provenance-20261104/workspace-state-v19/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。只确认该历史快照自身有效；2026-11-05复核发现它与当前工作树六个文件不同，详情见[部署状态](DEPLOYMENT.md)。快照不含忽略的运行资产，也不等同Cargo构建产物或部署包。
+
+## 2026-11-04 H3报告预算原因与显式unknown终态强杀回归
+
+本批复核发现：`time_budget`与已有`node_budget`案例都在`publish_report`报告引用及`budget_limited`修订持久化后、同一个`settle_with_persist`回调内被检查。为验证实际观察过的W1-C原因，新增`time_budget`报告字节的原因分类用例；它复用同一物理K点，不另计为一个H3逻辑窗口，也不改变该终态映射。
+
+随后按证据映射选择了独立的显式`mark_unknown`边界：`CompletionUncertain`导致的revision 3=`unknown`已保存、内存running槽尚未清除。未加挂点时聚焦矩阵以预期方式失败：子进程走到保护性panic并以101退出，父进程没有收到该阶段marker。增加仅`cfg(test)`挂点后，父进程认证operation与job三修订链、前驱/记录哈希、跨链绑定和状态迁移，再终止子进程。杀前确认恰好一次freeze/claim、事件日志只有这两项、无报告且执行器未调用；持真实目录锁重开两次后unknown保持revision 3，队列为空、`claim_next`无任务，所有持久字节稳定。该K验证合成协调器的显式不确定终态处理，不认证真实worker、执行器副作用或研究消费。
+
+聚焦回归先对time_budget和显式unknown两个缺失挂点分别观察到红测，补入测试专用挂点后`h3_2b_cross_chain_windows_recover_after_process_kill`为**1 passed**（最终运行耗时22.88秒）。CLI套件为**127 passed、0 failed、0 ignored**。最终workspace使用隔离目录`target/h3-time-budget-recovery`、`--offline --locked`和默认串行线程：**92个测试结果组，480 passed、0 failed、36 ignored**；完整日志SHA-256=`BFFE89CF15FA9B196A8D42E4D3BAA9B2B3CFAC16504F16EEA8FEDEF44EA007A3`，见本机忽略文件[`target/h3-time-budget-recovery/workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。36项均为默认关闭的本机资产、原生查询/重放、人工准备或显式本地报告opt-in，逐项原因在该日志；没有启用这些测试。
+
+`cargo fmt --all -- --check`及`cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-time-budget-recovery -- -D warnings`通过。相关Python schema回归为**16 passed**；pytest报告一条既有`cache_dir`未知配置警告（命令禁用cacheprovider），退出码仍为0。Cargo依赖均从缓存离线读取。
+
+本批只增加测试专用检查点与合成断言；公开API、schema、自动重试语义和普通启动未改变。未运行doctor、引擎、runner、worker、FFI、真实分析或部署；没有创建研究scope、提交或推送。H3其余逻辑窗口/调度、其他预算原因分类、报告来源、逐syscall故障、断电和介质故障仍分别开放。
+
+## 2026-11-04 W1-C多adapter回执合同校正
+
+源码核对发现当前`combo::search`可在同一job内进行节点探索与线路replay，既有Rabbit运行记录为165次应用层`engine_calls`。初版回执校验器却拒绝第二个adapter attempt，无法表示该实际工作负载。现允许job内顺序记录多个唯一attempt ID；后续attempt要求前一调用已写出请求并收到完整协议响应。worker spawn失败、请求未完成或响应未到达后，链中再出现attempt将被拒绝。这里的顺序多attempt表示多个有完整响应的搜索调用，不将它们并成重试；若生产搜索在未决调用后继续执行其他分支，v1将拒绝把该链认证为完整，生产观察器需保留此开放边界。
+
+校验器仍允许在replay传输失败后记录已提交的部分report，因为当前搜索实现会把该失败记入diagnostic并返回已验证线路。报告字节、长度及operation/job/input绑定可独立检查，但只要任一attempt没有完整回执，整条执行链仍为`incomplete`，`report_origin_authenticated=false`，消费仍unknown。报告落盘事件采用最后一个attempt ID。
+
+新增三项回归分别验证多attempt完成序列、未决transport后拒绝新attempt，以及replay失败后记录部分report仍保持incomplete。每项均先观察到预期红测；最终回执聚焦套件17 passed。完整Python回归共收集826项：**817 passed、9 skipped、219 subtests passed、0 failed**，耗时1929.70秒，退出码0。9项跳过中两项因当前Windows配置无法创建目录符号链接，其余为需明确opt-in的原生资产、报告或快照用例。唯一警告是禁用`cacheprovider`后pytest配置项`cache_dir`未被识别。完整日志为[`target/w1c-execution-receipt-multi-attempt/python-full-suite.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，SHA-256=`1D6D1D6A1F42914F411D066023CA6DE6282BEE9607B55DBF7A5DFEA51DDD4DF4`。该批仅修正合成合同，生产adapter、worker、FFI、报告持久化观察点尚未接入；未运行真实分析或建立scope。
+
+## 2026-11-04 ProcessEngineAdapter host观察
+
+为W1-C增加可选的`ProcessEngineAdapter::run_observed`，直接运行同一个进程适配路径并返回内存观察对象：worker配置路径在spawn前读取的SHA-256、spawn状态与PID、实际完整写入stdin的请求SHA-256/字节数、读至EOF的stdout SHA-256/字节数、JSON/协议/运行版本校验状态、退出/超时状态、退出码和耗时。spawn失败不声称有pipe I/O；写入不完整时不把预期请求摘要标成已写入。`ProcessIoStatus::Complete`只表示host pipe操作完成，超时后被杀进程的stdout读流排空仍须结合`termination=timed_out`判断。
+
+worker哈希是spawn前对配置路径当前文件内容的hash，不认证操作系统实际映像；请求写入成功不证明worker读入或消费；观察不落盘、不含attempt/job ID、worker FFI或报告/消费。正常`EngineAdapter::run`继续使用相同Result语义，且不计算worker文件与请求哈希。此段记录的是搜索收集器接入前的状态，后续接入见下节。
+
+测试先在`process_failures.rs`要求不存在的`run_observed`接口，观察到预期编译失败；实现后假worker成功、spawn失败、非零退出、超时、无效JSON和协议版本不符全部通过。聚焦命令`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/w1c-process-observation --test process_failures -- --test-threads=1`：**8 passed、0 failed**。workspace串行命令`cargo test --workspace --offline --locked --target-dir target/w1c-process-observation -- --test-threads=1`：**92个结果组，483 passed、0 failed、36 ignored**。忽略项是默认关闭的本机资产、原生执行、冻结规则/数据及人工准备opt-in；未启用它们。`cargo fmt --all -- --check`及`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-process-observation -- -D warnings`通过。workspace日志为[`target/w1c-process-observation/workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，SHA-256=`615673C6794558A930F8BA1E2FFABC78F8828DCDE143E8829EA978876B0E0E27`。
+
+该批没有执行doctor、真实worker、ocgcore/FFI、真实分析或部署；没有建立scope。
+
+## 2026-11-04 W1-C搜索调用attempt收集接入
+
+新增`ProcessObservedAdapter` opt-in入口及`ygo_search::combo::search_with_observations`。原有`search`仍调用普通`EngineAdapter::run`，不计算进程哈希，也不改变搜索报告或HTTP JSON。观察式入口将每次真实搜索路径调用标记为`initial`、`baseline`、`exploration`或`replay`，在adapter调用前由factory生成唯一32位小写hex attempt ID；观察序号按adapter调用顺序递增，记录返回的DuelStatus或WorkerError code/stage及对应的完整`ProcessRunObservation`。ID缺失、格式非法或重复会停止本次搜索，且不启动下一次adapter调用。探索中的普通adapter错误仍可按既有搜索规则记录诊断并继续其他分支，后续attempt保持原顺序。
+
+当时的workbench `process_analysis_executor`以`secure_random_hex(16)`生成attempt ID，并把`AnalysisExecution`中的观察暂留到report发布或unknown结算；该批尚未持久化观察。此项描述接入持久日志前的状态。后续job绑定日志现记录`Started`与host结果，见本页顶部“W1-C job绑定持久attempt日志”。公开HTTP JSON、`AnalysisReport`持久合同和schema保持不变；持久host观察仍不认证report来源，也不把pipe字节解释为worker消费。
+
+新增合成测试验证唯一ID、序号和四种搜索阶段，探索错误后仍记录后续成功replay，以及ID重复时在下一次adapter调用前失败。`cargo test -p ygo-search --offline --locked --target-dir target/w1c-process-observation -- --test-threads=1`：**8 passed、0 failed**。默认串行workspace命令`cargo test --workspace --offline --locked --target-dir target/w1c-process-observation -- --test-threads=1`：**92个结果组，485 passed、0 failed、36 ignored**；其中`ygo-cli`单元测试102项全部通过。36项是默认关闭的本机资产、原生执行、冻结规则/数据及人工准备opt-in。workspace日志为[`target/w1c-search-observation/workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，SHA-256=`CB2CF1AAA474C3B8926318AAAEC8B8EAEACD00F19693150FAD0BF8D8B48DC3B8`。
+
+`cargo fmt --all -- --check`、`git diff --check`及workspace全目标Clippy通过；Clippy日志为[`target/w1c-search-observation/workspace-clippy.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，SHA-256=`6A7318EF9D830AF1EB8A69A7C7715D37DDB5953A5BB86610C9F565C5477682C8`。本批未改动receipt/schema合同，也未重跑Python套件；未运行doctor、真实worker、ocgcore/FFI、runner、真实分析或部署，未建立scope。
+
+这一批之后已实施job绑定的持久attempt receipt链，且已加入合成FFI entered/returned事件合同。生产worker尚无逐FFI宿主确认通道，因此不能从这组Rust回调用例推定真实ocgcore事件已被观测。真实分析仍须另立scope。
+
+## 2026-11-04 W1-C搜索attempt收集后的源码与Git状态快照v9（历史）
+
+旧记录曾指向`target/w1c-provenance-20261104/source-bundle-v9`与`workspace-state-v9`。本次检查时这两个忽略目录均不存在，因此无法复核它们所述的manifest；保留该历史记录但不把它们作为当前证据。上一批生成并离线验证的v13源码与Git状态快照属于前一批，不绑定当前合成FFI事件实现。
+
+快照封存当前工作树源文件字节和精确Git index/patch/文件模式状态；不保存ACL、时间戳、忽略的运行资产或操作者身份，不证明构建可重现或之后执行了相同源码。本批没有构建Rust发布产物；`target/w1c-process-observation`只含本地测试构建产物，`rebuild-v3/build-record.json`仍绑定更早的source/state v3。命令与离线格式见[部署合同](DEPLOYMENT.md)。
+
+## 2026-11-04 ProcessEngineAdapter观察批后的源码与Git状态快照v8（历史）
+
+在W1-C host观察实现后的当时源码包为[`target/w1c-provenance-20261104/source-bundle-v8/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，配套[`target/w1c-provenance-20261104/workspace-state-v8/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。本节为历史快照，当前源码已由v9封存；v7及更早快照也保留作历史材料。
+
+快照封存当前工作树源文件字节和精确Git index/patch/文件模式状态；不保存ACL、时间戳、忽略的运行资产或操作者身份，不证明构建可重现或之后执行了相同源码。没有为v8构建Rust发布产物；`target/w1c-process-observation`只含本地测试构建产物，`rebuild-v3/build-record.json`仍绑定更早的source/state v3。命令与离线格式见[部署合同](DEPLOYMENT.md)。
+
+## 2026-11-04 W1-C回执校正后的当前源码与Git状态快照v7
+
+在H3窗口与W1-C回执合同校正、任务状态、验证记录、路线和交接文档更新后，离线生成当前[`target/w1c-provenance-20261104/source-bundle-v7/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)并运行`verify-source-bundle`，随后生成配套[`target/w1c-provenance-20261104/workspace-state-v7/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)并运行`verify-workspace-state-bundle`。两份manifest记录自身identity、source identity、成员/载荷计数和SHA-256；输出位于Git忽略目录，v5及v6快照保留作历史材料。
+
+快照封存当前工作树源文件字节和精确Git index/patch/文件模式状态；不保存ACL、时间戳、忽略的运行资产或操作者身份，不证明构建可重现或之后执行了相同源码。没有为v7运行Cargo构建；`rebuild-v3/build-record.json`仍绑定其自己的旧source/state v3，不是v7产物身份。命令与离线格式见[部署合同](DEPLOYMENT.md)。
+
+## 2026-11-04 W1-C工作区状态证据包
+
+修正来源身份采集：已暂存删除的HEAD跟踪路径现在仍以`null`进入来源清单，避免Git index移除路径后将其漏掉。新增workspace-state-bundle v1及schema，配套来源包捕获原始index字节/hash、`ls-files --stage -z`、porcelain v2、二进制暂存与未暂存patch、以及来源包每个现存文件的模式。Git子进程设`GIT_OPTIONAL_LOCKS=0`；来源变化或存在`index.lock`时拒绝捕获。未跟踪文件内容仍由来源字节包保存，状态包不包含ACL或文件时间戳。
+
+先运行新增聚焦回归：`py -m pytest -q tests/test_identity.py tests/test_schemas.py -k 'workspace_state_bundle or staged_tracked_deletion'`，**4 passed**。回归覆盖staged delete保留、stage/unstage patch、未跟踪状态、index原字节不变、来源绑定、确定性重复捕获、活动index锁拒绝及schema约束。
+
+随后按默认串行配置运行全量Python套件：
+
+```powershell
+$env:PYTHONPATH='python'; $env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/w1c-provenance-20261104/python-final tests
+```
+
+结果为**800 passed、9 skipped、219 subtests passed，0 failed**，耗时1886.17秒。9项跳过分别是Windows目录符号链接能力限制2项、v3/v4/真实报告/本机资产/本机快照/赛事配置opt-in 7项；完整原因由pytest输出列出。存在一条pytest未知配置`cache_dir`警告，不影响退出码0。本批只改Python身份工具、测试和schema/文档，没有Rust源码差异；未运行doctor、worker、FFI、runner、引擎、真实分析或部署。
+
+本批源码包和配套Git状态包的目标位置为忽略目录`target/w1c-provenance-20261104/source-bundle-v4`与`workspace-state-v4`，分别绑定最终源码字节和精确Git工作区状态；两份manifest保存身份及各payload哈希。最近的`rebuild-v3/build-record.json`绑定此前的source/state bundle v3，不绑定本批v4源码。此批没有Rust源码变化，因此没有重建v4 Rust产物；既有Python全套800 passed和v3离线build仅适用于各自记录的旧快照，不作为本批结果。
+
+## 2026-11-04 双轨路线文档复核
+
+只读基线`main / 622546c`，开始时工作区干净；对照任务、H3证据映射、日期化验证和部署/安全记录整理下一候选及小批门禁。没有重跑行为测试、doctor、引擎、worker、FFI或部署；下方历史合成测试、有限原生运行和partial安全扫描仍只适用于原范围。旧包哈希沿用同日既有只读记录，不证明当前源码部署。
+
+## 2026-11-04 H3.2-2b-2 当前源码复核与回归
+
+源码基线为`main / 622546c`，测试前已有四份未提交Markdown修改，均予保留。首次accepting窗口及测试挂点已存在于当前源码；本轮没有重复新增挂点，也没有修改Rust、schema或公开接口。按`durable.rs`中accepting revision持久追加后的挂点复核`durable_crash_window_tests.rs`：父进程校验握手阶段、operation修订链、命令摘要、分配的job ID、前驱/记录哈希与状态迁移，并在确认任务、报告及freeze/claim均为0后终止子进程。恢复使用真实目录锁和完整链认证，只追加一次`unknown`；再次重开无新修订且材料字节稳定。该检查确认既有单窗口状态，不扩大H3覆盖。
+
+离线、locked验证均使用隔离目录`target/h3-2b-2-cargo`：
+
+- 聚焦子进程测试：`cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1`，1 passed；日志SHA-256=`8925A761BECE0845DB0AAD5356FAF0B8E6FDA68C3B46DF1D1230D12C626290A3`。
+- CLI默认套件：`cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`，127 passed、0 failed、0 ignored。
+- Workspace默认串行套件：`cargo test --workspace --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`，92个测试结果组，480 passed、0 failed、36 ignored；完整日志SHA-256=`C34F9D70DA703F238C802C6DDC4F4D16F650258D77FC64470D4BFA0EAE3AEE9A`。
+- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-2b-2-cargo -- -D warnings`通过；`py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`为16 passed。
+
+36项ignored均是默认关闭的opt-in，需冻结引擎/core/CDB/scripts等资产、收费原生查询/重放、人工准备或`YGO_PILOT_REPORT_DIR`报告；本轮没有启用这些项目。测试与工具输出保留在忽略目录`target/h3-2b-2-cargo/`。本轮只复核已验收窗口；其他H3逻辑/调度、逐syscall、断电、介质故障、真实worker/引擎、研究消费及报告来源资格仍分别开放。未运行doctor、runner、worker或FFI，未部署、提交或推送。
+
+## 2026-11-04 安全审计整改与workspace复核
+
+本轮在`b35b12dec226b3b71eb36896e27452ec7fd12015`基线上修复Deep Scan发现的四项代码问题，并为一项本机ACL风险记录保留决定；发现、修复边界与残余事项见[SECURITY_AUDIT](SECURITY_AUDIT.md)。本轮未修改Python、schema、部署资产或研究数据。Deep Scan本身针对旧提交`50c279b`且覆盖部分，不把它作为修复后代码的扫描证据。
+
+全workspace Rust测试以串行模式离线运行，退出码0；遵循前次环境验收边界，跳过唯一会调用CLI doctor的`doctor_reports_missing_worker_and_assets`，默认忽略冻结引擎、原生和opt-in测试。随后对最终代码重跑全目标Clippy（`-D warnings`）并通过。结构整理后追加的定向测试也通过：HTTP deadline 1项、终端转义2项、workbench HTTP 5项、journal测试组21项；快照测试2项已在workspace测试中通过。Windows当前账户无法创建目录链接，journal测试因此明确跳过动态symlink部分，非目录sidecar拒绝测试通过。
+
+```powershell
+cargo fmt --all -- --check
+cargo test --workspace --offline --locked -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets
+cargo clippy --workspace --all-targets --offline --locked -- -D warnings
+cargo test -p ygo-cli --lib workbench::tests::incomplete_request_head_obeys_absolute_deadline --offline --locked
+cargo test -p ygo-cli --bin ygo-cli terminal_output_tests --offline --locked
+cargo test -p ygo-cli --test workbench_http --offline --locked
+cargo test -p ygo-engine-adapter --test journal --offline --locked
+cargo test -p ygo-storage --test snapshot --offline --locked
+git diff --check
+```
+
+格式检查、全目标Clippy、workspace Rust测试及本轮定向回归通过。Python未修改，因此没有重跑Python套件；最近一次全量Python结果保留在下方2026-11-03记录中。没有运行engine、worker、FFI、doctor、研究runner、原生研究或部署；本轮也不认证旧`dist/ygo-local`、原生效果资格、研究账本等价性、完整搜索或全局最优性。
+
+修复后Codex Security差异扫描`cd684777-42da-4fea-ba6c-09a0c54e17b4`已完成：快照基线`b35b12d`，716个文件是仓库清单数量，4个改动实现文件完成紧凑审阅并检查相关测试/选定文档；结果0项确认可报告发现、覆盖`partial`。三项候选路径竞态保留为未决，因为当前没有证明攻击者对目标目录的有效权限或跨越权限边界的影响；Windows目录链接动态复现因错误1314跳过。完整范围和候选处置见[安全审计](SECURITY_AUDIT.md)及扫描报告。该快照早于本轮随后校正的工作台与部署说明；这些文档按当前源码和只读部署观察人工复核。
+
+随后完成最终差异复核`4ee4dc69-03f9-4bec-ba82-69dc68ba1db3`，于2026-11-04 02:25:52 CST结束，快照摘要`codex-security-snapshot/v1:sha256:b4d849be4cf2aeeb294e01251119351d6af8eaeb91eece4dc21e9d7ddde2a0b5`。扫描纳入前述工作台/部署文档校正；0项确认可报告发现，覆盖仍为`partial`，同三项路径竞态候选仍未证实。审计结果摘要在快照封存后写入本记录和[安全审计](SECURITY_AUDIT.md)，没有后续代码差异。
+
+## 2026-11-03 全项目自检（代码基线）
+
+本轮核对 `docs/INDEX.md`、`TASKS.md`、部署包身份、隔离运行材料及当前工作区状态。执行可执行代码验证时的基线为 `main / 50c279b0605c55f8e1f05240078700d63c01dd9d`；该时点工作树干净，较 `origin/main` 领先13个本地提交。随后变更仅补充审计文档，未改变可执行代码。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围为diff/partial，不是全仓扫描；它记录1项低严重度本机权限问题。原全仓Deep Scan执行句柄`214`于2026-11-03恢复时返回`not found`。用户随后提供的界面截图显示条目“Yu-Gi-Oh!_AIBot · 11月3日 16:10”针对提交`50c279b`扫描全仓715个文件；截图时处于第8轮汇总，9项已完成、4项进行中。截图只证明该时点仍在运行；没有显示`scanId`/handoff token或最终报告，用户确认没有续接凭据，因此当前状态和最终结果无法核验，不记为完成或通过。按扫描协议，不以新扫描替换缺少恢复上下文的任务。只读ACL复核发现`Authenticated Users: Modify`直接设置在`D:\`根并继承到项目；项目父目录和工作区另有四个无法映射到当前账户名的Modify SID。本机账户枚举受拒，且四个SID在ProfileList中均无对应项；修改卷根可能影响D盘其他内容，修改项目父目录可能影响两个兄弟工作区。用户于2026-11-03选择保留当前ACL并记录风险；本轮未改ACL。普通工作台保持 `analysis_not_configured`，检查时未观察到 `ygo` 进程。调查和部署限制见[环境审计](ENVIRONMENT_AUDIT.md)、[部署状态](DEPLOYMENT.md)与[证据边界](EVIDENCE_CONTRACTS.md)。
+
+发布检查确认 `dist/ygo-local` 仍是 2026-10-19 旧包；`build-hashes.json` 只核对包内 CLI 与 worker 哈希，且 `manifest.json` 缺失，不能证明它对应当前工作树。W1-C 一次固定 Rabbit 运行在隔离候选目录完成，结果为 `budget_limited/time_budget`；160 nodes、165 engine_calls，不是完整搜索或最优性证明。2026-11-03续审对普通包使用其`configs/engine.toml`执行`ygo.exe engine doctor`：`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`；实际调用了包内worker和`probe_only=true`引擎ABI探针，不是决斗smoke或研究账本消费。除该探针外，未运行决斗smoke、研究runner/worker/FFI、原生研究或部署。未发现可以根据消费者和保留目的安全删除的模块；`cargo-machete` 不可用，因此没有声称完成自动未用依赖扫描。随后只删除了11个逐项审核过的Cargo `debug`构建缓存目录（118,131个文件、75.664 GiB逻辑大小），保留日志、运行状态、manifest、研究证据、release、W1C缓存、`data/runtime/`、`dist/`和兼容路径；完整清单见忽略审计记录`data/runtime/cleanup-audit/target-build-cache-cleanup-20261103-220156.json`。此后没有重跑构建或测试；代码验证结果仍对应`50c279b`基线，清理后复核限于路径、审计记录和文档链接。
+
+修复了一处报告状态错误：阶段驱动的后续 runner 调用结果不确定时，不再复用上一阶段的 `actual_unknown=0`；当前 ledger 和实际消费改为 unknown，并单独保留最后一份已认证 ledger。聚焦 Python 回归及相关准备/协议/schema 组为 **64 passed、2 skipped、19 subtests passed**。随后运行完整默认Python测试集：**786 passed、9 skipped、219 subtests passed**，耗时2324.45秒。跳过项包括Windows目录符号链接能力限制，以及需本机引擎、快照、历史报告或赛事配置的opt-in组。pytest有一条未知配置 `cache_dir` 警告。`py -m pip check`报告没有损坏的依赖；样例卡数据校验通过，计2张卡。
+
+Rust验证在隔离目录离线完成：`cargo fmt --all -- --check`通过；workspace默认串行测试退出码0，显式跳过唯一会调用CLI doctor的`doctor_reports_missing_worker_and_assets`；预先标记的冻结资产/原生/opt-in测试保持忽略。workspace all-targets Clippy使用`-D warnings`通过。workspace重复依赖检查确认两个`hashbrown`版本来自不同传递依赖链；`cargo-machete`不可用，未声称完成自动未用依赖扫描。此前全库Markdown本地目标扫描发现并修复48处断链：46个已忽略证据目标改指向[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)登记说明，另修2个相对路径错误。2026-11-03文档更新后复查覆盖210个tracked Markdown文件的1,640个相对链接目标，0个缺失；该检查不验证标题锚点。`git diff --check`复核通过。
+
+```powershell
+cargo fmt --all -- --check
+cargo test --workspace --offline --locked --target-dir target/audit-2026-11-03/rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/audit-2026-11-03/rust -- -D warnings
+$env:PYTHONPATH='python'; $env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/audit-2026-11-03/python-full tests
+py -m pip check
+py -m ygo_data.cli validate --input tests/fixtures/cards.sample.json
+Set-Item Env:PYTHONPATH python
+Set-Item Env:PYTHONDONTWRITEBYTECODE 1
+py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/audit-2026-11-03/pytest-tmp tests/test_ground_collapse_stage_driver.py tests/test_ground_collapse_preparation.py tests/test_ground_collapse_protocol.py tests/test_schemas.py
+git diff --check
+```
+
+Rust覆盖当前源码的离线workspace测试；被显式跳过的doctor测试和ignored项目没有运行。默认Python测试集完成，但需本机引擎/快照/报告/赛事配置的opt-in组仍跳过。diff安全扫描范围有限；全仓Deep Scan在用户截图所示时点仍处第8轮汇总，之后状态及最终报告无法核验。用户于2026-11-03选择保留现状并记录ACL风险；本轮未修改权限。上述检查不认证当前`dist/ygo-local`、完整引擎资产、研究账户等价性、独立原生重放、完整搜索或全局最优性。
+
+## 2026-11-03 H3 HTTP派发准入AssetMismatch持久化后、队列结算前进程终止
+
+先按[H3.1窗口映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)复核：`claim_next`中的冻结资产复核失败K与HTTP `dispatch_pending`派发准入失败是两条独立路径。新增测试专用检查点位于`fail_asset_mismatch`成功追加failed revision后、内存队列结算前；未改变生产路径、公开API或schema。
+
+测试子进程使用fixture admission policy制造HTTP准入身份不匹配，并经真实`dispatch_pending`进入拒绝路径。握手marker通过临时文件`sync_all`和原子重命名发布；父进程在20秒上限内等待后，认证完整operation/job修订封套与哈希链、状态迁移、命令摘要及冻结输入绑定，再确认事件严格为`freeze → claim → dispatch_asset_mismatch_persisted`、job状态为queued→running→failed/AssetMismatch、无报告后终止子进程。假执行器调用数为0。
+
+真实目录锁重开保留failed终态，不追加unknown；队列为空且`claim_next`无可领取工作，报告目录为空。第二次重开后operation/job材料字节与revision数稳定。最终机器证据[`target/h3-dispatch-asset-mismatch-kill/2de1a1bedd82a42e93f13d8ba3c64a47/dispatch-asset-mismatch-crash-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)为2,832字节，SHA-256=`bcad7b64506516d3af291e0b196d4740c25005f33a4134533cf7891fabf7ca86`；operation=`166e02cf42af7c3589b64df17c0c8ddb`，job=`bcf3c7bbdb9725dfec406c549dffcffe`。
+
+聚焦测试 **1 passed、0 failed、100 filtered**。workspace默认串行测试（显式跳过`doctor_reports_missing_worker_and_assets`）退出码为0，其中`ygo-cli`库测试101 passed；workspace全目标Clippy（`-D warnings`）、`cargo fmt --all -- --check`和`git diff --check`通过。`tests/test_schemas.py`为 **8 passed、2 skipped**。一次初始未过滤workspace尝试启动了`doctor_reports_missing_worker_and_assets`，该测试调用`ProcessEngineAdapter::doctor()`检查不存在的worker和资产；发现超出本批边界后停止了该次运行。它没有启动worker、引擎或FFI。最终workspace命令显式跳过该测试。最终增加父进程链认证断言后，重新运行聚焦测试及Clippy、格式和差异检查；完整workspace串行测试在补强后也已按上述过滤命令通过。
+
+```powershell
+cargo test --offline --locked --target-dir target/h3-dispatch-asset-mismatch-kill/cargo -p ygo-cli --lib workbench::analysis_http::tests::dispatch_admission_asset_mismatch_crash_keeps_terminal_failure -- --exact --test-threads=1
+cargo test --workspace --offline --locked --target-dir target/h3-dispatch-asset-mismatch-kill/cargo -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-dispatch-asset-mismatch-kill/cargo -- -D warnings
+cargo fmt --all -- --check
+py -m pytest tests/test_schemas.py -q
+git diff --check
+```
+
+本批未运行`cargo run -p ygo-cli -- engine doctor`、真实引擎、runner、worker、FFI、研究scope或部署；测试专用假执行器也未被调用。该K只覆盖HTTP派发准入AssetMismatch单点，不覆盖其他拒绝/调度分支、真实执行器副作用、逐syscall、断电或介质故障。普通启动仍为`analysis_not_configured`。
+
+## 2026-11-03 H3 AssetMismatch保存后、队列结算前进程终止
+
+先按[H3.1窗口映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)对照相邻证据：running队列更新后、票据返回前K只覆盖资产身份核对成功路径；已有普通失败测试及提交故障恢复测试分别覆盖AssetMismatch终态和失败提交不确定时的unknown分类，但没有覆盖failed revision成功保存、内存队列尚未结算时的K点。新增挂点仅编译进测试目标，位于`claim_next`资产身份失败分支的持久追加之后、队列内存应用之前。
+
+子进程在已接受并冻结的测试输入后更改自身临时fixture中的engine文件，命中资产哈希失配。父进程先认证operation/job修订封套、哈希前驱、命令摘要和输入绑定；job状态为queued→running→failed/AssetMismatch，事件严格为`freeze → claim → asset_mismatch_persisted`。没有报告，`claim_next`未返回ticket；测试中没有executor。父进程随后终止子进程。真实目录锁重开保留唯一failed终态，不追加unknown，活动队列为空且不可领取；第二次重开后七个revision文件字节完全相同。
+
+最终证据[`target/w1h21-analysis-operation-tests/b18041661f155e62909e0758302405f7/asset-mismatch-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)为2,499字节，SHA-256=`db8751b6c610be995309691bd39b77f136bbbfa1579f1cbca5108c336a1a86fd`；operation=`a08b458a48f8790b9e935559b1a6c73d`，job=`9f720f64d38b7dcbbbbabbe739119779`。聚焦子进程矩阵 **1 passed、0 failed、99 filtered**。首次编译发现夹具只持有path-free job input，修正为在提交前保存临时fixture资产路径后复跑通过。
+
+```powershell
+cargo test -p ygo-cli --offline --locked --target-dir target/asset-mismatch-crash-window/cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --test-threads=1
+```
+
+完整回归均使用隔离target和`--offline --locked`。新增聚焦矩阵为 **1 passed、0 failed、99 filtered**；`ygo-cli`全包测试 **123 passed**；workspace全目标Clippy（`-D warnings`）、`cargo fmt --all -- --check`及`git diff --check`通过。workspace默认串行测试退出码为0，命令显式跳过唯一会调用CLI doctor的`doctor_reports_missing_worker_and_assets`，以遵守本批不运行doctor的范围；其余已有ignored用例仍保持opt-in，不代表它们通过。相关schema回归 **24 passed、2 skipped**，pytest有一条未知`cache_dir`配置警告。未联网补依赖。
+
+```powershell
+cargo test -p ygo-cli --offline --locked --target-dir target/asset-mismatch-crash-window/cargo -- --test-threads=1
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/asset-mismatch-crash-window/cargo -- -D warnings
+cargo test --workspace --offline --locked --target-dir target/asset-mismatch-crash-window/cargo -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets
+cargo fmt --all -- --check
+$env:PYTHONPATH='python'; $env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --tb=short --basetemp target/asset-mismatch-crash-window/pytest-tmp tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py tests/test_workbench_analysis_http_schema.py tests/test_schemas.py
+git diff --check
+```
+
+该协调器层测试不覆盖`AnalysisHttpService`派发准入不匹配分支、真实worker/引擎、逐syscall、断电或介质故障。当前窗口只证明合成fixture中的已持久failed终态在进程终止后不被重试；普通启动仍`analysis_not_configured`。
+
+## 2026-11-03 H3 running队列更新后、领取票据返回前进程终止
+
+按[H3.1窗口映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)先核对两侧证据：running修订持久化后、队列内存更新前已有独立K；[票据返回后、执行器调用前](superpowers/plans/2026-11-03-ticket-return-crash-handoff.md)也已有独立K。本次检查点位于`claim_next`已应用队列状态、资产身份核验成功后，以及`DispatchTicket`返回前，覆盖两者之间的边界。
+
+父进程在终止前认证operation/job修订链、前驱和记录哈希、命令摘要及冻结输入绑定。事件严格为`freeze → claim → queue_updated`；operation保持accepted，job为running revision 2；报告数和假执行器调用数均为0。子进程经同步临时marker和原子重命名握手后被终止。真实目录锁恢复只追加一次job `unknown`修订；operation不变，活动队列为空且无可领取工作。第二次重开不再追加，测试逐字节比较持久材料并通过。
+
+最终机器证据[`target/w1h21-analysis-operation-tests/63de9d5c0b61a69652659cef2c305fa2/running-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)为1,298字节，SHA-256=`b679034cfed0091aef1cc7d611a8e965aea9bc52f167f20a23f1ddb726a2a39c`。operation `deb96b9ce7177d28aec9b2c58d494f6f`，job `83a99600cbdfe64849c2df08bf124612`，稳定重开2次。
+
+最终聚焦测试 **1 passed**；相邻HTTP running强杀回归 **4 passed**。全workspace串行测试退出码0，workspace全目标Clippy（`-D warnings`）和格式检查通过。相关schema回归 **24 passed、2 skipped**；skip为显式opt-in的本机snapshot/report及实际v2报告用例，pytest另有一条未知`cache_dir`配置警告。命令如下：
+
+```powershell
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-queue-updated-ticket-return/cargo workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-queue-updated-ticket-return/cargo --lib workbench::analysis_http::tests::running_job_crash_after_ -- --nocapture --test-threads=1
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-queue-updated-ticket-return/cargo -- -D warnings
+cargo test --workspace --offline --locked --target-dir target/h3-queue-updated-ticket-return/cargo -- --test-threads=1
+cargo fmt --all -- --check
+$env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --basetemp target/h3-queue-updated-ticket-return/pytest-tmp tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py tests/test_workbench_analysis_http_schema.py tests/test_schemas.py
+```
+
+测试迭代发现两项harness问题：最初事件记录器把`queue_updated`写入未选择新checkpoint的既有running场景，导致两个精确事件序列断言失败；之后operation完整链认证补强又暴露状态白名单漏掉`Accepted`。现已将事件限定到目标stage，并修正辅助认证器以实际验证accepted revision 4转换。第二项首次失败日志保存在[`target/h3-queue-updated-ticket-return/pre-auth-chain-focused.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。最终聚焦、相邻HTTP回归、全workspace和Clippy均在两项修正后通过。Rust测试使用隔离target及`--offline --locked`。本批未运行CLI doctor、真实引擎、runner、worker、FFI、研究scope或部署。它不覆盖执行器真实副作用、其他调度、报告写入、逐syscall、断电或介质故障；`unknown`不推断为零消费。完整窗口交接见[本批记录](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)。
+
+## 2026-11-03 H3报告临时文件发布前进程终止
+
+先按[窗口映射](superpowers/plans/2026-11-03-report-temp-crash-window-map.md)对照相邻K证据：假执行器返回前、执行器返回后`persist_report`调用前，以及正式报告发布并复读后、终态修订前均已有独立覆盖。本批在存储层仅测试依赖启用的检查点处终止子进程；检查点位于报告临时文件写完并`sync_all`之后、正式hard link发布之前。父进程认证检查点PID、临时文件名/长度/SHA-256、operation/job完整修订链、命令摘要、冻结输入绑定，并确认freeze、claim、假执行器调用和返回各一次、正式报告尚不存在后才终止。
+
+未修复时，真实目录锁重开以`Persistence(ReportInvalid)`拒绝reports目录中的遗留`.ygo-draft-<32位小写十六进制>.tmp`。故障及重开前后逐文件SHA-256保存在`target/h3-report-temp-kill/3b711ceb347db39f67138adf6b5a305e/report-temp-crash-reproduction.json`，失败日志为`target/h3-report-temp-kill/pre-fix-focused.log`。最小修复让重开识别并保留精确命名的普通临时文件（大小不超过报告上限）；该文件不被解析、索引、展示或删除。
+
+修复后，同一聚焦测试 **1 passed**。重开只追加running job的unknown revision 3，operation保持4个revision；没有正式报告、可排队任务或可领取工作，未发布临时文件逐字节保留；第二次重开没有新修订且持久材料哈希稳定。成功证据位于`target/h3-report-temp-kill/450f3b94d97b49c232d73b907930f54f/report-temp-crash-evidence.json`，命令输出为`target/h3-report-temp-kill/post-fix-focused.log`。
+
+```powershell
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-report-temp-kill/rust workbench::analysis_http::tests::running_job_crash_after_report_temp_sync_before_publish_recovers_unknown_once -- --exact --nocapture --test-threads=1
+```
+
+扩展验证：`cargo test -p ygo-cli --offline --locked --target-dir target/h3-report-temp-kill/rust -- --test-threads=1`为 **123 passed、0 failed**；`cargo test --workspace --offline --locked --target-dir target/h3-report-temp-kill/rust -- --test-threads=1`为 **471 passed、0 failed、36 ignored**。忽略项是显式opt-in的冻结引擎/资产、手工原生案例或本机保存报告案例；没有启用。workspace全目标Clippy（`-D warnings`）、`cargo fmt --all -- --check`及`git diff --check`均通过。`tests/test_schemas.py`为 **8 passed、2 skipped**；跳过项需要显式启用本机快照/报告或实际v2报告。命令输出保存在`target/h3-report-temp-kill/ygo-cli-tests.log`、`workspace-tests.log`、`workspace-clippy.log`和`schema-regression.log`。测试构建的依赖树启用`h3-crash-test-hook`，普通依赖树未启用；没有运行doctor、真实worker/引擎/FFI或研究scope。
+
+这只是测试专用假执行器和合成报告的逻辑窗口；没有生产worker、引擎、FFI、scope或消费账本调用。逐syscall、断电、介质故障及其他调度仍开放。
+
+## 2026-11-03 P1观察投影复验与opcode24菜单交叉核验
+
+既有观察投影候选按[实验设计](superpowers/plans/2026-11-02-p1-observation-boundary-experiment.md)重跑：`tests/test_information_projection.py`与`tests/test_information_route_projection.py`为29 passed、11 subtests passed。随后以新共享夹具[`ground-collapse-opcode24-menu-v1.json`](../tests/fixtures/ground-collapse-opcode24-menu-v1.json)核对Rust生产提示解码器和Python独立oracle：Rust `prompt_actions`为5 passed；Python `test_ground_collapse_protocol.py`为9 passed。固定合成帧`[24,0,2,224,255,224,255]`、掩码`0xffe0ffe0`对应10个可用区域、45个规范无序区域对和90种语法上不同的顺序编码。生产提示菜单只含45个规范顺序；反序Choice不在菜单中。此结果不判断反序是否被核心接受。
+
+`cargo fmt --all -- --check`及`cargo clippy -p ygo-engine-adapter --all-targets --offline --locked --target-dir target/p1-opcode24-20261103/rust -- -D warnings`通过。pytest缓存插件在target和系统临时目录写缓存时均遇到Windows `WinError 5`；最终聚焦运行使用target内最小pytest配置并关闭缓存插件，未跳过测试。未运行workspace全套、引擎、runner、worker或FFI；未创建scope、窗口或消费账本。实际opcode24提示、可达性、原生响应接受、反序等价及完整动作覆盖仍未知。完整边界见[本批交接](superpowers/plans/2026-11-03-p1-opcode24-menu-crosscheck.md)。
+
+```powershell
+cargo test -p ygo-engine-adapter --test prompt_actions --offline --locked --target-dir target/p1-opcode24-20261103/rust -- --test-threads=1
+$env:PYTHONPATH='python'; py -m pytest -c target/p1-opcode24-20261103/pytest.ini -p no:cacheprovider -q -ra --tb=short tests/test_ground_collapse_protocol.py
+$env:PYTHONPATH='python'; py -m pytest -c target/p1-20261103/pytest.ini -p no:cacheprovider -q -ra --tb=short tests/test_information_projection.py tests/test_information_route_projection.py
+cargo fmt --all -- --check
+cargo clippy -p ygo-engine-adapter --all-targets --offline --locked --target-dir target/p1-opcode24-20261103/rust -- -D warnings
+```
+
+## 2026-11-03 Ground Collapse opcode24实验设计只读复核
+
+从冻结prepared-cases和Rabbit案例重建`prompt-24-collapse-v1`输入摘要；候选案例的准备器SHA与canonical摘要分别为`ccf3143c589472dc3ea48f2ef1fcf0216f64a55cd5365e2762a26745c036e52b`和`e4bb568e30afc2f841916024c823c6e228a5c907b1d61369eba0d9b0382f0a6e`。旧提示acceptance、report、prepared-cases与frozen-cases文件均匹配源码中的固定SHA。当前`ocgcore.dll`、CDB、scripts manifest、目标Lua脚本、banlist和六个core源码pin均与候选要求相符；worker只读取SHA，未启动。
+
+旧`data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json`不存在，目录只保留source list与source ZIP；对历史报告37个成员未做完整复验。为保留独立证据，在新目录运行离线prepare；它在首个`latest_curry_delivery`来源门禁失败，缺少精确路径`data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json`。父目录的162项快照SHA-256为`52ab2a0dd4fd326a7235ff7bbbfcbb679547441ac655bce1a255480ad249c767`，递归文件名清点未找到其他`delivery*.json`；相同路径在兄弟checkout也不存在。失败报告`preparation.json`为2,855字节，SHA-256=`ffe3b7af02e9e96b8d21f48c5755d291f14d5318eabc58d8346ce4ca4e2cccf1`，其全部会计字段为`null`。没有从其他材料重建交付。
+
+Ground专用收费driver尚不存在，Tenki固定六阶段driver不适用。依据此现状形成[真实opcode24提示实验设计](superpowers/plans/2026-11-03-ground-collapse-opcode24-experiment-design.md)，提出最多5个请求、1,800秒单scope窗口和逐阶段停止条件；这只是设计，不是scope或运行授权。离线prepare命令耗时约18秒，`native_calls=0`、runner进程`0`、worker进程`0`、FFI调用`0`；没有运行verify、pytest、cargo、doctor、引擎或研究scope。历史未知消费保持未知。
+
+## 2026-11-03 Ground Collapse归档恢复与当前离线准备复验
+
+依据被忽略的`data/runtime/cleanup-audit/drive-archive-index.json`，从私有归档逐项恢复13份固定历史输入，共141,493字节。每份文件的实际字节数、SHA-256均匹配索引的上传源与回读记录；云端副本未修改。恢复涉及Curry交付及V1–V5父链中的固定报告、收据和日志；完整路径与保留边界见[EVIDENCE_RETENTION](EVIDENCE_RETENTION.md)。
+
+在独立输出目录[`p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2`](../data/runtime/p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2/)重新运行离线准备，六项检查全部通过：Curry交付、历史来源、冻结候选、运行资产/core、输入稳定性及工具源码稳定性。报告为25,131字节，SHA-256=`0571114833868488b6213997ad085cb82acf6db3eac036fe9869808189f02278`。只读verify-only返回`valid=true`，复核138个固定文件输入和5个目录输入，诊断为空。
+
+报告会计为认证消费子集40、政策预留7、规划47；旧confirmation实际消费和全部历史实际累计保持`null`。`execution_ready=false`，`proof_ready`、完整动作、原生概率、原生可达性、响应接受和全局最优资格均为false。此批native、runner、worker、FFI调用均为0，未创建scope或消费账本。较早两份失败报告仍保留；原2026-10-27 Ground `preparation.json`仍缺失，本报告不替代其历史身份或37成员声明。
+
+## 2026-11-03 Ground Collapse驱动源码绑定复核
+
+复核发现阶段Rust模块、单阶段runner、Python协调器及协调器测试未全部进入固定工具包。工具清单将当前profile固定为19个成员；v1 schema对`file_count`使用正整数结构约束，精确成员数由Python profile和ZIP成员校验执行。新增回归断言确认11成员的历史结构仍通过schema、但不通过当前profile校验。`tests.test_ground_collapse_preparation`以`PYTHONPATH=python;tests`运行 **36 passed**；`tests.test_schemas`为 **8 passed、2 skipped**。两项跳过测试分别要求显式启用真实v2报告和本机快照/报告检查，未启用。
+
+第一次CLI准备尝试将`--preparation`指向`report.json`、`--cases`指向`prepared-cases.json`，不符合生产profile固定路径，拒绝且未创建输出。修正为`--preparation`绑定`prepared-cases.json`、`--cases`绑定`data/runtime/baseline-2026-10-19/research/frozen-cases.json`后，离线CLI准备成功；CLI只读`--verify-only`复核返回`valid=true`。最终报告[`preparation.json`](../data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/preparation.json)为25,131字节，SHA-256=`a238a2f114c7cb26b6f1e79d6ca34b3e5f01f33bdb57eab0b6d2f650c2bb8c99`；工具包19个文件，ZIP为95,895字节，SHA-256=`8fd8bb6ad057f6b83507b28a33adc6281c049974cac5d3e49db723df96515dbc`，文件清单SHA-256=`9e844de98ab205f2243c706aa6b368d2b68a81af65e9c70472d47f8f9689f746`，工具包来源身份=`80827b9571b4fdaa7a2749d4a11a94a2916786486c7bdfae55d85d07853db228`。六项来源检查全部通过，verify-only重核138个文件输入和5个目录输入；报告`execution_ready=false`，native/runner/worker/FFI计数均为0，诊断为空。此前driver-review-1报告保留作前一版快照；当前profile不再把其schema成员数当作结构字段。
+
+该报告绑定当前driver/runner及固定来源，不替代缺失的2026-10-27历史报告或此前11成员归档恢复报告；历史实际消费仍未知。未创建scope、窗口或账本，也未启动任何执行器。
+
+## 2026-11-03 Ground离线准备报告的文档更新后复核
+
+L1来源审计的文档更新后，重新运行固定来源CLI `--verify-only`。首次调用因`--preparation`和`--cases`路径填反而被固定路径检查拒绝，没有写入输出；按生产profile修正后退出码0，结果为`valid=true`、`preparation_successful=true`，native/runner/worker计数均为0；报告文件保持25,131字节、SHA-256=`a238a2f114c7cb26b6f1e79d6ca34b3e5f01f33bdb57eab0b6d2f650c2bb8c99`。
+
+另外逐项比较`source-native.zip`、文件清单与当前19个profile源码成员：ZIP成员和清单完全匹配，19个当前文件哈希均匹配，差异0。当前完整工作树身份经`stable_source`重算后记录在忽略文件`target/p1-ground-collapse-source-review-2026-11-03/source-identity.json`；它与原报告记录的710文件历史捕获身份不同，因为本次期间工作树文档已更新。verify-only按实现合同复核当前19个固定工具成员及研究输入，同时保留原报告的历史全工作树捕获身份；它不把旧身份冒充为本次HEAD身份。
+
+原报告`execution_ready=false`，`future_native_binding`中的新scope、预算、worker、最终请求摘要及prompt ID仍为空；这次复核只证明离线来源和工具包稳定，不认证真实opcode24提示、响应接受、消费或执行准入，也不创建scope/窗口/账本。实现仍要求实际运行前另行绑定当前build、worker、最终请求与预算，并满足独立scope授权。
+
+## 2026-11-03 Ground Collapse候选执行清单离线评审
+
+为落实路线中“绑定当前源码、runner/worker/build、冻结输入、资产、最终stage request与停止条件后再审阅”的下一步，在忽略目录`target/p1-ground-collapse-candidate-manifest/`完成隔离候选准备。HEAD为`672e5a823fcad60e9413d79cac810b68a2bb003c`；准备报告`data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/preparation.json`为25,131字节、SHA-256=`a238a2f114c7cb26b6f1e79d6ca34b3e5f01f33bdb57eab0b6d2f650c2bb8c99`。该报告中的710文件身份仍是`historical_capture_metadata_not_reauthenticated`，不作为当前源码身份。最新工具包ZIP SHA-256=`8fd8bb6ad057f6b83507b28a33adc6281c049974cac5d3e49db723df96515dbc`，成员清单SHA-256=`9e844de98ab205f2243c706aa6b368d2b68a81af65e9c70472d47f8f9689f746`，profile为19个成员。
+
+CLI只读`--verify-only`返回`valid=true`、`preparation_successful=true`，复核138个文件输入和5个目录输入，耗时约107秒；native/runner/worker/FFI调用均为0。第一次调用的`--preparation`与`--cases`参数顺序写反，固定profile拒绝且未写入输出；纠正后复核通过，准备报告仍为原字节和哈希。隔离构建命令为`cargo build -p ygo-engine-adapter --example ground-collapse-probe --bin ygo-engine-worker --offline --locked --target-dir target/p1-ground-collapse-candidate-manifest/cargo`，退出0。runner和worker产物SHA-256分别为`cfbdea40902a0084ea8dfba9be5218591d899ef1a11a93a1ae76858dbbd89469`及`526f793ab41505132d7a7e6b0d460373914b235eeb6f01b43a41c881b6362819`；仅构建，未启动。
+
+固定候选`prompt-24-collapse-v1`（卡号`90502999`）案例摘要为`ccf3143c589472dc3ea48f2ef1fcf0216f64a55cd5365e2762a26745c036e52b`。最终stage 1请求规范摘要为`c1d95003c27047d78c68e247a3c0590d776508d6251bbb69157b3c31cde617ca`，其文件SHA-256为`47908b74523ef50d402df10a5ea77cecf8f0b6e940654ca21fc01d36b7b398df`；基础Rabbit请求摘要为`d25d2e79a58728221111d9007f5890b3e99be2bdcf4a8aee1a17554d59da91bb`。当前脚本树生产快照算法清点12,728个目录/文件条目（12,727个文件），SHA-256=`4f32b4aadc675437a03aa6adff7666cfce9d60e9846fd354d8b0354786d26d29`；DLL、CDB、manifest、禁限表、目标脚本、六个core源码pin和隔离worker哈希均与候选快照一致。详细绑定及停止条件见[离线评审记录](superpowers/plans/2026-11-03-ground-collapse-candidate-manifest-review.md)。
+
+机器清单类型为`ground_collapse_candidate_manifest_review_v1`，最终版本保存到忽略路径`target/p1-ground-collapse-candidate-manifest/reviewed-candidate-manifest.json`，明确标记`execution_ready=false`、`scope_created=false`、`scope_authorized=false`，最终原生请求摘要与实际prompt ID为空。完整当前源码身份在本文、任务表、路线和索引定稿后采集，并与最终build record前后身份核对一致；独立只读审阅确认清单自摘要、源码身份、请求文件、构建产物、快照和报告状态一致。此前的预定稿清单和构建记录保留为中间快照，不作为最终绑定。此清单不可被当作可执行scope manifest。没有创建scope/账本/窗口，也没有运行doctor、Ground runner、worker、引擎或FFI；本次不改变任何历史消费的未知值。
+
+## 2026-11-03 Ground Collapse阶段收费驱动与合成验证
+
+新增隔离的Rust `GroundCollapseProbeBatch` 和 `ground-collapse-probe` 单阶段runner，绑定独立scope `p1-ground-collapse-opcode24-reachability-v1`、最多5次收费请求、30秒单请求engine timeout及1,800秒窗口；Python协调器负责manifest/构建/输入身份核验、阶段顺序、收据复核、60秒runner外层超时及失败停止。每次runner进程最多执行一个阶段；没有自动重试。直接到opcode24的路线需要4次请求，经opcode18的路线需要5次；最后一次只对响应请求进行完全相同的重放。收据与runner stdout已共同绑定完整账本、但Rust与Python协议复核不一致时保留已知收费计数；无法认证收据或完整账本时停止并将未知计数保留为`null`。
+
+合成回归验证唯一激活、可选opcode18、opcode24菜单及响应字节、提示/决策前缀绑定、响应消费、异常提示停止、精确重放和scope/预算隔离。Ground协议、准备及阶段driver Python测试 **54 passed、19 subtests passed**；Rust adapter library **56 passed**；Ground runner示例 **2 passed**；schema回归 **8 passed、2 skipped**。Python测试各有1条现存pytest配置警告：当前pytest不识别`cache_dir`。研究CLI子命令帮助通过，workspace格式检查与全目标Clippy（`-D warnings`）通过。`git diff --check`通过；Git仅报告工作区LF/CRLF自动转换提示。
+
+```powershell
+$env:PYTHONPATH='python'; py -m pytest -q -p no:cacheprovider --tb=short tests/test_ground_collapse_protocol.py tests/test_ground_collapse_preparation.py tests/test_ground_collapse_stage_driver.py
+cargo test -p ygo-engine-adapter --lib --offline --locked --target-dir target/p1-ground-collapse-20261103/rust -- --test-threads=1
+cargo test -p ygo-engine-adapter --example ground-collapse-probe --offline --locked --target-dir target/p1-ground-collapse-20261103/rust -- --nocapture
+$env:PYTHONPATH='python'; py -m pytest -q -p no:cacheprovider --tb=short tests/test_schemas.py
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/p1-ground-collapse-20261103/rust -- -D warnings
+$env:PYTHONPATH='python'; py -m ygo_eval.research native-ground-collapse-probe --help
+```
+
+未运行workspace `cargo test`：默认会执行`crates/ygo-engine-adapter/tests/doctor.rs`中的`ProcessEngineAdapter::doctor()`，超出本批不运行doctor/真实引擎/runner/worker/FFI的边界。定向测试和Clippy未启动进程或引擎。当前固定来源准备报告仍`execution_ready=false`；未创建scope、窗口或账本，新增native/runner/worker/FFI调用均为0。此结果只确认合成阶段驱动和收费账本实现，不证明真实提示可达、响应可被引擎接受或研究/发布资格。
+
+## 2026-11-03 W2隔离工作台候选包与干净profile
+
+使用`cargo build -p ygo-cli --offline --locked --target-dir target/w2-clean-20261103/cargo`构建当前源码CLI；构建成功。候选`target/w2-clean-20261103/package-candidate-02`包含CLI、相对路径`workbench.cmd`及catalog snapshot `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`。包内CLI SHA-256=`1d1dda980cdbe220f3ea2c3b3193791b02b35bb5548840fa2bf1c84357b16021`，snapshot SHA-256=`3c0fa6249f4e5172488bf325f8d659070cfefb3d93115b7ec690e0486da4cbf7`。
+
+候选从空草稿profile启动并返回本机页面；catalog身份与卡号检索可用，卡名来源为本地catalog且译文仍标记`unverified`。保存/重开保留重复卡号顺序和main/extra/side分区；JSON与YDK导入/导出往返通过；停止服务并从同一包重启后，草稿ID、revision及内容稳定。随后将候选ZIP解压到带空格的路径，复核启动器、相对snapshot路径、空profile和重启保存也通过。机器记录：`target/w2-clean-20261103/package-candidate-02-evidence/clean-profile-acceptance.json`和`target/w2-clean-20261103/package-candidate-02-evidence/archive-extract-acceptance.json`。源码、二进制、ZIP和资产绑定见`target/w2-clean-20261103/package-candidate-02-source-identity.json`。
+
+首次候选自动化发生在清理阶段的进程树权限错误已保留在`target/w2-clean-20261103/package-candidate-attempt-01-failure.json`；候选进程按精确路径停止，产品检查未把该失败算作通过。此验收只覆盖同一主机的隔离目录，不是干净虚拟机/另一账户验收。没有旧工作台发布包可供升级，旧草稿迁移仍开放；旧`dist/ygo-local`未改动，未运行doctor、engine、worker、FFI或分析。
+
+## 2026-11-03 W2裸Deck JSON到V1兼容边界
+
+新增共享夹具`tests/fixtures/deck-draft-legacy-bare-v0.json`及期望V1输出；domain导入测试确认默认标题、分区顺序和重复卡号不丢失，并验证V1再次读取。CLI集成测试确认显式导入写出V1，已存在目标在无`--replace`时字节不变，坏输入即使显式替换也不改源/目标。schema回归验证期望输出符合V1 JSON Schema。
+
+验证结果：`cargo test -p ygo-domain --offline --locked --target-dir target/w2-migration-20261103/cargo --test deck_document -- --test-threads=1` **6 passed**；`cargo test -p ygo-cli --offline --locked --target-dir target/w2-migration-20261103/cargo --test deck_draft imports_legacy_bare_json_as_v1_and_preserves_destination_on_rejection -- --exact --test-threads=1` **1 passed**；`tests/test_schemas.py`的相关用例 **2 passed、8 deselected**；`cargo fmt --all -- --check`通过；`cargo clippy -p ygo-domain -p ygo-cli --all-targets --offline --locked --target-dir target/w2-migration-20261103/cargo -- -D warnings`通过。
+
+这里的legacy bare JSON测试只是文件导入合同。工作台profile保存的是带ID与revision的`StoredDeckDraft`，实际旧包/profile格式不存在，因此未执行整目录升级、profile迁移或回滚；细节见[W2迁移合同](superpowers/plans/2026-11-03-w2-draft-migration-contract.md)。
+
+## 2026-11-03 L1 44088353来源与使用依据复核
+
+只读核验人偶之锤（44088353）。本地官方日文页归档SHA-256=`96b9414eaa30d2aecd1fed2d2d0aa96136d853d8615729b31b78123a2afc76a7`与`configs/tournament-2026.source.json`相符；官方日文卡页显示`LPG2-JP008`、2026-07-25。官方简中同卡号查询返回“Card information not found”，未据此推断无简中印刷。冻结C1报告哈希与批次记录一致：zh-CN候选名称/正文仍为`candidate`/`not_reviewed`，使用依据及再分发均为`unknown`；zh-SC缺字段。上游提交对应`mycard/ygopro-database`的zh-CN CDB变更；仓库README标示数据库暂供测试，当前根目录列表未见许可文件，故没有找到覆盖本项目使用/再分发的许可依据。未修改候选CDB、C1报告或语言状态。详见[单卡来源与使用依据复核](superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)。
+
+## 2026-11-03 L1 MyCard双locale来源与使用依据复核
+
+只读核对冻结`zh-CN`、`zh-SC` CDB与固定上游提交`217ae165c1886af2fc36b823fc08f9fc3ec13185`。本地文件大小、SHA-256及`git hash-object` SHA-1均与冻结配置及上游CDB blob身份相符：zh-CN为8,164,352字节、`ff52f585…c3be152`、`2f3b012d…11b89c2`；zh-SC为6,520,832字节、`5382e8dc…e517d4`、`df1c6180…89fa1`。固定提交根目录没有`LICENSE`，两个locale目录各只有`cards.cdb`和`strings.conf`；README称数据库暂用于测试。该检查没有发现覆盖本项目使用或再分发的明确许可文本，但只限定于所检查提交和路径，不排除其他协议或另行授权，也不作法律结论。
+
+配置SHA-256仍为`c8f2512501f4563c1821e275824193ee67bdad5938db13cd867c26952eed8cbe`；C1报告SHA-256仍为`6d28d32b878790bfc0c9dc86cb3676053f296d9c68a5791e4203aa4aaab79d65`。两个来源的使用/再分发状态继续为`unknown`，报告保持`qualified=false`。本批是来源身份与目录线索复核，不是代码测试；没有运行语言审计、构建或研究工具，也没有修改冻结输入。详细文件身份和后续门槛见[双locale复核记录](superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)。
+
+## 2026-11-03 P4-R1b-3当前构建身份与零调用预检
+
+在隔离target `target/p4-r1b3-current-20261103/cargo`离线重建worker和研究驱动。首次`prepare-only`虽退出码为0，却暴露驱动仍绑定`target/p4-r1b3/cargo/debug/ygo-engine-worker.exe`；该预检未创建scope、worker进程或native调用，完整观察保存在`target/p4-r1b3-current-20261103/preflight-attempt-01-mismatch.json`。修正后，驱动从当前可执行文件的Cargo profile目录解析worker；manifest生成与重开校验都以当前`current_exe`为driver。聚焦测试现断言worker路径来自当前profile。
+
+新预检run `p4-r1b3-1793644408613378500-32336`绑定当前隔离worker和驱动，固定路线为`78449284:two_dark_level_three`→`25538345:normal_summon_and_set`；`output_root_created=false`、`scope_created=false`、`worker_processes_started=0`、`native_calls=0`。当前HEAD、完整tracked diff、Cargo.lock、参与源码与产物SHA-256见`target/p4-r1b3-current-20261103/source-identity.json`；预检完整结果见`target/p4-r1b3-current-20261103/preflight-result.json`。验证：R1b-3 harness **5 passed**；worker和example隔离构建通过；`cargo fmt --all -- --check`通过；workspace全目标Clippy `-D warnings`通过；workspace默认串行`cargo test`退出码0。显式opt-in冻结资产/原生案例仍按默认行为忽略。本批没有创建研究scope、启动worker或调用引擎，因此不构成恢复、原生重放或发布资格。
+
+## 2026-11-03 P4-R1b-3 scope只读复核
+
+重算了实验设计绑定的两份配置、两份固定fixture、冻结manifest、CDB、core、engine manifest和scripts manifest的SHA-256；9项均与2026-11-02设计基线一致。该静态身份核对没有验证ABI或调用引擎。旧run只读账本审计仍显示1097字节/3行、1次已完成Execution、0 Witness；没有pause marker、恢复或replay，旧输入/计划/source/driver身份不匹配。现有隔离worker和示例二进制为2026-11-02构建，未绑定本次完整工作树diff及untracked source。复核没有创建scope、写账本或增加native调用。详细哈希和下一批前置条件见[P4-R1b-3 scope复核](superpowers/plans/2026-11-03-p4-r1b3-scope-review.md)及[旧run追加只读审计](../data/runtime/p4-r1b3/p4-r1b3-1793625696606077800-54284/read-only-journal-audit.json)。
+
+## 2026-11-03 H3 running后假执行器进入窗口的进程终止
+
+按[H3证据门禁映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)选择一个尚未覆盖的边界：operation已accepted、job的`running` revision 2已持久化，派发已进入测试专用假执行器但调用尚未返回。子进程通过临时marker、`sync_all`和原子重命名发布完整握手；父进程核对marker中的operation/job ID及状态链后才终止子进程。此测试使用真实持久目录锁和恢复协调器，不启动生产worker、引擎、runner或FFI。
+
+本次operation `9c00393f49ddce2d1f6e113688331fbc`在终止前保持4个已认证revision及`accepted`状态；job `4dbf92a998974a486cec0334086e33b5`终止前为2个revision、状态`running`。事件顺序为一次freeze、一次claim、一次假执行器进入。重开后job恰好追加revision 3=`unknown`，operation仍4个revision，报告数为0，queued/running槽均空且`claim_next`无工作；第二次重开没有新revision，操作、任务及报告材料的哈希保持稳定。机器证据见[`target/h3-running-executor-kill/f1e819d9c6a28ae79af8afcbbac45942/running-executor-crash-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+
+验证命令与结果：聚焦强杀测试 **1 passed**；完整`ygo-cli`测试 **119 passed**；workspace默认串行测试命令退出码0；workspace全目标Clippy `-D warnings`和`cargo fmt --all -- --check`通过；工作台operation/job/HTTP及通用schema Python回归 **23 passed、2 skipped**。两项skip是`tests/test_schemas.py`显式要求本机snapshot/report和实际v2 report的opt-in案例。workspace其他明确标记的冻结资产、原生和人工准备案例保持默认忽略。
+
+```text
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-running-executor-kill/cargo --lib workbench::analysis_http::tests::running_job_crash_after_executor_started_recovers_unknown_once -- --exact --nocapture --test-threads=1
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-running-executor-kill/cargo -- --test-threads=1
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-running-executor-kill/cargo -- -D warnings
+cargo test --workspace --offline --locked --target-dir target/h3-running-executor-kill/cargo -- --test-threads=1
+cargo fmt --all -- --check
+py -m pytest -q -ra tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py tests/test_workbench_analysis_http_schema.py tests/test_schemas.py
+```
+
+初次测试夹具启动有两次失败：持久层的测试专用崩溃事件钩子要求事件文件预先存在，子进程在freeze事件记录处提前退出，未到目标marker，也未形成进程终止恢复证据。修正后在启动子进程前独占创建事件文件，并清除继承的旧checkpoint变量；聚焦测试、CLI套件和workspace套件随后通过。原失败日志及部分fixture存储保留在[`target/h3-running-executor-kill/test-harness-failures.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)所列目录，不计入通过证据。
+
+本次仅验证一个合成执行中断点。真实执行器调用后的执行副作用、领取/终止竞争中的其他调度时点、逐syscall、断电和介质故障仍开放；没有运行doctor、真实引擎、runner、生产worker、FFI或部署操作。完整范围见[交接](superpowers/plans/2026-11-03-running-executor-crash-handoff.md)。
+
+## 2026-11-03 H3 假执行器返回后、报告发布前的进程终止
+
+按[H3.1映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)补测前先区分两侧已有K证据：前一项在假执行器内部、返回前终止；2b-1报告窗口在报告已持久化后、终态前终止。本次测试专用钩子在`catch_unwind`收到`Ok(Ok(report))`后、生产结果分支和`publish_report`之前停住，覆盖这段独立窗口。
+
+父进程认证握手marker、完整operation/job修订链、record摘要与前驱哈希、accepted/running状态、job/operation绑定、命令摘要和冻结输入绑定，再确认事件恰为`freeze → claim → fake_executor_entered → fake_executor_returned`后终止子进程。所选workspace串行证据中operation `641db2385f295d9c9a401946a609d02d`保持4个revision及`accepted`；job `1fff0f583e0692553efaaa6687239d83`终止前为revision 2=`running`。恢复仅追加revision 3=`unknown`，报告数为0，queued/running槽为空且`claim_next`无工作；第二次重开不增revision，持久材料哈希稳定。机器证据见[`target/h3-executor-return-kill/b1c9198daca4c34e5b943e2ba3717d71/executor-return-crash-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+
+验证结果：聚焦测试1 passed；完整`ygo-cli`套件121 passed、0 failed、0 ignored；workspace全目标Clippy `-D warnings`、格式检查通过；默认串行workspace测试退出码0，显式opt-in用例保持忽略。operation/job/HTTP及通用Python schema回归24 passed、2 skipped。skip项是本机snapshot/report和实际v2 report的显式opt-in测试；禁用pytest缓存插件时，项目配置中的`cache_dir`产生一条未知配置警告。
+
+```text
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-executor-return-kill/cargo --lib workbench::analysis_http::tests::running_job_crash_after_executor_return_before_report_publish_recovers_unknown_once -- --exact --nocapture --test-threads=1
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-executor-return-kill/cargo -- --test-threads=1
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-executor-return-kill/cargo -- -D warnings
+cargo test --workspace --offline --locked --target-dir target/h3-executor-return-kill/cargo -- --test-threads=1
+cargo fmt --all -- --check
+$env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --basetemp target/h3-executor-return-kill/pytest-tmp tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py tests/test_workbench_analysis_http_schema.py tests/test_schemas.py
+```
+
+Rust构建与测试使用隔离target和`--offline --locked`。本批没有运行doctor、真实引擎、runner、生产worker、FFI、研究scope或部署；该合成窗口不认证真实执行器副作用、报告写入中故障或其他调度、syscall、断电及介质窗口。边界与交接见[H3返回后窗口](superpowers/plans/2026-11-03-executor-return-crash-handoff.md)。
+
+完整CLI和workspace串行套件通过后，又加了父进程对marker PID与实际子进程PID一致的断言；最终源码聚焦测试1 passed、格式检查和workspace Clippy再次通过。该最后改动只加强握手来源认证，因此没有重复运行完整CLI/workspace/Python套件。最终聚焦机器材料：[`target/h3-executor-return-kill/4416203ed30fe3949bd16db6e6d24942/executor-return-crash-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+
+## 2026-11-03 H3 running票据返回后、假执行器调用前的进程终止
+
+按[H3.1逐窗映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)核对相邻证据：`running_persisted_before_queue_update`发生在领取票据返回前；假执行器进入/返回两项测试发生在执行器调用之后。新增测试专用检查点位于`claim_next`返回并完成准入核对后、调用假执行器前，子进程通过临时marker、`sync_all`及原子重命名握手，父进程认证marker PID、完整operation/job历史和冻结绑定后才终止。
+
+握手确认job revision 2=`running`、operation仍为`accepted`，事件恰为`freeze → claim → ticket_returned_before_executor`；假执行器调用数、报告数、worker进程及engine/FFI调用均为0。持真实目录锁重开只追加一次job revision 3=`unknown`，operation保持4个revision，队列无queued/running工作且`claim_next`无结果。第二次重开不追加revision，持久材料哈希稳定。operation为`7efc61fbb022679c646660872ca0954b`，job为`c2bdd132cb6b09bc884f7361dffd9926`。完整handoff与机器证据见[票据返回后交接](superpowers/plans/2026-11-03-ticket-return-crash-handoff.md)和[`target/h3-ticket-return-kill/d1189be0e6adc48b2070a728b2ce70f8/ticket-return-crash-evidence.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+
+最终聚焦测试1 passed；完整`ygo-cli`套件122 passed、0 failed、0 ignored；workspace共枚举506项，470项执行并通过、36项opt-in ignored，workspace命令退出0；全目标Clippy `-D warnings`与格式检查通过。Python schema回归24 passed、2 skipped（本地snapshot/report、实际v2 report），并有一条`cache_dir`未知pytest配置警告。workspace中包含一个仅以不存在路径检查错误诊断的adapter `doctor()`单元测试；没有运行CLI doctor或真实worker/引擎/runner/FFI。忽略测试均保持原opt-in条件。本批Rust命令使用隔离target及`--offline --locked`；完整命令和测试列表保存在`target/h3-ticket-return-kill/`。H3其他逻辑窗口、调度竞态及系统/介质故障仍开放。
+
+```text
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-ticket-return-kill/cargo --lib workbench::analysis_http::tests::running_job_crash_after_ticket_return_before_executor_call_recovers_unknown_once -- --exact --nocapture --test-threads=1
+cargo test -p ygo-cli --offline --locked --target-dir target/h3-ticket-return-kill/cargo -- --test-threads=1
+cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-ticket-return-kill/cargo -- -D warnings
+cargo test --workspace --offline --locked --target-dir target/h3-ticket-return-kill/cargo -- --test-threads=1
+cargo fmt --all -- --check
+$env:PYTHONDONTWRITEBYTECODE='1'; py -m pytest -p no:cacheprovider -q -ra --basetemp target/h3-ticket-return-kill/pytest-tmp tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py tests/test_workbench_analysis_http_schema.py tests/test_schemas.py
+cargo test --workspace --offline --locked --target-dir target/h3-ticket-return-kill/cargo -- --list
+cargo test --workspace --offline --locked --target-dir target/h3-ticket-return-kill/cargo -- --ignored --list
+```
+
+## 2026-11-03 W1-C 单次Rabbit本机有限分析
+
+按独立执行范围[W1-C scope](superpowers/plans/2026-11-03-w1c-single-rabbit-execution-scope.md)，以固定Rabbit YDK、catalog/banlist快照和隔离CLI/worker候选运行一次显式workbench分析。草稿ID `520f9d91de54a312cb1e8a3aea520655`，revision `20f9703917d62920db575118ba1cae8303c545e138da8de1f89ef440892731e0`；operation `d9c94519880097bb0ef5213580f14e68` 最终accepted revision 4；job `70e9a8f132e88ff2334b269603363ab6` 最终`budget_limited` revision 3，绑定SHA-256=`f3a3e2d1faa102aabdf108bf1d25b4f35535c0739d8a89eb35004346b9d0e16d`。
+
+搜索以`time_budget`停止：160 nodes、165 `engine_calls`、55,775 ms耗时、1,658 ms `replay_ms`、28条completed_lines，报告返回5条线路且各自`engine_verified`和`replay_verified=true`。任务提交到最终状态查询用时83,776 ms。结果投影合同通过，schema `workbench-analysis-http-v1`、operation/job/result三类响应均校验通过。重开后operation、job、result响应逐字节相同；草稿与分析存储的11个文件哈希清单一致。报告ID `fccc8baf6f3178a511a9e9d45d7b26d7`，报告哈希=`52f6b0e2707d86b92e63906f7d03fa8352960904e603f1690dee4782fc0c6bbe`，结果投影哈希=`8287e8231683145e490776f312898edcd9a78d11494f1ba9c59d476defc7632c`。记录及全量运行包位于忽略目录`target/w1c-execution-20261103/`。
+
+该次运行关闭“一次固定Rabbit本机有限分析”验收项；`report_origin_authenticated=false`、`search_complete=false`、`global_optimality=false`。没有ResearchBatch账本；底层FFI调用数、worker OS进程创建数和独立消费均未计量，不能把未知消费写成0。没有独立原生重放、完整搜索、全卡覆盖或部署验收。此前两次尝试分别在哈希录入预检和Windows服务日志读取处失败；失败记录保留在同一运行目录，均未提交分析操作。
+
+## 2026-11-04 W1-C执行证据链只读审计
+
+审计基线为本地main / `622546c144604f36620deebe7f0f57e72271501f`。只读取忽略目录中的运行包、当前固定资产与源码；没有运行CLI、workbench、worker、engine、runner、FFI或分析。
+
+| 证据面 | 本次可复核结果 | 仍未知或未认证 |
+|---|---|---|
+| 运行包和资产身份 | `artifact-hashes-final.json`列出的56项逐文件重算均匹配；package manifest中的14条CLI/worker/config、固定输入/资产和身份报告记录也均匹配其记录。Rabbit请求/YDK、catalog/banlist快照、CDB、ocgcore、engine/scripts清单、CLI和worker当前字节与运行包身份相符（[`target/w1c-execution-20261103/artifact-hashes-final.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，[`target/w1c-execution-20261103/package-manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)）。 | 哈希证明当前文件与清单相符，不证明上游卡池/禁限表内容完整，也不单独认证当时由哪个进程执行。 |
+| 持久操作和结果 | operation `d9c94519880097bb0ef5213580f14e68`在重开后为accepted revision 4；job `70e9a8f132e88ff2334b269603363ab6`为budget_limited revision 3。重开前后operation、job、result及11文件存储清单的字节哈希一致；三类HTTP响应的schema-validation记录均为valid（[`target/w1c-execution-20261103/operation-final.after-reopen.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，[`target/w1c-execution-20261103/job-final.after-reopen.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，[`target/w1c-execution-20261103/result.after-reopen.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，[`target/w1c-execution-20261103/store-files.after-reopen.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)）。 | 这是同一运行记录的合同、绑定和重开稳定性证据，不独立证明worker或报告生产者身份。 |
+| 报告 | 持久report id、SHA-256与job引用一致；统计为160 nodes、165 engine_calls、time_budget、28 completed_lines和5条返回线路（[`target/w1c-execution-20261103/analysis/reports/fccc8baf6f3178a511a9e9d45d7b26d7.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，[`target/w1c-execution-20261103/result.after-reopen.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)）。HTTP投影明确写入report_contract_validated=true、report_origin_authenticated=false、search_complete=false、global_optimality=false（[投影实现](../crates/ygo-cli/src/workbench_analysis/http_contract.rs)）。 | 五条线路的engine_verified/replay_verified是该报告内的标签；未单独原生重放，不能据此认证报告来源。 |
+| 执行计数 | 当前搜索实现先递增engine_calls，再调用adapter.run；ProcessEngineAdapter正常路径会spawn worker，但run计数本身不证明spawn成功。所以按当前实现，165属于应用层adapter调用计数（[搜索计数](../crates/ygo-search/src/combo.rs)，[worker适配器](../crates/ygo-engine-adapter/src/process.rs)）。 | 没有操作系统进程创建审计；FFI函数进入/返回次数没有记录。历史构建差异未完整保留，也不能据当前源码补出当次worker数或FFI数。 |
+| 消费 | execution记录明确无ResearchBatch账本（[`target/w1c-execution-20261103/execution.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)）。 | 本次独立消费量未知；缺记录不等于零，也不能由engine_calls换算。 |
+| 源码构建来源 | 运行包记录HEAD `672e5a823fcad60e9413d79cac810b68a2bb003c`，该提交是审计时HEAD的祖先；包、配置与运行资产哈希可重新核对。 | package manifest所记5个未跟踪构建输入只有2个当前字节匹配；其余3个在当前树中已变化，且在本地Git历史未找到原SHA内容。tracked Cargo/crates diff记录SHA也无法从HEAD到当前HEAD的12个提交复算，因此旧build-input state无法由现存源码完整重建。该来源缺口不构成二进制或资产哈希不匹配的证据。 |
+
+源码摘要复算结果：包记录HEAD为672e5a823fcad60e9413d79cac810b68a2bb003c，build-input state SHA-256为dffc6c5f84a71c7f8e2031f8f6f868f25e10a53839e43e6da4bc06aaf4de4f3a，tracked Cargo/crates diff SHA-256为fe2e02406545ddad060dc20a99140d7e958e774fe42ffba322ebe4db08d2a9bb。当前HEAD累计差异SHA-256为245da31db43c89d4d70924940e762c8cc3c8ba49d3980fc215c0e77e4edff50f；从包HEAD到当前HEAD扫描的12个提交中没有匹配原diff摘要的提交。
+
+| 未跟踪输入文件 | 包记录SHA-256 | 当前SHA-256 | 原字节在本地Git历史 |
+|---|---|---|---|
+| crates/ygo-planner/examples/p4-r1b3-native-resume.rs | bfa59c062273007ddedf543e1c2b476b56308187a27045beab780f0850cda097 | 8a9bb9a9cac8dece47889af3894013f8c85452677e8709544f486ce74fad5e3f | 未找到 |
+| crates/ygo-planner/examples/p4_r1b3/harness.rs | f6b58647846a4ef790e37caa8d14a4d37eaa7332583835537287e70c365bd570 | 094ac50d996e5f5e3d6ab8c4b7f2e21357a3d230363f8a441d66e910cc787f6a | 未找到 |
+| crates/ygo-planner/tests/p4_r1b3_harness.rs | 66f5cf760f1283aab650912bab172964a2607313349fa995dc3c7cd1b7747835 | 89b2aa81fc500b8ab1013e4c2b84825079a84a0d31fd120e72add543b43de38b | 未找到 |
+
+结论：原单次运行继续按其独立scope验收为一次time-budget截断的有限分析；本次审计补强了磁盘文件身份和持久链稳定性的复核，不提升报告来源、原生调用计量、消费、独立重放、完整搜索、部署或最优性资格。若再次运行，应先完成[来源与调用计量合同设计](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)，并以可重建的源码包和逐次worker/FFI回执作为独立门禁；新运行仍需另立scope。
+
+## 2026-11-04 W1-C源码来源字节包v1
+
+在`python/ygo_data/identity.py`新增`source-bundle`与`verify-source-bundle`。清单以`workspace-source-bundle.schema.json`固定版本字段，绑定HEAD、每个当前跟踪/非忽略未跟踪文件的路径及SHA-256、删除路径、ZIP字节数/哈希和清单自摘要；ZIP成员使用排序路径和固定元数据。输入在归档前逐文件比对身份，打包中/结束后再次采样，变化时停止且不发布；校验器离线复算自摘要、archive摘要、完整成员集合与逐文件哈希。输出要求在仓库Git忽略路径且不得覆盖已有目录。
+
+当前树运行命令为`py -m ygo_data.identity source-bundle --repo . --output-dir target/w1c-provenance-20261104/source-bundle`，随后运行`py -m ygo_data.identity verify-source-bundle --bundle-dir target/w1c-provenance-20261104/source-bundle`；创建与验证均成功，证据见忽略目录中的[`target/w1c-provenance-20261104/source-bundle/manifest.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。验证仅说明归档内容与自带来源清单一致。工具不保存Git index、文件模式/时间戳/ACL或Git忽略的运行资产；不证明构建可复现、源包制作者身份、进程/FFI调用、报告来源或消费。W1-C的`report_origin_authenticated=false`及底层调用/消费unknown保持不变，没有启动doctor、引擎、worker、runner、FFI或新分析。
+
+Python全套离线回归：`py -m pytest -p no:cacheprovider -q -ra --basetemp target/w1c-provenance-20261104/pytest-full`，790 passed、9 skipped、219 subtests passed，耗时2088.46秒，退出码0。跳过项为两个Windows目录符号链接能力用例、七个明确要求opt-in本机报告/资产的用例；pytest另报告既有`cache_dir`配置项因禁用cacheprovider而未知的单条warning。来源包/身份聚焦测试与Schema相关测试此前为23 passed、2 skipped、4 subtests passed；完整回归包含最终实现及新增Schema。
+
+## 2026-11-04 W1-C来源包到离线候选构建绑定v1
+
+在来源包v1上新增`source-bound-build-record.schema.json`和`build-provenance-record`/`verify-source-bound-build-record`入口。构建记录嵌入原有严格`build-record.schema.json`合同，不改变旧`build-record`输出；它将来源包身份、全量构建argv摘要、工具链版本、候选产物SHA-256以及构建前后固定输入/资产摘要绑定在一起。构建前要求CLI和worker输出路径不存在且位于忽略目录；构建后重新核验源码、来源包和资产。完整argv由SHA-256绑定；记录摘要只显示允许的安全参数，具体路径和任意参数以`<argument>`隐藏。验证器要求调用方按同一逻辑role提供待核文件路径。
+
+当前源码包在构建前重新生成并离线校验，来源包identity=`131903ffa17c91652e170b743ed49f59b42042de7937a07653712feac37f89f0`，source identity=`e7afccada7a715550179a6d73dfb6219acb3e5bf777438e5e78ba627de4a354b`，归档719个文件，位于忽略目录`target/w1c-provenance-20261104/source-build-bundle`。随后用独立target运行`cargo build --offline --locked --profile dev -p ygo-cli --bin ygo-cli -p ygo-engine-adapter --bin ygo-engine-worker --target-dir target/w1c-provenance-20261104/isolated-target`，退出码0，dev构建耗时52.90秒；只构建产物，没有启动CLI或worker。
+
+来源绑定记录保存在忽略目录`target/w1c-provenance-20261104/build-record.json`，identity=`9b01f2713fc48ee51d5dae9f8eff130c51ed45b4cab3ecde0ef8a753bbff3bb2`，状态`recorded`。CLI SHA-256=`5da031d8277f502a5b575385e92370dc021e0045b909b91ef72435e0f7a0ea2a`；worker SHA-256=`4261829e693cdcd673d39d0a111cf866bf6eeba57c4f3948960bf525303613d3`。Python 3.14.7、rustc 1.98.1、Cargo 1.98.1、Git 2.40.0.windows.1均记录在嵌套构建记录中。九个资产role分别为`analysis_config`、`catalog_snapshot`、`banlist_snapshot`、`cdb`、`ocgcore`、`engine_manifest`、`script_manifest`、`rabbit_request`和`rabbit_ydk`；当前路径及哈希和旧W1-C清单逐项相符。CLI离线验证返回`valid=true`、`artifacts_verified=true`、`assets_verified=true`；使用仓库本地schema registry验证实际JSON记录通过。
+
+身份与Schema回归在最终代码上运行：`py -m pytest -p no:cacheprovider -q -ra tests/test_identity.py tests/test_schemas.py --basetemp target/w1c-provenance-build-record/final`，29 passed、2 skipped、4 subtests passed，110.42秒，退出码0。两项skip要求显式设置`YGO_LIVE_ENGINE`以使用本机snapshots/reports或actual v2 report；本批未启用。pytest另有一条既有`cache_dir`配置warning，因为此命令禁用了cacheprovider。新记录的实际schema校验使用测试所用本地registry，未依赖网络。`git diff --check`通过，仅输出既有LF→CRLF工作区提示。
+
+该批只认证观察到的来源/构建/产物/资产字节关系：`provenance=observed_command_only`且`reproducible_build_proven=false`。来源包不保存Git index、文件模式、时间戳、ACL或精确patch；role映射需由验证调用者提供。没有执行doctor、真实CLI、worker、runner、FFI、ocgcore或新分析，没有建立研究scope或切换部署；报告来源认证、调用计量、消费账本与全局最优资格继续开放。W1-C设计和未关闭门禁见[来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+## 2026-11-04 W1-C合成执行回执合同v1
+
+新增严格schema `schemas/w1c-execution-receipt-chain-v1.schema.json`、只读离线校验器 `python/ygo_eval/execution_receipts.py`，以及固定假receipt/报告字节fixture。v1把同一operation/job下多个顺序adapter attempt、worker spawn结果与PID/worker摘要、协议请求/响应摘要、Rust主动FFI与ocgcore回调两个方向的entered/returned事件、报告落盘/回读摘要按连续序号和前驱SHA-256连接。链尾可由调用方提供`--expected-head-sha256`锚定；未提供外部锚时只报告自洽，不认证producer。
+
+校验器可用`--report`重新读取精确报告字节并检查其长度、SHA-256和operation/job/input绑定。合法但不完整的链返回`valid=true,status=incomplete`，不补写零值；spawn、请求或响应观察缺失、FFI只有entered、报告写入失败/结果不确定都分别保留。所有整数型字段遵循JSON Schema语义，接受有限且数学上为整数的JSON数值表示；进程退出码保留host观察到的有符号值，负数可表示信号终止。若任一attempt的FFI事件流不完整，聚合`ffi_total_count`为null，并逐attempt列出已观察到但无返回事件的entry数。transport未决后再出现attempt会拒绝；完整协议响应后的下一attempt代表另一项搜索调用。replay传输失败后的最终report可以落盘并绑定精确字节，但整条receipt保持`incomplete`。`report_origin_authenticated`在此实验合同中恒为false；消费字段严格为unknown/null，不能从任一技术调用计数推导消费。该hash链不认证OS进程事实、生产者身份、硬件执行或卡片语义，也未接入生产adapter、worker、FFI、HTTP或真实分析路径。
+
+回执聚焦命令`py -m pytest -p no:cacheprovider -q tests/test_execution_receipts.py -ra --tb=short`结果为**17 passed、0 failed**。完整Python回归命令与结果在下方验证记录中。原有整数、spawn/请求/响应故障、FFI、hash链篡改、report绑定及unknown消费行为均保留；新增用例确认一个job下两个完整搜索调用、未决响应后的重试拒绝，以及replay失败后的部分报告状态。离线CLI对静态fixture仍返回`valid=true,status=complete`，报告字节/绑定为true，`report_origin_authenticated=false`，消费unknown；样例未传外部head，因此`head_anchor_verified=false`。本批未执行doctor、引擎、runner、worker、FFI、真实分析或部署。
+
+针对独立审查发现的schema/校验器退出码不一致，负退出码用例先复现负整数被拒绝，再复现`-9.0`这一schema有效数值被拒绝；校验器随后改为接受有限的数学整数并保留原事件摘要验证，回归通过。最终源码和Git状态快照另保存为忽略目录`target/w1c-provenance-20261104/source-bundle-v5`及`workspace-state-v5`，身份以各自manifest为准。最近Rust构建记录仍是`rebuild-v3/build-record.json`，不绑定v5源码，也没有为本批Python/schema/doc改动生成Rust产物。
+
+## 2026-11-03 W1-C 派发身份采样收敛与最终复验
+
+复核固定Rabbit派发链后，将完整脚本树身份采样收敛为：显式配置启动时一次；每个任务由`DurableAnalysisCoordinator::claim_next`在持久化`running`后、向执行器返回票据前一次。移除了派发前和认领后重复的完整树扫描；认领后仍核对CLI路径/哈希、配置、worker及catalog/banlist快照哈希。完整采样仍由`capture_engine_identity`双遍读取资产，既有协调器会将worker、core、CDB及清单与冻结身份比较。它不锁定外部资产；采样后的文件变化仍不属于哈希检查的原子保护范围。
+
+在相同隔离target、离线锁定依赖下，`cargo fmt --all -- --check`通过；准入测试3/3通过；工作台相关测试21/21通过；workspace默认串行测试命令退出码0；workspace全目标Clippy `-D warnings`通过。相关Python schema回归为13 passed、2 skipped；两项跳过分别要求显式启用本机snapshots/reports和实际v2 report。workspace中标记为opt-in的冻结资产、原生研究和人工准备案例保持默认忽略。候选CLI/worker离线构建均成功。
+
+重建后静态身份命令耗时约65秒，报告`consistent=true`；该命令只读取并哈希资产。新候选CLI SHA-256为`0baf2b338aa4eeee64a0b5b533da8e178e2b3c4b7d93ef5a78e43b7362b05c28`，worker为`fbbe554d85afbe0f3f3396c2e540a31e1af10e7f72d1f566f0f1fe5053f8550d`，build-input state SHA-256为`dffc6c5f84a71c7f8e2031f8f6f868f25e10a53839e43e6da4bc06aaf4de4f3a`。新机器清单及身份报告保存在忽略目录`target/w1c-executor/cargo/w1c-package-manifest-20261103-post-scan-optimization.json`和`w1c-engine-identity-20261103-post-scan-optimization.json`；上一版清单与报告保留未覆盖。
+
+此前记录的冷缓存/立即重复身份采样约98/21秒；本次重建后的首个/立即重复静态采样为约65/22.6秒，后一次报告与前一次逐字节相同并保持`consistent=true`。这些是CLI身份命令测时，不代表服务启动或单任务派发时长。由于首个完整采样加60秒搜索预算已超过原120秒观察上限，设计文档已将上限提高到240秒，覆盖观察到的最慢98秒采样、固定搜索预算及82秒收尾余量；服务内实际端到端仍未测，不能把该余量称为实测保证。workspace中的受控子进程回归使用测试专用`ygo-worker-fixture`；没有启动生产`ygo-engine-worker`、workbench、runner、FFI或ocgcore，也未运行doctor、提交Rabbit分析、创建研究scope或切换部署。W1-C真实分析、消费记录与停止条件仍须按独立执行范围验收；本批不证明原生执行、部署或最优性。
+
+## 2026-11-03 W1-C Rabbit固定准入与隔离候选包身份
+
+在HEAD `672e5a823fcad60e9413d79cac810b68a2bb003c`的未提交工作树上，实现并聚焦验证固定Rabbit准入。生产显式入口校验请求牌组、起手、seed、规则、catalog/banlist/date及五项搜索预算；固定快照ID、内容哈希和banlist生效日；CDB、ocgcore、engine/script manifest、timeout；CLI必须位于`target/w1c-executor/cargo`且worker与CLI同目录。freeze后检查冻结请求与身份；accept前拒绝非固定命令，freeze校验失败时不建任务，认领后包身份不符会持久化为`AssetMismatch`执行前失败并停止派发。普通启动仍`analysis_not_configured`。
+
+候选包在隔离目录离线构建，工作树构建输入状态SHA-256为`3c6ce5dd8fcc91574843ae20d9e45aa31cdfa17401ae9e345f16d18a4282783a`（tracked Cargo/crates diff SHA-256 `0869f6ad6922357b5d0112469ab7268f9cc8b1239879abb418d6b4fb9703061a`，另含5个未跟踪构建输入）。包身份如下：
+
+| 对象 | SHA-256 |
+|---|---|
+| CLI `target/w1c-executor/cargo/debug/ygo-cli.exe` | `c55e144ad29bb2411424500c6c17b26443b15ebdc8297ddc5cb3de7b3595a73d` |
+| worker `target/w1c-executor/cargo/debug/ygo-engine-worker.exe` | `7cf623ee9b1ee7cefec0c263b5d5ea07766a65ebf61be1e5c9a2a7ed99c4bb02` |
+| 配置 `configs/w1c-analysis.example.toml` | `07b7debb9a7d18d86ee55851d466b764e254dfb93d1d1c57801b0ca572efe744` |
+| 只读engine identity报告 | `d989196538b1f9858199a9c4b7647e53af29cc8a3ddf61d70359172016cb928d` |
+
+身份报告`consistent=true`，其中CDB=`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`、ocgcore=`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`、engine manifest=`3fadb68cd22e9e01d8083c581ffd442f64e6af65a6c2827544b19e5bab14aa00`、script manifest=`69bf6f9d3fe444fd53890c60bde877f97b753f8d3e218a6349615d09f6740d91`。Rabbit请求/YDK SHA-256分别为`bd5f0427dbd68583b203702a9c8950e2263791c3a62b2685ca89773ea1631378`和`028760778e47d46c3f366f0345957f597ee820774641e6e2800a718763bbd9fa`；catalog/banlist快照SHA-256分别为`3c0fa6249f4e5172488bf325f8d659070cfefb3d93115b7ec690e0486da4cbf7`和`a6344cd77c4db6dcfab02d03110954fa1c2717422f71da302970f427564506c9`。完整机器可读清单及身份报告保存在忽略目录`target/w1c-executor/cargo/w1c-package-manifest-20261103.json`与`w1c-engine-identity-20261103.json`。
+
+聚焦回归：`workbench_analysis::admission::` **2 passed**；`workbench_analysis::durable::operation_tests::` **22 passed**，含冻结拒绝、认领后包身份失败和既有恢复窗口；`w1c_profile_rejects_non_fixed_command_before_acceptance` **1 passed**。以下命令均使用隔离target和离线锁定依赖：
+
+```text
+cargo test -p ygo-cli --offline --locked --target-dir target/w1c-executor/cargo --lib workbench_analysis::admission:: -- --test-threads=1
+cargo test -p ygo-cli --offline --locked --target-dir target/w1c-executor/cargo --lib workbench_analysis::durable::operation_tests:: -- --test-threads=1
+cargo test -p ygo-cli --offline --locked --target-dir target/w1c-executor/cargo --lib w1c_profile_rejects_non_fixed_command_before_acceptance -- --test-threads=1
+cargo build -p ygo-cli --offline --locked --target-dir target/w1c-executor/cargo
+cargo build -p ygo-engine-adapter --bin ygo-engine-worker --offline --locked --target-dir target/w1c-executor/cargo
+cargo clippy -p ygo-cli --all-targets --offline --locked --target-dir target/w1c-executor/cargo -- -D warnings
+cargo fmt --all -- --check
+git diff --check
+```
+
+本段记录派发采样收敛前的初版候选验证：上述构建只生成候选二进制；`engine identity`只读取并哈希资产。冷缓存身份采样约98秒，立即重复采样约21秒；当时生产入口在启动、派发前和认领后调用完整采样，端到端准备时间尚未测量。该批没有运行workspace全量测试、doctor、workbench服务、worker、runner、FFI、ocgcore或真实分析；没有创建scope或切换部署。W1-C真实执行、调用/消费记录和停止条件仍需独立范围验收；这些合成回归与静态身份结果不授予真实分析、原生、部署或最优性资格。
+
+## 2026-11-02 W1-C默认关闭执行入口与单任务派发
+
+在HEAD `672e5a8`的未提交工作树上接入`--analysis-config FILE`及可选`--analysis-store DIR`。普通`workbench serve`继续将分析服务留空；显式配置要求选定并验证本地catalog快照，解析`ProcessEngineConfig`并把原始配置SHA-256绑定到操作上下文。启动只打开真实持久协调器，不初始化worker。接受并成功冻结操作后，每次派发只领取一个任务；已认证的执行前失败提交`analysis_failed`，执行后错误/panic或结果编码不确定持久化`unknown`并停止派发。成功报告由既有协调器先保存并重读，再提交终态。未知结果不自动重试。
+
+聚焦工作台测试 **20 passed**，持久分析子模块 **70 passed**；包含两个共享schema语料回归。完整workspace默认串行测试命令`cargo test --workspace --offline --locked --target-dir target/w1c-executor/cargo -- --test-threads=1`完成，退出码0；opt-in原生/冻结资产案例按默认配置忽略。`cargo fmt --all -- --check`与`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-executor/cargo -- -D warnings`通过。所有运行使用隔离target且离线锁定。
+
+测试中的分析执行使用假闭包；工作台显式配置启动测试只验证服务和存储，测试fixture worker没有被该服务调用。完整workspace包含`ygo-worker-fixture`受控子进程测试，用于校验超时、崩溃和无效输出；未启动`ygo-engine-worker`执行真实引擎、ocgcore、研究runner、FFI或doctor命令。本批没有W1-C Rabbit分析运行、消费账本或部署验收。固定Rabbit请求参数准入尚未由当前入口强制，须在另批完成后再独立授权真实执行。HTTP schema及`WorkbenchConfig`公开结构未改。
+
+## 2026-11-02 P4-R1b-3首轮停止后的账本复核与离线修正
+
+对run `p4-r1b3-1793625696606077800-54284`执行`--inspect-initial-run`只读审计：CallJournal及两个blob链校验通过；账本共3行、1097字节，SHA-256=`d2db98bd25dcdfc9e71ca8c51dbd3a17afee8916efdea493573cf014d932e803`，仅有1次已完成Execution，`consumed=1`、`unknown=0`、`reserved=0`、`abandoned=0`，没有Witness调用。初始结果SHA-256=`ab8560f3cad1d035b3e7007e0db8a4eadc674dd1519e7e71a8226cf158e41371`，49帧原始前缀和16条决定匹配，且通过修正后的event-49 trace见证校验。旧manifest中的event-49见证记录对手牌组/手牌为0/0；固定trace中的正确数量为39/1。较早的`implementation-gate-diagnosis.json`对此数量的陈述有误，已保留原文件并用[只读审计追加记录](../data/runtime/p4-r1b3/p4-r1b3-1793625696606077800-54284/read-only-journal-audit.json)更正。
+
+离线修正让trace重建恢复对手牌组/手牌数量，并逐事件核对重建见证与冻结trace；event-49门禁比较实际提示、原始前缀、决定和完整公开QueryWitness，避免比较私有checkpoint编码。最终聚焦测试为5 passed，`cargo fmt --all -- --check`、planner全目标Clippy（offline/locked，`-D warnings`）、example构建和`--prepare-only`均通过；预检为`scope_created=false`、`worker_processes_started=0`、`native_calls=0`。原run旧输入身份、source和driver哈希与当前版本不匹配，因此不续跑；无暂停marker、进程终止记录、恢复重开或replay scope，R1b-3继续开放。内部FFI调用数不可得。
+
+## 2026-11-02 W1-C生产调用路径静态复核
+
+以下只读快照早于本文件上方的执行入口实现记录；其中“当前没有生产执行器”的状态已被后续改动取代，固定Rabbit分析和真实运行门禁仍保持开放。
+
+在HEAD `672e5a8`只读检查普通工作台入口：`WorkbenchServer::start`固定设置`analysis: None`；CLI `workbench serve`只接受草稿、快照、语言状态和端口参数；[HTTP编排模块](../crates/ygo-cli/src/workbench/analysis_http.rs)明确没有生产分析执行器。因此虽已固定W1-C输入、资产与预算，当前普通工作台仍没有可运行这次分析的生产调用路径。相关源码见[workbench入口](../crates/ygo-cli/src/workbench.rs)。
+
+本记录只覆盖源码可达性，不是运行或引擎验收。`git diff --check`通过，新增本地源码/交接链接目标存在；本轮没有运行代码测试、构建、doctor、workbench、worker、runner、FFI或ocgcore。后续先实现默认关闭的显式执行路径和有界派发并完成非原生验证，再为W1-C另立执行范围。
+
+## 2026-11-02 L1 zh-SC第十三批3卡人工来源与语义对照
+
+对zh-SC候选中的抽牌小丑与封锁鸟（94145021）、魅影翼（98431356）和未界域之土龙（99745551）完成人工对照；三张候选标题与官方简中标题一致，效果条件、处理和相关类别称谓一致。zh-SC累计38/38张有候选值记录完成对照；39卡样本中卡号44088353缺少字段，没有剩余有值候选待审阅。C1字段状态仍为`candidate`/`not_reviewed`，语言类别仍为`und`/`unknown`，报告总资格`qualified=false`。字段哈希和边界见[zh-SC批次13交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-13.md)。本项为离线字段哈希核对及人工页面对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1 zh-SC第十二批3卡人工来源与语义对照
+
+对zh-SC候选中的四天之龙 暗反叛超量龙（90091224）、魅影骑士团沾尘袍（90432163）和邪蚀・俄菲翁（91279700）完成人工对照。前两张候选标题与官方简中标题一致，候选名称及正文语义、条件、处理和类别称谓与官方页面相符；91279700候选标题与官方标题仅有间隔符差异，正文数字/符号格式不同，效果语义及类别称谓一致。zh-SC累计35/38张有候选值记录完成对照，另3张有候选值未审阅，卡号44088353缺少字段。C1字段状态仍为`candidate`/`not_reviewed`，语言类别仍为`und`/`unknown`，报告总资格`qualified=false`。字段哈希和边界见[zh-SC批次12交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-12.md)。本项为离线字段哈希核对及人工页面对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1 zh-SC第十一批3卡人工来源与语义对照
+
+对zh-SC候选中的魅影骑士团愤恨披幕（85257384）、升阶魔法－魅影之力（88504133）和魅影骑士团脏胫甲（88544390）完成人工对照；三张候选标题、效果条件和处理与Konami官方简中页一致，类别称谓一致。zh-SC累计32/38张有候选值记录完成对照，另6张有候选值未审阅，卡号44088353缺少字段。C1字段状态仍为`candidate`/`not_reviewed`，语言类别仍为`und`/`unknown`，报告总资格`qualified=false`。字段哈希和边界见[zh-SC批次11交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-11.md)。本项为离线字段哈希核对及人工页面对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1 zh-SC第十批3卡人工来源与语义对照
+
+对zh-SC候选中的魅影骑士团凶恶之镰（78449284）、愚蠢埋葬（81439173）和魅影骑士团末日护胫（83566725）完成人工对照；三张候选标题、效果条件和处理与官方简中页一致，类别称谓与官方一致。zh-SC累计29/38张有候选值记录完成对照，另9张有候选值未审阅，卡号44088353缺少字段。C1字段状态仍为`candidate`/`not_reviewed`，语言类别仍为`und`/`unknown`，报告总资格`qualified=false`。字段哈希和边界见[zh-SC批次10交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-10.md)。本项为离线字段哈希核对及人工页面对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1 zh-SC第九批及zh-CN卡号77675029补充对照
+
+按冻结报告顺序完成人工对照：zh-SC卡号65192027、65741786、77675029共26/38张有候选值记录已对照，12张待审阅，44088353缺失。三张名称及效果语义与官方简中页一致；暗黑武装龙候选正文存在“可以场上的1张卡为对象发动”与官方“以场上的1张卡为对象可以发动”的语序/措辞差异。C1字段仍为`candidate`，语义仍为`not_reviewed`，zh-SC类别仍为`und`/`unknown`，报告仍为`qualified=false`。
+
+本次复查发现卡号77675029的Konami官方简中详情页（首轮曾只找到官方日文页）。zh-CN候选标题“救祓少女·卡尔麦尔”及类别词“救祓少女”与官方简中“驱魔姐妹・卡尔玛尔/驱魔姐妹”不同，类别映射未确认；效果条件与处理语义一致。zh-CN累计39/39张候选已人工对照，其中38张有官方简中详情页，1张目前仅找到官方日文页（人偶之锤）；在38张可直接比较的卡中，29张候选标题不同，21张正文类别称谓映射未确认。卡号91279700的官方简中页由同日后续复核补入当前统计。逐卡材料见[zh-SC批次9交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-9.md)及[zh-CN批次9补充复核](superpowers/plans/2026-11-02-l1-card-review-batch-9.md)。本项为只读字段哈希核对和人工页面对照，不是自动化测试、来源授权证明或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1 zh-SC第八批3卡人工来源与语义对照
+
+对zh-SC候选中的魅影骑士团断碎剑（62709239）、魅影骑士团破手套（63821877）和弧反叛超量龙（64276752）完成人工对照；候选标题与官方简中标题一致，效果条件和处理语义一致。破手套候选用语“超量召唤成功”与官方“超量召唤”略异，未见条件语义差异。zh-SC累计23/38张有候选值记录完成对照，另15张有候选值未审阅，卡号44088353缺少字段。C1字段仍为`candidate`、语义状态仍为`not_reviewed`，语言类别仍为`und`/`unknown`，报告总资格`qualified=false`。报告与CDB哈希、逐卡字段哈希和比较边界见[zh-SC批次8交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-8.md)。本项为离线哈希核对及人工网页对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1 zh-SC第七批3卡人工来源与语义对照
+
+对zh-SC候选中的急袭者之翼（52159691）、彼岸之黑天使 凯鲁比尼（58699500）和升阶魔法－魅影骑士团镇魂曲（62104532）完成人工对照；三张候选标题与官方简中标题一致，效果条件和处理语义一致，类别称谓与官方一致。zh-SC前七批累计20张有候选值记录完成人工对照；来源缺少人偶之锤（44088353），另18张有候选值未审阅。C1结构化状态及语言类别仍为`not_reviewed`、`candidate`和`und`/`unknown`，总资格`qualified=false`。字段哈希与边界见[zh-SC批次7交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-7.md)。
+
+## 2026-11-02 L1 zh-SC第六批3项字段核验
+
+按报告顺序核对多多迷宝・软绵雀精（42141493）、人偶之锤（44088353）和魅影骑士团衰朽斗篷（46072770）。42141493和46072770的zh-SC候选名称、效果语义均与官方简中页一致；44088353在冻结zh-SC CDB中缺少记录，C1报告字段为`missing`/`candidate_value_absent`。六批累计17张有候选字段的卡完成人工对照，21张仍未审阅，另1张缺少源字段。C1候选、`not_reviewed`及`und`/`unknown`状态保持原样，报告`qualified=false`。详情和哈希见[zh-SC批次6交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-6.md)。
+
+## 2026-11-02 L1 zh-SC第五批3卡人工来源与语义对照
+
+对zh-SC候选中的增援（32807846）、魅影骑士团无声靴（36426778）和灵主王之波动（40366667）完成人工对照；三张候选标题与官方简中标题一致，效果条件和处理语义一致。zh-SC前五批累计人工对照15/39张；候选源共有38条样本记录，人偶之锤（44088353）字段缺失，另23张有候选值未审阅。C1结构化状态及语言类别仍保持`not_reviewed`、`candidate`和`und`/`unknown`，总资格`qualified=false`。字段哈希与边界见[zh-SC批次5交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-5.md)。
+
+## 2026-11-02 L1 zh-SC第四批3卡人工来源与语义对照
+
+对zh-SC候选中的魅影骑士团锈蚀月刃斧（26692769）、急袭者骑士（28781003）和S：P小夜骑士（29301450）完成人工对照；三张候选标题与官方简中标题一致，效果条件和处理语义一致，类别称谓一致。zh-SC前四批累计人工对照12/39张；候选源共有38条样本记录，人偶之锤（44088353）字段缺失，另26张有候选值未审阅。C1结构化状态及语言类别仍保持`not_reviewed`、`candidate`和`und`/`unknown`，总资格`qualified=false`。字段哈希与边界见[zh-SC批次4交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-4.md)。
+
+## 2026-11-02 L1 zh-SC第三批3卡人工来源与语义对照
+
+对zh-SC候选中的禁忌的一滴（24299458）、魅影骑士团裂鳞甲（25538345）和魅影雾剑（25542642）完成人工对照；三张候选标题与官方简中标题一致，效果条件和处理语义一致，类别术语与官方文本一致。zh-SC前三批累计人工对照9/39张；候选源共有38条样本记录，人偶之锤（44088353）字段缺失，另29张有候选值未审阅。C1结构化状态及语言类别仍保持`not_reviewed`、`candidate`和`und`/`unknown`，总资格`qualified=false`。字段哈希与边界见[zh-SC批次3交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-3.md)。
+
+## 2026-11-02 L1 zh-SC第二批3卡人工来源与语义对照
+
+对zh-SC候选中的灰流丽（14558127）、暗反叛超量龙（16195942）和增殖的Z（23434538）完成人工对照；三张候选名称均与官方简中标题相符，各自效果条件和处理语义一致。zh-SC两批累计人工对照6/39张；候选源共有38条样本记录，人偶之锤（44088353）字段缺失，另32张有候选值未审阅。C1结构化状态及语言类别仍保持`not_reviewed`、`candidate`和`und`/`unknown`，总资格`qualified=false`。字段哈希与边界见[zh-SC批次2交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-2.md)。
+
+## 2026-11-02 L1 zh-SC首批3卡人工来源与语义对照
+
+对zh-SC候选中的暗镇魂超量龙（1621413）、W：P变幻舞夜（4993187）和无限泡影（10045474）完成人工对照；名称均与官方简中页相符，效果条件和处理语义一致。另对39卡冻结样本做只读字段覆盖比较：zh-SC有38卡记录，卡号44088353缺失；在38张两源都有行的卡中，29张名称、38张正文原始字符串与zh-CN不同。该计数只反映字符串不同，不代表语义差异。C1报告中的三张记录仍是`not_reviewed`/`candidate`，语言类别仍为`und`/`unknown`，总资格`qualified=false`。字段哈希和证据边界见[zh-SC批次1交接](superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-1.md)。
+
+## 2026-11-02 L1第十三批3卡人工来源与语义对照
+
+对固定mycard `zh-CN` 候选中的卡号94145021、98431356和99745551完成人工对照；三张均有Konami官方简中详情页。三张候选标题均与官方标题不同，其中只有98431356正文的“幻影骑士团/魅影骑士团”类别映射未确认；各自效果条件和处理语义一致。逐卡来源和字段哈希见[批次13交接](superpowers/plans/2026-11-02-l1-card-review-batch-13.md)。
+
+十三批完成时累计为39/39张zh-CN候选人工对照；首轮统计为36张官方简中页、3张仅有官方日文页，27个标题差异和19个正文类别称谓映射缺口。之后同日两次复核发现卡号77675029和91279700的官方简中页，当前统计更新为38张简中页、1张仅日文页（人偶之锤）、29个标题差异和21个正文类别称谓映射缺口，见本记录顶部和批次12补充复核。全部zh-SC、别名/本地化映射及来源使用和再分发权利门槛仍开放。本项是离线字段哈希核对及人工网页对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1第十二批3卡人工来源与语义对照
+
+对固定mycard `zh-CN` 候选中的卡号90091224、90432163和91279700完成人工对照。前两张均有Konami官方简中详情页，候选标题均与官方标题不同；正文类别称谓映射均未确认。卡号91279700首轮未定位官方简中页，随后同日复核取得其官方简中详情页；候选标题“入魔龙主 俄菲翁”与官方“邪蚀俄菲翁”不同，正文“入魔/邪蚀”类别映射未确认，“侵略的”用语一致，效果语义一致。逐卡来源、字段哈希及补充复核见[批次12交接](superpowers/plans/2026-11-02-l1-card-review-batch-12.md)。
+
+十二批累计为36/39张zh-CN候选人工对照。初始记录为33张官方简中页、3张仅有日文页，24个标题差异和18个正文类别称谓映射缺口；同日复核发现77675029和91279700的官方简中页后，当前累计为35张官方简中页、1张仅有日文页（人偶之锤），26个标题差异和20个正文类别称谓映射缺口；另有3张zh-CN仍未审阅。全部zh-SC、别名/本地化映射及来源使用和再分发权利门槛仍开放。本项是离线字段哈希核对及人工网页对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1第十一批3卡人工来源与语义对照
+
+对固定mycard `zh-CN` 候选中的卡号85257384、88504133和88544390完成人工对照；三张均有Konami官方简中详情页。三张候选标题均与官方标题不同，且三张正文都使用“幻影骑士团”对应官方“魅影骑士团”的类别称谓，映射未确认；各自发动条件、处理和限制的语义一致。逐卡来源和字段哈希见[批次11交接](superpowers/plans/2026-11-02-l1-card-review-batch-11.md)。
+
+十一批累计为33/39张zh-CN候选人工对照；经同日补充发现77675029的官方简中页后，其中32张有官方简中页、1张目前仅有官方日文页（人偶之锤）。可与简中页面直接比较的32张中，23张候选标题不同，17张正文类别称谓映射未确认；另有6张zh-CN仍未审阅。全部zh-SC、别名/本地化映射及来源使用和再分发权利门槛仍开放。本项是离线字段哈希核对及人工网页对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1第十批3卡人工来源与语义对照
+
+对固定mycard `zh-CN` 候选中的幻影骑士团 敌意死镰（78449284）、愚蠢的埋葬（81439173）和幻影骑士团 厄运钢甲靴（83566725）完成人工对照；三张均有官方简中详情页。三张候选标题均与官方标题不同，其中两张正文的“幻影骑士团”类别称谓与官方“魅影骑士团”不同；各自效果条件及处理语义一致。逐卡来源和字段哈希见[批次10交接](superpowers/plans/2026-11-02-l1-card-review-batch-10.md)。
+
+报告SHA-256=`6d28d32b878790bfc0c9dc86cb3676053f296d9c68a5791e4203aa4aaab79d65`，zh-CN CDB SHA-256=`ff52f585de24a762a4e613ac37654b1a7fb15a58990c14f5eada85f28c3be152`，均与冻结值相同。本批六个字段哈希逐项由CDB重算匹配；C1三张记录仍为`not_reviewed`/`candidate`，总资格仍为`qualified=false`。
+
+截至第十批，累计为30/39张zh-CN候选人工对照；其中29张有官方简中页、1张目前仅找到官方日文页。可与简中页面直接比较的29张中，20张候选标题不同，14张正文类别称谓映射未确认；另有9张zh-CN仍未审阅。卡号77675029的简中页由后续同日复核补入统计。全部zh-SC、别名/本地化映射及来源使用和再分发权利门槛仍开放。本项是截至第十批时的离线字段哈希核对及人工网页对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1第九批3卡人工来源与语义对照
+
+对固定mycard `zh-CN` 候选中的暗黑武装龙（65192027）、I：P百变莱娜（65741786）和救祓少女·卡尔麦尔（77675029）完成人工对照。首轮前两张与官方简中页一致；卡号77675029首轮只找到官方日文页，同日复查发现官方简中页并补充对照：候选标题和“救祓少女”类别词不同于官方“驱魔姐妹”，映射仍未确认，效果语义一致。修订后的来源、哈希和统计见[批次9交接](superpowers/plans/2026-11-02-l1-card-review-batch-9.md)。
+
+报告SHA-256=`6d28d32b878790bfc0c9dc86cb3676053f296d9c68a5791e4203aa4aaab79d65`，zh-CN CDB SHA-256=`ff52f585de24a762a4e613ac37654b1a7fb15a58990c14f5eada85f28c3be152`，均与冻结值相同。本批六个字段哈希逐项由CDB重算匹配；C1三张记录仍为`not_reviewed`/`candidate`，总资格仍为`qualified=false`。
+
+截至第九批，累计为27/39张zh-CN候选人工对照；其中26张有官方简中页、1张目前仅有官方日文页。可与简中页面直接比较的26张中，17张候选标题不同，12张正文类别称谓映射未确认；另有12张zh-CN仍未审阅。全部zh-SC、别名/本地化映射及来源使用和再分发权利门槛仍开放。本项是离线字段哈希核对及人工网页对照，不是自动化测试或C1资格验收；未运行代码测试。
+
+## 2026-11-02 L1第八批3卡人工来源与语义对照
+
+对照固定mycard `zh-CN` 候选中的幻影骑士团 断碎剑（62709239）、幻影骑士团 破手套（63821877）和弧叛逆超量龙（64276752），绑定冻结C1报告字段哈希。三张候选标题均与Konami官方简中标题不同；前两张正文“幻影骑士团/幻影”类别词与官方“魅影骑士团/魅影”不同，类别映射未确认。超量素材条件、破坏/特召处理及限制均与官方页面对照一致。C1资格状态未修改。逐卡来源、字段哈希及边界见[批次8交接](superpowers/plans/2026-11-02-l1-card-review-batch-8.md)。
+
+八批累计为24/39张zh-CN候选人工对照；16张候选标题与官方简中标题不同，11张文本内类别映射未确认，15张zh-CN仍未审阅。C1报告继续保持`not_reviewed`和`qualified=false`；全部zh-SC、别名/本地化映射及使用和再分发权利门槛仍开放。
+
+## 2026-11-02 L1第七批3卡人工来源与语义对照
+
+对照固定mycard `zh-CN` 候选中的增援（32807846）、彼岸的黑天使 基路伯（58699500）和升阶魔法-幻影骑士团的镇魂歌（62104532），绑定冻结C1报告字段哈希。名称及效果与Konami官方简中详情页对照：增援标题/效果一致；后两张候选标题与官方标题不同，其中升阶魔法候选文本“幻影骑士团”与官方“魅影骑士团”类别词不同，映射未确认。C1资格状态未修改。逐卡来源、字段哈希及边界见[批次7交接](superpowers/plans/2026-11-02-l1-card-review-batch-7.md)。
+
+七批累计为21/39张zh-CN候选人工对照；13张候选标题与官方简中标题不同，9张文本内类别映射未确认，18张zh-CN仍未审阅。C1报告继续保持`not_reviewed`和`qualified=false`；全部zh-SC、别名/本地化映射及使用和再分发权利门槛仍开放。
+
+## 2026-11-02 L1第六批3卡人工来源与语义对照
+
+对照固定mycard `zh-CN` 候选中的人偶之锤（44088353）、幻影骑士团 衰亡斗篷（46072770）和袭击队飞翼（52159691），绑定冻结C1报告字段哈希。后两张的官方简中详情页分别使用“魅影骑士团衰朽斗篷”和“急袭者之翼”；效果条件及处理结构对照一致，但候选名称与官方标题不同，且前两张文本内“幻影骑士团”与官方“魅影骑士团”的类别词映射未确认。人偶之锤的官方简中详情查询无卡片信息，仅使用官方日文页对照效果结构，中文候选名称不予确认。C1资格状态未修改。逐卡来源、字段哈希与边界见[批次6交接](superpowers/plans/2026-11-02-l1-card-review-batch-6.md)。
+
+六批累计为18/39张zh-CN候选人工对照；11张候选标题与可用官方简中标题不同，8张文本内类别映射未确认，21张zh-CN仍未审阅。C1报告继续保持`not_reviewed`和`qualified=false`；全部zh-SC、别名/本地化映射及使用和再分发权利门槛仍开放。
+
+## 2026-11-02 L1第五批3卡人工来源与语义对照
+
+人工对照固定mycard `zh-CN` 候选中的幻影骑士团 无声靴（36426778）、灵王的波动（40366667）和欢聚友伴·茸茸长尾山雀（42141493），并绑定C1报告字段哈希。三张候选标题均与Konami官方简中标题不同；正文操作条件和处理步骤一致，其中无声靴与茸茸长尾山雀的文本内类别词分别为“幻影/魅影”和“欢聚友伴/多多迷宝”，映射仍未确认。逐卡来源、字段哈希和比较边界见[批次5交接](superpowers/plans/2026-11-02-l1-card-review-batch-5.md)。
+
+五批累计为15/39张zh-CN候选人工对照。C1报告保持`not_reviewed`和`qualified=false`；24张zh-CN、全部zh-SC、别名/本地化映射及使用和再分发权利门槛继续开放。
+
+## 2026-11-02 L1第四批3卡人工来源与语义对照
+
+人工对照固定mycard `zh-CN` 候选中的幻影骑士团 锈蚀月刃斧（26692769）、袭击队骑士（28781003）和S：P小夜骑士（29301450），并绑定C1报告字段哈希。S：P小夜骑士名称及三张卡的操作条件/处理步骤与官方简中详情页对照一致；前两张候选标题与官方标题不同，文本内“幻影骑士团”与官方“魅影骑士团”类别词映射仍未确认。逐卡来源、字段哈希和比较边界见[批次4交接](superpowers/plans/2026-11-02-l1-card-review-batch-4.md)。
+
+截至第四批交接时，四批累计为12/39张zh-CN候选人工对照。C1报告保持`not_reviewed`和`qualified=false`；当时剩余27张zh-CN、全部zh-SC、别名/本地化映射及使用和再分发权利门槛继续开放。
+
+## 2026-11-02 L1第三批3卡人工来源与语义对照
+
+人工对照固定mycard `zh-CN` 候选中的禁忌的一滴（24299458）、幻影骑士团 破洞鳞甲（25538345）和幻影雾剑（25542642），并绑定C1报告字段哈希。禁忌的一滴的名称、送墓代价、连锁限制、选择数量和处理语义与Konami官方简中详情页对齐。另两张候选名称及文本内“幻影”类别指称与官方“魅影”标题/类别词不同；操作条件和处理步骤可对照，但类别名称映射仍未确认，不能据此把其整段文字或别名标为已通过。逐卡来源、字段哈希和边界见[批次3交接](superpowers/plans/2026-11-02-l1-card-review-batch-3.md)。
+
+截至第三批交接时，三批累计为9/39张zh-CN候选人工对照。C1报告保持`not_reviewed`和`qualified=false`；当时剩余30张zh-CN、全部zh-SC、别名/本地化映射及使用和再分发权利门槛继续开放。
+
+## 2026-11-02 L1首批3卡人工来源与语义对照
+
+将固定mycard `zh-CN` 候选中卡号1621413、4993187、10045474的名称和效果语义，与Konami官方OCG简体中文卡片详情页逐项对照；本批未发现改变效果含义的差异，词语和排版有差别。卡号、官方页面、C1候选字段哈希及复核限制见[批次交接](superpowers/plans/2026-11-02-l1-card-review-batch-1.md)。
+
+本次仅为3/39张zh-CN候选的人工抽批复核，不是自动测试，也不覆盖zh-SC、别名或权利依据。C1报告未修改，三个候选仍在结构化报告中标为`not_reviewed`，总资格仍为`qualified=false`；其余候选和使用/再分发资格继续开放。
+
+## 2026-11-02 L1第二批3卡人工来源与语义对照
+
+人工对照固定mycard `zh-CN` 候选中的灰流丽（14558127）、暗叛逆超量龙（16195942）和增殖的G（23434538），并绑定C1报告字段哈希。三张候选正文的发动条件、处理和限制语义均与Konami官方简中详情页一致；其中暗叛逆超量龙与增殖的G的候选名称分别不同于官方标题“暗反叛超量龙”和“增殖的Z”，本次不将差异推断为正式别名。逐卡来源、字段哈希和比较范围见[批次2交接](superpowers/plans/2026-11-02-l1-card-review-batch-2.md)。
+
+截至第二批交接时，两批累计为6/39张zh-CN候选人工对照。C1报告仍未修改并保持`qualified=false`；全部zh-SC、别名/本地化映射及使用和再分发权利门槛继续开放。
+
+## 2026-11-02 unknown已保存、后续queued待分类（限定合成验收）
+
+测试直接构造先running、后queued的两组可认证操作/任务链；恢复补齐accepted关联后，第一任务unknown已保存、第二仍queued时同步握手并终止子进程。父进程认证两对链的封套、前驱/记录哈希、状态转换和输入绑定；新协调器持锁认证后仅给第二任务追加一次interrupted，首个unknown不重复推进；再次重开字节稳定，无活动队列或可领取任务。红测因检查点缺失失败；加入`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/5476fbcb8d37cdeb26aabeabce9f9d79/`保存握手、终止状态及前后哈希；恢复后13项文件哈希与磁盘一致，首任务unknown、次任务interrupted。running为测试直接构造，不证明真实执行；unknown不解释为零消费。哈希记录不是逐阶段原始字节备份。详见[交接](superpowers/plans/2026-11-02-unknown-first-recovery-handoff.md)。
+
+## 2026-11-02 H3逐边界证据与门禁静态复核
+
+对照H3.1矩阵、H2.2-A/B、H3.2-1/2a及各限定强杀交接，并只读核查逻辑故障测试的场景、阶段和恢复追加选择器，建立[证据门禁映射](superpowers/plans/2026-11-02-h3-evidence-gate-map.md)。候选为running→unknown已保存、后续queued尚未分类的恢复中断；本次仅静态对照，未运行新测试或认证该候选。映射内本地文件路径存在性检查及`git diff --check`通过；未检查标题锚点。
+
+## 2026-11-02 queued与running混合恢复中断（限定合成验收）
+
+直接构造两组可认证操作/任务链：第一任务queued、第二任务running。恢复时两条操作关联已补齐、第一任务分类为interrupted而第二仍running，测试子进程同步握手后被终止；父进程认证两对链的封套、前驱/记录哈希、状态转换与输入绑定。新协调器持锁认证后仅为第二任务追加一次unknown，首个interrupted不变；再次重开字节稳定，无活动队列或可领取任务。红测因挂点缺失失败；加入`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+`target/w1h21-analysis-operation-tests/33c684f7bbbbd49b3426bfc0816a3da4/`保存握手、终止状态和前后哈希；恢复后13项文件哈希与磁盘一致，第一任务interrupted、第二任务unknown。running状态由测试直接构造，不代表真实工作已执行，unknown不解释为零消费；哈希清单不是逐阶段原始文件备份。详见[交接](superpowers/plans/2026-11-02-mixed-task-recovery-handoff.md)。
+
+## 2026-11-02 accepted关联保存后队列更新前（限定合成验收）
+
+合成冻结输入、queued任务和accepted操作关联均已保存后，在内存队列更新前发布测试专用握手并终止子进程。父进程认证四条操作修订、queued任务初始修订、各自前驱/记录哈希、转换和冻结输入绑定；新协调器持锁完整认证后保留accepted，只为queued追加一次interrupted，无活动队列或可领取工作，第二次重开字节稳定。强杀前事件为freeze 1、claim 0。红测因挂点缺失失败；加入`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/c3933e2360937e2a83a452b8d8d6b1c2/`的六项恢复后哈希已与磁盘核对，新增任务修订为interrupted；握手、退出状态及前后哈希已留存。哈希与父进程断言不是逐阶段原始字节备份。范围见[交接](superpowers/plans/2026-11-02-accepted-crash-handoff.md)。
+
+## 2026-11-02 多操作恢复中断后继续分类（限定合成验收）
+
+测试直接构造两条无匹配任务的accepting操作链，恢复中第一条unknown已持久化、第二条仍accepting时通过测试专用握手终止子进程。父进程逐条认证操作修订、前驱/记录哈希、命令摘要和状态转换；新协调器持锁完整认证后仅为第二条追加一次unknown，第一条不重复推进，第二次重开字节稳定且无冻结、任务、报告或可领取工作。红测因缺少挂点失败，加入`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed、fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/747962844c88c22fbd6c08ed77680451/`保留握手、终止状态和前后哈希，六项恢复后文件哈希已与磁盘核对，两条操作均为unknown。测试直接构造持久链，不代表正常单队列可同时持有两个预占；哈希清单并非逐阶段原始字节备份，unknown不解释为零消费。详见[交接](superpowers/plans/2026-11-02-partial-operation-recovery-handoff.md)。
+
+## 2026-11-02 多任务恢复中断后继续分类（限定合成验收）
+
+测试直接构造两组可认证的操作/queued任务链并启动恢复：两条操作关联已补齐、第一任务已分类interrupted而第二仍queued时，子进程在测试专用同步握手后被终止。父进程逐条认证两个操作和任务的封套、前驱/记录哈希、状态转换及输入绑定；新协调器持锁完整认证后仅给第二任务追加一次interrupted，第一任务不重复推进；再次重开字节稳定，无活动队列或可领取工作。红测因缺少挂点失败；增加`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed、fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/dfefb37bbe49b0012ad9f08b15a69498/`保留握手、终止状态及强杀前/恢复后哈希；12项恢复后文件哈希已与磁盘核对，两项任务均为interrupted。测试手工构造两个queued持久链，不声称正常单队列可同时接纳两个queued；哈希记录不是逐阶段原始字节备份。详见[交接](superpowers/plans/2026-11-02-partial-task-recovery-handoff.md)。
+
+## 2026-11-02 合成node_budget终态保存后内存结算前（限定验收）
+
+合成node_budget报告保存并通过绑定读取，budget_limited修订持久化后、内存槽位结算前握手并终止子进程。父进程检查任务三修订、queued→running→budget_limited转换、报告引用哈希和冻结输入绑定；新协调器持锁认证后两次重开保留budget_limited及可读取报告，无活动队列或重新领取，持久字节稳定。报告是构造的合成材料，不证明真实节点预算达到或搜索穷尽。红测因缺少检查点失败；增加`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/edc239a20c02eaed05bec4c3721feefb/`的八个文件哈希均与磁盘匹配，含一份报告及`budget_limited`、`node_budget:no_verified_lines`终态。哈希与父进程断言不是逐阶段原始字节备份；原操作完整跨链认证在重开时进行。范围见[交接](superpowers/plans/2026-11-02-budget-crash-handoff.md)。
+
+## 2026-11-02 合成completed保存后内存结算前（限定验收）
+
+合成exhausted报告已保存并通过绑定读取，completed任务修订持久化后、内存running槽位结算前，测试子进程握手并被终止。父进程认证任务三修订、queued→running→completed转换、报告引用哈希和冻结输入绑定；新协调器持锁完整认证后两次重开保留completed及可认证报告，无活动队列或重新领取，所有持久字节稳定。红测因缺少检查点失败；增加`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed、fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/bdc95d45890947f075651c41b4c33284/`的八个文件哈希均与磁盘匹配，含一份报告及completed任务终态。报告仅经合同和冻结输入绑定验证，不认证真实分析来源；哈希记录不构成逐阶段字节备份。边界见[交接](superpowers/plans/2026-11-02-completed-crash-handoff.md)。
+
+## 2026-11-02 合成失败终态保存后内存结算前（限定验收）
+
+合成queued任务领取后调用失败结算，在`analysis_failed`修订保存成功、内存running槽位结算前以同步原子握手终止子进程。父进程检查任务三修订封套、前驱与记录哈希、queued→running→failed转换及输入绑定；新协调器持锁完整认证后，两次重开保持failed、三条修订和文件字节稳定，无活动队列、可领取工作或报告。红测因挂点缺失失败；增加`cfg(test)`挂点后聚焦测试1 passed、durable操作组19 passed、fmt与workspace全目标Clippy通过；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/8f35423fcca5b0bd0580dd436c03d96a/`保存握手、退出状态、事件及七项强杀前哈希，均与现存文件匹配，任务状态为failed、错误码`analysis_failed`。哈希清单与父进程断言不是逐阶段字节备份；真实执行和消费不在本测试内。详见[交接](superpowers/plans/2026-11-02-failed-crash-handoff.md)。
+
+## 2026-11-02 running修订保存后队列更新前（限定合成验收）
+
+对accepted的合成queued任务领取，在running修订保存成功、队列更新及票据返回前以测试专用握手终止子进程。父进程检查任务修订封套、哈希、queued→running转换和与操作冻结输入绑定；重开时持锁完整认证链并恰好追加一次unknown，活动队列为空、不可重新领取，第二次重开字节稳定。强杀前事件为freeze 1、claim 1；挂点位于资产身份校验及票据返回之前，不推断真实消费。
+
+红测因检查点缺失失败；增加挂点后聚焦强杀测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过。本批未重跑workspace全套。证据目录`target/w1h21-analysis-operation-tests/d2f6ed602b83325f6ecef6400ab45d58/`保存握手、事件、终止状态和强杀前哈希；六项原文件与磁盘匹配，重开后的第三个任务修订为unknown。父进程记录与哈希清单不是逐阶段原始字节备份；原操作完整跨链认证在重开时进行。范围见[交接](superpowers/plans/2026-11-02-running-crash-handoff.md)。
+
+## 2026-11-02 取消修订保存后内存更新前（限定合成验收）
+
+对已accepted的合成queued任务，在cancelled修订持久化成功后、队列内存更新前通过测试专用握手终止子进程。父进程检查任务两修订封套、记录/前驱哈希、queued→cancelled转换及与操作冻结输入的绑定；新协调器持锁认证全部链后，两次重开均保持accepted操作与cancelled任务，不追加修订、不恢复队列或可领取工作，持久字节稳定。强杀前freeze事件1、claim事件0；没有执行工作任务。红测因缺少挂点失败，随后聚焦测试1 passed、durable操作组19 passed、fmt和workspace全目标Clippy通过；未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/a415abac0d0d33cecfc38482c5430a5a/`的六个文件哈希均与磁盘匹配，任务终态cancelled、无报告；握手、终止状态和事件日志保留。原操作完整跨链认证发生在强杀后新协调器打开时；哈希记录不是逐阶段原始字节备份。范围及限制见[交接](superpowers/plans/2026-11-02-cancelled-crash-handoff.md)。
+
+## 2026-11-02 合成准备失败拒绝保存后（限定验收）
+
+测试冻结闭包返回`OpeningHandInvalid`后，在拒绝修订保存成功、协调器返回前握手并终止子进程。父进程认证allocated→accepting→rejected三条修订及命令摘要；强杀前事件为一次合成冻结尝试、零领取。重开两次及重复提交均保持拒绝、三条修订与持久字节不变，无冻结票据、活动队列、任务或报告。红测因缺少挂点失败；增加`cfg(test)`挂点后聚焦强杀测试1 passed，durable操作组19 passed，fmt、workspace全目标Clippy及相关Python schema 16 passed；本批未重跑workspace全套。
+
+证据目录`target/w1h21-analysis-operation-tests/b891b956e5e3d1207aa1e0b555846ad8/`中的三条修订哈希已与磁盘核对，状态为rejected、错误码`opening_hand_invalid`，事件日志只有freeze。哈希清单和父进程断言不是逐阶段字节备份；失败为合成闭包，不认证真实手牌校验或其他错误。范围见[交接](superpowers/plans/2026-11-02-preparation-rejection-crash-handoff.md)。
+
+## 2026-11-02 P1受限观察键外层元数据实验
+
+在`rabbit-idle-observation-v1`两个idle及`rabbit-shuffle-end-observation-v1`两个决策和终止视图的合成fixtures中，分别改变事件外层的牌库顺序、对手手牌、随机状态和来源元数据，比较完整策略view及观察键；增加可见菜单变化在后续历史中的传播、公开声明混入隐藏字段时拒绝，以及输入不变断言。原有手牌顺序、未知帧、损坏菜单及无效终止绑定测试继续覆盖对应负例。最终投影组`PYTHONPATH=python py -m pytest tests/test_information_projection.py tests/test_information_route_projection.py -q -ra --tb=short`为29 passed、11 subtests passed；增加最后一个idle用例之前，扩展的投影、route、pipeline和audit组为55 passed、24 subtests passed。
+
+这些变异只是合成事件字典中被投影器忽略的外层元数据，不会改变真实引擎checkpoint、牌库状态或原始帧；测试未证明真实隐藏状态等价、未覆盖分支、任意策略无泄漏、概率或最优性。pipeline测试中的runner为替身并由mock拦截；未执行真实引擎、runner、worker或FFI，未创建研究scope或消费账本。
+
+## 2026-11-02 配置身份变化拒绝保存后（限定合成验收）
+
+子进程以变化的配置摘要提交已分配操作，持久化`analysis_operation_context_changed`后、协调器返回前握手暂停；父进程认证操作链并终止，验证两次重开均保留拒绝、重复指令不获冻结票据、不产生任务及报告，持久字节稳定。红测因挂点缺失失败，增加`cfg(test)`挂点后聚焦测试1 passed，fmt与workspace全目标Clippy通过。握手和哈希记录位于`target/w1h21-analysis-operation-tests/5280213db70d3a8e2c4328ac53e7f8fc/`；workspace回归退出0，91组、444 passed、0 failed、36 ignored，输出为`target/h3-2b-2-cargo/context-rejected-workspace.log`。此限定窗口不代表其他拒绝分支、HTTP传输中强杀或真实分析通过。
+
+只读复核上述目录：两份操作修订的现存SHA-256均与强杀前证据相同；最终状态为rejected、错误码为`analysis_operation_context_changed`、job_id为空，任务和报告文件均为零。握手内容与目标一致、子进程事件日志为空；终止结果与两次重开来自父进程断言记录，哈希清单不是逐阶段原始文件备份。
+
+## 2026-11-02 容量拒绝保存后协调器返回前（限定合成验收）
+
+在已有accepting预占容量时，第二个操作持久化`analysis_queue_full`拒绝，测试子进程在协调器返回前同步握手并暂停。父进程认证两条操作链、命令摘要及转换，再终止子进程；恢复时首个accepting恰好追加一次unknown，容量拒绝保持两次修订且无任务、报告、冻结或活动队列，第二次重开字节稳定。红测先因缺少检查点失败；增加`cfg(test)`挂点及断言后，聚焦测试1 passed，fmt和workspace全目标Clippy通过。该窗口不代表HTTP传输中强杀、其他拒绝分支或真实分析已认证。
+
+随后新增父进程证据文件并重跑聚焦测试（1 passed）、fmt及Clippy：`target/w1h21-analysis-operation-tests/5438189212f771b9aa077de2a44320dd/`保留握手、事件日志、终止状态和强杀前/恢复后文件哈希。只读复核全部恢复后哈希与磁盘一致，accepting为unknown、拒绝保持`analysis_queue_full`；此哈希清单记录父进程断言，不是各阶段原始字节备份。workspace回归退出0：91组、444 passed、0 failed、36 ignored，日志`target/w1h322b-process-kill/capacity-rejected-workspace.log`；该回归早于证据文件写入的测试改动，不称为最终版本全量回归。
+
+之后补充重启后重复提交被拒绝操作的检查：返回原`analysis_queue_full`，无冻结票据且材料字节不变；聚焦测试、fmt及Clippy通过。该最终聚焦测试的证据目录为`target/w1h21-analysis-operation-tests/dcb58e5a7320499b583a6abf53ee1b3d/`。workspace回归早于证据输出及这一幂等断言，须按版本边界解释。
+
+## 2026-11-02 allocated保存后协调器返回前（限定合成验收）
+
+已新增测试专用检查点，父进程核验allocated记录、空任务及报告后终止子进程；测试检查两次重开字节稳定，并验证显式新分配产生新ID。最终聚焦测试1 passed，fmt与workspace全目标Clippy通过，相关Python schema 16 passed。`cargo test --workspace --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`退出0，91组、444 passed、0 failed、36 ignored，输出位于`target/h3-2b-2-cargo/allocated-workspace-final.log`。该检查点位于协调器返回前，不独立模拟HTTP网络响应丢失。
+
+随后补充证据文件写入：聚焦测试通过，父进程核验的握手、退出码、原修订SHA-256及两次重开结果见`target/w1h21-analysis-operation-tests/7efbabbb9658b132fad17b969e72e510/allocated-evidence.json`及同目录握手、事件日志和持久材料；格式与Clippy再次通过。该证据记录断言结果和原哈希，并非逐阶段的完整字节快照。补充后workspace回归退出0：91组、444 passed、0 failed、36 ignored，见`target/h3-2b-2-cargo/allocated-evidence-workspace.log`。
+
+随后又增加恢复及新分配后无running任务的显式断言；包含该断言的聚焦测试1 passed。上述workspace回归早于这项测试断言，不应称作最终测试版本的全量回归。
+
+该最终聚焦测试证据位于`target/w1h21-analysis-operation-tests/f0723fbe71f7c12c360512b4e159ce5a/`：只读复核握手文本、零字节子进程事件日志及证据文件，原操作修订的当前SHA-256与强杀前记录一致；显式新分配后两条操作各有一个修订。退出状态及两次重开结果由父进程测试断言后记录，现存文件不构成独立逐阶段字节快照。限定窗口的交接及回归时点见[交接](superpowers/plans/2026-11-02-allocated-crash-handoff.md)。
+
+## 2026-11-02 2b-2后路线只读复核
+
+基线`main / 672e5a8`，工作区开始干净；旧普通包CLI和worker哈希与包内清单一致。`a21d587`至HEAD包含工作台和持久化源码变化；历史候选目录存在，但本轮未重新核验其完整清单和配置资产，历史双资产结果按原记录读取。本轮不运行测试、doctor、引擎或部署；历史444通过、36忽略及schema 16通过不属于本轮。既有历史本地链接缺失和私有归档索引限制见下方清理审计，未重新回读云端。
+
+## 2026-11-02 H3.2-2b-2 accepting保存后冻结前进程终止
+
+在`durable_crash_window_tests`中新增accepting修订持久化后、实际输入冻结前的子进程检查点。父进程等待同步原子握手，完整认证两条操作修订的封套、前驱/记录哈希、命令摘要和状态迁移，并确认无冻结输入、任务及报告，再终止子进程。强杀前事件日志为freeze=0、claim=0；该合成协调器测试不启动worker/ocgcore/FFI，不能将事件计数解释为原生执行或研究消费证明。恢复只追加一次unknown，不创建任务或报告；队列无工作，重复重开不追加修订且保存材料字节稳定。
+
+验证命令（离线、locked，产物位于忽略的`target/w1h322b-process-kill/cargo`）：
+
+- `cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1`：1 passed。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`：CLI各测试二进制合计104 passed、0 failed、0 ignored；日志SHA-256=`8A0F110EC655B3F4678B70491B2D290BA9D64F132F259CE38CC37FEA7BD7B15A`。
+- `cargo test --workspace --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1`：91个测试组，445 passed、0 failed、36 ignored；逐组输出`target/h3-2b-2-cargo/workspace-final.log`的SHA-256=`7A10F5AC0F713D806D6BA9FF0F233F2298714DE76C89368E595B1527D88D2DDB`。36项均是默认关闭的opt-in：需要冻结引擎/core/CDB/scripts或其他固定资产、收费原生执行/查询/重放、人工准备或基准；其中3项要求`YGO_PILOT_REPORT_DIR`提供报告，2项要求`YGO_WRITE_DEPENDENCY_CASES=1`。逐项测试名称和原始忽略原因为该workspace日志中的`ignored`说明；本批未启用这些门禁。
+- `cargo fmt --all -- --check`与`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h322b-process-kill/cargo -- -D warnings`：通过。
+- `py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`：16 passed。
+
+此结果只认证首次accepting保存后、freeze前这一合成进程终止窗口。H3.2-2b其他逻辑窗口/调度、worker执行、逐syscall、断电/介质持久性、W1-C真实分析、原生及账本资格仍分别开放；普通服务仍为`analysis_not_configured`。进程窗口设计与关系见[双轨路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
+
+## 2026-11-02 恢复操作unknown追加的P/U/R故障（限定合成验收）
+
+新增`recovery_unknown_operation_publish_faults_preserve_later_work_and_resume_once`，以真实持久存储、目录锁和协调器恢复路径，对两条直接构造、无匹配任务的accepting操作链，在`unknown` revision 3追加处分别注入BeforePublish、AfterPublish及Reread故障。BeforePublish时未落盘且两条链仍为accepting；另外两种故障下首条unknown已持久、第二条仍为accepting。之后真实重开认证存储，只为缺失的修订追加unknown；不会建任务/报告、冻结或派发，重复begin返回已存unknown且无ticket。第二次重开不再增加修订，所有材料字节稳定。
+
+每阶段证据记录4个原始修订、4或5个故障后修订及6个恢复后修订；最近一次完整workspace运行的三份阶段证据中，6个恢复文件的SHA-256均与各证据目录下`store/`材料复核相符。文件位于忽略目录`target/w1h21-analysis-operation-tests/{e8016d25f4012681e65f31487d820447,7cad216aaf6fd51b3b3b1b3b0025d12a,e057382a0eddcb6efc923969608d635b}/unknown-operation-fault-evidence.json`，阶段依次为BeforePublish、AfterPublish、Reread。
+
+验证结果：聚焦用例1 passed（内部执行三种故障）；durable operation组20 passed；CLI全套104 passed；workspace串行测试91组、445 passed、0 failed、36 ignored，退出0，日志`target/h3-2b-2-cargo/workspace-final.log`，SHA-256=`7A10F5AC0F713D806D6BA9FF0F233F2298714DE76C89368E595B1527D88D2DDB`。`cargo fmt --all -- --check`、workspace全目标Clippy（offline/locked，`-D warnings`）及三份workbench schema Python回归16 passed。
+
+本项是逻辑持久化故障注入，不是进程终止或文件系统掉电测试；两条accepting链在存储层构造，不证明正常服务可同时保有两条预占。混合accepted/unknown恢复顺序由单独K场景覆盖；其他恢复转换、系统调用窗口、原生执行或消费记录仍开放，unknown不等同零消费。普通服务仍为`analysis_not_configured`，W1-C与P4-R5仍开放。细节见[交接](superpowers/plans/2026-11-02-unknown-operation-fault-handoff.md)。
+
+## 2026-11-02 混合unknown/accepted操作恢复顺序K
+
+先按[映射](superpowers/plans/2026-11-02-mixed-operation-recovery-map.md)固定状态与已有证据，再在`recovery_mixed_operations_first_classified_before_next`挂点强杀。存储层直接构造ID排序为`a…a`的无任务accepting操作及`c…c`的带queued任务accepting操作。父进程先认证两条操作链、任务链和冻结输入交叉绑定；挂点处首条unknown revision 3已发布，第二条仍为accepting revision 3，任务仍为queued revision 1，事件计数freeze=0、claim=0。实际持锁重开追加第二操作accepted revision 4和任务interrupted revision 2；再次重开后修订及保存材料字节稳定，队列与`claim_next`均为空。
+
+本次workspace证据位于`target/w1h21-analysis-operation-tests/52d4f1e5727a65f5ebc88ad4b680c587/mixed-operation-recovery-evidence.json`，证据JSON SHA-256=`C7DD3EF97FA52736AF108C5D844138E849B8CF4B0E36B90741D56B4AD78C2963`。强杀前7个文件和恢复后9个文件的哈希已对该证据目录下`store/`逐项复核；子进程被终止，重复重开稳定标记为true。该场景在直接构造的存储fixture中测试，不证明正常服务可同时持有两条预占。
+
+`cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1`：1 passed；同一窗口测试内部也重跑既有跨链K阶段。CLI串行套件104 passed；workspace串行套件91组、445 passed、0 failed、36 ignored，日志SHA-256见上一节。`cargo fmt --all -- --check`、workspace全目标Clippy（offline/locked，`-D warnings`）和三个工作台schema回归（16 passed）通过。
+
+本K只覆盖这一组操作ID排序和状态组合，不证明其他排序、转换或调度；P/U/R、逐syscall、断电、介质故障仍需分别验收。没有运行worker、runner、ocgcore或FFI；这不授予真实分析、原生、消费或最优性资格。普通启动保持`analysis_not_configured`，W1-C和P4-R5继续开放。实施边界与后续门禁选择见[交接](superpowers/plans/2026-11-02-mixed-operation-recovery-handoff.md)。
+
+## 2026-11-02 双轨路线文档复核
+
+只读基线`main / 39da661`，工作区开始干净；未访问远端。本次核对H3.1设计、限定交接、现有任务与需求矩阵，并在当前路线增加窗口映射及下一候选，未执行该窗口测试。旧普通包CLI和worker的SHA-256各自与包内`build-hashes.json`匹配；包文件日期为2026-10-19，仅证明文件身份。`git diff --stat a21d587 HEAD`显示其后工作台HTTP、持久协调器等源码已变化；历史候选不证明当前HEAD已部署。历史双资产诊断、预算截断和缺少可比账本见本页P4-R5记录。未运行构建、测试、doctor、引擎、真实分析或部署。
+
+## 2026-11-02 环境清理后自检与文档事实源复核
+
+基线为`main / ae4a9ab`；审计开始时工作区有6份已跟踪Markdown修改和1份新路线文档，源码未修改。清理范围、逐文件清单与权限/归档结果见[环境审计](ENVIRONMENT_AUDIT.md)和[证据保留清单](EVIDENCE_RETENTION.md)。本轮修正任务表里已过时的“未迁移”摘要，并将README、差距评估、路线图和工作区检查入口指向H3.2-2b-1后的路线。
+
+静态文档检查覆盖147份Markdown和1,122个本地目标引用；其中58个源文件/目标组合不在工作区，逐项均能在私有归档索引中找到匹配的51个云端文件，其他目标均存在。此检查验证路径和归档映射，不检查Markdown标题锚点；私有索引被Git忽略，普通克隆不能恢复归档。`git diff --check`通过。`cargo tree --workspace --duplicates --offline --locked`仅显示`hashbrown` 0.14.5（`rusqlite/hashlink`链）与0.17.1（`toml/indexmap`链）两条不同传递依赖，未发现可据此安全移除的重复直接依赖或crate。
+
+本轮差异只改文档，没有重新运行Rust/Python测试、构建、doctor、引擎、部署或真实分析。源码HEAD的最近完整Rust证据仍是上方2026-11-01记录：workspace 444通过、36忽略，schema 16通过，fmt和Clippy通过；这不能替代仍开放的H3.2-2b余项、W1-C或P4-R5门禁。
+**2026-11-01 路线只读复核：**本地HEAD `ae4a9ab`，初始工作区干净，本地跟踪引用领先9，未访问远端。旧普通包CLI SHA-256 `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`、worker `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`与包内清单一致；仅核对文件身份，未运行doctor、引擎、部署或测试。
+
+## 2026-11-01 无效忽略配置清理
+
+只删除被Git忽略的`configs/engine.toml.legacy`，不触碰当前`configs/engine.toml`、dist或运行资产。删除前确认目标是仓库内普通文件、大小258 bytes、修改时间2026-09-09，SHA-256为`D2F51D7C826A35F8A2B595C063045500C903F69B7DE25E2B82FF2BC9BFB0876D`；Git忽略规则为`/configs/engine.toml.*`。文件中的`engine_path`、`working_directory`、`protocol`、`temp_directory`与当前严格`ProcessEngineConfig`不兼容，且无代码/脚本消费者。验证`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/w1h322b-process-kill/cargo --test doctor config_round_trip_and_legacy_gui_config_rejected -- --exact`：**1 passed**，并确认原文件已不存在。历史SHA仅用于说明被移除文件身份，不是可恢复副本。
+
+## 2026-11-01 W1-H3.2-2b-1 跨链关键窗口进程终止
+
+基线本地`main / 2f690d5`；保留已有的两处文档修改。使用真实修订存储、目录锁、跨链认证和报告校验，以测试二进制子进程覆盖四个逻辑提交窗口：冻结输入保存后/job前、queued job保存后/accepted关联前、报告保存后/终态job修订前、恢复关联修复后/job分类前。每个窗口由父进程在握手点核对原始材料后终止子进程；握手通过临时文件写入并`sync_all`后原子改名，父进程仅观察完整标记，等待上限20秒。
+
+强杀后用新协调器取得目录锁并认证所有材料再恢复。四例均检查活动队列为空、没有可claim任务、第二次重开不追加修订，并逐字节比较operations/jobs/reports。新增有效但跨链不匹配的冻结绑定负例，确认完整认证失败且修订文件不变。已有用例另覆盖损坏修订、非法任务转换和损坏/错误引用报告；这些没有被表述为新子进程窗口。
+
+验证命令与结果（全部Cargo构建使用隔离`target/w1h322b-process-kill/cargo`及`--offline --locked`）：
+
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h322b-process-kill/cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture`：最终握手修复后 **1 passed**。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h322b-process-kill/cargo -- --test-threads=1`：**103 passed、0 failed**。
+- `cargo test --workspace --offline --locked --target-dir target/w1h322b-process-kill/cargo -- --test-threads=1`：**444 passed、0 failed、36 ignored**，91个结果组；完整日志位于忽略目录`target/w1h322b-process-kill/workspace.log`。
+- `py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`：**16 passed**。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h322b-process-kill/cargo -- -D warnings`和`cargo fmt --all -- --check`通过。最终标记修复后重新通过强杀聚焦测试；格式命令先执行`cargo fmt --all`再复核。
+
+独立只读审阅指出初版握手标记先创建再写入会有空/部分读取竞态，已改为同步临时文件后原子发布并重跑聚焦矩阵。该批新增原生研究、真实runner/worker、引擎FFI调用均为0；未启动worker、真实服务或引擎。普通工作台仍`analysis_not_configured`。仅关闭上述四个逻辑窗口；其他H3.2-2b窗口/调度、逐syscall故障、断电/介质故障、报告来源与W1-C真实分析仍开放。未知收费/调用状态不推定为零。
+
+**2026-11-01 路线静态复核：**`git status --short --branch`显示本地main在`2f690d5`、工作区干净、本地跟踪引用领先8；未访问远端。`Get-FileHash -Algorithm SHA256`复核旧普通包CLI `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`及worker `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与包内`build-hashes.json`一致。仅证明文件身份；未运行doctor、引擎、部署或测试，不证明当前源码已部署。
+
+## 2026-11-01 W1-H3.2-2a HTTP响应丢失与幂等查询
+
+基线main / 6b523f2，保留已有未提交源码和文档。关闭本批限定合成关口后暂停，见[交接](superpowers/plans/2026-11-01-w1h322a-response-loss-handoff.md)。真实本机TCP在路由完成后分别零字节关闭和保留Content-Length截断正文；每种模式13份原始传输捕获、11项逻辑断言。覆盖allocated、accepting幂等及容量预占、后台accepted/rejected、取消、操作/任务/结果GET、completed及budget_limited空线路、健康停止后读取、报告字节损坏和独立引用错误、正常停服释放锁后重开及重复重开。没有自动重试请求，没有用未知状态推定零调用。
+
+最终源码验证（日志均在忽略目录`target/w1h322a-response-loss-tests/`）：
+
+- `workspace-final.log`：offline/locked默认workspace串行测试 **442 passed、0 failed、36 ignored**，退出0；其中CLI库79通过。逐项忽略名称和原因为`skipped.json`，均保留默认opt-in/frozen资产或收费研究门禁，未启用这些测试。
+- `focused-green.log`：响应丢失全矩阵及Windows socket模式回归 **2 passed**。
+- `fmt-final.log`、`clippy-final.log`：fmt检查及workspace全目标Clippy（`-D warnings`）通过。
+- `schema.log`：显式HTTP、任务、操作三个Python/schema测试文件 **16 passed**。
+- `python-full-final.log`：`py -m pytest -q -ra --tb=short`完整Python默认套件 **768 passed、9 skipped、208 subtests passed**，用时1,780.89秒、退出0。跳过项是Windows目录符号链接能力不足、缺少明确opt-in的报告/快照/引擎资产，以及独立赛事配置；完整逐项原因保留在日志中。本次默认全套通过，不将其解释为启用被跳过的资产或研究门禁。
+- 全部Cargo构建共用隔离`CARGO_TARGET_DIR`和同值显式`--target-dir`，使用`--offline --locked`；命令、汇总、覆盖和只读审阅分别见`commands.json`、`test-summary.json`、`coverage-summary.json`及`review.md`。
+
+保留失败证据：首轮`workspace.log`失败，随后`focused-diagnostic.log`捕获路由握手前零字节ConnectionReset，未计入通过。独立无载荷实验`socket-mode.log`证明本机Windows accepted socket继承非阻塞模式；`socket-mode-red-1.log`在原配置准确复现WouldBlock而非TimedOut。最小生产修复为接受连接后显式恢复blocking，保留listener非阻塞、原5秒读写超时及连接上限。`socket-mode-red.log`最初过滤0测试，不作为红测。该新证据不追认每次旧TCP重置的具体根因。早期锁文件快照、冻结计数及后台拒绝夹具错误均保留日志并在交接说明。
+
+独立只读审阅确认传输钩子仅cfg(test)、提交后握手、锁外等待、有限期限及冻结在客户端确认丢失后才释放；并检查取消revision、容量保护、独立引用错误和受控重开，没有绕过真实冻结/存储/报告认证。相关8份文档415项本地文件链接缺失0，`git diff --check`通过；结果另存`links.json`、`diff-check.log`，仅检查文件目标存在，不认证标题锚点。
+
+新增原生研究、真实runner/worker及引擎FFI调用0；普通工作台仍`analysis_not_configured`。H3.2-2b目标窗口强杀、逐syscall故障、断电/介质、非空线路结果及W1-C真实分析未覆盖。认证消费子集40、政策预留7、规划47和未知历史累计口径不变，Tenki pin不变；不运行doctor、不部署、不提交或推送。
+
+
+**2026-11-01 路线文档复核：**只读重算旧普通包 CLI 与 worker SHA-256，分别为 `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F` 和 `AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，与包内清单一致；不证明当前源码已部署。本次未运行 doctor、引擎、部署或测试。H3.2-1 历史 workspace 439 passed、36 ignored 后有增强断言与新增用例，最终 CLI 库 77 passed；不是第二次完整 workspace 复验。
+
+## 2026-11-01 W1-H3.2-1 跨链认证与恢复核心
+
+基线main / 6b523f2；保留原文档改动。共享链认证与完整恢复清单已实现，原函数红测复现分类时间非法却提前追加accepted（3→4条）。修复后通过。6种关联/分类发布故障组合逐一检查未分类磁盘状态，再恢复及重复重开；新增后排序操作损坏阻止先排序操作修复。见[交接](superpowers/plans/2026-11-01-w1h321-recovery-handoff.md)。
+
+日志target/w1h321-recovery-tests/：red-original-final.log为可靠原函数红测；focused-final.log两项通过（含六组合），multi-operation.log新增一项通过。workspace.log工作区串行439通过、0失败、36忽略；随后加强故障断言并新增多操作用例，分别聚焦复验，不将其计为第二次全workspace通过。最终CLI库复验77通过、0失败、0忽略，另存cli-lib-final.log。fmt-final.log、clippy-final.log均通过，schema.log相关HTTP/任务/操作schema共16通过。忽略项保持测试默认策略，原始逐项标注见workspace.log；未启用真实资产opt-in或doctor。
+
+独立只读审阅确认核心逻辑，要求将原始前驱纳入快照、故障后先未分类读取，均落实。最初并发编译的记录和LNK1104不算行为红测；保留原日志。静态本地链接6文档207项无缺失，diff --check通过。没有新增依赖或修改schema/HTTP端点。
+
+H3.2-2完整响应丢失及目标窗口强杀未验收，普通工作台仍未配置。新增原生研究、真实runner/worker/FFI调用0；消费子集40、预留7、规划47不变，历史实际累计未知。不部署、提交或推送。
+
+
+**2026-11-01 文档静态核对：**重新计算旧 `dist/ygo-local` 的 CLI 和 worker SHA-256，分别为 `54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`、`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与包内 `build-hashes.json` 一致。仅检查文件身份；未运行 doctor、引擎、部署或测试，不证明当前源码已部署。
+
+## 2026-11-01 W1-H3.1跨链恢复与响应丢失设计（仅静态）
+
+基线main / 6b523f2；保留既有11份文档修改和新增路线文档。本批交付[设计](superpowers/plans/2026-11-01-w1h31-cross-chain-recovery-design.md)及[交接](superpowers/plans/2026-11-01-w1h31-recovery-design-handoff.md)，同步任务、API、工作台、HTTP/持久化合同及导航。没有修改生产模块或schema。
+
+静态核对durable的全链扫描、操作关联修复、重启分类、只读查询，以及persistence的发布/报告认证和已有测试名称。矩阵明确P/U/R/L/K逻辑窗口、保存与内存状态、HTTP及下次追加数；它是H3.2待实现验收，不是运行通过记录。旧437通过、36忽略仅引用历史。
+
+本轮检查：独立只读设计审阅、本批涉及文档本地文件链接检查、git diff --check；检查结果：9份本批涉及文档、404项本地文件链接，缺失0（不校验标题锚点）；git diff --check通过。独立只读审阅的两项意见已落实：固定现有503错误映射，区分拒绝提交前allocated与accepting的分类追加数。未构建、未运行Rust/Python测试、doctor或真实分析；没有外网请求。新增原生研究、runner、worker、FFI调用均0。认证消费子集40、预留7、规划47与未知历史累计口径不变。
+
+
+## 2026-11-01 H2.2-A/B后路线文档复核
+
+本轮起始为干净`main / 6b523f2`；规划阶段只读核对旧普通包CLI/worker哈希与清单相符。本轮未运行doctor、引擎、收费实验、部署或全量测试。H2.2-A workspace 435 passed/36 ignored、H2.2-B 437 passed/36 ignored及候选双资产诊断按下文原范围读取，不相加，不代表真实工作台分析或P4-R5通过。路线见[H2.2-A/B后路线](superpowers/plans/2026-11-01-post-w1h22-ab-project-route.md)。
+
+## 2026-11-01 W1-H2.2-B并发验收及审计收尾
+
+- 本轮从本地`main / 8d8c492`继续；针对分析HTTP补充并发重复提交与取消/领取竞争回归，逻辑故障矩阵及证据仅写入忽略的`target/w1h22a-persistence-fault-tests/`和`target/w1h22b-concurrency-tests/`。新增注入点和计数器均受`#[cfg(test)]`限制。
+- H2.2定向HTTP组12 passed；`py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short`为16 passed，日志见`target/w1h22a-persistence-fault-tests/python-h2.2b-final.log`。全workspace命令`cargo test --workspace --offline --locked --target-dir target/w1h22a-persistence-fault-tests/cargo -- --test-threads=1`退出0：437 passed、0 failed、36 ignored（91个结果组）。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h22a-persistence-fault-tests/cargo -- -D warnings`与`cargo fmt --all -- --check`通过；Markdown本地链接检查137份跟踪及新增文档、1,043个目标、缺失0；`git diff --check`通过。提交前源码与文档差异已逐项审阅。
+- 同ID重复提交16次均重放同一`accepting`响应，只产生1个后台任务和1次输入冻结；并发取消/领取实测16轮全部由claim获胜，随后显式fail任务并确认持久状态。取消先完成后claim为空由既有TCP用例覆盖。不能据此声称已观察到两个竞争胜者或所有线程调度。
+- 日志与并发结果保存在上列忽略目录；关键SHA-256：workspace日志`DDCE9F50879C5D4DD5D3C7C933F79EBC08C9B564392EB454A604EBFB1A41BDDD`；重复提交结果`7BF6AAD072820ABCEB365042364D126233726FB0C141BD1931D9F7129CA25E24`；取消/claim结果`F260F60D650F466C0A078D94827869CE096B518AC907C6EA44BF862A7045F1E3`。详细范围见[H2.2-B交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。
+- H2.2合成HTTP门禁关闭。H3跨链恢复/响应丢失、W1-C真实分析、报告来源认证及P4-R5可比账本/部署门禁仍开放；普通服务继续`analysis_not_configured`。本轮无真实分析、engine、runner、worker、FFI或研究账本调用，旧历史证据按用户决定不迁移，仅保留哈希清单。
+- 工作区定位：主修改位于`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\Yu-Gi-Oh!_AIBot`的本地`main`；`C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot`仍是`e684f4e`隔离旧候选，另有PR审查worktree。它们不是当前主源码基线，均未被本轮清理或重置。GitHub远端`main`已由连接器确认在`577924b`；本地基线较该远端领先6个提交，提交前仍须检查提交内容与推送范围。
+
+## 2026-11-01 W1-H2.2-A持久故障与停止后只读验收
+
+- 基线`main / 8d8c492`，保留既有11份跟踪文档修改及路线文档。本批增加测试专用精确故障注入、矩阵与证据；新用例未复现需修复的生产缺陷。重启入口仅抽取相同的认证/分类核心供测试装配，未增加生产放行参数或HTTP接口。
+- 逻辑矩阵为13个提交点×3类故障共39项，另有unknown真实重启分类3项；精确断言目标命中、发布前后修订字节/state/revision、报告数量、保留槽位及停派发策略。实际TCP另覆盖同步503共15项、已返回202后的后台故障12项；同步故障未安排冻结，后台屏障前冻结计数0、完成后1，GET与被阻断领取后仍为1。计数只观察真实`finish_operation_with_clock`中的W1-A冻结调用，不冒充原生执行数。
+- 停止后9类TCP查询覆盖健康历史/404、报告缺失与哈希错误、请求/身份/评分/预算绑定，以及操作/任务链损坏。语义负例重新绑定原始哈希以准确进入语义门禁。状态和结果GET拒绝无法认证材料；前后文件/目录快照相同。Windows持有锁文件无法读字节，记录其存在与长度，查询矩阵另记录修改时间；其他证据比较字节或哈希，未释放锁。
+- 先行用例记录了测试夹具锁读取失败、语义负例自身报告无效及临时缺少测试导入；日志保留，不称为生产红测。曾怀疑状态GET不认证报告引用，新增预期失败用例实际通过（`query-status-red.log`），现有scan已验证引用，因此保留反证且不修改该生产逻辑。首次`analysis_query`过滤未命中测试（0项），不计为通过；后续使用正确过滤与全量回归。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h22a-persistence-fault-tests/cargo --lib -- --test-threads=1`最终72 passed、0 failed（`cli-counter-final.log`）。workspace默认串行435 passed、0 failed、36 ignored（`workspace-final.log`）；全量启动后补了仅测试编译的冻结计数，随后重新运行全部CLI、fmt和全目标Clippy，其他crate未改。忽略项及原始原因逐项保存于`test-summary.json`，未启用任何opt-in。
+- fmt `--check`及workspace全目标Clippy `-D warnings`通过；编译命令均设置同一隔离`CARGO_TARGET_DIR`并显式使用相同`--target-dir`，offline/locked。Python相关HTTP/operation/job三个schema测试16 passed（`python.log`）；未重跑全套Python，也未改Tenki历史pin或原失败记录。
+- 独立只读审阅检查实际命中、停止与只读断言、无校验替换、生产cfg边界及TCP Content-Length读取。`review.md`区分hook作者自审与交叉审阅；故障核心由另一agent独立审阅。TCP错误保留方法、路径、响应阶段和已收字节，不自动重试。此次通过不认证Windows历史RST根因。
+- 机器入口`target/w1h22a-persistence-fault-tests/coverage-matrix.json`，含42个逻辑组合、27个TCP提交组合及9类查询；原始各组JSON、失败/最终日志和审阅均保留该新目录，不覆盖H2.2旧日志。详见[交接](superpowers/plans/2026-11-01-w1h22a-persistence-fault-handoff.md)。文档本地链接及diff检查另存同目录。
+- 仅关闭H2.2-A逻辑持久故障关口；H2.2-B重复并发、H3崩溃/回复丢失/跨链恢复及W1-C真实分析仍开放。不声称每条文件系统调用、断电或介质故障通过。普通服务分析保持未配置；真实native/runner/worker/FFI调用0，不运行doctor，不部署、提交或推送。认证子集40、预留7、规划47；旧confirmation与全部实际历史累计未知。
+
+## 2026-11-01 W1-H2.2后路线文档复核
+
+本轮起始为干净`main / 8d8c492`；规划阶段只读核对旧普通包CLI/worker哈希与清单相符。本轮未运行doctor、引擎、收费实验、部署或全量测试。H2.2早期workspace 426 passed/36 ignored、后续HTTP 5 passed、其后workspace复验及候选双资产诊断按下文原范围读取，不相加测试数，不代表真实工作台分析或P4-R5通过。路线见[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)。
+
+## 2026-11-01 H2.2 HTTP提交不确定回归与文档续核
+
+- 在`main / c6faa29`复核TASKS、INDEX、API与工作台分析合同后，发现TASKS的W1-B1至B3总述仍把任务HTTP列为未完成，与H2.2当前实现冲突。已将该段标为历史交付并指向当前H2.2实现和仍开放的验收矩阵。
+- 新增`operation_allocation_store_failure_is_reported_and_stops_acceptance`：模拟POST操作分配的持久写失败，验证503稳定错误、停止后续接入且不创建后台工作。新增`uncertain_cancel_commit_is_reported_and_stops_further_dispatch`：模拟取消修订已发布但存储层返回提交不确定，验证HTTP回503 `analysis_commit_uncertain`、只读查询显示持久终态并标记stopped、停止后领取被拒绝且重试不会继续写入。
+- H2.2 HTTP定向用例5 passed；`cargo test --workspace --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- --test-threads=1`退出0，所有执行用例通过、opt-in用例仍忽略；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- -D warnings`及`cargo fmt --all -- --check`通过。
+- 对134份跟踪Markdown运行本地相对链接目标检查：1,002个本地链接，缺失0；`git diff --check`通过。通过合并重复段落，链接总数减少10。此类检查只验证目标文件存在，不验证页面锚点或运行行为。
+- 本小节记录的H2.2回归与文档复核未运行doctor或部署；随后在隔离目录完成的当前源码候选诊断见下一节，普通dist仍是2026-10-19制品且未改写。H2.2完整故障注入与重复并发调度矩阵仍未关闭。
+
+## 2026-11-01 整体工作区与部署状态静态自检
+
+- 复核提交后源码为干净`main / a21d587`。`docs/INDEX.md`仍是文档入口，`TASKS.md`维护状态，`TESTING.md`维护有日期的验证；修正README、INDEX、ROADMAP、API、WORKBENCH和HTTP合同中把H2.2实现仍写成“未接入”的当前摘要。阶段历史与handoff留在日期化计划中。
+- 普通`dist/ygo-local`清单和二进制文件时间为2026-10-19；当前H2.2源码提交晚于该包，未重建或覆盖dist。因此当前HTTP实现未部署到普通dist。此为文件/提交时间静态比较；本轮没有运行doctor、smoke或真实分析。
+- `cargo metadata --offline --no-deps`列出9个workspace crate。`cargo tree --offline --locked -d`确认`hashbrown` 0.14.5经`hashlink/rusqlite`进入，0.17.1经`indexmap/toml_edit`进入；未发现同一直接依赖的重复声明。`cargo-machete`当前不可用，故不声称机器化未用依赖审计通过，也没有删除Rust crate或兼容路径。
+- 在该历史审计时点，`configs/engine.toml.legacy`是Git忽略的本地文件，含`C:/ProjectIgnis`机器路径；未发现代码/文档消费者。它当时被临时保留以待回滚用途核对，后续处置见本文件顶部2026-11-01清理记录；不得把本历史状态当作当前存在性。
+- 文件级盘点发现127份docs Markdown。既有历史计划、证据链接和本机资产保留，不按文件年龄清理；用户此前决定历史证据不迁移，只保留SHA-256清单。
+
+## 2026-11-01 `a21d587`当前源码隔离部署候选复验
+
+- 从源码提交`a21d587`（H2.2 HTTP实现）归档到忽略目录`target/p4-r5-current-a21d587/`，使用`deploy-local.ps1 -Offline -FrozenRuntime`完成Release构建、13,665行普通catalog导入、203行（2026-10-01生效）banlist导入及12卡知识验证。冻结运行资产通过stage下的`data/runtime`目录junction只读复用；构建产物、身份配置及诊断报告全部留在隔离target，未覆盖普通`dist/ygo-local`或runtime资产。当前工作区HEAD为文档提交`c6faa29`，候选编译源码基线为其祖先`a21d587`。
+- 普通与赛事配置`engine doctor`均退出0：`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。identity均`consistent=true`：普通身份`90990e275176d381d7de227f2598014351944aa6291e46a658ba73301128881a`，赛事身份`efe981e791c71090bc8469a528e22de5db75bf0be38db64068212da0b0444b3b`；共用core SHA-256为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`，候选CLI/worker分别为`16a942a61ede261b567ede4e048ae99dbd8b6ada759d29df625d7465a4aadd2f`和`c2a2d46dae50254c63c9c428bec8060617e254078a985222e9ed4eec83e39e69`。
+- 普通smoke为326节点/329次引擎调用/27,290ms；赛事smoke为310节点/313次调用/27,316ms。均产生3条报告线路并因30秒`time_budget`终止。两份报告独立`combo replay`均退出0，3/3线路`engine_verified`且`replay_verified=true`。报告SHA-256分别为`37bf74305911bf7dbc8a24a521a58b69a85960ad1b6aeef7542ce97d37578890`和`4e2727adf103b96b9272129f7e0274aec1c8506f4f509b36133f824d4cd0991d`；replay输出分别为`4fa00a480502ab24b09ad7a994eb25312589313b807f7d5aa2f4090985bf6de0`和`bc4617e11e50bc0c848513029461738ec891cc2698b7118eccaf32b0f28b5d41`。两套资产使用各自active snapshot及CDB。
+- doctor的`smoke_ok=null`表示doctor自身未做决斗；独立smoke/replay确实调用了真实本机engine worker，但不是正式研究scope或消费账本，不核验研究预算。没有可比研究账本，smoke也在预算处截断，不代表全搜索、规则覆盖或最优性；因此P4-R5仍开放。主工作区普通dist未切换，赛事与普通配置也未合并。
+
+## 2026-11-01 W1-H2.2 HTTP验收续接
+
+- 依据H2.2交接缺口补充：GET拒绝请求体、未配置后端时六端点均有集成检查；增加HTTP取消与队列claim并发竞争、取消后不再领取、operation/job持久写失败的HTTP行为，以及草稿revision变化后异步操作被稳定拒绝/重放的TCP回归。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo --lib workbench::analysis_http::tests:: -- --test-threads=1`：3 passed、0 failed。`cargo fmt --all`已执行并通过格式化（本命令不等于`--check`复核）。
+- 之后完成`cargo test --workspace --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- --test-threads=1`（退出0，全部执行的测试通过，仓库标记的opt-in用例保持ignored）；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1h22-analysis-http-tests/cargo -- -D warnings`、`cargo fmt --all -- --check`及HTTP/operation/job三个Python schema测试（16 passed）通过。`git diff --check`通过；对134份版本控制Markdown中的1004个本地链接检查，缺失0。
+- 全量复验期间TCP用例重现10054；观测到服务开始返回400响应，但响应头中途被RST截断，未能可靠读取错误码。测试客户端改用`write_all`并在完整发送后半关闭写方向；该核心TCP用例随后连续3次通过，修正后workspace全套复验退出0，全部执行测试通过，opt-in用例仍按标记ignored。
+- H2.2仍未关闭：新增HTTP端点持久故障注入和重复并发调度的完整矩阵未穷尽。未运行真实分析、引擎、runner或部署。
+
+## 2026-11-01 W1-H2.2 合成HTTP接入
+
+- 基线main / 26756c3；保留原三份文档修改。新增六端点、严格HTTP合同/schema、无路径投影、异步接受与完成票据，以及不依赖运行时冻结对象的历史报告读取。普通启动保持analysis_not_configured，没有生产执行器或新CLI参数。
+- routes-red.log实际观察到404而预期503；合同最初是缺接口编译失败。异步核心冷编译期间实现已推进，初次命令最终通过，不能算行为红测。日志均保留，不补造失败。
+- 同一隔离target/w1h22-analysis-http-tests/cargo，offline/locked：workspace.log为426 passed、0 failed、36 ignored；随后最新CLI复跑cli-verified.log为85 passed、0 failed。两次不相加。fmt-verified.log、clippy-verified.log通过；Python新HTTP及既有operation/job schema共16 passed。workspace忽略原因逐项保存在原日志，真实资产opt-in未运行；Unix专用路径未在Windows执行。
+- 实际TCP合成测试覆盖六端点、真实W1-A冻结、屏障阻塞时202、重复提交、容量预占、排队取消、运行中/终态取消拒绝、真实报告发布及停止后历史结果读取。覆盖重复/未知JSON、非法及不存在ID；既有HTTP安全测试通过。没有使用真实分析适配器。
+- 一次CLI复跑出现测试客户端ConnectionReset，cli-latest.log保留62 passed/1 failed。测试读取改为严格Content-Length帧；其后完整CLI通过。原始重置原因未认证，不将偶然重跑成功解释为生产网络可靠性证明。
+- 独立交叉审阅发现错误状态码映射并修正；记录independent-review.json。本轮未逐项新建HTTP层全部故障注入与取消/领取双向并发矩阵；底层既有回归通过不等于这些新增端到端用例已执行，因此H2.2完整验收仍保留此缺口。完整进程崩溃/响应丢失留H3，真实分析留W1-C。
+- 新增原生研究、真实runner/worker/引擎FFI调用均0；无doctor、部署、提交或推送。会计40/7/47保持不变，历史实际累计未知。交接见[H2.2](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。
+
+## 2026-11-01 H2.1路线文档静态复核
+
+本轮起始为本地干净`main / 26756c3`，比本地`origin/main`跟踪引用领先3个提交，未访问远端。文档仅依据既有TASKS、代码合同及下列日期化证据交叉复核；未运行doctor、引擎、部署、收费实验或全量测试。普通/赛事候选`e684f4e`诊断与旧普通包身份分别见下文；P4-R5因无可比账本仍开放。
+
+## 2026-11-01 `e684f4e`隔离候选双资产部署诊断
+
+- 在独立worktree以`deploy-local.ps1 -Offline -FrozenRuntime`从`e684f4e85499e4cc17b746380e536f6cb50195a9`构建Release候选；catalog导入13,665行，banlist 203行（2026-10-01生效），知识包验证12卡。候选二进制SHA-256：CLI `7dc8e5fe9421b6fc93e6e14a88e5035f289b48c946eafa6f0f7150d19b5d6f9b`、worker `cda0a12237b562850bb81227859167ccc14f6cb1b56c6c7f1babb6e31d0be006`。
+- 普通及赛事资产的`engine doctor`均ready、ABI/assets检查通过且issues为空；`engine identity`均consistent、脚本清单missing/mismatch/extra均为0。两套身份分别为`d76888a07069b54c6cfdf2ac50eaf7fb3e196908a23c0ce4fef50cd7da443394`及`24b2a95a6e78525625daecdf46363b95ea46acf7481c5a05d5305c74a52116a7`。普通/赛事CDB SHA-256分别为`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`、`3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632`；共用core SHA-256为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`。
+- 普通smoke为136节点/139次引擎调用/27,900ms，赛事smoke为139节点/142次引擎调用/28,318ms；均3条报告线路、`time_budget`终止。普通报告SHA-256 `92172eb9a029cf704ea6dbcd6b0ac0be2f5e3a71460a0fc9cf204f7e01c1d737`，赛事报告`3a8df9e107d59edcf6ffe9291781190bf9606f290eab148ee8356f55ac1de2ad`。各自独立replay均3/3 `engine_verified`且`replay_verified=true`；输出SHA-256分别`4ef988c69382eecf6cdc2b8f9082d8b57eb1eb46fe3559bb1e22bcf1e16ba886`、`00c9efcd473d4e5fe39fff9293ba55258e40295c286b47076e4dbd70332bbe7e`。诊断产物在忽略目录`target/p4r5-audit/`，未迁入受保护历史区。
+- 首次赛事smoke因误用普通snapshot被拒绝，错误为`catalog snapshot does not match engine CDB`；随后显式使用赛事snapshot及其active catalog/banlist重跑成功。普通runtime通过目录junction共享，identity因此采用指向既有资产的直达路径配置；没有改写普通/赛事资产或snapshot。
+- 这些是候选部署诊断，不是正式研究scope、账本更新、规则资格或最优性证据。两次smoke都在时间预算处停止；没有可比研究账本，P4-R5发布门禁仍开放。主工作区`dist/ygo-local`保持2026-10-19旧包，未被替换。
+
+## 2026-10-31 W1-H2.1 内部操作持久化与幂等提交
+
+- 基线main / 577924b，保留既有13份tracked及4份untracked文档。新增操作合同/schema、同根同锁修订链、真实W1-A合成冻结、容量预占、先任务/accepted提交再注册派发、跨链重开及停止后只读查询。无新增HTTP、界面或真实分析。
+- 真实红测记录：unknown未绑定却接受revision4，修复后拒绝；持久竞争修订错误后未停止派发，修复后停止。contract-behavior-red.log、integrity-stop-red.log为行为红测；早期contract-red/coordinator-red只是接口缺失/并行开发编译阻断，不冒充行为红测。
+- 最终合同4项、协调器11项、独立存储负例2项聚焦通过；共享36例由Rust/Python检查。Python新schema测试3 passed；相关既有回归30 passed、2 skipped、4 subtests passed，跳过为真实报告/本机快照opt-in，未运行Python全套。
+- 同一隔离CARGO_TARGET_DIR和显式--target-dir：target/w1h21-analysis-operation-tests/cargo；全部编译offline/locked。workspace串行测试415 passed、0 failed、36 ignored。其执行期间最终完整性错误停止修复仅影响CLI，之后再跑最终CLI串行77 passed、0 failed；不将两次数量相加。最终fmt --check和workspace全目标Clippy -D warnings均退出0。初次fmt模块排序及Clippy范围模式失败保留，修正后复验通过。
+- 独立只读审阅发现并修复派发前认证缺口、封装nullable缺字段及冻结后读取错误不停止；最终未发现剩余必须修复项。日志、independent-review.json及逐项exclusions.json在忽略目录target/w1h21-analysis-operation-tests。Unix链接负例在本Windows主机cfg排除；完整进程崩溃/响应丢失矩阵留H3，未宣称已验收。
+- 本批测试时未调用真实runner/worker/引擎FFI、doctor、研究账本或真实资产opt-in，也未部署；提交状态由之后的交付记录说明。认证子集40、政策预留7、规划47不变，全部历史实际累计未知。实现与下一步见[H2.1交接](superpowers/plans/2026-10-31-w1h21-analysis-operation-handoff.md)。
+
+## 2026-10-31 W1-H1后路线文档复核
+
+历史记录：该轮基线HEAD `577924b`，起始有13份已跟踪Markdown修改和3份未跟踪文档，均保留。规划阶段只读重算旧普通包CLI/worker哈希与清单一致；当轮未运行doctor、引擎、收费实验、部署或全量测试。H1为静态设计；W1-B3合成测试、历史Python全套和候选普通smoke/replay按下文原范围读取，P4-R5仍开放。对应历史路线见[W1-H1后路线](superpowers/plans/2026-10-31-post-w1h1-project-route.md)。
+
+## 2026-10-31 W1-H1分析任务HTTP合同设计（仅静态）
+
+- 基线main / 577924b；保留此前未提交文档。本批只增加/更新设计和导航，未修改生产代码或schema。
+- 对照workbench路由/安全门禁、W1-A冻结、jobs/queue/durable/persistence、报告校验器及SearchBudget/SearchStats/Choice，核对Rabbit的40/3/0、五张起手、seed1、ocg-mr5、日期及5/10000/32/64/60000预算。设计及完整失败矩阵见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)。这些是静态走查，不记为HTTP、幂等或恢复测试通过。
+- 完成独立只读设计审阅；补齐草稿/任务revision类型区别、操作状态图、重复拒绝响应和固定结果白名单。现有submit没有创建幂等，history停用时不能直接作为HTTP历史查询；H2前置项已单列。
+- 本地链接/事实源核对及git diff --check结果见[H1交接](superpowers/plans/2026-10-31-w1h1-analysis-http-handoff.md)。本批不构建、不运行测试/doctor/引擎/runner/worker/FFI，不部署、提交或推送；不将历史测试和候选部署数字算作复验。
+- 新增研究调用0；认证消费子集40、政策预留7、规划47不变，旧confirmation与全部历史实际累计未知；候选部署诊断不并入认证子集。
+
+## 2026-10-31 W1-B3后路线文档复核
+
+历史记录：当轮文档基线为干净`main / 577924b`；规划阶段核对旧包CLI/worker与包内清单一致。候选源码`6800bf2`、普通smoke预算截断及独立replay 3/3、赛事专项和可比账本缺口见下文；不构成P4-R5完成。对应历史路线见[W1-B3后路线](superpowers/plans/2026-10-31-post-w1b3-project-route.md)。
+
 ## 2026-10-31 P4-R5源码候选部署审计（未完成）
 
-- 在独立干净worktree `C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot` 从源码提交`6800bf2`执行`deploy-local.ps1 -Offline -FrozenRuntime`；D盘主工作区`data/runtime`只读共享，候选构建产物和配置留在隔离worktree。该源码包含W1-B3.3实现；当前`main / a1542c2`比候选多出的提交仅为文档。Release构建、普通资产catalog导入（13,665行）、banlist导入（203行，2026-10-01生效）和知识验证（12卡）成功；doctor对候选普通包和赛事配置均返回`ready/abi_ok/assets_ok=true`、`issues=[]`。doctor的`smoke_ok=null`仍表示doctor本身未运行决斗。
+- 在独立干净worktree（标识`p4-r5-audit`）从源码提交`6800bf2`执行`deploy-local.ps1 -Offline -FrozenRuntime`；主工作区`data/runtime`以只读方式共享，候选构建产物和配置留在隔离worktree。该源码包含W1-B3.3实现，但早于当前`main / 577924b`中的W1-H2.1源码改动，因此以下构建、doctor、身份、smoke和replay结果只适用于该较早候选，不证明当前工作区源码已部署。Release构建、普通资产catalog导入（13,665行）、banlist导入（203行，2026-10-01生效）和知识验证（12卡）成功；doctor对候选普通包和赛事配置均返回`ready/abi_ok/assets_ok=true`、`issues=[]`。doctor的`smoke_ok=null`仍表示doctor本身未运行决斗。
 - 使用候选CLI对普通及赛事资产分别运行`engine identity`，均`consistent=true`，`actual`脚本清单完整且无missing/mismatch/extra。普通CDB SHA-256为`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`，赛事CDB为`3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632`；两套资产core DLL相同，均为`446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9`。普通身份检查使用资产直达路径；经目录junction的配置被identity安全检查拒绝，未把该拒绝误记为资产不一致。
 - 普通包Rabbit smoke报告位于候选worktree的`target/p4r5-audit/ordinary-smoke.json`，SHA-256 `b889bcb0787f3e42db555d3962105751a3ca6d7caa0bb6ce4171354dd8f65a5c`；退出0，352节点、355次引擎调用、27,239ms、41条完成线路，top-3报告线路均`engine_verified`且报告内重放标记为true。运行因30秒time budget终止，不代表全搜索或最优性。候选包对该报告另行执行`combo replay`退出0，3/3线路`engine_verified`且`replay_verified=true`。回放输出写stdout，未保存独立输出文件。
 - 候选构建/运行仅用于本机部署诊断，未绑定或更新正式研究scope、账本、原生消费记录；独立replay引擎调用数未计量。赛事候选包尚未单独smoke/replay；未找到可比的独立研究账本，不能据此宣称账本等价。因此P4-R5仍开放。候选checkout及本机运行输出在干净checkout中不可用，须另行保留或重建；本轮没有将其迁入主工作区。
@@ -11,7 +1184,7 @@
 
 - `cargo test -p ygo-cli --offline --locked persistence_tests -- --test-threads=1`通过：23 passed、0 failed。新增覆盖报告终态提交失败后停派发并重开为unknown、报告文件发布不确定、提交后不确定的submit/cancel/fail、全部冻结资产角色/脚本路径漂移、已提交queued/running修订后的操作系统子进程强杀及恢复分类；既有测试继续覆盖提交前失败、同票据重复终态、链/报告核验与失败重试。
 - `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`及`cargo test --workspace --offline --locked -- --test-threads=1`均退出0。workspace测试保留标记的opt-in引擎与人工案例为ignored；未启动真实引擎或研究调用。
-- `py -m pytest -q -ra --tb=short`完整套件通过：**758 passed、9 skipped、208 subtests passed**，用时1731.49秒。原Tenki历史迁移用例已改为断言未认证的Curry源码迁移返回`protected_source_change_hash_mismatch`，并确认受保护runtime目录与ledger字节哈希不变；此用例不声称七份ledger已成功重审。原始输出位于忽略目录[`target/project-self-audit-20261031-python.log`](../target/project-self-audit-20261031-python.log)。
+- `py -m pytest -q -ra --tb=short`完整套件通过：**758 passed、9 skipped、208 subtests passed**，用时1731.49秒。原Tenki历史迁移用例已改为断言未认证的Curry源码迁移返回`protected_source_change_hash_mismatch`，并确认受保护runtime目录与ledger字节哈希不变；此用例不声称七份ledger已成功重审。原始输出位于忽略目录[`target/project-self-audit-20261031-python.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 在该次源码检查点之后，对现存`dist/ygo-local`分别运行普通配置`ygo.cmd engine doctor`和赛事配置`YGO_ENGINE_CONFIG=data/runtime/tournament-2026/engine.toml`下的`ygo.exe engine doctor`；均退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。另重新计算旧包CLI/worker SHA-256，与`build-hashes.json`中2项一致；`configs/engine.toml`的worker、core、catalog、scripts目录、script manifest及engine manifest 6个路径均存在。检查对象是2026-10-19旧包，未重建/切换部署，也没有最新源码包的smoke或P4-R5验收。
 - 提交后锁内内存状态应用只有互斥锁保护的赋值/移除操作，没有可返回错误分支；未虚构可注入错误。子进程强杀发生在已提交revision之后，不代表逐syscall/fsync强杀、断电、介质或网络文件系统验收。报告为合成合同数据，不认证来源或真实执行；HTTP、真实分析和claim后实际执行前的资产竞态验收仍开放。
 - 历史E1归档和pin未改变；当前保护测试证明不具备来源链时迁移失败关闭且不写入。按用户决定不迁移；Curry七份历史ledger成功重审仍开放，只有在未来建立可信来源链后才可处理。
@@ -62,10 +1235,10 @@
 
 ## 2026-10-31 合并、CI与普通包现场复核
 
-- PR #12在2026-10-31 03:51:46 UTC squash合并为`main / 8c7d4d50b9eee70e381ee3744fbde3cb70f8c9af`。修复临时目录竞争后的两次Windows `contracts`工作流均成功：workspace **374 passed、36 ignored、0 failed**；adapter examples **52 passed、1 ignored、0 failed**；Python **746 passed、21 skipped、0 failed**，样例卡校验2张通过。Python两次分别为1171.69秒和1157.36秒。CI日志副本保存在忽略目录[`target/project-self-audit-2026-10-31-ci-41064527582.log`](../target/project-self-audit-2026-10-31-ci-41064527582.log)和[`target/project-self-audit-2026-10-31-ci-41064537860.log`](../target/project-self-audit-2026-10-31-ci-41064537860.log)。
+- PR #12在2026-10-31 03:51:46 UTC squash合并为`main / 8c7d4d50b9eee70e381ee3744fbde3cb70f8c9af`。修复临时目录竞争后的两次Windows `contracts`工作流均成功：workspace **374 passed、36 ignored、0 failed**；adapter examples **52 passed、1 ignored、0 failed**；Python **746 passed、21 skipped、0 failed**，样例卡校验2张通过。Python两次分别为1171.69秒和1157.36秒。CI日志副本保存在忽略目录[`target/project-self-audit-2026-10-31-ci-41064527582.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`target/project-self-audit-2026-10-31-ci-41064537860.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 同日分别对本机普通包运行`dist/ygo-local/ygo.cmd engine doctor`、以该旧CLI读取赛事冻结配置`data/runtime/tournament-2026/engine.toml`运行`engine doctor`，均退出0，`ready/abi_ok/assets_ok=true`、`issues=[]`、`smoke_ok=null`。普通包CLI/worker SHA-256均与包内清单匹配，`engine.toml`六个主要路径存在。doctor通过worker ABI探针，不等于运行决斗smoke。
-- 普通包只读`catalog status`返回13,665条，snapshot `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`，源哈希`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`；`banlist status`返回203条，snapshot `banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`，生效日2026-10-01。原始输出分别见[`catalog-status.log`](../target/project-self-audit-2026-10-31-catalog-status.log)和[`banlist-status.log`](../target/project-self-audit-2026-10-31-banlist-status.log)。
-- 包内CLI/worker最后修改时间为2026-10-18 UTC（本地日期10月19日），旧包不含workbench命令；它仍绑定本机绝对路径。此次没有重建、部署、smoke或切换资产，P4-R5最新源码双资产干净部署验收仍开放。普通包与赛事配置doctor原始输出分别见[`dist-doctor.log`](../target/project-self-audit-2026-10-31-dist-doctor.log)和[`tournament-doctor.log`](../target/project-self-audit-2026-10-31-tournament-doctor.log)。
+- 普通包只读`catalog status`返回13,665条，snapshot `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`，源哈希`c49a077285e1d999f32056cb65303b75e311e859b4486c48f41772a193069225`；`banlist status`返回203条，snapshot `banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783`，生效日2026-10-01。原始输出分别见[`target/project-self-audit-2026-10-31-catalog-status.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`target/project-self-audit-2026-10-31-banlist-status.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- 包内CLI/worker最后修改时间为2026-10-18 UTC（本地日期10月19日），旧包不含workbench命令；它仍绑定本机绝对路径。此次没有重建、部署、smoke或切换资产，P4-R5最新源码双资产干净部署验收仍开放。普通包与赛事配置doctor原始输出分别见[`target/project-self-audit-2026-10-31-dist-doctor.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`target/project-self-audit-2026-10-31-tournament-doctor.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 本机默认Python完整套件此前为757 passed、9 skipped、1 failed，失败限于忽略目录内受保护Tenki历史pin；干净CI不包含该本机历史证据，因而该用例按条件跳过。两项结果作用范围不同，均按原样保留。
 
 ## 2026-10-31 CI触发去重
@@ -82,27 +1255,27 @@
 
 ## 2026-10-30 pytest默认收集范围修复与完整自检
 
-- 首次从仓库根目录运行`py -m pytest -ra --tb=short`时，pytest递归进入被Git忽略的`data/runtime`，在收集期产生512个`PermissionError: [WinError 5]`；这是本机受保护目录的收集错误，不是512个断言失败。原始日志见[`python-full-self-audit.log`](../target/w1b1-analysis-job-tests/python-full-self-audit.log)。
+- 首次从仓库根目录运行`py -m pytest -ra --tb=short`时，pytest递归进入被Git忽略的`data/runtime`，在收集期产生512个`PermissionError: [WinError 5]`；这是本机受保护目录的收集错误，不是512个断言失败。原始日志见[`target/w1b1-analysis-job-tests/python-full-self-audit.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 在`pyproject.toml`为pytest配置`testpaths = ["tests"]`，令默认收集限定在测试目录，保留既有target缓存位置。修复后`py -m pytest --collect-only -q`成功收集767项（1.92秒），不再遍历`data/runtime`。
-- 修复后完整默认Python套件运行**757 passed、9 skipped、1 failed**（1677.36秒）。唯一失败为`tests/test_native_tenki_placement_confirmation.py::TenkiPlacementConfirmationTests::test_seven_historical_ledgers_reaudit_read_only_without_runner`，因历史受保护源码校验返回`protected_source_change_hash_mismatch`；没有改动历史pin或证据。完整日志见[`python-full-after-testpaths.log`](../target/w1b1-analysis-job-tests/python-full-after-testpaths.log)。
+- 修复后完整默认Python套件运行**757 passed、9 skipped、1 failed**（1677.36秒）。唯一失败为`tests/test_native_tenki_placement_confirmation.py::TenkiPlacementConfirmationTests::test_seven_historical_ledgers_reaudit_read_only_without_runner`，因历史受保护源码校验返回`protected_source_change_hash_mismatch`；没有改动历史pin或证据。完整日志见[`target/w1b1-analysis-job-tests/python-full-after-testpaths.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 因此收集边界问题已修复；完整本机Python门禁仍有上述已知历史pin失败，不能记为全绿。9个跳过项维持各自本机资产、符号链接能力或显式opt-in条件。
 
 ## 2026-10-30 CI并行下工作台HTTP测试目录冲突
 
 - PR #12首轮Windows CI的`cargo test --workspace --locked`失败于`selected_snapshot_is_verified_and_card_results_disclose_name_source_and_translation_state`；`WorkbenchServer::start`报告`draft_store_already_locked`（Windows错误33）。格式与Clippy步骤通过；失败日志来自GitHub Actions run `41062674776`。
 - 该集成测试文件中的临时目录曾以进程ID和系统时间纳秒拼名；Windows时钟精度下，并行调用不能保证目录名唯一。改为进程内原子序号并以`create_dir`确认独占，碰到已存在名称就继续分配。
-- 修复后本机默认并行重复运行`cargo test -p ygo-cli --test workbench_http --offline --locked`五次，均为**4 passed、0 failed**。记录见[`workbench-http-unique-tempdirs.log`](../target/w1b1-analysis-job-tests/workbench-http-unique-tempdirs.log)。PR #12修复版CI后续全绿并已合并，最终结果见本文件顶部。
+- 修复后本机默认并行重复运行`cargo test -p ygo-cli --test workbench_http --offline --locked`五次，均为**4 passed、0 failed**。记录见[`target/w1b1-analysis-job-tests/workbench-http-unique-tempdirs.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。PR #12修复版CI后续全绿并已合并，最终结果见本文件顶部。
 
 ## 2026-10-30 W1-B1无路径任务合同与纯状态机
 
 - 实施从`main / d3bc212ccdc782d6988162f2030de00836df315c`开始，保留既有未提交路线与文档修改。新增`AnalysisJobRecordV1`、独立schema、严格JSON及纯状态转换；没有新增任务文件存储、HTTP、队列或界面。合同和状态/失败矩阵见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)，当前断点见[W1-B1交接](superpowers/plans/2026-10-30-w1b1-analysis-job-handoff.md)。
-- 先写聚焦测试：未实现模块导致编译红测，schema缺失导致Python红测。额外有限浮点bit样本真实复现`0x723f4114006c08c7`往返摘要不一致，启用serde_json `float_roundtrip`后通过；默认Python解析NaN的红测亦复现，已加严格常量与有限number检查。红测与最终日志保留于[`target/w1b1-analysis-job-tests`](../target/w1b1-analysis-job-tests/)，不把测试语料生成问题误记为生产根因。
+- 先写聚焦测试：未实现模块导致编译红测，schema缺失导致Python红测。额外有限浮点bit样本真实复现`0x723f4114006c08c7`往返摘要不一致，启用serde_json `float_roundtrip`后通过；默认Python解析NaN的红测亦复现，已加严格常量与有限number检查。红测与最终日志保留于[`target/w1b1-analysis-job-tests/`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，不把测试语料生成问题误记为生产根因。
 - 8项新增Rust测试覆盖真实W1-A合成冻结后的任务复制、三分区/重复/顺序、创建任务后更新草稿和移除snapshot、白名单无路径、两个摘要及runtime/request绑定、状态矩阵/revision/时间/终态、报告原因与空线路/top_k关系、递归字段与数字/重复键拒绝、非有限评分及固定种子4096个bit样本中的有限f64精确往返。与4项W1-A聚焦测试合计**12 passed、0 failed**。Rust和schema共用**121项语料（14正例、107负例）**，单独标注schema无法表达的摘要及跨字段关系，未把结构通过称作来源认证。
-- 独立只读子任务审阅源码、schema、语料、文档和日志，没有执行测试；发现的非有限JSON数字、top_k超额和错误revision负例隔离不足均已处理。摘要及限制见[`read-only-review.json`](../target/w1b1-analysis-job-tests/read-only-review.json)。最终语料复验为聚焦12 passed与schema 6 passed；新增fixture在真实任务创建后修改原草稿/移除快照，任务字节仍一致。
-- 实跑命令统一设置`CARGO_TARGET_DIR=target/w1b1-isolated`，所有编译命令显式使用同一`--target-dir target/w1b1-isolated --offline --locked`。`cargo test -p ygo-cli ... -- --test-threads=1`为**33 passed、0 ignored、0 failed**，包括已有同源/草稿/导入导出/卡表与状态接口回归。`cargo fmt --all -- --check`、workspace全目标Clippy `-D warnings`通过；最终串行workspace为**374 passed、36 ignored、0 failed**（91条结果记录）。初次Clippy只发现新增测试的默认值后字段重赋，已修复并复验。日志分别见[`ygo-cli-final.log`](../target/w1b1-analysis-job-tests/ygo-cli-final.log)、[`fmt-reviewed.log`](../target/w1b1-analysis-job-tests/fmt-reviewed.log)、[`clippy-reviewed.log`](../target/w1b1-analysis-job-tests/clippy-reviewed.log)和[`workspace-final.log`](../target/w1b1-analysis-job-tests/workspace-final.log)。36项忽略的名称及原始原因逐项保存在[`ignored-tests.json`](../target/w1b1-analysis-job-tests/ignored-tests.json)，均为既有opt-in研究/冻结资产或人工准备案例，未启用。
-- Python执行`py -m pytest tests/test_workbench_analysis_job_schema.py tests/test_schemas.py tests/test_coverage_language.py -q -ra`，**30 passed、2 skipped、4 subtests passed**；两项均为`test_schemas.py`显式opt-in的本机snapshots/reports或actual v2 report。相关日志为[`python-related-final.log`](../target/w1b1-analysis-job-tests/python-related-final.log)；最终121语料的schema专测再次为6 passed，见[`schema-after-review.log`](../target/w1b1-analysis-job-tests/schema-after-review.log)。没有运行Python全套，已知Tenki历史pin及其原失败记录不变，未将本批Rust通过解释为历史链通过。
+- 独立只读子任务审阅源码、schema、语料、文档和日志，没有执行测试；发现的非有限JSON数字、top_k超额和错误revision负例隔离不足均已处理。摘要及限制见[`target/w1b1-analysis-job-tests/read-only-review.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。最终语料复验为聚焦12 passed与schema 6 passed；新增fixture在真实任务创建后修改原草稿/移除快照，任务字节仍一致。
+- 实跑命令统一设置`CARGO_TARGET_DIR=target/w1b1-isolated`，所有编译命令显式使用同一`--target-dir target/w1b1-isolated --offline --locked`。`cargo test -p ygo-cli ... -- --test-threads=1`为**33 passed、0 ignored、0 failed**，包括已有同源/草稿/导入导出/卡表与状态接口回归。`cargo fmt --all -- --check`、workspace全目标Clippy `-D warnings`通过；最终串行workspace为**374 passed、36 ignored、0 failed**（91条结果记录）。初次Clippy只发现新增测试的默认值后字段重赋，已修复并复验。日志分别见[`target/w1b1-analysis-job-tests/ygo-cli-final.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`target/w1b1-analysis-job-tests/fmt-reviewed.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`target/w1b1-analysis-job-tests/clippy-reviewed.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`target/w1b1-analysis-job-tests/workspace-final.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。36项忽略的名称及原始原因逐项保存在[`target/w1b1-analysis-job-tests/ignored-tests.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，均为既有opt-in研究/冻结资产或人工准备案例，未启用。
+- Python执行`py -m pytest tests/test_workbench_analysis_job_schema.py tests/test_schemas.py tests/test_coverage_language.py -q -ra`，**30 passed、2 skipped、4 subtests passed**；两项均为`test_schemas.py`显式opt-in的本机snapshots/reports或actual v2 report。相关日志为[`target/w1b1-analysis-job-tests/python-related-final.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)；最终121语料的schema专测再次为6 passed，见[`target/w1b1-analysis-job-tests/schema-after-review.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。没有运行Python全套，已知Tenki历史pin及其原失败记录不变，未将本批Rust通过解释为历史链通过。
 - 所有新运行材料只写入忽略target。本批新增原生研究、真实runner、worker和引擎FFI调用均为0；未运行真实分析、doctor、真实资产opt-in或48手评估，不改部署、active资产，不提交或推送。认证消费子集40、政策预留7、规划47维持原义，旧confirmation及全部历史实际累计仍未知。W1-B1验收只关闭合同/状态核心关口；W1-B2队列、W1-B3持久化/报告发布/重启及W1-C真实本机分析待后续独立实施。
-- 收尾`git diff --check`通过；对7份相关Markdown检查本地文件目标，无缺失或访问失败，记录见[`document-links.json`](../target/w1b1-analysis-job-tests/document-links.json)。该检查只验证文件目标，不认证锚点语义或运行证据；最终源码/日志绑定见[`verification-summary.json`](../target/w1b1-analysis-job-tests/verification-summary.json)。
+- 收尾`git diff --check`通过；对7份相关Markdown检查本地文件目标，无缺失或访问失败，记录见[`target/w1b1-analysis-job-tests/document-links.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。该检查只验证文件目标，不认证锚点语义或运行证据；最终源码/日志绑定见[`target/w1b1-analysis-job-tests/verification-summary.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 
 ## 2026-10-30 W1-A后路线文档复核
 
@@ -116,11 +1289,11 @@
 - 先写跨站`DELETE /api/not-implemented`红测并运行旧门禁，测试失败；旧代码只检查POST/PUT，DELETE跨站请求到达路由并绕过Origin拒绝。本地Host、Bearer token及foreign/missing Origin的DELETE均加入回归。修复后同源未知DELETE进入路由并返回404，跨站/缺Origin返回403，异Host返回400；现有草稿POST/PUT和其他HTTP回归通过。
 - 新增内部Rust库能力`ygo_cli::workbench_analysis::freeze_analysis_input`。它以`DeckDraftStore::load_at_revision`在同一存储互斥锁内加载并核对revision，复制牌组数据；解析内容寻址catalog与生效banlist快照，校验OCG规则、完整牌组、五张起手、日期、禁限、搜索预算和catalog/CDB哈希，并通过现有`prepare`生成运行请求。冻结结果拥有请求、catalog及运行版本身份；资产在prepare前后重算，变化返回稳定错误码。该路径只读取合成资产及快照，不构造adapter、不启动worker、不创建任务/收费账本。
 - 合成单测覆盖合法冻结后修改草稿及移除默认snapshot、旧revision、39张非法牌组、手牌数量不足、无效日期、banlist未生效、预算越界、catalog/CDB不匹配、worker资产缺失和错误不泄露本机根路径。聚焦测试4 passed；`workbench_http` 4 passed；`ygo-cli` crate全套25 passed、0 ignored。
-- `cargo fmt --all -- --check`与workspace全目标Clippy `-D warnings`通过。串行workspace测试为**366 passed、36 ignored、0 failed**；36项均为仓库已有的显式冻结资产、原生研究、人工准备或本机报告opt-in，本批未运行这些项。日志在[`fmt.log`](../target/w1a-workbench-freeze-tests/fmt.log)、[`ygo-cli-tests.log`](../target/w1a-workbench-freeze-tests/ygo-cli-tests.log)、[`clippy.log`](../target/w1a-workbench-freeze-tests/clippy.log)和[`workspace-serial.log`](../target/w1a-workbench-freeze-tests/workspace-serial.log)。
+- `cargo fmt --all -- --check`与workspace全目标Clippy `-D warnings`通过。串行workspace测试为**366 passed、36 ignored、0 failed**；36项均为仓库已有的显式冻结资产、原生研究、人工准备或本机报告opt-in，本批未运行这些项。日志在[`target/w1a-workbench-freeze-tests/fmt.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`target/w1a-workbench-freeze-tests/ygo-cli-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`target/w1a-workbench-freeze-tests/clippy.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`target/w1a-workbench-freeze-tests/workspace-serial.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 全程使用`--offline --locked`及隔离`target/w1a-isolated`；本批新增原生研究、真实runner、worker、FFI和收费调用为0。未运行真实分析、浏览器、doctor、真实资产opt-in或部署。认证消费子集40、政策预留7、规划47不变；旧confirmation和全部历史实际累计仍未知，Tenki历史pin及已知Python历史失败记录保持原样。
 - 旧失败门禁和行为现状来自代码/测试，不构成Curry历史来源认证。W1-A只完成同源防护和分析输入冻结；W1-B任务HTTP/队列、W1-C真实本机分析仍开放。详见[W1-A交接](superpowers/plans/2026-10-30-w1a-input-freeze-handoff.md)。
 - 后续安全审阅发现`FrozenAnalysisInput`含`RunDuelRequest.engine`本机路径和完整catalog副本，原先可被serde无意序列化；已移除其serde实现，并将W1-B约束为独立的无路径任务存储合同。此防护是代码/API边界调整，不替代W1-B的HTTP响应和持久化回归。
-- 对移除serde实现后的最终工作区重新运行验证：`cargo fmt --all -- --check`通过；`cargo test -p ygo-cli --offline --locked --target-dir target/w1a-isolated -- --test-threads=1`为**25 passed、0 failed**；workspace全目标Clippy `-D warnings`通过；`cargo test --workspace --offline --locked --target-dir target/w1a-isolated -- --test-threads=1`为**366 passed、36 ignored、0 failed**（91条test-result记录）。终端输出未保存到仓库；workspace复跑汇总日志在忽略目录[`workspace-serial-audit.log`](../target/w1a-isolated/workspace-serial-audit.log)。
+- 对移除serde实现后的最终工作区重新运行验证：`cargo fmt --all -- --check`通过；`cargo test -p ygo-cli --offline --locked --target-dir target/w1a-isolated -- --test-threads=1`为**25 passed、0 failed**；workspace全目标Clippy `-D warnings`通过；`cargo test --workspace --offline --locked --target-dir target/w1a-isolated -- --test-threads=1`为**366 passed、36 ignored、0 failed**（91条test-result记录）。终端输出未保存到仓库；workspace复跑汇总日志在忽略目录[`target/w1a-isolated/workspace-serial-audit.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 
 ## 2026-10-30 W1设计完成后的路线文档核对
 
@@ -151,7 +1324,7 @@
 
 - 只读代码审阅发现初始`QueryWitness`在独立重放前即可影响语义选择；公开入口现在要求不可伪造的`AuditedQueries`能力，并核对其绑定的初始请求、收费结果和完整见证序列。未匹配时在创建执行检查点前拒绝。合成循环测试通过仅供`cfg(test)`使用的内部分支，不开放生产调用。
 - 只读代码审阅另发现终局查询审计预留与内/外检查点分步发布会留下不可恢复窗口。预留改为在外层查询审计状态可恢复后创建；若预留已写入但进度检查点发布失败，重开只接受与查询游标完全匹配的唯一预留，并将账本快照同步后继续。故障注入回归覆盖预留后发布失败，以及Witness收费完成后外层发布失败；重开核验唯一尾调用并复用结果，不重复收费。
-- 最终验证（基于已整合的`origin/main`提交）：`cargo fmt --all -- --check`通过；workspace全目标Clippy `-D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**362 passed、36 ignored、0 failed**（91条test-result摘要，日志见[`workspace-tests-20261029.log`](../target/p4-r1b-followup/logs/workspace-tests-20261029.log)）；Python C1/schema聚焦套件**24 passed、2 skipped**。最终提交涉及的15份Markdown共416个本地链接目标均存在；`git diff --check`通过。清理5个确认由失败/中断测试遗留的`.tenki-*`临时目录，未删改历史运行证据。跳过项仍是两个显式本地证据opt-in。未重跑完整Python套件；已知Tenki历史`codec.rs`保护哈希失败和原pin保持不变。
+- 最终验证（基于已整合的`origin/main`提交）：`cargo fmt --all -- --check`通过；workspace全目标Clippy `-D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**362 passed、36 ignored、0 failed**（91条test-result摘要，日志见[`target/p4-r1b-followup/logs/workspace-tests-20261029.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)）；Python C1/schema聚焦套件**24 passed、2 skipped**。最终提交涉及的15份Markdown共416个本地链接目标均存在；`git diff --check`通过。清理5个确认由失败/中断测试遗留的`.tenki-*`临时目录，未删改历史运行证据。跳过项仍是两个显式本地证据opt-in。未重跑完整Python套件；已知Tenki历史`codec.rs`保护哈希失败和原pin保持不变。
 - 此补检不认证真实进程崩溃/文件系统故障矩阵、真实OCG调用或独立原生重放；原生/runner/worker/FFI调用仍为0。原始费用及未知累计沿用TASKS顶部会计口径。
 
 ## 2026-10-29 普通部署包现场只读复核
@@ -165,14 +1338,14 @@
 
 - PR #7的Windows Actions完整Python套件报告**739 passed、21 skipped、1 failed**；失败用例是`LanguageAuditTests.test_language_review_detects_input_hash_drift_and_never_overwrites_report`。它在CI干净checkout中访问被Git忽略的冻结`data/runtime/baseline-2026-10-19/data`输入，故先报`frozen_language_input_missing_or_linked`，没有运行到哈希漂移断言。不是历史Tenki pin失败，也没有证据表明生产逻辑不一致。[失败run](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/40732011021)
 - 后续修复将该单测改为39卡合成发行样本、临时清单/记录/卡库和受控catalog loader；只验证扫描中哈希漂移仍被拒绝，不依赖忽略目录、不改生产代码或既有source pin。目标回归和schema聚焦测试本机通过（8 passed、2 skipped）。PR #8修复提交`84650f70f7447f4b2282a69447487b34a5a7aaeb`的干净Windows Actions通过：Rust格式、Clippy、workspace测试、Python套件及样例卡数据验证均成功；Python为**740 passed、21 skipped、0 failed（761项）**，耗时1169.02秒。[PR #8](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/pull/8)、[成功run](https://github.com/AscAed/Yu-Gi-Oh-_AIBot/actions/runs/40736563854)。
-- 另一次本机全量Python运行在修复前以28%进度主动停止，未完成，不能作为全套通过或失败统计；保留输出于本机忽略日志[`python-tests-20261029-full.log`](../target/p4-r1b-followup/logs/python-tests-20261029-full.log)。
+- 另一次本机全量Python运行在修复前以28%进度主动停止，未完成，不能作为全套通过或失败统计；保留输出于本机忽略日志[`target/p4-r1b-followup/logs/python-tests-20261029-full.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 
 ## 2026-10-28 P4-R1b多动作恢复等价与中断门禁
 
 - 先以红测发现两处恢复差异：已完成尾调用被恢复后没有补回与连续执行相同的动作证据；推进外层语义后，内层A3检查点没有同步实例映射、已用选择和预测，导致下一次续跑因快照不匹配而拒绝。修复后正常完成和恢复完成共用动作证据校验/记录逻辑；外层语义推进在发布外层游标前同步保存内层检查点。请求、计划、用途、收据和预算校验未放宽。
 - 新增非空两动作合成对照：第一步使用仓库trace夹具中的XYZ procedure并跨越连续提示，第二步按公开菜单执行合成normal summon，随后进入End Phase和query audit。每个语义Execution调用后均释放journal并恢复；连续与恢复结果的动作证据（11项）、预测（2项）、实例映射、已用选择、13份query、前缀、reservation及账本收费序列相同。账本为26次完成消费：Execution 12次、Witness 14次，unknown 0；adapter调用26次。引擎结果来自合成adapter，不能视为真实规则或原生重放证据。End Phase/query audit跨恢复另由`resumable_first_turn_loop_persists_end_phase_and_query_audit_progress`覆盖，不把该多动作测试中的连续query审计表述为逐审计调用暂停对照。
 - 仅测试编译的故障钩子验证语义快照发布、外层调用意图发布失败均发生在收费前：继续adapter调用0，既有消费保持1；恢复后不凭空推进。另在账本已有完整执行结果、进度检查点尚未发布时中断，恢复从账本认证并复用尾调用；adapter总调用仍为1、消费为2，无重复收费。未决尾部的未知消费阻断由A3回归覆盖。新增竞争用例在外层只读检查释放后、内层恢复前用另一个真实`CallJournal`写入完成的合成记录；恢复识别到未绑定调用并拒绝继续。另验证持有writer时恢复拒绝。故障钩子没有进入非测试构建。
-- 最终验证：`cargo fmt --all -- --check`通过；`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**70 passed、10 ignored、0 failed**；`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**145 passed、2 ignored、0 failed**；workspace全目标Clippy `-D warnings`通过；workspace默认串行测试为**362 passed、36 ignored、0 failed**（91条结果摘要）。忽略项是既有冻结资产/真实引擎/原生收费研究、手工基准及明确opt-in测试；逐项原因见[`workspace-tests-final.log`](../target/p4-r1b-followup/logs/workspace-tests-final.log)。日志另见[`planner-tests-final.log`](../target/p4-r1b-followup/logs/planner-tests-final.log)、[`engine-adapter-tests.log`](../target/p4-r1b-followup/logs/engine-adapter-tests.log)和[`workspace-clippy-final.log`](../target/p4-r1b-followup/logs/workspace-clippy-final.log)。schema回归`py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`为**1 passed、8 deselected**；完整Python套件未重跑，C1记录的Tenki历史`codec.rs`保护哈希失败及原pin保留。
+- 最终验证：`cargo fmt --all -- --check`通过；`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**70 passed、10 ignored、0 failed**；`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b-followup -- --test-threads=1`为**145 passed、2 ignored、0 failed**；workspace全目标Clippy `-D warnings`通过；workspace默认串行测试为**362 passed、36 ignored、0 failed**（91条结果摘要）。忽略项是既有冻结资产/真实引擎/原生收费研究、手工基准及明确opt-in测试；逐项原因见[`target/p4-r1b-followup/logs/workspace-tests-final.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。日志另见[`target/p4-r1b-followup/logs/planner-tests-final.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`target/p4-r1b-followup/logs/engine-adapter-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`target/p4-r1b-followup/logs/workspace-clippy-final.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。schema回归`py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`为**1 passed、8 deselected**；完整Python套件未重跑，C1记录的Tenki历史`codec.rs`保护哈希失败及原pin保留。
 - 本批新增原生研究、真实runner、worker和FFI调用为**0**；没有创建研究窗口或收费账本。认证消费子集40、政策预留7、规划47不变；旧confirmation与全部历史实际累计仍未知。仍未认证真实OCG进程暂停/终止/重开、操作系统级文件系统崩溃矩阵及独立原生重放。
 
 # 2026-10-28 项目现状与文档路线核对
@@ -188,7 +1361,7 @@
 
 - 在A3单次调用检查点外新增`ResumablePartialExecutionV1`完整循环游标及`first-turn-resumable-execution-v1` schema。显式API从已完成并收费的初始Execution调用开始；逐步继续复用既有动作绑定、预测、资源比较、实例映射和End Phase规则。查询审计逐次独立记账。旧`execute_partial_v2`和报告合同未变。
 - 先添加并观察到缺失API的红测。聚焦测试贯通合成End Phase调用、QueryWitness前缀审计、终端根审计、释放/重开journal、消费与reservation边界，以及外层语义步骤篡改时收费前拒绝。完整验证中修正了意图构造与语义快照同步顺序；再次运行后通过。该用例不覆盖非空语义计划的多动作连续提示暂停/重开等价，因此该项仍是离线测试缺口。
-- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/p4-r1b -- -D warnings`通过。`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试及66个集成测试通过，10个既有opt-in测试忽略。`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试及91个集成测试通过，2个既有资产opt-in测试忽略。workspace串行总检`cargo test --workspace --offline --locked --target-dir target/p4-r1b -- --test-threads=1`为**358 passed、36 ignored、0 failed**（91条test-result记录）。忽略项为既有本机冻结资产/引擎、原生收费研究、手工基准及明确opt-in写入测试。日志位于[`target/p4-r1b/logs`](../target/p4-r1b/logs/)。
+- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/p4-r1b -- -D warnings`通过。`cargo test -p ygo-planner --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：22个单元测试及66个集成测试通过，10个既有opt-in测试忽略。`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/p4-r1b -- --test-threads=1`通过：54个单元测试及91个集成测试通过，2个既有资产opt-in测试忽略。workspace串行总检`cargo test --workspace --offline --locked --target-dir target/p4-r1b -- --test-threads=1`为**358 passed、36 ignored、0 failed**（91条test-result记录）。忽略项为既有本机冻结资产/引擎、原生收费研究、手工基准及明确opt-in写入测试。日志位于[`target/p4-r1b/logs/`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - Python schema回归`PYTHONPATH=python py -m pytest tests/test_schemas.py -k resumable_execution_loop -ra --tb=short`为**1 passed、8 deselected**；全Python套件未重跑，因为C1记录的Tenki旧保护哈希失败仍为已知基线，锚点未修改。无真实进程、runner、worker、FFI、doctor或可写研究账本调用；新增原生研究消费为**0**。会计保持认证子集40、政策预留7、规划47，全部历史实际累计未知。
 - 本批关闭的是显式语义执行恢复API与End Phase/查询审计合成路径的离线实现关口；不宣称连续语义多动作暂停/重开等价、真实进程崩溃恢复、外部并发进程竞争或独立原生重放通过。详见[执行恢复合同](EXECUTION_RECOVERY.md)及[P4-R1b交接](superpowers/plans/2026-10-28-p4-r1b-resumable-execution-loop-handoff.md)。
 
@@ -197,16 +1370,16 @@
 - 新增`ExecutionCheckpointV1`与`ExecutionIntentV1`，通过`ygo_planner::first_turn`提供起始检查点、单步推进、语义快照保存和恢复接口。状态绑定初始请求、plan、catalog、知识包、goal及运行时版本，并保存阶段/步骤、已认证实际前缀与资源快照、实例映射、选择、预测、QueryWitness、待处理动作和账本。该接口从已完成且已收费的初始Execution调用开始；原同步`execute_partial_v2`接口及报告合同保持不变，真实执行循环尚未改接新接口。
 - 收费续步前先保存不可变意图和待处理检查点。恢复先用`inspect_existing`验证账本、checkpoint、预算、结果和收费序列，再释放只读句柄，以新增`open_existing_strict`独占打开既有账本；strict模式拒绝撕裂/空/损坏尾记录，不创建或修复文件。独占重开后再次比较统计、预留令牌映射、收费序列、进度快照和意图。已完成的唯一尾部调用只复用认证结果；未决/未知消费拒绝推进且不退款、不自动重试。`actual_resources`必须与已认证实际前缀checkpoint一致。序列化状态不产生`PartialExecutionV2`运行时凭证。
 - planner单元测试：**21 passed、0 failed**；包含连续运行与两次暂停重开的收费序列、实际前缀/资源、QueryWitness、预测和实例映射对照，计划/请求绑定拒绝、预算耗尽时adapter调用0、已完成尾调用复用、未决收费阻断及重复零调用恢复。engine-adapter完整测试在workspace总检内执行：该crate54个单元测试、journal19项和相关集成测试均通过；strict重开对损坏账本拒绝且字节不变。
-- 最终`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/a3-resumable -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/a3-resumable -- --test-threads=1`共**357 passed、36 ignored、0 failed**（91条test-result摘要）。忽略项是既有冻结引擎/本机资产、原生研究、手工基准和明确opt-in写入用例；逐项说明保留在[`workspace-test.log`](../target/a3-resumable/logs/workspace-test.log)。Python schema回归`py -m pytest tests/test_schemas.py -ra --tb=short`为**6 passed、2 skipped**；跳过项为本机snapshot/report opt-in和真实v2 report opt-in。schema JSON语法检查通过。日志与汇总位于[`target/a3-resumable/logs`](../target/a3-resumable/logs/)。
+- 最终`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/a3-resumable -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/a3-resumable -- --test-threads=1`共**357 passed、36 ignored、0 failed**（91条test-result摘要）。忽略项是既有冻结引擎/本机资产、原生研究、手工基准和明确opt-in写入用例；逐项说明保留在[`workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。Python schema回归`py -m pytest tests/test_schemas.py -ra --tb=short`为**6 passed、2 skipped**；跳过项为本机snapshot/report opt-in和真实v2 report opt-in。schema JSON语法检查通过。日志与汇总位于[`target/a3-resumable/logs/`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 本批新增原生研究/runner/worker/FFI调用为**0**。未运行doctor、真实资产opt-in或48手评估。认证消费子集40、政策预留7、规划47不变，旧confirmation与全部历史实际累计仍未知。C1已记录的Tenki保护哈希全Python失败未在本批重跑或修改。此处只关闭A3离线实现与合成恢复关口；真实进程暂停/重开、正式循环接入及独立重放仍未认证。详情见[执行恢复合同](EXECUTION_RECOVERY.md)和[A3交接](superpowers/plans/2026-10-28-a3-execution-recovery-handoff.md)。
 
 ## 2026-10-28 C1牌组中文字段离线核验
 
 - 冻结输入是39个唯一发行样本卡号、来源清单、语言记录及两份只读SQLite CDB。报告路径为`data/runtime/c1-language-review-offline-2026-10-28/language-review.json`，大小136,708字节；SHA-256及逐项来源见[LANGUAGE_REVIEW](LANGUAGE_REVIEW.md)。审计在读取前后重算全部输入哈希，未启动runner、worker、FFI或可写研究账本。
 - 报告为39卡、2来源、`qualified=false`。zh-CN `zh-Hans`候选名称/正文各39项；zh-SC类别保持`und`，候选名称/正文各38项、各缺失1项；两来源的alias及archetypes映射均未知各39项；同源候选名冲突0。旧语言审计另有197条未解决项。这些数字描述字段覆盖，不证明翻译正确或来源获授权。
-- 新schema正反例和合成回归：最终聚焦命令`PYTHONPATH=python py -m pytest tests/test_coverage_language.py tests/test_schemas.py -ra --tb=short`为**22 passed、2 skipped、0 failed**。跳过项是既有本地snapshot/report及真实v2报告opt-in。显式枚举`tests/test_*.py`运行全套后为**749 passed、9 skipped、1 failed**（759项，1840.50秒）；唯一失败是既有`test_seven_historical_ledgers_reaudit_read_only_without_runner`的旧Tenki保护锚点：它预期`crates/ygo-engine-adapter/src/codec.rs`为`e8f97eef…aad133`，当前字节为`62339e56…577e68`，错误`protected_source_change_hash_mismatch`。本批未改该文件，该路径`git diff`为空；未放宽历史保护检查。9项跳过原因及完整输出见[`python-full.log`](../target/c1-language-review-tests/python-full.log)。
-- 工作台增加只读`GET /api/language-status?ids=...`，只返回卡号、固定来源ID、字段状态/原因及候选哈希；不返回候选名称或正文。候选状态缺少哈希的红测失败后，加载器拒绝不完整/损坏材料并降级为未核验。`workbench_http`为**4 passed**，红测日志见[`status-loader-red.log`](../target/c1-language-review-tests/status-loader-red.log)；本机隔离服务HTTP验收确认固定39卡报告可读、样本外ID为unknown、无catalog时仍未核验，并创建、更新、重新读取含重复卡号的草稿成功，摘要在[`http-smoke-summary.json`](../target/c1-language-review-tests/http-smoke-summary.json)。首次尝试连接用户原生浏览器时，Computer Use授权超时，没有执行原生浏览器动作；随后改用隔离的Codex应用内浏览器完成真实界面验收：打开已保存草稿、显示“候选/缺失/未知”与`zh-SC`语言类别未确认、在无catalog状态继续编辑、保存并刷新列表后重新打开，结果摘要见[`browser-smoke-summary.json`](../target/c1-language-review-tests/browser-smoke-summary.json)。候选正文没有进入响应或界面。集成日志见[`workbench-http.log`](../target/c1-language-review-tests/workbench-http.log)。
-- Rust格式`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/c1-language-review -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/c1-language-review -- --test-threads=1`为**353 passed、36 ignored、0 failed**，91条测试结果记录。被忽略项仍是既有本机资产、研究、基准及显式opt-in测试；日志见[`rust-workspace.log`](../target/c1-language-review-tests/rust-workspace.log)、[`rust-clippy.log`](../target/c1-language-review-tests/rust-clippy.log)及[`rust-fmt-check.log`](../target/c1-language-review-tests/rust-fmt-check.log)。
+- 新schema正反例和合成回归：最终聚焦命令`PYTHONPATH=python py -m pytest tests/test_coverage_language.py tests/test_schemas.py -ra --tb=short`为**22 passed、2 skipped、0 failed**。跳过项是既有本地snapshot/report及真实v2报告opt-in。显式枚举`tests/test_*.py`运行全套后为**749 passed、9 skipped、1 failed**（759项，1840.50秒）；唯一失败是既有`test_seven_historical_ledgers_reaudit_read_only_without_runner`的旧Tenki保护锚点：它预期`crates/ygo-engine-adapter/src/codec.rs`为`e8f97eef…aad133`，当前字节为`62339e56…577e68`，错误`protected_source_change_hash_mismatch`。本批未改该文件，该路径`git diff`为空；未放宽历史保护检查。9项跳过原因及完整输出见[`python-full.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- 工作台增加只读`GET /api/language-status?ids=...`，只返回卡号、固定来源ID、字段状态/原因及候选哈希；不返回候选名称或正文。候选状态缺少哈希的红测失败后，加载器拒绝不完整/损坏材料并降级为未核验。`workbench_http`为**4 passed**，红测日志见[`status-loader-red.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)；本机隔离服务HTTP验收确认固定39卡报告可读、样本外ID为unknown、无catalog时仍未核验，并创建、更新、重新读取含重复卡号的草稿成功，摘要在[`http-smoke-summary.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。首次尝试连接用户原生浏览器时，Computer Use授权超时，没有执行原生浏览器动作；随后改用隔离的Codex应用内浏览器完成真实界面验收：打开已保存草稿、显示“候选/缺失/未知”与`zh-SC`语言类别未确认、在无catalog状态继续编辑、保存并刷新列表后重新打开，结果摘要见[`browser-smoke-summary.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。候选正文没有进入响应或界面。集成日志见[`workbench-http.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- Rust格式`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/c1-language-review -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/c1-language-review -- --test-threads=1`为**353 passed、36 ignored、0 failed**，91条测试结果记录。被忽略项仍是既有本机资产、研究、基准及显式opt-in测试；日志见[`rust-workspace.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`rust-clippy.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)及[`rust-fmt-check.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 本批新增原生研究/runner/worker/FFI调用0；认证消费子集40、政策预留7、规划47不变；旧confirmation与全部历史实际累计仍未知。语义审阅、zh-SC类别、使用依据、再分发资格和正式中文搜索未通过。Rust隔离CLI使用本机系统分配端口，仅写入`target/c1-workbench-browser/`并已停止；无部署变更。
 
 ## 2026-10-30 E1 Tenki历史保护锚点只读诊断
@@ -221,9 +1394,9 @@
 
 - 工作台实现复用B1 `DeckDocumentV1`与安全草稿存储。草稿存储集成测试4 passed，覆盖三分区顺序/重复卡、随机标识独占创建、同revision并发更新仅一方成功、过期revision拒绝及文件不变；共享发布器故障注入确认替换失败后原稿可恢复。CLI草稿集成测试3 passed，现有命令回归5 passed；HTTP集成3 passed，覆盖loopback Host、mutation Origin、Bearer令牌、1MiB请求体限制、草稿读写/409冲突、YDK导入导出及经过`SnapshotStore`验证的本地catalog名称来源。`ygo-domain`三分区草稿相关测试5 passed。
 - 真实本机浏览器连接隔离服务，完成空草稿创建、添加重复主卡及额外/Side卡、保存、刷新后重开；截图显示卡号顺序/数量、重复实例和“名称未核验”。浏览器自动下载事件未在工具期限内返回；文件选择器上传受当前Chrome扩展的本地文件访问限制，未更改浏览器权限。故浏览器中人工执行了编辑/保存/重开，导入和导出由HTTP集成测试验证；没有写入用户下载目录。合成草稿位于忽略的`target/b2-workbench-browser-final/`。
-- 接续自审发现上述三组集成测试的临时根目录未自动删除；现为`deck_draft`、`workbench_http`和`deck_draft_store`测试夹具添加RAII清理。格式检查与全目标Clippy重跑通过；相关测试重跑分别为3、3、4 passed，日志为[`temp-guard-tests.log`](../target/workspace-audit-current-2026-10-28/temp-guard-tests.log)。随后审查并移除此前测试遗留的102个专用临时目录、290个JSON/YDK/锁文件；路径清单均位于系统临时目录，内容无reparse点且只有测试生成类型，未发现运行中的相关测试进程。核验前内容哈希及删除后计数见[`temp-test-cleanup-before.json`](../target/workspace-audit-current-2026-10-28/temp-test-cleanup-before.json)和[`temp-test-cleanup-result.json`](../target/workspace-audit-current-2026-10-28/temp-test-cleanup-result.json)；重跑后没有产生新的匹配目录。
+- 接续自审发现上述三组集成测试的临时根目录未自动删除；现为`deck_draft`、`workbench_http`和`deck_draft_store`测试夹具添加RAII清理。格式检查与全目标Clippy重跑通过；相关测试重跑分别为3、3、4 passed，日志为[`temp-guard-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。随后审查并移除此前测试遗留的102个专用临时目录、290个JSON/YDK/锁文件；路径清单均位于系统临时目录，内容无reparse点且只有测试生成类型，未发现运行中的相关测试进程。核验前内容哈希及删除后计数见[`temp-test-cleanup-before.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`temp-test-cleanup-result.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)；重跑后没有产生新的匹配目录。
 - `PYTHONPATH=python py -m pytest tests/test_schemas.py -ra`：**4 passed、2 skipped、0 failed**。两个既有跳过项为本机snapshot/report opt-in与真实v2 report opt-in。
-- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/b2-workbench-cargo -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/b2-workbench-cargo -- --test-threads=1`：**352 passed、36 ignored、0 failed**，91条test-result记录。36项是需要本机冻结引擎/资产、原生收费研究/报告、人工基准/评估或明确写案例opt-in的既有测试，逐项原因保留在[`workspace-serial.log`](../target/b2-workbench-tests/workspace-serial.log)。格式、Clippy及完整测试日志分别见[`fmt.log`](../target/b2-workbench-tests/fmt.log)、[`clippy.log`](../target/b2-workbench-tests/clippy.log)和该workspace日志。
+- `cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked --target-dir target/b2-workbench-cargo -- -D warnings`通过；串行`cargo test --workspace --offline --locked --target-dir target/b2-workbench-cargo -- --test-threads=1`：**352 passed、36 ignored、0 failed**，91条test-result记录。36项是需要本机冻结引擎/资产、原生收费研究/报告、人工基准/评估或明确写案例opt-in的既有测试，逐项原因保留在[`workspace-serial.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。格式、Clippy及完整测试日志分别见[`target/b2-workbench-tests/fmt.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`clippy.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和该workspace日志。
 - 新增HTTP库的代理获取尝试因本机TLS客户端凭据错误`SEC_E_NO_CREDENTIALS`失败；没有引入未缓存的外部依赖。服务因此使用Rust标准库的固定HTTP/1.1 loopback实现并实施请求/连接限制。该代码需要持续审阅；本次不宣称其等同于成熟HTTP库的协议覆盖。
 - 本批新增原生研究、runner、worker及FFI调用为**0**。未运行doctor、真实资产opt-in、48手评估或正式部署；认证消费子集40、政策预留7、规划47，以及旧confirmation和全部历史实际累计未知均保持原口径。未提交或推送Git，A1/B1原未提交工作继续保留。
 
@@ -232,16 +1405,16 @@
 ## 2026-10-28 工作区续接自审
 
 - 自审基线为PR #2合并后的`main`（`6e5fade`）；该PR的两个`contracts`检查现已成功。开始自审时工作台与A1/B1源改动尚未提交；本批未构建或部署新的运行包。
-- 当前源码全目标格式检查与Clippy通过；完整串行workspace测试为**352 passed、36 ignored、0 failed**。随后测试夹具增加自动清理，仅重跑受影响的草稿CLI、工作台HTTP和草稿存储三组集成测试，分别3、3、4 passed；格式检查与Clippy也在该修改后复验。完整套件日志为[`workspace-tests.log`](../target/workspace-audit-current-2026-10-28/workspace-tests.log)，修改后日志为[`fmt-after-temp-cleanup.log`](../target/workspace-audit-current-2026-10-28/fmt-after-temp-cleanup.log)、[`clippy-after-temp-cleanup.log`](../target/workspace-audit-current-2026-10-28/clippy-after-temp-cleanup.log)和[`temp-guard-tests.log`](../target/workspace-audit-current-2026-10-28/temp-guard-tests.log)。
-- 当前Python schema文件测试为**4 passed、2 skipped、0 failed**，跳过项继续是本机snapshot/report与真实v2 report opt-in，日志见[`python-schema.log`](../target/workspace-audit-current-2026-10-28/python-schema.log)。Markdown检查覆盖107篇文档、112个片段引用；最终相对链接数和检查结果见[`doc-link-check-current-20261028-verified-final.json`](../target/workspace-audit-current-2026-10-28/doc-link-check-current-20261028-verified-final.json)。
+- 当前源码全目标格式检查与Clippy通过；完整串行workspace测试为**352 passed、36 ignored、0 failed**。随后测试夹具增加自动清理，仅重跑受影响的草稿CLI、工作台HTTP和草稿存储三组集成测试，分别3、3、4 passed；格式检查与Clippy也在该修改后复验。完整套件日志为[`workspace-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，修改后日志为[`target/workspace-audit-current-2026-10-28/fmt-after-temp-cleanup.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`clippy-after-temp-cleanup.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`temp-guard-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- 当前Python schema文件测试为**4 passed、2 skipped、0 failed**，跳过项继续是本机snapshot/report与真实v2 report opt-in，日志见[`python-schema.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。Markdown检查覆盖107篇文档、112个片段引用；最终相对链接数和检查结果见[`doc-link-check-current-20261028-verified-final.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 目录和秘密特征扫描没有发现可提交二进制、敏感密钥或非测试用的真实绝对路径；`D:\private\...`等只出现在故障信息的负例测试中。`.gitignore`已验证忽略工作台默认草稿目录、`target/`、`dist/`、本机引擎配置和`.tenki-*`临时目录。
 - 本批没有新增原生研究、runner、worker、FFI调用；未运行`doctor`、真实资产opt-in、手工基准或最新源码部署。B2浏览器下载事件和文件选择上传仍有上一节记录的工具环境限制，HTTP导入/导出由集成测试覆盖。
 
 ## 2026-10-28 A1首次失败诊断与B1牌组草稿基础
 
-- A1先添加两个合成账本回归并观察到修复前失败：v2验证器将已扣费的结果级失败误归为已完成初始状态。修复后`cargo test -p ygo-planner --lib --offline --locked --target-dir target/a1-b1-implementation -- --test-threads=1`为**17 passed、0 failed、0 ignored**；包括`DuelResult.error`和`QueryWitness::capture`失败两例及篡改拒绝。两例均认证已扣费结果，但没有可信查询、成功资格、receipt或可恢复前缀。日志见[`planner-tests.log`](../target/a1-b1-implementation/planner-tests.log)。
-- B1聚焦Rust：`ygo-domain`为**12 passed**；`ygo-cli`为**17 passed**，覆盖合同、三分区编辑、YDK/JSON、独占创建/显式替换、CLI命令及写失败时保留原文件。两个新集成入口通过真实CLI执行。Cargo全量覆盖日志见[`workspace-test.log`](../target/a1-b1-implementation/workspace-test.log)。
-- 新schema测试`PYTHONPATH=python py -m pytest tests/test_schemas.py -ra`为**4 passed、2 skipped、0 failed**。跳过的是本机snapshot/report和真实v2 report opt-in；明细及原始输出见[`python-schema-tests.log`](../target/a1-b1-implementation/python-schema-tests.log)。
+- A1先添加两个合成账本回归并观察到修复前失败：v2验证器将已扣费的结果级失败误归为已完成初始状态。修复后`cargo test -p ygo-planner --lib --offline --locked --target-dir target/a1-b1-implementation -- --test-threads=1`为**17 passed、0 failed、0 ignored**；包括`DuelResult.error`和`QueryWitness::capture`失败两例及篡改拒绝。两例均认证已扣费结果，但没有可信查询、成功资格、receipt或可恢复前缀。日志见[`planner-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- B1聚焦Rust：`ygo-domain`为**12 passed**；`ygo-cli`为**17 passed**，覆盖合同、三分区编辑、YDK/JSON、独占创建/显式替换、CLI命令及写失败时保留原文件。两个新集成入口通过真实CLI执行。Cargo全量覆盖日志见[`workspace-test.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- 新schema测试`PYTHONPATH=python py -m pytest tests/test_schemas.py -ra`为**4 passed、2 skipped、0 failed**。跳过的是本机snapshot/report和真实v2 report opt-in；明细及原始输出见[`python-schema-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 复验`cargo fmt --all -- --check`与`cargo clippy --workspace --all-targets --offline --locked --target-dir target/a1-b1-implementation -- -D warnings`均通过。默认串行workspace命令`cargo test --workspace --offline --locked --target-dir target/a1-b1-implementation -- --test-threads=1`为**344 passed、36 ignored、0 failed**（89个测试目标/文档测试结果行）。36项均为显式opt-in：需要冻结引擎/CDB/脚本、收费原生研究或查询、人工基准/16+32手、已保存本机报告/历史账本，或`YGO_WRITE_DEPENDENCY_CASES=1`的案例写入；逐项原始原因在workspace日志中。没有运行doctor、真实资产opt-in或48手评估。
 - CLI合同增加了`schemas/deck-document-v1.schema.json`正反例；JSON重复键、非u32/零卡号及错误版本被拒绝。草稿没指定本地catalog时明确返回未核验；指定时只报告未知卡号。分析和旧`Deck`请求合同未改变。
 - 本批新增原生研究、runner、worker及FFI调用均为**0**；不创建scope/窗口/账本，不切换部署，不提交或推送Git。认证历史子集40、政策预留7、规划47仍按原口径；旧confirmation及全部历史实际累计消费仍未知。
@@ -250,8 +1423,8 @@
 
 ## 2026-10-28 接续验证
 
-- 在目录标识为`codex-ci-current-review312-20261027`的隔离干净源码副本执行Python 3.12.13顶层测试：**729 passed、24 skipped、0 failed**，1644.81秒，进程退出0；随后`python -m ygo_data.cli validate --input tests/fixtures/cards.sample.json`验证2张卡并退出0。测试输出副本为[`ci-current-review-python312.log`](../target/workspace-audit-2026-10-27-codex/ci-current-review-python312.log)，源码清单SHA-256 `9e67e38ce79935bd8c7ff8d6a773b6bcffa253264034f14be277672fdb2196eb`，共551个Git可见源文件。测试使用`PYTHONPATH=python`。与当前Git可见文件逐项比对时，成员数和路径均一致，快照后内容变化限于`docs/TESTING.md`、`docs/WORKSPACE_REVIEW.md`和`docs/superpowers/plans/2026-10-22-tenki-placement-native-recovery-handoff.md`；代码、测试、配置和schema与通过测试的快照相同。24项跳过涉及Windows目录符号链接、不可用的本机历史材料/基线，以及显式要求本机引擎、快照或赛事配置的opt-in；详情见日志。干净副本不含忽略的本机证据，因此这些跳过仍不能当作资产或历史用例验收。
-- 最新工作区Rust验证：`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`通过；串行`cargo test --workspace --offline --locked -- --test-threads=1`为**331 passed、36 ignored、0 failed**；`cargo test -p ygo-engine-adapter --examples --offline --locked`为**52 passed、1 ignored、0 failed**。日志为[`final-review-rust-workspace.log`](../target/workspace-audit-2026-10-27-codex/final-review-rust-workspace.log)、[`final-review-rust-examples.log`](../target/workspace-audit-2026-10-27-codex/final-review-rust-examples.log)、`fmt.log`和`clippy.log`。
+- 在目录标识为`codex-ci-current-review312-20261027`的隔离干净源码副本执行Python 3.12.13顶层测试：**729 passed、24 skipped、0 failed**，1644.81秒，进程退出0；随后`python -m ygo_data.cli validate --input tests/fixtures/cards.sample.json`验证2张卡并退出0。测试输出副本为[`ci-current-review-python312.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，源码清单SHA-256 `9e67e38ce79935bd8c7ff8d6a773b6bcffa253264034f14be277672fdb2196eb`，共551个Git可见源文件。测试使用`PYTHONPATH=python`。与当前Git可见文件逐项比对时，成员数和路径均一致，快照后内容变化限于`docs/TESTING.md`、`docs/WORKSPACE_REVIEW.md`和`docs/superpowers/plans/2026-10-22-tenki-placement-native-recovery-handoff.md`；代码、测试、配置和schema与通过测试的快照相同。24项跳过涉及Windows目录符号链接、不可用的本机历史材料/基线，以及显式要求本机引擎、快照或赛事配置的opt-in；详情见日志。干净副本不含忽略的本机证据，因此这些跳过仍不能当作资产或历史用例验收。
+- 最新工作区Rust验证：`cargo fmt --all -- --check`通过；`cargo clippy --workspace --all-targets --offline --locked -- -D warnings`通过；串行`cargo test --workspace --offline --locked -- --test-threads=1`为**331 passed、36 ignored、0 failed**；`cargo test -p ygo-engine-adapter --examples --offline --locked`为**52 passed、1 ignored、0 failed**。日志为[`final-review-rust-workspace.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、[`final-review-rust-examples.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)、`fmt.log`和`clippy.log`。
 - 本次没有重建或部署最新源码包，也没有新增真实引擎实验。部署现状和旧包检查的限制仍以[工作区审计](WORKSPACE_REVIEW.md)及[部署文档](DEPLOYMENT.md)为准。
 
 ## 2026-10-27 项目环境自检与清理
@@ -332,11 +1505,11 @@ print(f'archive={len(files)}, nonmarkdown={len(nonmd)}, delivery_references={len
 
 缓存竞态修复先由测试复现：账本二次核验在输入检查后短暂替换再恢复请求文件时，旧裸路径读取会拒绝/失配；修复后只保留七个stage request的原始字节供账本校验，其他输入仍全量路径/哈希检查但不留在内存。聚焦组44 passed、19个子测试通过；独立复审确认哈希与最终稳定性检查保持有效。
 
-Python全套显式枚举88个顶层文件，`734 passed, 9 skipped, 200 subtests passed`，0失败，用时1,695.86秒。日志及清单为[`pytest-full-after-cache-tightening.log`](../target/ground-collapse-preparation-tests/pytest-full-after-cache-tightening.log)和[`python-test-files-review-final.txt`](../target/ground-collapse-preparation-tests/python-test-files-review-final.txt)。9项跳过逐项为：`test_curry_consumption_reservation.py:555`、`test_curry_optional_source_path.py:39`（Windows目录符号链接能力不足）；`test_goal_schemas.py:41`（opt-in v3 reports）；`test_recovery_schemas.py:24`（opt-in v4 report）；`test_runtime_build.py:9`（未提供本机引擎资产）；`test_schemas.py:77`（opt-in本机快照/报告）；`test_schemas.py:52`（opt-in实际v2报告）；`test_strategy_schemas.py:22`（opt-in完整策略报告）；`test_tournament_gate.py:95`（未提供独立2026赛事配置）。完整结构化排除清单见[`test-exclusion-inventory.json`](../target/ground-collapse-preparation-tests/test-exclusion-inventory.json)。
+Python全套显式枚举88个顶层文件，`734 passed, 9 skipped, 200 subtests passed`，0失败，用时1,695.86秒。日志及清单为[`pytest-full-after-cache-tightening.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`python-test-files-review-final.txt`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。9项跳过逐项为：`test_curry_consumption_reservation.py:555`、`test_curry_optional_source_path.py:39`（Windows目录符号链接能力不足）；`test_goal_schemas.py:41`（opt-in v3 reports）；`test_recovery_schemas.py:24`（opt-in v4 report）；`test_runtime_build.py:9`（未提供本机引擎资产）；`test_schemas.py:77`（opt-in本机快照/报告）；`test_schemas.py:52`（opt-in实际v2报告）；`test_strategy_schemas.py:22`（opt-in完整策略报告）；`test_tournament_gate.py:95`（未提供独立2026赛事配置）。完整结构化排除清单见[`test-exclusion-inventory.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 
-本批Rust修改的隔离验证：`cargo fmt --all -- --check`通过；workspace all-targets offline/locked Clippy以`-D warnings`通过；串行workspace 382 passed、37 ignored；examples 52 passed、1 ignored。唯一examples忽略项要求固定历史genesis证据；workspace 37项及逐项忽略原因列在同一[排除清单](../target/ground-collapse-preparation-tests/test-exclusion-inventory.json)，原始日志分别为[`workspace-tests-serial.log`](../target/ground-collapse-preparation-tests/workspace-tests-serial.log)和[`adapter-examples-tests.log`](../target/ground-collapse-preparation-tests/adapter-examples-tests.log)。此后仅改Python缓存与文档，Rust源码未变。
+本批Rust修改的隔离验证：`cargo fmt --all -- --check`通过；workspace all-targets offline/locked Clippy以`-D warnings`通过；串行workspace 382 passed、37 ignored；examples 52 passed、1 ignored。唯一examples忽略项要求固定历史genesis证据；workspace 37项及逐项忽略原因列在同一[排除清单](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)，原始日志分别为[`workspace-tests-serial.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)和[`adapter-examples-tests.log`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。此后仅改Python缓存与文档，Rust源码未变。
 
-真实固定来源准备命令退出0，耗时357.287秒，保存[`preparation.json`](../data/runtime/p1-ground-collapse-preparation-offline-2026-10-27/preparation.json)（SHA256 `5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`，25,131字节）。六项检查通过：最新Curry delivery与双时点源码/账本来源、历史保护材料、冻结候选、CDB/禁限/脚本/核心来源及输入稳定性。认证历史消费40、政策预留7、规划47；旧confirmation和全部历史实际总消费仍`null`。report `execution_ready=false`，所有资格标记为false。原始stdout 180字节SHA256 `acfebec454437161277b74741ef5f192f651817f5bfa70f387a73b4339f86920`；stderr 0字节，退出0。文档前verify-only耗时313.189秒，退出0、`valid=true`、native/runner/worker/FFI=0，stdout 130字节SHA256 `25574f811e30c8b3e295e4b0834eee463e3d1551a55b675dd6325c4b12e9edc1`；报告哈希前后均不变。进程原始字节及状态在`target/ground-collapse-preparation-tests/real-prepare-attempt-final/`和`verify-before-docs-final/`。
+真实固定来源准备命令退出0，耗时357.287秒，保存[`preparation.json`](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)（SHA256 `5354438945079d9df4f2867e272e2420d71605909c772f0a874b6c21b8319d74`，25,131字节）。六项检查通过：最新Curry delivery与双时点源码/账本来源、历史保护材料、冻结候选、CDB/禁限/脚本/核心来源及输入稳定性。认证历史消费40、政策预留7、规划47；旧confirmation和全部历史实际总消费仍`null`。report `execution_ready=false`，所有资格标记为false。原始stdout 180字节SHA256 `acfebec454437161277b74741ef5f192f651817f5bfa70f387a73b4339f86920`；stderr 0字节，退出0。文档前verify-only耗时313.189秒，退出0、`valid=true`、native/runner/worker/FFI=0，stdout 130字节SHA256 `25574f811e30c8b3e295e4b0834eee463e3d1551a55b675dd6325c4b12e9edc1`；报告哈希前后均不变。进程原始字节及状态在`target/ground-collapse-preparation-tests/real-prepare-attempt-final/`和`verify-before-docs-final/`。
 
 文档前源码身份为`c96a9e5ec6e6aef5a24cf218b11cc18140be01cdbd4fd4e95d59ab12deee8862`（602项），归档ZIP SHA256 `70cda05d86ac361172afdc209dc14d785e526d121dc3874c23039e3590a303fe`，list SHA256 `fc23e6fba0205eda569147ba8e91979508dc044b6f0899033d835cd9b90a99fe`。这是代码冻结，不是本批文档定稿后的最终身份；最终身份、源码归档、访问失败清单和交付记录见本批handoff及外部delivery材料。ACL受限临时目录保留，未调整权限或删除。下一批须另建scope/预算；本准备报告不得直接启动原生实验。
 

@@ -1,6 +1,6 @@
 # 项目现状
 
-本评估以当前能力矩阵为主，源码复验基底为2026-10-31 `main / 8526c1f`及本批历史保护测试更新；部署包仍须单独按身份判断。W1-B3内部任务/报告持久化、协调器、claim资产哈希门禁及内部合成故障矩阵已有验证；HTTP、真实分析、逐syscall崩溃和断电验收仍开放。阶段进度唯一见[TASKS](../TASKS.md)，复验范围见[TESTING](TESTING.md)，路线依赖见[ROADMAP](ROADMAP.md)和[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。历史基线及冻结归档只适用于各自日期/身份，不作为当前工作区证明。
+当前评估及路线：[2026-11-09项目现状评估与双轨路线](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)，已补记2026-11-10 PR状态。项目仍为有限场景研究原型；草稿工作台和一次固定Rabbit有限分析已存在，后者因`time_budget`截断，报告来源/FFI/消费未独立认证。PR #17中的worker宿主确认流尚未进入main；PR仍为Draft且最终head没有review。普通`workbench serve`仍为`analysis_not_configured`；H3余项、P4-R2–R5及通用能力仍开放。当前ACL与安全残余风险见[SECURITY_AUDIT](SECURITY_AUDIT.md)、[DEPLOYMENT](DEPLOYMENT.md)和[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)。唯一当前任务状态见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。
 
 ## 产品目标
 
@@ -19,7 +19,7 @@
 | 工作区/双资产身份、覆盖清点、研究输入和独立响应oracle | 已验证（首批工具） | 独立v1合同；canonical响应匹配不授予完整动作或最优资格，来源/中文及全卡缺口仍保留，见BASELINE_AUDIT与RESEARCH_AUDIT |
 | P1局部终场、公开观察与提示研究 | 局部验证 | Rabbit、Tenki、Curry仅各自冻结案例；Ground Collapse仅离线准备，原生可达/响应接受未知，见[P1候选](P1_MICROCASE.md)及[本批交接](superpowers/plans/2026-10-27-ground-collapse-preparation-handoff.md) |
 | 草稿保存、分区编辑、YDK/JSON往返 | 基础工具和本机浏览器工作台已交付 | `DeckDocumentV1`允许残缺及重复卡；不授予完整合法性，见[草稿CLI](DECK_DRAFTS.md)与[工作台](WORKBENCH.md) |
-| 工作台分析接入 | W1-A输入冻结、W1-B2进程内队列及W1-B3持久协调已合成验收 | 任务/报告存储、claim资产门禁及内部故障恢复矩阵已实现；HTTP、执行器、真实分析、逐syscall崩溃/断电验收仍开放，见[任务合同](WORKBENCH_ANALYSIS_JOBS.md)与[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md) |
+| 工作台分析接入 | H2.2六个HTTP端点、无路径DTO及H2.2-A/B、H3.2-1、2a、2b-1与2b-2 accepting-before-freeze、allocated返回前及多个running细分窗口已通过限定合成验收 | W1-C固定Rabbit单次有限分析以`budget_limited/time_budget`完成；普通服务仍未配置分析后端，报告来源与FFI/消费未独立认证；H3.2-2b其他窗口/调度、逐syscall崩溃和断电仍开放，见[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md) |
 | 中文字段来源盘点 | 已完成有限样本离线盘点 | 冻结39卡的字段存在性及来源哈希已登记；语义、zh-SC类别、别名映射及使用/再分发依据未通过，不能开放正式中文检索 |
 | 自动从字段构筑、补全残缺牌组、构筑优化 | 未实现 | 当前不得输出已优化或全局最佳构筑 |
 | 任意手坑/对手策略、后攻、解场和完整对局 | 未实现 | 已有灰流丽固定场景不能外推为通用抗干扰能力 |
@@ -49,11 +49,13 @@ R1a问题由离线合成收费账本复现并修复：[执行捕获](../crates/y
 
 ## 方案比较与关键判断
 
+2026-11-03复核：近期次序及逐窗口证据见[当前双轨路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。已完成一次本机有限分析，不足以证明全卡分析、搜索完整性或最优性。旧部署包不包含当前开发工作台，隔离候选未切换部署；D盘继承ACL风险按用户选择保留，进一步处理须先确认可信账户与受影响范围。
+
 1. **继续逐卡扩充人工模型：**复用现有知识、账本与正反例，适合完成P4和定向规则；全卡维护和交互组合成本未验证，不能由案例推出安全剪枝。
 2. **完整引擎搜索：**保留执行权威；须补齐全部合法动作、随机分布、信息一致性、循环与值界。当前进程前缀重放和beam不是这样的求解器。
 3. **语义模型、引擎执行与独立证明结合：**推荐作为P1实验方向。语义先改善排序；只有可核查的安全依据才能删去证明分支。若实验失败，记录障碍而非改称有界最优已满足需求。
 
-近期采用研究与工作台双轨。D3、E1诊断、W1设计及W1-A已完成；当前后续路线以[TASKS](../TASKS.md)为准，具体依赖见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)。2026-10-29干净Windows CI在修复提交上Python 740 passed、21 skipped、0 failed；本机旧全套仍记录749 passed、9 skipped、1 failed，唯一失败为Tenki历史保护哈希不匹配。两者环境和目的不同，不相互覆盖。当前任务以[TASKS](../TASKS.md)为准。
+近期采用研究与工作台双轨。D3、E1诊断、W1设计及W1-A已完成；当前依赖和排序见[2026-11-03更新的双轨路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)及[TASKS](../TASKS.md)。2026-10-29干净Windows CI的Python 740 passed、21 skipped、0 failed与本机旧全套749 passed、9 skipped、1 failed均为历史批次；唯一失败为Tenki历史保护哈希不匹配，两者环境和目的不同，不相互覆盖。
 
 ## 系统边界
 
@@ -65,13 +67,13 @@ R1a问题由离线合成收费账本复现并修复：[执行捕获](../crates/y
 
 ## 当前环境判断
 
-普通本机包于2026-10-19刷新。2026-10-29记录及本轮静态复核显示包内CLI/worker哈希与`build-hashes.json`相符，配置主要资产路径存在；保存的doctor结果ready、`smoke_ok=null`，旧包没有workbench命令。开发版工作台没有进入旧dist，哈希一致不代表当前源码已部署。当前源码的doctor通过worker执行ABI探针；对旧包那次doctor的内部进程副作用，已有记录不足以确认具体旧二进制行为，见[TESTING](TESTING.md)。
+普通本机包于2026-10-19刷新。包内CLI/worker哈希与`build-hashes.json`相符，但该清单不绑定完整源码、配置和资产，旧包也没有workbench命令。2026-11-03普通包doctor为`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`；它只执行ABI探针，不是决斗smoke或当前源码部署认证。当前源码的doctor同样通过worker执行ABI探针；旧包早期doctor内部进程副作用的证据不足，详细范围见[TESTING](TESTING.md)。
 
 普通包仅带普通资产及Phantom知识；赛事配置引用独立冻结CDB/Lua/core，但worker复用普通旧包；本轮独立账本固定案例与重放通过，不代表“正式v6/双资产包已部署”。本次仅检查保存的Ground Collapse来源报告和交付记录，`execution_ready=false`及证明资格false；它不替代现场引擎行为验收。正式源码、普通dist、赛事资产和被冻结的原生runner须各自绑定身份。
 
 Rust/Python、既有编译产物及两套引擎资产为后续离线工程提供基础。`ygo-cli workbench serve`已有本机loopback草稿HTTP/单页界面；通用分析服务、产品化依赖审查和可移植发布包仍待验证。中文候选字段存在性和来源已盘点，但语义、zh-SC类别、别名、字段映射及使用依据未通过。此前硬件CIM读取权限受限，没有取得可用于全卡成本估算的硬件报告，不能据此宣称当前机器足以完成全卡证明。
 
-`data/runtime`及`data/tmp`混有资产与账本证据；`target`同时包含编译缓存和历史交付证据。本轮做过有85处访问盲区、未去重硬链接的只读容量清点，不能视为精确占用；之后仅移除了隔离Cargo缓存。保留/分发边界及范围见[环境审计](ENVIRONMENT_AUDIT.md)。
+`data/runtime`及`data/tmp`混有资产与账本证据；`target`同时包含编译缓存和历史交付证据。早期全树清点存在访问盲区和硬链接重复，不能作为精确占用。2026-11-03经独立逐目录核验后删除11个仅含可重建输出的Cargo `debug`缓存；删除范围为118,131个文件、75.664 GiB逻辑大小。清理后可访问的`target/`为1,086,097个文件、33.852 GiB逻辑大小，排除1个目录联接，受ACL保护的Python依赖子树无法枚举且未触碰。逻辑大小不等同NTFS实际占用；审计日志及保留边界见[环境审计](ENVIRONMENT_AUDIT.md)。
 
 ## 用户需求与阶段历史
 

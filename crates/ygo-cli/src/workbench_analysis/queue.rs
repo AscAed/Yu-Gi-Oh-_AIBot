@@ -86,11 +86,21 @@ impl AnalysisJobQueue {
         now_ms: u64,
         persist: impl FnOnce(&AnalysisJobRecordV1) -> Result<(), super::persistence::PersistenceError>,
     ) -> Result<AnalysisJobRecordV1, QueueError> {
+        let id = ygo_storage::secure_random_hex(16).map_err(|_| QueueError::IdUnavailable)?;
+        self.enqueue_identified_with_persist(id, input, scoring, now_ms, persist)
+    }
+    pub(super) fn enqueue_identified_with_persist(
+        &self,
+        id: String,
+        input: FrozenAnalysisInput,
+        scoring: ScoringConfig,
+        now_ms: u64,
+        persist: impl FnOnce(&AnalysisJobRecordV1) -> Result<(), super::persistence::PersistenceError>,
+    ) -> Result<AnalysisJobRecordV1, QueueError> {
         let mut s = self.state.lock().map_err(|_| QueueError::LockUnavailable)?;
         if s.queued.is_some() {
             return Err(QueueError::Full);
         }
-        let id = ygo_storage::secure_random_hex(16).map_err(|_| QueueError::IdUnavailable)?;
         if s.used_ids.contains(&id) {
             return Err(QueueError::IdUnavailable);
         }

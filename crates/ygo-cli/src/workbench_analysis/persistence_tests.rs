@@ -124,11 +124,80 @@ fn report_bytes(frozen: &FrozenAnalysisInput, scoring: ScoringConfig) -> Vec<u8>
     .unwrap()
 }
 
+#[test]
+fn uncertain_execution_is_durably_unknown_and_stops_dispatch() {
+    let root = root();
+    let coordinator = super::durable::DurableAnalysisCoordinator::open(root.clone()).unwrap();
+    let queued = coordinator
+        .submit(frozen(), ScoringConfig::default(), 100)
+        .unwrap();
+    let ticket = coordinator.claim_next(101).unwrap().unwrap();
+
+    let unknown = coordinator.mark_unknown(&ticket, 102).unwrap();
+
+    assert_eq!(unknown.job_id(), queued.job_id());
+    assert_eq!(unknown.state(), AnalysisJobState::Unknown);
+    assert_eq!(unknown.revision(), 3);
+    assert_eq!(
+        unknown.error_code(),
+        Some(AnalysisJobFailure::CompletionUncertain)
+    );
+    assert!(unknown.report().is_none());
+    assert!(coordinator.is_stopped().unwrap());
+    drop(coordinator);
+
+    let reopened = super::durable::DurableAnalysisCoordinator::open(root).unwrap();
+    let history = reopened.history(queued.job_id()).unwrap();
+    assert_eq!(history.last().unwrap().state(), AnalysisJobState::Unknown);
+    assert!(reopened.claim_next(103).unwrap().is_none());
+}
+
 fn revision_path(root: &std::path::Path, id: &str, revision: u64) -> PathBuf {
     root.join("jobs")
         .join(id)
         .join("revisions")
         .join(format!("{revision}.json"))
+}
+
+#[test]
+fn scan_waits_for_initial_job_revision_publication() {
+    let root = root();
+    let store = std::sync::Arc::new(PersistentAnalysisJobStore::open(root).unwrap());
+    let record = queued(ygo_storage::secure_random_hex(16).unwrap());
+    let entered = std::sync::Arc::new(std::sync::Barrier::new(2));
+    let release = std::sync::Arc::new(std::sync::Barrier::new(2));
+    store.pause_initial_publish_for_test(entered.clone(), release.clone());
+
+    let publisher_store = store.clone();
+    let publisher = std::thread::spawn(move || publisher_store.append_initial(record));
+    entered.wait();
+
+    let inspector_store = store.clone();
+    let (started_tx, started_rx) = std::sync::mpsc::channel();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let inspector = std::thread::spawn(move || {
+        started_tx.send(()).unwrap();
+        done_tx.send(inspector_store.scan()).unwrap();
+    });
+    started_rx.recv().unwrap();
+    let early_result = done_rx
+        .recv_timeout(std::time::Duration::from_millis(50))
+        .ok();
+    let scan_waited = early_result.is_none();
+
+    release.wait();
+    publisher.join().unwrap().unwrap();
+    let scan = early_result
+        .unwrap_or_else(|| {
+            done_rx
+                .recv_timeout(std::time::Duration::from_secs(2))
+                .unwrap()
+        })
+        .unwrap();
+    inspector.join().unwrap();
+    assert!(scan_waited);
+    assert_eq!(scan.len(), 1);
+    assert_eq!(scan.values().next().unwrap().len(), 1);
 }
 
 #[test]

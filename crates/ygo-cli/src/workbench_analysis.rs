@@ -12,13 +12,27 @@ use ygo_engine_adapter::{ProcessEngineConfig, RunDuelRequest};
 use ygo_search::combo::SearchBudget;
 use ygo_storage::{hash, DeckDraftStore, SnapshotStore};
 
+mod admission;
+mod attempt_receipts;
+pub(crate) use admission::W1cAdmission;
+#[cfg(test)]
+pub(crate) use attempt_receipts::AttemptReceiptContextV1;
+pub(crate) use attempt_receipts::AttemptReceiptEventV1;
+
 pub mod durable;
+pub mod http_contract;
 pub mod jobs;
+mod operation_store;
+pub mod operations;
 pub mod persistence;
 
 #[cfg(test)]
 #[path = "workbench_analysis/jobs_tests.rs"]
 mod jobs_tests;
+
+#[cfg(test)]
+#[path = "workbench_analysis/operation_storage_tests.rs"]
+mod operation_storage_tests;
 
 #[derive(Clone, Debug)]
 pub struct AnalysisFreezeSpec {
@@ -79,6 +93,7 @@ pub enum AnalysisFreezeError {
     CatalogCdbMismatch,
     AssetUnavailable,
     AssetChanged,
+    AnalysisProfileMismatch,
     PreparationFailed,
 }
 
@@ -98,6 +113,7 @@ impl AnalysisFreezeError {
             Self::CatalogCdbMismatch => "catalog_cdb_mismatch",
             Self::AssetUnavailable => "asset_unavailable",
             Self::AssetChanged => "asset_changed_during_freeze",
+            Self::AnalysisProfileMismatch => "analysis_profile_mismatch",
             Self::PreparationFailed => "preparation_failed",
         }
     }
@@ -320,7 +336,7 @@ fn map_prepare_error(error: String) -> AnalysisFreezeError {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use serde::Serialize;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -377,7 +393,7 @@ mod tests {
         format!("{kind}-{}", hash(&provenance))
     }
 
-    pub(super) fn fixtures(
+    pub(crate) fn fixtures(
         root: &Path,
     ) -> (
         DeckDraftStore,

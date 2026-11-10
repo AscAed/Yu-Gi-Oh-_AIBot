@@ -398,6 +398,8 @@ fn publish_file_with(
         file.sync_all()
             .map_err(|error| format!("temporary_sync_failed: {error}"))?;
         drop(file);
+        #[cfg(feature = "h3-crash-test-hook")]
+        h3_report_temp_sync_checkpoint(destination, &temp, bytes);
         if !existing {
             fs::hard_link(&temp, destination).map_err(|error| {
                 if error.kind() == std::io::ErrorKind::AlreadyExists {
@@ -413,6 +415,46 @@ fn publish_file_with(
     })();
     let _ = fs::remove_file(&temp);
     write_result
+}
+
+#[cfg(feature = "h3-crash-test-hook")]
+fn h3_report_temp_sync_checkpoint(destination: &Path, temp: &Path, bytes: &[u8]) {
+    const MARKER_ENV: &str = "YGO_STORAGE_H3_REPORT_TEMP_MARKER";
+    let Some(marker) = std::env::var_os(MARKER_ENV).map(PathBuf::from) else {
+        return;
+    };
+    if destination
+        .parent()
+        .and_then(|parent| parent.file_name())
+        .map_or(true, |name| name != std::ffi::OsStr::new("reports"))
+    {
+        return;
+    }
+
+    let temporary_marker = marker.with_extension(format!("{}.tmp", std::process::id()));
+    let checkpoint = serde_json::json!({
+        "schema_version": 1,
+        "kind": "h3_report_temp_synced_before_publish",
+        "pid": std::process::id(),
+        "destination_name": destination.file_name().and_then(|name| name.to_str()),
+        "temporary_name": temp.file_name().and_then(|name| name.to_str()),
+        "bytes": bytes.len(),
+        "sha256": hash(bytes),
+    });
+    let checkpoint_bytes = serde_json::to_vec(&checkpoint).expect("serialize H3 checkpoint");
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary_marker)
+        .expect("create temporary H3 checkpoint marker");
+    file.write_all(&checkpoint_bytes)
+        .expect("write H3 checkpoint marker");
+    file.sync_all().expect("sync H3 checkpoint marker");
+    drop(file);
+    fs::rename(&temporary_marker, &marker).expect("publish H3 checkpoint marker");
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
 }
 
 fn replace_file(

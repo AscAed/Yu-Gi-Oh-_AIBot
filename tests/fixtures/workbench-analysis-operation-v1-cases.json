@@ -1,0 +1,933 @@
+{
+  "golden": {
+    "schema_version": 1,
+    "kind": "workbench_analysis_operation",
+    "operation_id": "cccccccccccccccccccccccccccccccc",
+    "revision": 1,
+    "created_at_ms": 100,
+    "updated_at_ms": 100,
+    "state": "allocated",
+    "service_context": {
+      "scoring": {
+        "board_interaction": 5.0,
+        "resource_advantage": 3.0,
+        "follow_up": 2.0,
+        "complexity": -0.25
+      },
+      "default_catalog_id": "catalog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "configuration_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "command": null,
+    "command_sha256": null,
+    "job_id": null,
+    "frozen_input": null,
+    "frozen_binding_sha256": null,
+    "rejection": null,
+    "error_code": null
+  },
+  "cases": [
+    {
+      "name": "allocated",
+      "schema_valid": true
+    },
+    {
+      "name": "missing_schema_version",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/schema_version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_kind",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_operation_id",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/operation_id",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_revision",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/revision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_created_at_ms",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_updated_at_ms",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/updated_at_ms",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_state",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_service_context",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/service_context",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_command",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/command",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_command_sha256",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/command_sha256",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_job_id",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/job_id",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_frozen_input",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/frozen_input",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_frozen_binding_sha256",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/frozen_binding_sha256",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_rejection",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/rejection",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing_error_code",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/error_code",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unknown",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/private_path",
+          "value": "C:/private"
+        }
+      ]
+    },
+    {
+      "name": "bool_revision",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "float_revision",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/revision",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "negative_time",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/created_at_ms",
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "upper_id",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/operation_id",
+          "value": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+        }
+      ]
+    },
+    {
+      "name": "unknown_state",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "running"
+        }
+      ]
+    },
+    {
+      "name": "path_catalog",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/service_context/default_catalog_id",
+          "value": "C:/private"
+        }
+      ]
+    },
+    {
+      "name": "bad_sha",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/service_context/configuration_sha256",
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "terminal_without_command",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/state",
+          "value": "accepted"
+        }
+      ]
+    },
+    {
+      "name": "premature_job",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/job_id",
+          "value": "dddddddddddddddddddddddddddddddd"
+        }
+      ]
+    },
+    {
+      "name": "rejection_before_submit",
+      "schema_valid": false,
+      "patches": [
+        {
+          "pointer": "/rejection",
+          "value": {
+            "http_status": 409,
+            "error_code": "analysis_queue_full"
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate",
+      "schema_valid": false,
+      "replace": [
+        [
+          "\"schema_version\":1",
+          "\"schema_version\":1,\"schema_version\":1"
+        ]
+      ]
+    },
+    {
+      "name": "trailing_json",
+      "schema_valid": false,
+      "suffix": "{}"
+    },
+    {
+      "name": "nan_scoring",
+      "schema_valid": false,
+      "replace": [
+        [
+          "\"board_interaction\":5.0",
+          "\"board_interaction\":NaN"
+        ]
+      ]
+    },
+    {
+      "name": "accepting_unbound",
+      "schema_valid": true,
+      "patches": [
+        {
+          "pointer": "/command",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "opening_hand": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "seed": 1,
+            "rules": "ocg-mr5",
+            "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+            "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+            "as_of": "2026-10-30",
+            "search": {
+              "top_k": 5,
+              "node_budget": 10000,
+              "beam_width": 32,
+              "max_depth": 64,
+              "time_limit_ms": 60000
+            }
+          }
+        },
+        {
+          "pointer": "/command_sha256",
+          "value": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+        },
+        {
+          "pointer": "/job_id",
+          "value": "dddddddddddddddddddddddddddddddd"
+        },
+        {
+          "pointer": "/state",
+          "value": "accepting"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "accepting_bound",
+      "schema_valid": true,
+      "patches": [
+        {
+          "pointer": "/command",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "opening_hand": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "seed": 1,
+            "rules": "ocg-mr5",
+            "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+            "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+            "as_of": "2026-10-30",
+            "search": {
+              "top_k": 5,
+              "node_budget": 10000,
+              "beam_width": 32,
+              "max_depth": 64,
+              "time_limit_ms": 60000
+            }
+          }
+        },
+        {
+          "pointer": "/command_sha256",
+          "value": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+        },
+        {
+          "pointer": "/job_id",
+          "value": "dddddddddddddddddddddddddddddddd"
+        },
+        {
+          "pointer": "/state",
+          "value": "accepting"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/frozen_input",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "request": {
+              "deck": {
+                "main": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10
+                ],
+                "extra": [],
+                "side": []
+              },
+              "opening_hand": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "seed": 1,
+              "rules": "ocg-mr5",
+              "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+              "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+              "as_of": "2026-10-30",
+              "search": {
+                "top_k": 5,
+                "node_budget": 10000,
+                "beam_width": 32,
+                "max_depth": 64,
+                "time_limit_ms": 60000
+              }
+            },
+            "identity": {
+              "input_sha256": "03f1466acc8d6e14ec323e64e1a138c309e763863859aefebeac33391b803e37",
+              "rules": "ocg-mr5",
+              "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+              "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+              "protocol_version": 2,
+              "engine_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+              "worker_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "cdb_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "scripts_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+              "engine_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "core_commit": "",
+              "initializer": "",
+              "catalog_source_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "banlist_source_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "scoring": {
+              "board_interaction": 5.0,
+              "resource_advantage": 3.0,
+              "follow_up": 2.0,
+              "complexity": -0.25
+            },
+            "binding_sha256": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+          }
+        },
+        {
+          "pointer": "/frozen_binding_sha256",
+          "value": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+        }
+      ]
+    },
+    {
+      "name": "accepted",
+      "schema_valid": true,
+      "patches": [
+        {
+          "pointer": "/command",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "opening_hand": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "seed": 1,
+            "rules": "ocg-mr5",
+            "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+            "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+            "as_of": "2026-10-30",
+            "search": {
+              "top_k": 5,
+              "node_budget": 10000,
+              "beam_width": 32,
+              "max_depth": 64,
+              "time_limit_ms": 60000
+            }
+          }
+        },
+        {
+          "pointer": "/command_sha256",
+          "value": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+        },
+        {
+          "pointer": "/job_id",
+          "value": "dddddddddddddddddddddddddddddddd"
+        },
+        {
+          "pointer": "/state",
+          "value": "accepted"
+        },
+        {
+          "pointer": "/revision",
+          "value": 4
+        },
+        {
+          "pointer": "/frozen_input",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "request": {
+              "deck": {
+                "main": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10
+                ],
+                "extra": [],
+                "side": []
+              },
+              "opening_hand": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "seed": 1,
+              "rules": "ocg-mr5",
+              "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+              "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+              "as_of": "2026-10-30",
+              "search": {
+                "top_k": 5,
+                "node_budget": 10000,
+                "beam_width": 32,
+                "max_depth": 64,
+                "time_limit_ms": 60000
+              }
+            },
+            "identity": {
+              "input_sha256": "03f1466acc8d6e14ec323e64e1a138c309e763863859aefebeac33391b803e37",
+              "rules": "ocg-mr5",
+              "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+              "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+              "protocol_version": 2,
+              "engine_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+              "worker_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "cdb_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "scripts_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+              "engine_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "core_commit": "",
+              "initializer": "",
+              "catalog_source_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "banlist_source_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "scoring": {
+              "board_interaction": 5.0,
+              "resource_advantage": 3.0,
+              "follow_up": 2.0,
+              "complexity": -0.25
+            },
+            "binding_sha256": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+          }
+        },
+        {
+          "pointer": "/frozen_binding_sha256",
+          "value": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+        }
+      ]
+    },
+    {
+      "name": "unknown_unbound",
+      "schema_valid": true,
+      "patches": [
+        {
+          "pointer": "/command",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "opening_hand": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "seed": 1,
+            "rules": "ocg-mr5",
+            "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+            "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+            "as_of": "2026-10-30",
+            "search": {
+              "top_k": 5,
+              "node_budget": 10000,
+              "beam_width": 32,
+              "max_depth": 64,
+              "time_limit_ms": 60000
+            }
+          }
+        },
+        {
+          "pointer": "/command_sha256",
+          "value": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+        },
+        {
+          "pointer": "/job_id",
+          "value": "dddddddddddddddddddddddddddddddd"
+        },
+        {
+          "pointer": "/state",
+          "value": "unknown"
+        },
+        {
+          "pointer": "/revision",
+          "value": 3
+        },
+        {
+          "pointer": "/error_code",
+          "value": "analysis_commit_uncertain"
+        }
+      ]
+    },
+    {
+      "name": "unknown_bound",
+      "schema_valid": true,
+      "patches": [
+        {
+          "pointer": "/command",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "opening_hand": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "seed": 1,
+            "rules": "ocg-mr5",
+            "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+            "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+            "as_of": "2026-10-30",
+            "search": {
+              "top_k": 5,
+              "node_budget": 10000,
+              "beam_width": 32,
+              "max_depth": 64,
+              "time_limit_ms": 60000
+            }
+          }
+        },
+        {
+          "pointer": "/command_sha256",
+          "value": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+        },
+        {
+          "pointer": "/job_id",
+          "value": "dddddddddddddddddddddddddddddddd"
+        },
+        {
+          "pointer": "/state",
+          "value": "unknown"
+        },
+        {
+          "pointer": "/revision",
+          "value": 4
+        },
+        {
+          "pointer": "/frozen_input",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "request": {
+              "deck": {
+                "main": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10
+                ],
+                "extra": [],
+                "side": []
+              },
+              "opening_hand": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "seed": 1,
+              "rules": "ocg-mr5",
+              "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+              "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+              "as_of": "2026-10-30",
+              "search": {
+                "top_k": 5,
+                "node_budget": 10000,
+                "beam_width": 32,
+                "max_depth": 64,
+                "time_limit_ms": 60000
+              }
+            },
+            "identity": {
+              "input_sha256": "03f1466acc8d6e14ec323e64e1a138c309e763863859aefebeac33391b803e37",
+              "rules": "ocg-mr5",
+              "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+              "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+              "protocol_version": 2,
+              "engine_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+              "worker_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "cdb_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "scripts_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+              "engine_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "core_commit": "",
+              "initializer": "",
+              "catalog_source_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "banlist_source_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "scoring": {
+              "board_interaction": 5.0,
+              "resource_advantage": 3.0,
+              "follow_up": 2.0,
+              "complexity": -0.25
+            },
+            "binding_sha256": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+          }
+        },
+        {
+          "pointer": "/frozen_binding_sha256",
+          "value": "725d95638712073d1f008bd0088c24cce088c8d21ecbb7024c2dc94b5fd92aa6"
+        },
+        {
+          "pointer": "/error_code",
+          "value": "analysis_commit_uncertain"
+        }
+      ]
+    },
+    {
+      "name": "rejected",
+      "schema_valid": true,
+      "patches": [
+        {
+          "pointer": "/command",
+          "value": {
+            "draft_id": "33333333333333333333333333333333",
+            "draft_revision": "4444444444444444444444444444444444444444444444444444444444444444",
+            "opening_hand": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "seed": 1,
+            "rules": "ocg-mr5",
+            "catalog_id": "catalog-1111111111111111111111111111111111111111111111111111111111111111",
+            "banlist_id": "banlist-2222222222222222222222222222222222222222222222222222222222222222",
+            "as_of": "2026-10-30",
+            "search": {
+              "top_k": 5,
+              "node_budget": 10000,
+              "beam_width": 32,
+              "max_depth": 64,
+              "time_limit_ms": 60000
+            }
+          }
+        },
+        {
+          "pointer": "/command_sha256",
+          "value": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+        },
+        {
+          "pointer": "/job_id",
+          "value": null
+        },
+        {
+          "pointer": "/state",
+          "value": "rejected"
+        },
+        {
+          "pointer": "/revision",
+          "value": 2
+        },
+        {
+          "pointer": "/rejection",
+          "value": {
+            "http_status": 409,
+            "error_code": "analysis_queue_full"
+          }
+        },
+        {
+          "pointer": "/error_code",
+          "value": "analysis_queue_full"
+        }
+      ]
+    }
+  ],
+  "command_golden_sha256": "d423ded2a96493ead4a5579839b2614abf230092162cb8f1bf43ae6489485cb8"
+}

@@ -1,6 +1,58 @@
 # 本机环境与资产审计
 
-2026-10-31补充：独立worktree `p4-r5-audit` 从`6800bf2`构建当前功能源码候选，普通/赛事配置doctor和身份均通过；普通smoke在预算内产出3条可独立重放线路，独立replay 3/3通过。主工作区普通`dist/ygo-local`仍未覆盖，候选不在主仓库中；赛事候选未单独smoke/replay，且无可比研究账本，故P4-R5仍开放。完整命令、哈希和限制见[TESTING](TESTING.md#2026-10-31-p4-r5源码候选部署审计未完成)。
+## 历史现场（2026-11-04）
+
+该节记录2026-11-04的源码/安全审计基线，不是当前checkout或运行资产的重新核验。当前源码、PR和部署包关系见[DEPLOYMENT](DEPLOYMENT.md)；ACL保留决定和扫描覆盖见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
+
+本轮开始时HEAD为`b35b12dec226b3b71eb36896e27452ec7fd12015`；在该基线上完成安全整改与Rust复核。Codex Security Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`检查的是旧基线`50c279b`，715文件清单中完成12个独立审阅并报告5项发现；覆盖按部分记录。扫描与整改结果、五项处置、验证和残余风险见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
+
+用户于2026-11-04选择保留已观察的ACL，不调整卷根、项目父目录或工作区权限；卷根的Authenticated Users Modify及四个未映射SID继续作为本机残余风险登记。当前源码变化不会自动更新`dist/ygo-local`；部署身份仍以[DEPLOYMENT](DEPLOYMENT.md)记录为准。
+
+## 历史现场（2026-11-03；本轮Deep Scan之前）
+
+本轮可执行代码审计基线为`main` / `50c279b0605c55f8e1f05240078700d63c01dd9d`；该验证时点工作树干净，较`origin/main`领先13个本地提交。后续仅补充审计文档，未改变可执行代码。本次文档续审开始时，HEAD为`87e6d57`，main较origin/main领先21个本地提交且工作区干净；`crates/`、`python/`、Cargo清单、`schemas/`、`scripts/`相对`50c279b`无可执行代码差异。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围明确为diff/partial。全仓Deep Scan原执行句柄`214`于2026-11-03恢复时返回`not found`。用户随后提供的界面截图显示条目“Yu-Gi-Oh!_AIBot · 11月3日 16:10”针对提交`50c279b`扫描全仓715个文件；截图时处于第8轮汇总，9项已完成、4项进行中。该截图只证明当时仍在运行；没有提供该扫描的`scanId`/handoff token或最终报告，用户确认没有续接凭据，因此当前状态和最终结果无法核验，不记为完成或通过。按扫描协议，不以新扫描替换缺少恢复上下文的任务。差异扫描记录1项低严重度本机权限问题。`dist/ygo-local`仍为2026-10-19旧包，`build-hashes.json`只记录CLI与worker哈希且与当前文件匹配；包内没有`manifest.json`，该结果只证明旧包文件与自身清单一致。W1-C隔离候选另完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；它没有部署进普通包，P4-R5仍开放。
+
+只读ACL复查把权限来源追到卷根：`NT AUTHORITY\Authenticated Users`在卷根上有直接`Modify` ACE，并继承到项目父目录及下层工作区文件。项目父目录还有两个无法映射到当前本机账户名的显式Modify SID；工作区再有两个此类显式SID，另继承父目录的两个SID。检查使用本机标准用户令牌；本机账户枚举受拒，且四个SID在ProfileList中均无账户配置文件记录，无法确认对应主体。`.git`对这四个SID另有显式写入/删除Deny ACE，同时继承Authenticated Users的Modify；未评估任一具体账户令牌的有效访问结果。项目父目录含两个兄弟工作区，因此修改父级ACL会影响兄弟目录；删除卷根ACE则会影响该卷其他内容。配置仍指向包内worker及`data/runtime`中的引擎资产。源码hash只绑定所选文件，不证明文件由可信主体发布。普通工作台保持`analysis_not_configured`，检查时没有观察到`ygo`进程。用户于2026-11-03选择保留当前ACL并记录风险，本轮未调整权限。详细部署界限见[DEPLOYMENT](DEPLOYMENT.md)。
+
+### 组件与依赖复核
+
+- 没有发现可依据源码消费者和历史证据安全删除的源码模块、运行组件或兼容路径。2026-11-03只清理了11个逐一核验、仅含可重建Cargo `debug`构建输出且不含日志、状态、manifest、研究证据或资产的缓存目录：118,131个文件、81,243,791,398字节（75.664 GiB逻辑大小）。保留其余`target/`内容、`data/runtime/`、`dist/`、release产物和兼容路径；Markdown中的忽略路径和缺失目标集中登记于[证据保留清单](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
+- 清理后可访问的`target/`文件清点为1,086,097个文件、36,348,084,528字节（33.852 GiB逻辑大小）；排除了1个目录联接，受ACL保护的Python依赖子树无法枚举且未触碰。逻辑大小不等于NTFS实际占用或可回收空间。该批清理期间D盘可用空间增加77,289,877,504字节；记录和11个精确路径见忽略文件`data/runtime/cleanup-audit/target-build-cache-cleanup-20261103-220156.json`。
+- 对9个Rust crate逐项扫描直接依赖的crate标识符，覆盖该crate下的Rust源码、测试和示例；每个直接依赖至少有一个文本引用，没有发现零引用候选。该词法筛查不证明运行时实际使用，也不替代专用未用依赖分析器。`cargo-machete`、`cargo-audit`和`cargo-deny`未安装。
+- `cargo tree --workspace --duplicates --offline --locked`显示两个`hashbrown`版本：`0.14.5`经`rusqlite 0.32.1`/`hashlink`引入，`0.17.1`经`toml 0.8.23`/`toml_edit`引入。它们来自不同传递依赖约束；未作强制覆盖或升级。
+- Python的`pyproject.toml`只声明`jsonschema`运行依赖及可选`pytest`测试依赖。文件名盘点未发现`setup.py`、`setup.cfg`、`requirements*.txt`、`Pipfile`、Poetry、tox或Travis旧式配置；`pip-audit`、`bandit`、`semgrep`和`ruff`未安装，因此未完成外部漏洞库扫描或这些工具的专项检查。
+
+## 历史现场（2026-11-02）
+
+2026-11-01 WinDirStat截图估算项目约312.3 GB，其中`target/`约199.2 GB、`data/runtime/`约112.6 GB。`target/p4-r5-current-a21d587/data/runtime`是指向主`data/runtime/`的目录联接，清理扫描排除此联接，避免重复计量。保留当前P4-R5候选、全部release目录、`dist/ygo-local`、可执行文件、引擎与卡库资产、报告、账本、脚本和图片。2026-11-02流式只读扫描显示`target/`逻辑大小20,237,986,969字节（889,994个文件）、`data/runtime/`为11,462,519,359字节（98,514个文件）、`data/tmp/`为190,719,560字节（5,756个文件）。扫描排除1个已知目录联接；`target/`有28个、`data/tmp/`有14个受保护目录无法枚举，均属于保留的Python/pip依赖临时目录，故这些逻辑体积是可访问文件统计。WinDirStat仍开着原D盘视图，但本次桌面截图通道超时，未能用同一工具完成清理后复测；以上是流式文件扫描结果，不等同NTFS去重后的可回收空间，也不应冒充WinDirStat结果。D盘当前可用307,274,039,296字节；相对清理前21,336,346,624字节的卷级净变化为+285,937,692,672字节，期间可能包含其他卷活动，不能单独归因于项目清理。
+
+按SHA-256清单移除了441,183个可访问的Cargo编译缓存路径（逻辑大小303,919,886,861字节）：`debug/incremental`内容，以及debug树中的`.pdb`、`.o`、`.rlib`和`.rmeta`。候选哈希无计算错误；66个访问拒绝路径未纳入首轮清理。清理前记录D盘可用21,336,346,624字节，完成后304,439,128,064字节，净增加283,102,781,440字节。该数字是期间D盘卷级净变化，包含审计清单占用，也可能包含其他卷活动；不能单独归因于清理或视为精确回收量。逻辑候选文件大小303,919,886,861字节，去重文件身份后为177,647,380,688字节，二者范围不同。逐文件清单、摘要、失败路径和操作日志位于忽略目录`data/runtime/cleanup-audit/`。删除脚本末尾因读取旧摘要字段报错；随后逐项检查441,183条路径均已不存在，并将核对结果写入审计日志。
+
+同日清理`data/tmp/`中由测试源码按随机ID/进程ID/时间戳生成的日志、journal与blob：逐项检查源码生成方式、未发现运行中的测试进程、哈希清单记录95,295个候选文件（233,006,654字节），预检元数据和哈希一致后逐文件删除；另非递归移除9,585个空目录。随后对遗留的1,847个`journal-test-*`目录树作只读递归复查，确认7,281个子目录为空且无重解析点后，另非递归移除共9,128个空目录。删除清单及SHA-256、操作计数保存在忽略审计目录。`data/tmp/`仍有5,756个文件（190,719,560字节），包括离线构建依赖、源码和历史输出，均保留。
+
+首轮受ACL保护的66个目录路径在只读提升权限复查后，39个为空且无重解析点的目录已逐个移除，27个Python测试依赖目录（约16 MB）保留；未改ACL。另对`target/curry-recovery-synthetic-e2e-tests/`中643个由测试按UUID创建的临时根目录进行逐文件SHA-256清单核验。清单含763,059个文件、1,817,135,459字节、120,072个子目录，SHA-256为`60F8911BE425F0AEACD508C4E0B3348E224EBF06636888FD58A53A00FB7A2567`，扫描无错误/重解析点。首轮删除762,444个文件后，615个只读`.git/objects`因ReadOnly属性未删；逐项复核哈希、大小和时间戳后清除这615个文件的ReadOnly属性并删除，未改ACL；合计1,817,135,459字节文件均已删除。共移除120,072个清单目录及643个已确认空的UUID根目录，最终UUID根目录残留为0。命名证据目录和根级日志保留。逐文件清单、删除回执和操作事件在忽略审计目录。
+
+证据保留清单中的54个唯一源文件中，51个非空文件（750,733字节）已上传至仅所有者可访问的Google Drive归档并逐个回读校验字节数及SHA-256，随后删除本机原件；3个零字节日志保留原位。5份重试产生的重复云端副本已清除。映射索引在忽略目录`data/runtime/cleanup-audit/drive-archive-index.json`；没有向公开GitHub仓库上传文件。完整处置见[证据保留清单](EVIDENCE_RETENTION.md)。
+
+## 当前现场（2026-11-01）
+
+当前checkout为本机`main / 2f690d5`，工作区有未提交修改；本批没有部署。普通`dist/ygo-local`仍是2026-10-19旧包；`target/release`对应CLI/worker与dist二进制为相同哈希的Windows硬链接，不证明当前HEAD已构建。隔离候选`a21d587`及更早`e684f4e`各自的验收不等同当前部署；smoke受预算截断且缺少可比账本，P4-R5仍开放。历史证据按用户决定不迁移，仅保留哈希清单，不代表已有备份。现场和历史证据见[TESTING](TESTING.md)、[DEPLOYMENT](DEPLOYMENT.md)和[TASKS](../TASKS.md)。
+
+2026-11-01清理：删除被忽略的`configs/engine.toml.legacy`（258 bytes，SHA-256 `D2F51D7C826A35F8A2B595C063045500C903F69B7DE25E2B82FF2BC9BFB0876D`）。它使用旧EDOPro进程字段；当前`ProcessEngineConfig`启用`deny_unknown_fields`且要求worker/ocgcore等字段，既有`config_round_trip_and_legacy_gui_config_rejected`测试确认旧`engine_path`配置会被拒绝。源码与脚本中无消费者，文件命中忽略规则`/configs/engine.toml.*`。当前`configs/engine.toml`保留不变。此为本机失效配置清理，不涉及运行资产、兼容协议或历史研究证据。
+
+以下段落记录各日期/提交的审计快照；其中的“当前”“本轮”均指原记录时点，不覆盖上面的现场摘要。
+
+### 历史快照（2026-11-01，main / 8d8c492）
+
+当时主工作区为主仓库的本地`main`；独立的`e684f4e`隔离候选worktree和PR审查worktree均另行保留，不能当作主源码。GitHub连接器在2026-11-01确认远端`main`为`577924b`；当时本地主分支基线`8d8c492`领先6个提交。历史证据不迁移，原SHA-256清单保留且不代表已有备份。
+
+### 历史快照（2026-11-01，main / a21d587源码与普通dist核对）
+
+本轮源码位于本机`main / a21d587`，仓库提交后干净；普通`dist/ygo-local`中的`ygo.exe`、`ygo-engine-worker.exe`、`ygo.cmd`、`build-hashes.json`及包内测试/配置文档时间均为2026-10-19。H2.2源码提交晚于该包且没有部署重建，因此当前checkout包含的HTTP源码不能推断为已部署能力。未运行旧包doctor、smoke或真实分析，也未改写dist；既有旧包诊断和候选部署证据按其历史提交/资产身份保留在下文和[TESTING](TESTING.md)。
+
+依赖复查仍未证明存在可安全删除的重复直接依赖或未用crate：9个workspace成员保留，两个`hashbrown`版本属于不同传递链；本机没有`cargo-machete`。忽略的`configs/engine.toml.legacy`不是运行配置，含机器路径且没有代码/文档消费者；因其可能承担人工回滚用途，暂保留并在[TESTING](TESTING.md)记录。没有删除crate、兼容解析或历史证据。
+
+2026-11-01提交`e684f4e`已在隔离worktree离线构建并完成普通/赛事资产doctor、身份和诊断smoke/replay；smoke受30秒预算限制，P4-R5发布验收仍开放。普通主工作区dist仍为2026-10-19旧包，未切换。历史证据按用户决定不迁移，仅保留原哈希清单；清单不等于备份。当前候选证据见[TESTING](TESTING.md)。
 
 早期2026-10-31本地环境审计快照基于`main / 8526c1f`：普通旧包和赛事配置doctor均ready；`dist/ygo-local`仍为2026-10-19包。之后的候选源码部署复核见本页补记及[TESTING](TESTING.md)。赛事配置worker路径复用普通dist worker。历史证据哈希清单不是备份；Windows目录符号链接实测仍受系统策略限制。
 
@@ -17,15 +69,15 @@
 | 路径 | 观察到的内容 | 处理原则 |
 |---|---|---|
 | `crates/`, `python/`, `schemas/`, `scripts/`, `tests/`, `knowledge/`, `configs/` | 源码、数据工具、合同、构建脚本、夹具和知识包 | Git 管理；禁止混入本地运行产物或机器绝对路径 |
-| `data/runtime/` | 约 1.71 GiB、约 59k 文件；含 CDB、ocgcore/Lua、清单、历史原生报告、快照及实验输出 | 本机忽略数据。不是纯缓存；删改前查验收报告/内容寻址账本引用并先备份 |
-| `data/tmp/` | 约 0.1–0.14 GiB；含约 500 余目录、测试 trace/blob/检查点和 journal 目录，以及 LFLists/core 源码与 Python 构建工具缓存 | 忽略目录但混合了离线构建依赖和诊断证据。只允许按测试生命周期清理可确认临时项；保留固定上游 checkout 和构建缓存供离线构建 |
+| `data/runtime/` | 2026-11-02可访问逻辑统计11,462,519,359字节、98,514个文件；含CDB、ocgcore/Lua、清单、历史原生报告、快照及实验输出 | 本机忽略数据。不是纯缓存；删改前查验收报告/内容寻址账本引用并先备份 |
+| `data/tmp/` | 2026-11-02可访问逻辑统计190,719,560字节、5,756个文件；另有14个受保护pip临时目录无法枚举。保留LFLists/core源码和Python构建工具缓存 | 忽略目录但混合了离线构建依赖和诊断证据。只允许按测试生命周期清理可确认临时项；保留固定上游checkout和构建缓存供离线构建 |
 | `data/snapshots/` | active 指针与内容寻址的卡库/禁限表 JSON 快照 | 本机数据；不可与版本库快照混淆，不应在一般清理中移除 |
 | `data/raw/`, `data/normalized/` | 目前只有 `.gitkeep` | 可再生成工作区，不代表受许可卡库可公开提交 |
 | `target/` | Rust 编译缓存及独立测试目录；其中还保存原始日志、源码归档、清单和交付证据 | Cargo 编译缓存可重建；历史日志、归档和交付证据不能靠重编译恢复。禁止整体清除，先核对各批引用与保留需求 |
 | `dist/ygo-local/` | 本机CLI/worker/fixture/schema和绝对路径配置；2026-10-19重建 | 2026-10-27包内二进制与清单哈希一致，doctor就绪；不证明最新工作区的干净构建，不含独立赛事资产 |
 | `.venv/` | 本地 Python 3.14.7 环境，可启动解释器，但检查时未安装 pip 或 pytest | 保留原位；不能假定该环境可执行完整测试。系统Python及独立3.12测试环境分别记录 |
 
-文件数/体积来自前次本地目录扫描；少数由系统保护的pip临时子目录可能未被递归读取。不要将此处统计当作本轮重新测量或精确配额。
+本节`data/runtime/`和`data/tmp/`体积为2026-11-02流式扫描可访问文件的逻辑大小；`target/`、`data/tmp/`存在ACL保护目录跳过，且逻辑字节未折算NTFS硬链接/稀疏文件占用。不要将逻辑统计当作卷级实际回收量或精确配额。
 
 ## 2026-10-30 pytest默认收集边界
 

@@ -1,0 +1,7 @@
+# 多任务恢复中第一条分类提交后强杀：限定验收
+
+测试手工建立两组可认证的accepting操作和queued任务链；恢复先补齐两个accepted关联，再在第一任务分类为interrupted之后、第二任务分类之前通过`cfg(test)`检查点同步握手。父进程在强杀前逐条认证两对操作/任务的修订封套、前驱与记录哈希、转换及冻结输入绑定。新协调器持锁完整认证后，仅为第二任务追加一次interrupted；首个任务和原文件不变，第二次重开不再写入，队列及领取结果为空。
+
+红测因检查点缺失失败；增加挂点后聚焦测试1 passed、durable操作组19 passed，fmt与workspace全目标Clippy通过；本批未重跑workspace全套。`target/w1h21-analysis-operation-tests/dfefb37bbe49b0012ad9f08b15a69498/`保留握手、终止状态和强杀前/恢复后哈希；12项恢复后文件哈希及两个interrupted终态已只读核对。哈希与父进程断言不是逐阶段原始字节备份。
+
+两条queued链为存储层合成构造，不证明正常单队列可以同时接纳两条queued；不认证running→unknown混合场景、其他恢复顺序、HTTP传输期间强杀、逐syscall、断电或介质故障。冻结输入为测试准备，未启动真实runner、worker、FFI或原生研究，不推断真实消费；普通启动仍为`analysis_not_configured`，W1-C及P4-R5开放。

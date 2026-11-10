@@ -183,6 +183,10 @@ def main():
     ground_collapse = sub.add_parser('prepare-ground-collapse-probe')
     from ygo_eval.ground_collapse_preparation import add_arguments as add_ground_collapse_arguments
     add_ground_collapse_arguments(ground_collapse)
+    native_ground_collapse = sub.add_parser('native-ground-collapse-probe')
+    for name in ('manifest','request','runner','identity','output'):
+        native_ground_collapse.add_argument('--'+name,type=Path,required=True)
+    native_ground_collapse.add_argument('--prepare-only',action='store_true')
     history = sub.add_parser('audit-history')
     history.add_argument('--baseline-dir', type=Path, required=True)
     history.add_argument('--output', type=Path, required=True)
@@ -235,6 +239,38 @@ def main():
             return 2
         print(json.dumps(report,ensure_ascii=False))
         return 0 if report.get('successful') is True or report.get('prepared') is True else 1
+    if args.command == 'native-ground-collapse-probe':
+        from ygo_data.identity import regular_file
+        from ygo_eval.ground_collapse_preparation import strict_json
+        from ygo_eval.ground_collapse_stage_driver import (
+            _verify_frozen_manifest_inputs,
+            run_ground_collapse_stages,
+        )
+        repo = Path(__file__).resolve().parents[2]
+        try:
+            manifest = strict_json(regular_file(args.manifest).read_bytes())
+            request = strict_json(regular_file(args.request).read_bytes())
+            identity = strict_json(regular_file(args.identity).read_bytes())
+            def unchanged():
+                _verify_frozen_manifest_inputs(manifest,args.runner.absolute(),repo)
+            report = run_ground_collapse_stages(
+                args.runner,args.output,manifest,request,identity,unchanged,
+                repo=repo,prepare_only=args.prepare_only,
+            )
+        except (ValueError,OSError,KeyError,TypeError,sqlite3.Error,subprocess.SubprocessError) as error:
+            reason = str(error)
+            if reason not in (
+                'separate_scope_authorization_and_execution_ready_required',
+                'existing_ground_scope_evidence_requires_audit',
+                'ground_workspace_source_identity_changed',
+                'ground_initial_request_binding_mismatch',
+                'ground_scope_manifest_context_mismatch',
+            ):
+                reason = 'frozen Ground Collapse input or scope gate failed'
+            print('native-ground-collapse-probe refused: '+reason)
+            return 2
+        print(json.dumps(report,ensure_ascii=False))
+        return 0 if report.get('prepared') is True or report.get('successful') is True else 1
     if args.command == 'native-tenki-placement-probe':
         from ygo_eval.native_tenki_placement import native_tenki_placement
         try:

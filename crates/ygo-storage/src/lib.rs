@@ -50,26 +50,63 @@ impl JsonSnapshotStore {
     pub fn new(root: PathBuf) -> Self {
         Self { root }
     }
-    fn path(&self, version: &str) -> PathBuf {
-        self.root.join(format!("banlist-{version}.json"))
+    fn path(&self, version: &str) -> io::Result<PathBuf> {
+        let mut bytes = version.bytes();
+        let valid_start = bytes
+            .next()
+            .is_some_and(|byte| byte.is_ascii_alphanumeric());
+        if !valid_start
+            || version.len() > 128
+            || !bytes.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "banlist version must be a single ASCII identifier",
+            ));
+        }
+        Ok(self.root.join(format!("banlist-{version}.json")))
+    }
+
+    fn reject_unsafe_destination(path: &std::path::Path) -> io::Result<()> {
+        match fs::symlink_metadata(path) {
+            Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
+                Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "banlist snapshot destination is not a regular file",
+                ))
+            }
+            Ok(_) => Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error),
+        }
     }
 }
 
 impl BanlistProvider for JsonSnapshotStore {
     fn save_banlist(&self, banlist: &Banlist, metadata: &SnapshotMetadata) -> io::Result<()> {
+        let path = self.path(&banlist.version)?;
         fs::create_dir_all(&self.root)?;
+        Self::reject_unsafe_destination(&path)?;
         let snapshot = BanlistSnapshot {
             metadata: metadata.clone(),
             banlist: banlist.clone(),
         };
         let data = serde_json::to_vec_pretty(&snapshot).map_err(io::Error::other)?;
-        fs::write(self.path(&banlist.version), data)
+        fs::write(path, data)
     }
 
     fn load_banlist(&self, version: &str) -> io::Result<Option<BanlistSnapshot>> {
-        let path = self.path(version);
-        if !path.is_file() {
-            return Ok(None);
+        let path = self.path(version)?;
+        match fs::symlink_metadata(&path) {
+            Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "banlist snapshot source is not a regular file",
+                ));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error),
         }
         let data = fs::read(path)?;
         serde_json::from_slice(&data)

@@ -15,6 +15,53 @@ def fixture():
 EVAL = {'binding_valid':True,'count':0,'utility':0,'termination':'terminal_boundary_bound'}
 
 class RouteTests(unittest.TestCase):
+    def test_separate_private_metadata_changes_preserve_all_strategy_views(self):
+        original = fixture()
+        baseline = project_route(*original, EVAL)
+        self.assertTrue(baseline['route_complete'])
+        self.assertEqual(len(baseline['views']), 3)
+        for field, value in (
+            ('deck_order', [11, 22, 33]),
+            ('opponent_hand', [44, 55]),
+            ('rng_state', {'state': [99, 100]}),
+            ('source_hash', 'private-source'),
+        ):
+            with self.subTest(field=field):
+                changed = copy.deepcopy(original)
+                for item in changed[0]:
+                    item[field] = copy.deepcopy(value)
+                before = copy.deepcopy(changed)
+                projected = project_route(*changed, EVAL)
+                self.assertTrue(projected['route_complete'])
+                self.assertEqual(
+                    [(v['view'], v['observation_key']) for v in baseline['views']],
+                    [(v['view'], v['observation_key']) for v in projected['views']],
+                )
+                self.assertEqual(changed, before)
+
+    def test_visible_menu_change_propagates_through_later_history(self):
+        args = fixture()
+        baseline = project_route(*args, EVAL)
+        changed = copy.deepcopy(args)
+        changed[0][6] = idle(7, (0, 0, 1))
+        result = project_route(*changed, EVAL)
+        self.assertTrue(result['route_complete'])
+        self.assertEqual(len(result['views']), 3)
+        for old, new in zip(baseline['views'], result['views']):
+            self.assertNotEqual(old['observation_key'], new['observation_key'])
+
+    def test_hidden_data_in_public_declaration_is_fail_closed(self):
+        for key, value in (('deck_order', [11, 22]), ('opponent_hand', [44]),
+                           ('rng_state', 123)):
+            with self.subTest(key=key):
+                args = fixture()
+                args[1]['initial_public_state'][key] = value
+                result = project_route(*args, EVAL)
+                self.assertFalse(result['route_complete'])
+                self.assertFalse(result['terminal_bound'])
+                self.assertTrue(result['gaps'])
+                self.assertEqual(result['views'], [])
+
     def test_complete_route(self):
         r=project_route(*fixture(),EVAL)
         self.assertEqual(r['gaps'],[])

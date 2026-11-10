@@ -152,6 +152,66 @@ fn import_and_export_round_trip_ydk_and_refuse_implicit_overwrite() {
 }
 
 #[test]
+fn imports_legacy_bare_json_as_v1_and_preserves_destination_on_rejection() {
+    let dir = temp_dir();
+    let input = dir.join("legacy.json");
+    let output = dir.join("draft.json");
+    let legacy = include_str!("../../../tests/fixtures/deck-draft-legacy-bare-v0.json");
+    fs::write(&input, legacy).unwrap();
+
+    let imported = cli(&[
+        "import",
+        "--input",
+        input.to_str().unwrap(),
+        "--output",
+        output.to_str().unwrap(),
+        "--format",
+        "json",
+    ]);
+    assert!(
+        imported.status.success(),
+        "{}",
+        String::from_utf8_lossy(&imported.stderr)
+    );
+    let stored = DeckDocumentV1::from_json(&fs::read_to_string(&output).unwrap()).unwrap();
+    let expected = DeckDocumentV1::from_json(include_str!(
+        "../../../tests/fixtures/deck-draft-legacy-bare-v0.expected-v1.json"
+    ))
+    .unwrap();
+    assert_eq!(stored, expected);
+    let destination_before_rejections = fs::read(&output).unwrap();
+
+    let overwrite = cli(&[
+        "import",
+        "--input",
+        input.to_str().unwrap(),
+        "--output",
+        output.to_str().unwrap(),
+        "--format",
+        "json",
+    ]);
+    assert!(!overwrite.status.success());
+    assert_eq!(fs::read(&output).unwrap(), destination_before_rejections);
+
+    let invalid_input = dir.join("invalid.json");
+    let invalid_bytes = br#"{"main":[0],"extra":[],"side":[]}"#;
+    fs::write(&invalid_input, invalid_bytes).unwrap();
+    let invalid = cli(&[
+        "import",
+        "--input",
+        invalid_input.to_str().unwrap(),
+        "--output",
+        output.to_str().unwrap(),
+        "--format",
+        "json",
+        "--replace",
+    ]);
+    assert!(!invalid.status.success());
+    assert_eq!(fs::read(&invalid_input).unwrap(), invalid_bytes);
+    assert_eq!(fs::read(&output).unwrap(), destination_before_rejections);
+}
+
+#[test]
 fn failed_removal_does_not_replace_the_input_or_output() {
     let dir = temp_dir();
     let input = dir.join("input.json");

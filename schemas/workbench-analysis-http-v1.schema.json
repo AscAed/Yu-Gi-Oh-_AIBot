@@ -1,0 +1,910 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workbench-analysis-http-v1.schema.json",
+  "$defs": {
+    "allocate": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_operation_allocate"
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "submit": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_submit"
+        },
+        "draft_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "draft_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "opening_hand": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          }
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rules": {
+          "const": "ocg-mr5"
+        },
+        "catalog_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "banlist_id": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string"
+        },
+        "search": {
+          "type": "object",
+          "properties": {
+            "top_k": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "node_budget": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            },
+            "beam_width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "max_depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "time_limit_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600000
+            }
+          },
+          "required": [
+            "top_k",
+            "node_budget",
+            "beam_width",
+            "max_depth",
+            "time_limit_ms"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "draft_id",
+        "draft_revision",
+        "opening_hand",
+        "seed",
+        "rules",
+        "catalog_id",
+        "banlist_id",
+        "as_of",
+        "search"
+      ],
+      "additionalProperties": false
+    },
+    "cancel": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_cancel"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_api_error"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "operation_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "job_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "operation_id",
+            "job_id",
+            "field"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "operation": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_operation"
+        },
+        "operation_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "enum": [
+            "allocated",
+            "accepting",
+            "accepted",
+            "rejected",
+            "unknown"
+          ]
+        },
+        "command_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "job_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "frozen_binding_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "operation_id",
+        "revision",
+        "created_at_ms",
+        "updated_at_ms",
+        "state",
+        "command_sha256",
+        "job_id",
+        "frozen_binding_sha256",
+        "error_code"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_job_status"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "budget_limited",
+            "failed",
+            "cancelled",
+            "interrupted",
+            "unknown"
+          ]
+        },
+        "input": {
+          "$ref": "workbench-analysis-job-v1.schema.json#/$defs/input"
+        },
+        "report": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "report_id": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "termination": {
+                  "type": "string"
+                },
+                "verified_lines": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "report_id",
+                "sha256",
+                "termination",
+                "verified_lines"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "service_state": {
+          "enum": [
+            "ready",
+            "stopped"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "job_id",
+        "revision",
+        "created_at_ms",
+        "updated_at_ms",
+        "state",
+        "input",
+        "report",
+        "error_code",
+        "service_state"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "analysis_job_result"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "input_binding_sha256": {
+          "type": "string"
+        },
+        "report": {
+          "type": "object",
+          "properties": {
+            "report_id": {
+              "type": "string"
+            },
+            "sha256": {
+              "type": "string"
+            },
+            "termination": {
+              "type": "string"
+            },
+            "verified_lines": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "report_id",
+            "sha256",
+            "termination",
+            "verified_lines"
+          ],
+          "additionalProperties": false
+        },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "top_k": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "node_budget": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            },
+            "beam_width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "max_depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "time_limit_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600000
+            }
+          },
+          "required": [
+            "top_k",
+            "node_budget",
+            "beam_width",
+            "max_depth",
+            "time_limit_ms"
+          ],
+          "additionalProperties": false
+        },
+        "termination": {
+          "type": "string"
+        },
+        "scoring": {
+          "type": "object",
+          "properties": {
+            "board_interaction": {
+              "type": "number"
+            },
+            "resource_advantage": {
+              "type": "number"
+            },
+            "follow_up": {
+              "type": "number"
+            },
+            "complexity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "board_interaction",
+            "resource_advantage",
+            "follow_up",
+            "complexity"
+          ],
+          "additionalProperties": false
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "nodes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "engine_calls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cache_hits": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pruned": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed_branches": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "elapsed_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "replay_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "peak_frontier": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_decision_depth": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "completed_lines": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "parent_peak_working_set_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "worker_peak_working_set_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "nodes",
+            "engine_calls",
+            "cache_hits",
+            "pruned",
+            "failed_branches",
+            "elapsed_ms",
+            "replay_ms",
+            "peak_frontier",
+            "max_decision_depth",
+            "completed_lines",
+            "parent_peak_working_set_bytes",
+            "worker_peak_working_set_bytes"
+          ],
+          "additionalProperties": false
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "decisions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "prompt_id": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 18446744073709551615
+                    },
+                    "player": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 255
+                    },
+                    "choice": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "command"
+                            },
+                            "command": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "command",
+                            "index"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "cards"
+                            },
+                            "indices": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 4294967295
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "indices"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "toggle"
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "finish"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "yes_no"
+                            },
+                            "yes": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "yes"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "option"
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "place"
+                            },
+                            "zones": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "player": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 255
+                                  },
+                                  "location": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 255
+                                  },
+                                  "sequence": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 255
+                                  }
+                                },
+                                "required": [
+                                  "player",
+                                  "location",
+                                  "sequence"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "zones"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "position"
+                            },
+                            "position": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "position"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "chain"
+                            },
+                            "index": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 4294967295
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "prompt_id",
+                    "player",
+                    "choice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "evaluation": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "heuristic"
+                  },
+                  "profile_version": {
+                    "const": "rabbit-v1"
+                  },
+                  "interaction": {
+                    "type": "number"
+                  },
+                  "resources": {
+                    "type": "number"
+                  },
+                  "follow_up": {
+                    "type": "number"
+                  },
+                  "decisions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "total": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "profile_version",
+                  "interaction",
+                  "resources",
+                  "follow_up",
+                  "decisions",
+                  "total"
+                ],
+                "additionalProperties": false
+              },
+              "status": {
+                "type": "string"
+              },
+              "replay_verified": {
+                "type": "boolean"
+              },
+              "coverage_gaps": {
+                "type": "array",
+                "items": {
+                  "const": "coverage_gap_unclassified"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "decisions",
+              "evaluation",
+              "status",
+              "replay_verified",
+              "coverage_gaps"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "report_contract_validated": {
+              "const": true
+            },
+            "report_origin_authenticated": {
+              "const": false
+            },
+            "search_complete": {
+              "const": false
+            },
+            "global_optimality": {
+              "const": false
+            }
+          },
+          "required": [
+            "report_contract_validated",
+            "report_origin_authenticated",
+            "search_complete",
+            "global_optimality"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "job_id",
+        "revision",
+        "input_binding_sha256",
+        "report",
+        "budget",
+        "termination",
+        "scoring",
+        "stats",
+        "lines",
+        "evidence"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/allocate"
+    },
+    {
+      "$ref": "#/$defs/submit"
+    },
+    {
+      "$ref": "#/$defs/cancel"
+    },
+    {
+      "$ref": "#/$defs/error"
+    },
+    {
+      "$ref": "#/$defs/operation"
+    },
+    {
+      "$ref": "#/$defs/status"
+    },
+    {
+      "$ref": "#/$defs/result"
+    }
+  ]
+}

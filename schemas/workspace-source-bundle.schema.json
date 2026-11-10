@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ygo-ai.local/schemas/workspace-source-bundle.schema.json",
+  "title": "Workspace source bundle manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "source",
+    "archive",
+    "archived_file_count",
+    "deleted_tracked_file_count",
+    "identity"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "workspace_source_bundle"},
+    "source": {"$ref": "#/$defs/source"},
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bytes", "sha256"],
+      "properties": {
+        "name": {"const": "source.zip"},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "archived_file_count": {"type": "integer", "minimum": 0},
+    "deleted_tracked_file_count": {"type": "integer", "minimum": 0},
+    "identity": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["head", "files", "identity"],
+      "properties": {
+        "head": {"type": ["string", "null"]},
+        "identity": {"$ref": "#/$defs/hash"},
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]
+          }
+        }
+      }
+    }
+  }
+}

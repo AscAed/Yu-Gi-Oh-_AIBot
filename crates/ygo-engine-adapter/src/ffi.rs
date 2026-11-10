@@ -1,4 +1,5 @@
 //! ABI 11.0, copied by layout from the pinned ocgapi_types.h (see ENGINE_COMPATIBILITY).
+use crate::stream_protocol::{ffi_call_shared, FfiDirection, WorkerSession};
 use crate::*;
 use std::{
     ffi::{c_char, c_void},
@@ -64,6 +65,7 @@ pub struct Query {
 }
 pub struct Api {
     _library: libloading::Library,
+    pub stream: Option<WorkerSession>,
     pub create: unsafe extern "C" fn(*mut Duel, *const Options) -> i32,
     pub destroy: unsafe extern "C" fn(Duel),
     pub new_card: unsafe extern "C" fn(Duel, *const NewCard),
@@ -77,7 +79,10 @@ pub struct Api {
     pub field: unsafe extern "C" fn(Duel, *mut u32) -> *const u8,
 }
 impl Api {
-    pub fn load(path: &Path) -> Result<Self, WorkerError> {
+    pub fn load_with_stream(
+        path: &Path,
+        stream: Option<WorkerSession>,
+    ) -> Result<Self, WorkerError> {
         if std::mem::size_of::<CardData>() != 64
             || std::mem::size_of::<Options>() != 136
             || std::mem::size_of::<NewCard>() != 24
@@ -102,7 +107,13 @@ impl Api {
             }
             let version: unsafe extern "C" fn(*mut i32, *mut i32) = sym!("OCG_GetVersion");
             let (mut major, mut minor) = (0, 0);
-            version(&mut major, &mut minor);
+            ffi_call_shared(
+                stream.as_ref(),
+                FfiDirection::IntoCore,
+                "OCG_GetVersion",
+                || version(&mut major, &mut minor),
+            )
+            .map_err(|error| WorkerError::new("ffi_receipt", "ffi", error))?;
             if (major, minor) != (11, 0) {
                 return Err(WorkerError::new(
                     "abi_version",
@@ -111,6 +122,7 @@ impl Api {
                 ));
             }
             Ok(Self {
+                stream,
                 create: sym!("OCG_CreateDuel"),
                 destroy: sym!("OCG_DestroyDuel"),
                 new_card: sym!("OCG_DuelNewCard"),
@@ -134,7 +146,12 @@ pub struct Guard<'a> {
 impl Drop for Guard<'_> {
     fn drop(&mut self) {
         unsafe {
-            (self.api.destroy)(self.duel);
+            let _ = ffi_call_shared(
+                self.api.stream.as_ref(),
+                FfiDirection::IntoCore,
+                "OCG_DestroyDuel",
+                || (self.api.destroy)(self.duel),
+            );
         }
     }
 }

@@ -1,4 +1,26 @@
+use serde::Deserialize;
 use ygo_engine_adapter::*;
+
+#[derive(Deserialize)]
+struct Opcode24MenuFixture {
+    classification: String,
+    raw_prompt: Vec<u8>,
+    disabled_mask: String,
+    available_zones: usize,
+    canonical_menu_pair_count: usize,
+    distinct_ordered_encodings: usize,
+    actions: Vec<Opcode24FixtureAction>,
+    native_reachability_verified: bool,
+    native_response_acceptance_verified: bool,
+    order_equivalence_verified: bool,
+}
+
+#[derive(Deserialize)]
+struct Opcode24FixtureAction {
+    choice: Choice,
+    card_ids: Vec<u32>,
+    bytes: Vec<u8>,
+}
 
 fn idle(flags: u8) -> Vec<u8> {
     let mut raw = vec![11, 0];
@@ -140,4 +162,63 @@ fn place_subsets_follow_independent_mask_enumeration() {
         assert!(parse_prompt(1, &raw).is_err());
         assert!(expected_prompt_responses(&raw).is_err());
     }
+}
+
+#[test]
+fn ground_collapse_opcode24_menu_matches_independent_fixture() {
+    let fixture: Opcode24MenuFixture = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/ground-collapse-opcode24-menu-v1.json"
+    ))
+    .unwrap();
+    assert_eq!(fixture.classification, "synthetic_only");
+    assert_eq!(fixture.disabled_mask, "ffe0ffe0");
+    assert_eq!(fixture.available_zones, 10);
+    assert_eq!(fixture.canonical_menu_pair_count, 45);
+    assert_eq!(fixture.distinct_ordered_encodings, 90);
+    assert!(!fixture.native_reachability_verified);
+    assert!(!fixture.native_response_acceptance_verified);
+    assert!(!fixture.order_equivalence_verified);
+
+    let prompt = parse_prompt(71, &fixture.raw_prompt).unwrap().unwrap();
+    assert_eq!(prompt.id, 71);
+    assert_eq!(prompt.player, 0);
+    assert_eq!(prompt.opcode, 24);
+    assert_eq!(prompt.actions.len(), fixture.actions.len());
+    for (actual, expected) in prompt.actions.iter().zip(&fixture.actions) {
+        assert_eq!(actual.choice, expected.choice);
+        assert_eq!(actual.card_ids, expected.card_ids);
+        assert_eq!(actual.bytes, expected.bytes);
+        assert_eq!(prompt.encode(&expected.choice).unwrap(), expected.bytes);
+    }
+
+    let forward = Choice::Place {
+        zones: vec![
+            Zone {
+                player: 1,
+                location: 4,
+                sequence: 0,
+            },
+            Zone {
+                player: 1,
+                location: 4,
+                sequence: 1,
+            },
+        ],
+    };
+    let reverse = Choice::Place {
+        zones: vec![
+            Zone {
+                player: 1,
+                location: 4,
+                sequence: 1,
+            },
+            Zone {
+                player: 1,
+                location: 4,
+                sequence: 0,
+            },
+        ],
+    };
+    assert_eq!(prompt.encode(&forward).unwrap(), [1, 4, 0, 1, 4, 1]);
+    assert!(prompt.encode(&reverse).is_err());
 }

@@ -1,6 +1,10 @@
 # 工作区自检与维护矩阵
 
-2026-10-31审计续跑基线为`main / 8526c1f`；本轮Rust格式、Clippy、workspace测试、23项持久协调定向测试及Python全套均通过。Python结果为758 passed、9 skipped、208 subtests；E1测试验证来源不匹配时拒绝迁移且不写历史材料，七份ledger成功重审仍开放。旧包与赛事配置doctor本轮复验ready，CLI/worker哈希和六个配置路径复核通过；当前包smoke及最新源码部署验收未做。当前路线见[W1-B2后路线](superpowers/plans/2026-10-31-post-w1b2-project-route.md)及[验证记录](TESTING.md)。
+当前状态（2026-11-02）：H2.2-A/B、H3.2-1/2a、2b-1四个窗口及accepting保存后冻结前窗口按限定范围验收已完成；H3.2-2b其余窗口/调度、逐syscall/断电/介质故障、真实分析和报告来源认证仍开放。详细状态以[TASKS](../TASKS.md)为准，验证证据见[TESTING](TESTING.md)。以下基线记录保留各自历史时点。
+
+2026-11-01本轮起始于`main / 8d8c492`；其后完成H2.2-A/B合成故障与并发验收。H3跨链恢复、W1-C真实分析和P4-R5部署/账本门禁仍开放；当前状态与证据见[TASKS](../TASKS.md)、[TESTING](TESTING.md)和[W1-H2.2后路线](superpowers/plans/2026-11-01-post-w1h22-project-route.md)。
+
+2026-11-01 `e684f4e`完成workspace测试、Clippy、fmt、schema定向检查及隔离候选双资产部署诊断；普通/赛事doctor、identity和smoke/replay记录见[TESTING](TESTING.md)。主工作区部署包仍为2026-10-19旧包，P4-R5因smoke预算截断及缺少可比账本仍开放。当前路线见[H3.2-2b-1后路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。
 
 2026-10-31 W1-B2内部队列在本地隔离target完成Rust workspace复验（377 passed、36 ignored、0 failed），相关Python/schema检查30 passed、2 skipped、4 subtests通过；格式与Clippy检查通过。此为源码测试，不包含部署、doctor、smoke或真实分析。交接见[W1-B2记录](superpowers/plans/2026-10-31-w1b2-analysis-queue-handoff.md)，逐项命令见[TESTING](TESTING.md)。
 
@@ -67,10 +71,10 @@
 | 方面 | 已取得证据 | 尚缺或限制 | 下一步 |
 |---|---|---|---|
 | 源码和工作区 | 本轮Git状态可枚举，旧修改和未跟踪文件保留；初始Ground归档603成员及15个引用已核对 | HEAD不代表完整工作区；归档不再等于当前源码，部分必要源码、schema和测试未跟踪 | 保留原改动；交付或提交前按消费者、许可和生成物归属审阅完整状态 |
-| 部署与资产 | 2026-10-31独立干净worktree从`6800bf2`构建当前功能源码候选；普通/赛事doctor和资产identity通过，普通预算smoke和独立replay 3/3通过；主工作区dist未覆盖 | 普通smoke因时间预算终止；赛事候选未单独smoke/replay；无可比研究账本；候选输出不在干净checkout中。P4-R5未完成 | 保留候选路径或按记录重建；赛事候选专项重放及身份/账本比较仍待完成 |
+| 部署与资产 | `e684f4e`隔离候选已重建；普通/赛事doctor、身份及smoke/replay均通过3/3；主工作区dist未覆盖 | 两个smoke均因30秒time_budget终止；无可比研究账本，故P4-R5仍开放 | 有明确研究账本对象后完成可比性核验；超出部署诊断的研究执行另按scope处理 |
 | Rust | 2026-10-31 `cargo fmt --all -- --check`、全目标Clippy及串行workspace测试通过；W1-B3.3持久化定向矩阵23 passed | 默认workspace仍忽略opt-in引擎/人工案例；合成合同测试不认证真实报告来源、系统级断电或完整引擎规则 | 以[TESTING](TESTING.md)对应日期记录为准；任何原生研究另遵守scope与预算 |
 | Python和CI | Python 3.12.13完整套件758 passed、9 skipped、208 subtests passed；语言审计边界聚焦13 passed/4拒绝子测试 | 9项跳过及本机历史材料/显式资产opt-in边界见TESTING；忽略的本机证据不会出现在干净checkout | 保留跳过原因及所需本机证据说明；不把合成或静态结果升级为运行资格 |
-| 清理和兼容 | 删除229个空临时目录和本轮隔离Cargo缓存；两项冗余直接依赖移除；交付前复核修复语言审计schema输入边界和v1–v5事件兼容 | 有85处访问错误、未去重硬链接，扫描时存在并发写入；crate内历史测试ledger保留待迁移清单；`.venv`缺少pip/pytest | 对后续候选先查引用、内容和保留用途；完善证据保留清单和临时产物生命周期 |
+| 清理和兼容 | 既往已删除229个空临时目录、隔离Cargo缓存及两项冗余直接依赖；本轮`cargo tree -d`仅见两个传递`hashbrown`版本，`pip check`无破损依赖 | 本轮未发现有证据可安全删除的模块；`cargo-machete`未安装，85处访问错误/硬链接与并发扫描为旧快照且未复测；受保护ledger和运行资产不迁移、不清理 | 需要完整依赖可达性报告时安装/运行依赖审计工具；历史证据先确认读取者与保留策略，再决定是否处置 |
 | 文档 | INDEX提供单一事实源导航；TASKS和TESTING原文按字节保存历史快照，入口保留历史锚点 | 历史文件及忽略目录证据不能视为干净checkout自动具备；当前链接检查不证明语义或远端可用 | 保持历史快照原样；核对内容一致性、包装链接和新证据的可获取性 |
 | 产品和研究（截至2026-10-27自检） | 当时P0–P8、R1–R5、研究资格和未知消费分别有事实源 | 当时未交付通用分析、全部规则资格、全卡覆盖及最优性证明；其后草稿工作台已交付 | 当前产品与研究状态按TASKS更新；研究、产品交付和资格分别验收 |
 

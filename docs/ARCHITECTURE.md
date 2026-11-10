@@ -52,7 +52,7 @@ JSON schema在 `schemas/`，部署和实验fixture在 `tests/fixtures/`，人工
 
 ## 已有工作台与拟议产品架构
 
-`ygo-cli workbench serve`已提供仅绑定`127.0.0.1`的单页草稿工作台，复用`DeckDocumentV1`、三分区编辑和`ygo-storage`持久化；可导入/导出YDK与JSON，可选读取本机catalog名称及C1字段状态。它不提供牌组分析、构筑、研究任务、worker或证明服务，中文卡名及候选译文也未获得语义或许可资格。详细接口及安全边界见[WORKBENCH](WORKBENCH.md)。
+`ygo-cli workbench serve`已提供仅绑定`127.0.0.1`的单页草稿工作台，复用`DeckDocumentV1`、三分区编辑和`ygo-storage`持久化；可导入/导出YDK与JSON，可选读取本机catalog名称及C1字段状态。默认启动不启用分析。显式传入`--analysis-config`后可运行固定输入的串行分析；2026-11-03的一次本机有限分析以预算耗尽结束，不代表完整搜索。该工作台没有构筑、研究任务控制台或证明服务，中文卡名及候选译文也未获得语义或许可资格。详细接口及安全边界见[WORKBENCH](WORKBENCH.md)。
 
 **拟议产品架构（未实现部分）**
 

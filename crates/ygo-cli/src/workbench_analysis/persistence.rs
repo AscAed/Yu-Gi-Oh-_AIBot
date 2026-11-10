@@ -23,6 +23,23 @@ const STORE_LOCK: &str = ".ygo-analysis.lock";
 const REVISION_KIND: &str = "workbench_analysis_job_revision";
 const MAX_REPORT_BYTES: usize = 64 * 1024 * 1024;
 
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FaultPhase {
+    BeforePublish,
+    AfterPublish,
+    Reread,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+struct LogicalFault {
+    chain: String,
+    state: String,
+    revision: u64,
+    phase: FaultPhase,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PersistenceError {
     Locked,
@@ -74,7 +91,25 @@ struct RevisionEnvelope {
 }
 
 pub struct PersistentAnalysisJobStore {
-    root: PathBuf,
+    #[cfg(test)]
+    logical_fault: std::sync::Mutex<Option<LogicalFault>>,
+    #[cfg(test)]
+    pub(super) logical_fault_hits: std::sync::Arc<AtomicUsize>,
+    pub(super) root: PathBuf,
+    initial_publish_lock: std::sync::RwLock<()>,
+    #[cfg(test)]
+    initial_publish_gate: std::sync::Mutex<
+        Option<(
+            std::sync::Arc<std::sync::Barrier>,
+            std::sync::Arc<std::sync::Barrier>,
+        )>,
+    >,
+    pub(super) attempt_receipt_states:
+        std::sync::Mutex<BTreeMap<String, super::attempt_receipts::AttemptReceiptAppendState>>,
+    #[cfg(test)]
+    pub(super) attempt_receipt_history_reads: AtomicUsize,
+    #[cfg(test)]
+    pub(super) operation_failure: AtomicUsize,
     // Kept alive for the entire store lifetime; dropping releases the OS lock.
     _lock: ygo_storage::ExclusiveStoreLock,
     #[cfg(test)]
@@ -87,6 +122,10 @@ pub struct PersistentAnalysisJobStore {
     fail_before_next_report_publish: AtomicBool,
     #[cfg(test)]
     fail_after_next_report_publish: AtomicBool,
+    #[cfg(test)]
+    pub(super) fail_attempt_receipt_before_publish_after: AtomicUsize,
+    #[cfg(test)]
+    pub(super) fail_attempt_receipt_after_publish_after: AtomicUsize,
 }
 
 impl std::fmt::Debug for PersistentAnalysisJobStore {
@@ -98,7 +137,73 @@ impl std::fmt::Debug for PersistentAnalysisJobStore {
 }
 
 impl PersistentAnalysisJobStore {
+    #[cfg(test)]
+    pub(super) fn pause_initial_publish_for_test(
+        &self,
+        entered: std::sync::Arc<std::sync::Barrier>,
+        release: std::sync::Arc<std::sync::Barrier>,
+    ) {
+        *self
+            .initial_publish_gate
+            .lock()
+            .expect("initial publish gate") = Some((entered, release));
+    }
+
+    #[cfg(test)]
+    pub(crate) fn inject_logical_fault(
+        &self,
+        chain: &str,
+        state: &str,
+        revision: u64,
+        phase: FaultPhase,
+    ) {
+        *self.logical_fault.lock().expect("fault lock") = Some(LogicalFault {
+            chain: chain.into(),
+            state: state.into(),
+            revision,
+            phase,
+        });
+        self.logical_fault_hits.store(0, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn logical_fault_hits(&self) -> usize {
+        self.logical_fault_hits.load(Ordering::SeqCst)
+    }
+
+    #[cfg(test)]
+    pub(super) fn check_logical_fault(
+        &self,
+        chain: &str,
+        state: &str,
+        revision: u64,
+        phase: FaultPhase,
+    ) -> Result<(), PersistenceError> {
+        let mut configured = self.logical_fault.lock().expect("fault lock");
+        if configured.as_ref().is_some_and(|f| {
+            f.chain == chain && f.state == state && f.revision == revision && f.phase == phase
+        }) {
+            configured.take();
+            self.logical_fault_hits.fetch_add(1, Ordering::SeqCst);
+            return Err(if phase == FaultPhase::BeforePublish {
+                PersistenceError::Io
+            } else {
+                PersistenceError::CommitUncertain
+            });
+        }
+        Ok(())
+    }
+
     pub fn open(root: PathBuf) -> Result<Self, PersistenceError> {
+        let store = Self::open_unclassified(root)?;
+        if store.root.join("operations").exists() {
+            return Err(PersistenceError::InvalidPath);
+        }
+        store.classify_restart()?;
+        Ok(store)
+    }
+
+    pub(super) fn open_unclassified(root: PathBuf) -> Result<Self, PersistenceError> {
         let root = ygo_storage::prepare_store_directory(&root)
             .map_err(|_| PersistenceError::InvalidPath)?;
         for dir in [root.join("jobs"), root.join("reports")] {
@@ -114,7 +219,19 @@ impl PersistentAnalysisJobStore {
             }
         })?;
         let store = Self {
+            #[cfg(test)]
+            logical_fault: std::sync::Mutex::new(None),
+            #[cfg(test)]
+            logical_fault_hits: std::sync::Arc::new(AtomicUsize::new(0)),
             root,
+            initial_publish_lock: std::sync::RwLock::new(()),
+            #[cfg(test)]
+            initial_publish_gate: std::sync::Mutex::new(None),
+            attempt_receipt_states: std::sync::Mutex::new(BTreeMap::new()),
+            #[cfg(test)]
+            attempt_receipt_history_reads: AtomicUsize::new(0),
+            #[cfg(test)]
+            operation_failure: AtomicUsize::new(usize::MAX),
             _lock: lock,
             #[cfg(test)]
             fail_before_next_publish: AtomicBool::new(false),
@@ -126,29 +243,41 @@ impl PersistentAnalysisJobStore {
             fail_before_next_report_publish: AtomicBool::new(false),
             #[cfg(test)]
             fail_after_next_report_publish: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_attempt_receipt_before_publish_after: AtomicUsize::new(usize::MAX),
+            #[cfg(test)]
+            fail_attempt_receipt_after_publish_after: AtomicUsize::new(usize::MAX),
         };
-        let histories = store.scan()?;
-        for (_, history) in histories {
-            if let Some(last) = history.last() {
-                let event = match last.state() {
-                    AnalysisJobState::Queued | AnalysisJobState::Running => {
-                        Some(AnalysisJobEvent::ClassifyRestart)
-                    }
-                    _ => None,
-                };
-                if let Some(event) = event {
-                    let now = now_ms()?;
-                    let next = last
-                        .transition(last.revision(), event, now)
-                        .map_err(|_| PersistenceError::InvalidChain)?;
-                    store.publish_next(last, next)?;
-                }
-            }
-        }
+        store.scan()?;
         Ok(store)
     }
 
+    pub(super) fn classify_restart(&self) -> Result<(), PersistenceError> {
+        for (_, history) in self.scan()? {
+            if let Some(last) = history.last() {
+                if matches!(
+                    last.state(),
+                    AnalysisJobState::Queued | AnalysisJobState::Running
+                ) {
+                    let next = last
+                        .transition(
+                            last.revision(),
+                            AnalysisJobEvent::ClassifyRestart,
+                            now_ms()?,
+                        )
+                        .map_err(|_| PersistenceError::InvalidChain)?;
+                    self.publish_next(last, next)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn append_initial(&self, record: AnalysisJobRecordV1) -> Result<(), PersistenceError> {
+        let _publish_guard = self
+            .initial_publish_lock
+            .write()
+            .map_err(|_| PersistenceError::CommitUncertain)?;
         record
             .validate()
             .map_err(|_| PersistenceError::RecordInvalid)?;
@@ -168,6 +297,16 @@ impl PersistentAnalysisJobStore {
         if ygo_storage::prepare_store_directory(&revisions).is_err() {
             self.remove_empty_job(record.job_id());
             return Err(PersistenceError::InvalidPath);
+        }
+        #[cfg(test)]
+        if let Some((entered, release)) = self
+            .initial_publish_gate
+            .lock()
+            .map_err(|_| PersistenceError::CommitUncertain)?
+            .take()
+        {
+            entered.wait();
+            release.wait();
         }
         let result = self.write_envelope(&record, None);
         if result.is_err() && !self.revision_path(record.job_id(), 1).exists() {
@@ -224,6 +363,8 @@ impl PersistentAnalysisJobStore {
         {
             return Err(PersistenceError::Io);
         }
+        #[cfg(test)]
+        self.check_logical_fault("report", "file", 0, FaultPhase::BeforePublish)?;
         ygo_storage::publish_exclusive_file(&path, bytes).map_err(|error| {
             if error.starts_with("store_commit_uncertain:") {
                 PersistenceError::CommitUncertain
@@ -240,6 +381,10 @@ impl PersistentAnalysisJobStore {
         {
             return Err(PersistenceError::CommitUncertain);
         }
+        #[cfg(test)]
+        self.check_logical_fault("report", "file", 0, FaultPhase::AfterPublish)?;
+        #[cfg(test)]
+        self.check_logical_fault("report", "file", 0, FaultPhase::Reread)?;
         let reread = fs::read(&path).map_err(|_| PersistenceError::CommitUncertain)?;
         if ygo_storage::hash(&reread) != report_sha256 || strict_report(&reread).is_err() {
             return Err(PersistenceError::CommitUncertain);
@@ -342,6 +487,19 @@ impl PersistentAnalysisJobStore {
                     .fetch_sub(1, Ordering::SeqCst);
             }
         }
+        #[cfg(test)]
+        let logical_state = serde_json::to_value(record.state())
+            .expect("state")
+            .as_str()
+            .expect("state string")
+            .to_owned();
+        #[cfg(test)]
+        self.check_logical_fault(
+            "job",
+            &logical_state,
+            record.revision(),
+            FaultPhase::BeforePublish,
+        )?;
         ygo_storage::publish_exclusive_file(&path, &encoded).map_err(|error| {
             if error.starts_with("store_commit_uncertain:") || path.exists() {
                 PersistenceError::CommitUncertain
@@ -355,6 +513,15 @@ impl PersistentAnalysisJobStore {
         if self.fail_after_next_publish.swap(false, Ordering::SeqCst) {
             return Err(PersistenceError::CommitUncertain);
         }
+        #[cfg(test)]
+        self.check_logical_fault(
+            "job",
+            &logical_state,
+            record.revision(),
+            FaultPhase::AfterPublish,
+        )?;
+        #[cfg(test)]
+        self.check_logical_fault("job", &logical_state, record.revision(), FaultPhase::Reread)?;
         let history = self
             .read_history(record.job_id())
             .map_err(|_| PersistenceError::CommitUncertain)?;
@@ -391,7 +558,13 @@ impl PersistentAnalysisJobStore {
         }
     }
 
-    fn scan(&self) -> Result<BTreeMap<String, Vec<AnalysisJobRecordV1>>, PersistenceError> {
+    pub(super) fn scan(
+        &self,
+    ) -> Result<BTreeMap<String, Vec<AnalysisJobRecordV1>>, PersistenceError> {
+        let _publish_guard = self
+            .initial_publish_lock
+            .read()
+            .map_err(|_| PersistenceError::CommitUncertain)?;
         self.validate_root_layout()?;
         let jobs = self.root.join("jobs");
         let mut result = BTreeMap::new();
@@ -416,6 +589,9 @@ impl PersistentAnalysisJobStore {
                 }
             }
         }
+        for job_id in result.keys() {
+            self.read_attempt_receipts(job_id)?;
+        }
         Ok(result)
     }
 
@@ -424,6 +600,14 @@ impl PersistentAnalysisJobStore {
         record: &AnalysisJobRecordV1,
         reference: &super::jobs::AnalysisJobReportRefV1,
     ) -> Result<(), PersistenceError> {
+        self.read_saved_report(record, reference).map(|_| ())
+    }
+
+    pub(super) fn read_saved_report(
+        &self,
+        record: &AnalysisJobRecordV1,
+        reference: &super::jobs::AnalysisJobReportRefV1,
+    ) -> Result<AnalysisReport, PersistenceError> {
         if !valid_id(&reference.report_id) || reference.sha256.len() != 64 {
             return Err(PersistenceError::ReportBindingMismatch);
         }
@@ -460,7 +644,7 @@ impl PersistentAnalysisJobStore {
         {
             return Err(PersistenceError::ReportBindingMismatch);
         }
-        Ok(())
+        Ok(report)
     }
 
     fn validate_root_layout(&self) -> Result<(), PersistenceError> {
@@ -473,6 +657,9 @@ impl PersistentAnalysisJobStore {
             match name.as_str() {
                 STORE_LOCK if metadata.is_file() => {}
                 "jobs" | "reports" if metadata.is_dir() => {}
+                "operations" if metadata.is_dir() => {
+                    self.scan_operations()?;
+                }
                 _ => return Err(PersistenceError::InvalidPath),
             }
             names.insert(name);
@@ -487,11 +674,19 @@ impl PersistentAnalysisJobStore {
         for entry in fs::read_dir(reports).map_err(|_| PersistenceError::Io)? {
             let entry = entry.map_err(|_| PersistenceError::Io)?;
             let name = entry.file_name().to_string_lossy().into_owned();
+            let metadata = ygo_storage::safe_store_metadata(&entry.path())
+                .map_err(|_| PersistenceError::InvalidPath)?;
+            if is_unpublished_store_file(&name, &metadata, MAX_REPORT_BYTES as u64)
+                .map_err(|_| PersistenceError::ReportInvalid)?
+            {
+                // An interrupted exclusive publish can leave its synced,
+                // unpublished temporary bytes behind. Preserve them as
+                // evidence, but never treat them as an indexed report.
+                continue;
+            }
             let id = name
                 .strip_suffix(".json")
                 .ok_or(PersistenceError::ReportInvalid)?;
-            let metadata = ygo_storage::safe_store_metadata(&entry.path())
-                .map_err(|_| PersistenceError::InvalidPath)?;
             if !valid_id(id) || !metadata.is_file() || metadata.len() > MAX_REPORT_BYTES as u64 {
                 return Err(PersistenceError::ReportInvalid);
             }
@@ -519,8 +714,16 @@ impl PersistentAnalysisJobStore {
         }
         for entry in fs::read_dir(&dir).map_err(|_| PersistenceError::Io)? {
             let entry = entry.map_err(|_| PersistenceError::Io)?;
-            if entry.file_name() != "revisions" {
-                return Err(PersistenceError::InvalidChain);
+            match entry.file_name().to_str() {
+                Some("revisions") => {}
+                Some("attempt_receipts") => {
+                    let metadata = ygo_storage::safe_store_metadata(&entry.path())
+                        .map_err(|_| PersistenceError::InvalidPath)?;
+                    if !metadata.is_dir() {
+                        return Err(PersistenceError::InvalidPath);
+                    }
+                }
+                _ => return Err(PersistenceError::InvalidChain),
             }
         }
         let mut files = Vec::new();
@@ -529,6 +732,9 @@ impl PersistentAnalysisJobStore {
             let name = entry.file_name().to_string_lossy().into_owned();
             let metadata = ygo_storage::safe_store_metadata(&entry.path())
                 .map_err(|_| PersistenceError::InvalidPath)?;
+            if is_unpublished_store_file(&name, &metadata, 1024 * 1024)? {
+                continue;
+            }
             if !metadata.is_file() || !name.ends_with(".json") {
                 return Err(PersistenceError::InvalidChain);
             }
@@ -610,6 +816,54 @@ impl PersistentAnalysisJobStore {
     }
     fn report_path(&self, id: &str) -> PathBuf {
         self.root.join("reports").join(format!("{id}.json"))
+    }
+
+    #[cfg(test)]
+    pub(super) fn inject_attempt_receipt_failure_after(
+        &self,
+        successful_publishes: usize,
+        after_publish: bool,
+    ) {
+        let target = if after_publish {
+            &self.fail_attempt_receipt_after_publish_after
+        } else {
+            &self.fail_attempt_receipt_before_publish_after
+        };
+        target.store(successful_publishes, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    pub(super) fn fail_attempt_receipt_before_publish(&self) -> Result<(), PersistenceError> {
+        let remaining = self
+            .fail_attempt_receipt_before_publish_after
+            .load(Ordering::SeqCst);
+        if remaining == 0 {
+            self.fail_attempt_receipt_before_publish_after
+                .store(usize::MAX, Ordering::SeqCst);
+            return Err(PersistenceError::Io);
+        }
+        if remaining != usize::MAX {
+            self.fail_attempt_receipt_before_publish_after
+                .fetch_sub(1, Ordering::SeqCst);
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(super) fn fail_attempt_receipt_after_publish(&self) -> Result<(), PersistenceError> {
+        let remaining = self
+            .fail_attempt_receipt_after_publish_after
+            .load(Ordering::SeqCst);
+        if remaining == 0 {
+            self.fail_attempt_receipt_after_publish_after
+                .store(usize::MAX, Ordering::SeqCst);
+            return Err(PersistenceError::CommitUncertain);
+        }
+        if remaining != usize::MAX {
+            self.fail_attempt_receipt_after_publish_after
+                .fetch_sub(1, Ordering::SeqCst);
+        }
+        Ok(())
     }
 }
 
@@ -735,7 +989,26 @@ fn valid_id(id: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-fn now_ms() -> Result<u64, PersistenceError> {
+pub(super) fn unpublished_store_file_id(name: &str) -> Option<&str> {
+    let id = name.strip_prefix(".ygo-draft-")?.strip_suffix(".tmp")?;
+    valid_id(id).then_some(id)
+}
+
+pub(super) fn is_unpublished_store_file(
+    name: &str,
+    metadata: &fs::Metadata,
+    max_bytes: u64,
+) -> Result<bool, PersistenceError> {
+    if unpublished_store_file_id(name).is_none() {
+        return Ok(false);
+    }
+    if !metadata.is_file() || metadata.len() > max_bytes {
+        return Err(PersistenceError::InvalidPath);
+    }
+    Ok(true)
+}
+
+pub(super) fn now_ms() -> Result<u64, PersistenceError> {
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| PersistenceError::RecordInvalid)?
