@@ -34,6 +34,8 @@ struct RuntimeIdentity {
     config_path: PathBuf,
     config_sha256: String,
     snapshots_dir: PathBuf,
+    catalog_snapshot_sha256: String,
+    banlist_snapshot_sha256: String,
     engine: ProcessEngineConfig,
 }
 
@@ -67,13 +69,13 @@ impl W1cAdmission {
         let snapshots = SnapshotStore::new(snapshots_dir.to_path_buf());
         let catalog = snapshots.catalog(CATALOG_ID)?;
         let banlist = snapshots.banlist(BANLIST_ID)?;
+        let catalog_snapshot_sha256 = file_hash(&snapshots_dir.join(format!("{CATALOG_ID}.json")))?;
+        let banlist_snapshot_sha256 = file_hash(&snapshots_dir.join(format!("{BANLIST_ID}.json")))?;
         if catalog.id != CATALOG_ID
             || banlist.id != BANLIST_ID
             || banlist.effective_date.as_deref() != Some("2026-10-01")
-            || file_hash(&snapshots_dir.join(format!("{CATALOG_ID}.json")))?
-                != CATALOG_SNAPSHOT_SHA256
-            || file_hash(&snapshots_dir.join(format!("{BANLIST_ID}.json")))?
-                != BANLIST_SNAPSHOT_SHA256
+            || catalog_snapshot_sha256 != CATALOG_SNAPSHOT_SHA256
+            || banlist_snapshot_sha256 != BANLIST_SNAPSHOT_SHA256
         {
             return Err("workbench_analysis_snapshot_identity_mismatch".into());
         }
@@ -133,6 +135,8 @@ impl W1cAdmission {
                 snapshots_dir: snapshots_dir
                     .canonicalize()
                     .map_err(|_| "workbench_analysis_snapshot_unavailable")?,
+                catalog_snapshot_sha256,
+                banlist_snapshot_sha256,
                 engine: engine.clone(),
             }),
         })
@@ -200,11 +204,11 @@ impl W1cAdmission {
         if file_hash(&snapshots.join(format!("{CATALOG_ID}.json")))
             .ok()
             .as_deref()
-            != Some(CATALOG_SNAPSHOT_SHA256)
+            != Some(runtime.catalog_snapshot_sha256.as_str())
             || file_hash(&snapshots.join(format!("{BANLIST_ID}.json")))
                 .ok()
                 .as_deref()
-                != Some(BANLIST_SNAPSHOT_SHA256)
+                != Some(runtime.banlist_snapshot_sha256.as_str())
         {
             return Err("analysis_snapshot_identity_mismatch");
         }
@@ -300,15 +304,10 @@ mod tests {
         std::fs::create_dir_all(&snapshots_dir).unwrap();
         std::fs::write(&config_path, b"w1c-analysis-config").unwrap();
         std::fs::write(&worker_path, b"test-worker").unwrap();
-
-        let repository = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-        for id in [CATALOG_ID, BANLIST_ID] {
-            std::fs::copy(
-                repository.join("data/snapshots").join(format!("{id}.json")),
-                snapshots_dir.join(format!("{id}.json")),
-            )
-            .unwrap();
-        }
+        let catalog_snapshot_path = snapshots_dir.join(format!("{CATALOG_ID}.json"));
+        let banlist_snapshot_path = snapshots_dir.join(format!("{BANLIST_ID}.json"));
+        std::fs::write(&catalog_snapshot_path, b"test-catalog-snapshot").unwrap();
+        std::fs::write(&banlist_snapshot_path, b"test-banlist-snapshot").unwrap();
 
         let executable_path = std::env::current_exe().unwrap().canonicalize().unwrap();
         let engine = ProcessEngineConfig {
@@ -322,6 +321,8 @@ mod tests {
             config_path: config_path.canonicalize().unwrap(),
             config_sha256: file_hash(&config_path).unwrap(),
             snapshots_dir: snapshots_dir.canonicalize().unwrap(),
+            catalog_snapshot_sha256: file_hash(&catalog_snapshot_path).unwrap(),
+            banlist_snapshot_sha256: file_hash(&banlist_snapshot_path).unwrap(),
             engine,
         };
         (

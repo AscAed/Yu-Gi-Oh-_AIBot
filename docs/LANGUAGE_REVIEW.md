@@ -46,7 +46,7 @@ cargo run -p ygo-cli --offline --locked -- workbench serve --language-status dat
 
 39卡的候选仍不能作为正式中文搜索、自动选择或卡片效果知识。完成语义准确性、语言类别及使用/分发依据核验后，才可另行评估有限字段资格。
 
-2026-11-03对人偶之锤（44088353）单独复核来源与使用依据：Konami官方日文页和本地日文收录归档哈希相符；同卡号官方简中查询仍返回无卡片信息。冻结C1中zh-CN名称/正文仍为`candidate`、语义`not_reviewed`，使用依据和再分发均为`unknown`。上游`mycard/ygopro-database`来源链已定位，但未发现覆盖本项目使用/再分发的许可文本；不改C1或候选状态。详见[单卡来源与使用依据复核](superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)。
+2026-11-03对人偶之锤（44088353）单独复核来源与使用依据：Konami官方日文页确认卡号、日文名称和收录信息；本地日文收录归档的SHA-256与`configs/tournament-2026.source.json`登记值相符。同卡号官方简中查询仍返回无卡片信息。冻结C1中zh-CN名称/正文仍为`candidate`、语义`not_reviewed`，使用依据和再分发均为`unknown`。上游`mycard/ygopro-database`来源链已定位，但未发现覆盖本项目使用/再分发的许可文本；不改C1或候选状态。详见[单卡来源与使用依据复核](superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)。
 
 2026-11-03将来源身份与权利线索复核扩展到冻结清单中的zh-CN和zh-SC两份CDB：本地字节数、SHA-256及Git blob身份均与同一MyCard固定提交对象匹配；检查的固定提交根目录和locale目录未列出许可文件，README只称数据库用于测试。此次未找到覆盖本项目使用或再分发的明确授权，两个来源的使用依据和再分发状态继续为`unknown`；没有修改冻结配置、C1报告、候选数据或资格。详情见[双locale来源与使用依据复核](superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)。
 

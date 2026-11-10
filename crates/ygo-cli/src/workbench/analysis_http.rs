@@ -442,7 +442,10 @@ impl AnalysisHttpService {
                                 }
                             }
                         }) {
-                        Ok(job) => jobs.push(job),
+                        Ok(job) => {
+                            jobs.retain(|handle| !handle.is_finished());
+                            jobs.push(job);
+                        }
                         Err(_) => {
                             let _ = self.coordinator.stop_dispatch();
                             return failure(503, "analysis_commit_uncertain", Some(id), None);
@@ -1070,6 +1073,11 @@ mod tests {
             "/api/analysis-operations/{}",
             operation["operation_id"].as_str().unwrap()
         );
+        let completed_handle = std::thread::spawn(|| {});
+        while !completed_handle.is_finished() {
+            std::thread::yield_now();
+        }
+        service.background.lock().unwrap().push(completed_handle);
         let command = serde_json::json!({"schema_version":1,"kind":"analysis_submit","draft_id":saved.id,"draft_revision":saved.revision,"opening_hand":draft.main[..5],"seed":1,"rules":"ocg-mr5","catalog_id":null,"banlist_id":banlist,"as_of":"2026-10-30","search":ygo_search::combo::SearchBudget::default()});
         let (status, accepting) = request(addr, &token, "PUT", &operation_path, command.clone());
         assert_eq!(status, 202);

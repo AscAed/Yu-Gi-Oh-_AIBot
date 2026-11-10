@@ -47,7 +47,7 @@
 | 资产组 ID | `asset-group-228cca96b5cf16a5e8d8f397cb30db073b483e75ddb0536d7d5f6f28783af340` |
 | Catalog / banlist ID | `catalog-de71e6b4683795a9cb83c44ba85bf1cc43d635ce8da032fff9f8b055b60e31b9` / `banlist-c98f770b366fed87be0fb23357a63d704db58b31508fbb88133fda66575f3783` |
 | `data/runtime/tournament-2026/frozen/manifest.json` | `2131d85669dc307a2cb0a82096b6460acba3ecbd63eca3852bf0158f450d1a2c` |
-| 冻结 `cards.cdb` / `engine/ocgcore.dll` | `3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632` / `446f26df7a2fb0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632` |
+| 冻结 `cards.cdb` / `engine/ocgcore.dll` | `3530f406ba92b0f8d5699aa107e95158a1f1b4816f8f5ca2dd82c490301ef632` / `446f26df7a2fb35d94374d74f5f5a5ef200d5454322d372b325e46b4e083d7a9` |
 | `engine/manifest.json` / `scripts.json` | `2028d6b7d5bf6878c11107760e73f33cf8dcfcf977d312c86ff98640c736e457` / `26c44946c7aba56900ededc5358e163fce71d5b99182f0d0fa910739bc3d9c94` |
 
 上述文件在检查时存在，CDB、core 和脚本清单与请求/配置声明一致；检查没有调用引擎或验证当前 ABI。`target/debug/ygo-engine-worker.exe` 当时存在，SHA-256 为 `0cb8547fb9b302802dff81e986efa854ee7c27b74c37af834b5c384b9323db68`，但没有绑定到本批源码，故不作为候选运行包。当前 HEAD 为 `672e5a823fcad60e9413d79cac810b68a2bb003c`，工作区有既存改动；实际执行前必须记录源码 HEAD、完整 tracked diff、参与构建的 untracked 源文件、`Cargo.lock` 与构建产物哈希。资产/fixture 只读哈希是设计基线，执行前必须重验。

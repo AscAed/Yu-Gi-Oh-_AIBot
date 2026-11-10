@@ -730,7 +730,7 @@ fn execute_stream(
         unsafe {
             for name in ["constant.lua", "utility.lua"] {
                 let name = CString::new(name).unwrap();
-                script_reader(payload, duel, name.as_ptr());
+                script_reader_inner(payload, duel, name.as_ptr());
             }
             for (p, zone, cards) in [
                 (0, 1, &remaining),
@@ -1066,14 +1066,7 @@ pub fn run_worker<R: BufRead, W: Write>(mut input: R, mut output: W) -> std::io:
             Ok(r) => {
                 let protocol = r.protocol_version;
                 let versions = r.versions.clone();
-                execute(r).unwrap_or_else(|e| {
-                    let mut result = DuelResult::failure(e);
-                    if protocol >= 3 {
-                        result.protocol_version = protocol;
-                        result.versions = versions;
-                    }
-                    result
-                })
+                execute(r).unwrap_or_else(|error| failure_result(protocol, versions, error))
             }
             Err(e) => {
                 DuelResult::failure(WorkerError::new("invalid_request", "input", e.to_string()))
@@ -1106,8 +1099,10 @@ pub fn run_worker_stream() -> std::io::Result<()> {
     let attempt_id = request.attempt_id;
     let stream = shared_worker_stream(attempt_id.clone(), input, std::io::stdout())
         .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))?;
-    let result =
-        execute_stream(request.request, Some(stream.clone())).unwrap_or_else(DuelResult::failure);
+    let protocol = request.request.protocol_version;
+    let versions = request.request.versions.clone();
+    let result = execute_stream(request.request, Some(stream.clone()))
+        .unwrap_or_else(|error| failure_result(protocol, versions, error));
     let response = StreamResult {
         version: STREAM_VERSION,
         attempt_id,
@@ -1120,6 +1115,53 @@ pub fn run_worker_stream() -> std::io::Result<()> {
         .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error));
     write_result
 }
+
+fn failure_result(protocol: u16, versions: RuntimeVersions, error: WorkerError) -> DuelResult {
+    let mut result = DuelResult::failure(error);
+    if protocol >= 3 {
+        result.protocol_version = protocol;
+        result.versions = versions;
+    }
+    result
+}
+
+#[cfg(test)]
+mod failure_result_tests {
+    use super::*;
+
+    #[test]
+    fn failure_result_preserves_v3_protocol_and_runtime_versions() {
+        let versions = RuntimeVersions {
+            rules: "rules-v1".into(),
+            ..RuntimeVersions::default()
+        };
+        let result = failure_result(
+            3,
+            versions.clone(),
+            WorkerError::new("fixture", "test", "failure"),
+        );
+
+        assert_eq!(result.status, DuelStatus::Failed);
+        assert_eq!(result.protocol_version, 3);
+        assert_eq!(result.versions, versions);
+    }
+
+    #[test]
+    fn failure_result_keeps_v2_legacy_defaults() {
+        let result = failure_result(
+            2,
+            RuntimeVersions {
+                rules: "ignored-for-v2".into(),
+                ..RuntimeVersions::default()
+            },
+            WorkerError::new("fixture", "test", "failure"),
+        );
+
+        assert_eq!(result.protocol_version, 2);
+        assert_eq!(result.versions, RuntimeVersions::default());
+    }
+}
+
 fn automatic_choice(prompt: &Prompt, protocol: u16, resolved: usize) -> Option<Choice> {
     if prompt.actions.len() == 1 && resolved < 1024 && !(protocol >= 5 && prompt.opcode == 11) {
         Some(prompt.actions[0].choice.clone())

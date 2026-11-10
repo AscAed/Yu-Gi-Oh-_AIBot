@@ -467,10 +467,71 @@ fn intent_name(stage: u8) -> Result<String, WorkerError> {
 
 /// One authenticated 1,800-second, five-request Ground Collapse scope.
 pub struct GroundCollapseProbeBatch {
-    journal: Arc<CallJournal>,
+    journal: ProbeJournal,
     context: String,
     started: u64,
     gate: Mutex<()>,
+}
+
+enum ProbeJournal {
+    Writable(Arc<CallJournal>),
+    ReadOnly(Box<ReadOnlyJournal>),
+}
+
+impl ProbeJournal {
+    fn stats(&self) -> Result<LedgerStats, WorkerError> {
+        match self {
+            Self::Writable(journal) => journal.stats(),
+            Self::ReadOnly(journal) => journal.stats(),
+        }
+    }
+
+    fn verify(&self) -> Result<(), WorkerError> {
+        match self {
+            Self::Writable(journal) => journal.verify(),
+            Self::ReadOnly(journal) => journal.verify(),
+        }
+    }
+
+    fn checkpoint(&self, name: &str) -> Result<Option<Value>, WorkerError> {
+        match self {
+            Self::Writable(journal) => journal.checkpoint(name),
+            Self::ReadOnly(journal) => journal.checkpoint(name),
+        }
+    }
+
+    fn load_outcome(
+        &self,
+        call_id: u64,
+        request: &RunDuelRequest,
+    ) -> Result<Option<Result<DuelResult, WorkerError>>, WorkerError> {
+        match self {
+            Self::Writable(journal) => journal.load_outcome(call_id, request),
+            Self::ReadOnly(journal) => journal.load_outcome(call_id, request),
+        }
+    }
+
+    fn save_checkpoint(&self, name: &str, value: &Value) -> Result<(), WorkerError> {
+        match self {
+            Self::Writable(journal) => journal.save_checkpoint(name, value),
+            Self::ReadOnly(_) => Err(WorkerError::new(
+                "journal_readonly",
+                "ground_collapse_probe",
+                "read-only Ground Collapse inspection cannot write checkpoints",
+            )),
+        }
+    }
+
+    fn writable(&self) -> Result<Arc<CallJournal>, WorkerError> {
+        match self {
+            Self::Writable(journal) => Ok(journal.clone()),
+            Self::ReadOnly(_) => Err(WorkerError::new(
+                "journal_readonly",
+                "ground_collapse_probe",
+                "read-only Ground Collapse inspection cannot execute requests",
+            )),
+        }
+    }
 }
 
 impl GroundCollapseProbeBatch {
@@ -492,7 +553,45 @@ impl GroundCollapseProbeBatch {
             None => journal.save_checkpoint("immutable/ground-collapse/start", &json!(started))?,
         }
         Ok(Self {
-            journal,
+            journal: ProbeJournal::Writable(journal),
+            context: context.into(),
+            started,
+            gate: Mutex::new(()),
+        })
+    }
+
+    /// Open a fully authenticated existing scope without recovering or writing
+    /// checkpoints. Inspection requires the original start checkpoint to exist.
+    pub fn inspect_existing(path: &Path, context: &str, started: u64) -> Result<Self, WorkerError> {
+        if context.is_empty() || started > now()? {
+            return Err(fail("invalid_context_or_start"));
+        }
+        let journal = CallJournal::inspect_existing(
+            path,
+            GROUND_COLLAPSE_PROBE_SCOPE,
+            context,
+            GROUND_COLLAPSE_PROBE_LIMIT,
+        )?
+        .ok_or_else(|| {
+            WorkerError::new(
+                "journal_readonly_incomplete",
+                "ground_collapse_probe",
+                "existing ledger required",
+            )
+        })?;
+        match journal.checkpoint("immutable/ground-collapse/start")? {
+            Some(existing) if existing == json!(started) => {}
+            Some(_) => return Err(fail("immutable_start_changed")),
+            None => {
+                return Err(WorkerError::new(
+                    "start_checkpoint_missing",
+                    "ground_collapse_probe",
+                    "read-only scope start checkpoint is missing",
+                ))
+            }
+        }
+        Ok(Self {
+            journal: ProbeJournal::ReadOnly(Box::new(journal)),
             context: context.into(),
             started,
             gate: Mutex::new(()),
@@ -537,6 +636,15 @@ impl GroundCollapseProbeBatch {
     }
 
     pub fn validate_request(&self, stage: u8, request: &RunDuelRequest) -> Result<(), WorkerError> {
+        self.validate_request_inner(stage, request, true)
+    }
+
+    fn validate_request_inner(
+        &self,
+        stage: u8,
+        request: &RunDuelRequest,
+        initialize_base_request: bool,
+    ) -> Result<(), WorkerError> {
         if !(1..=GROUND_COLLAPSE_PROBE_LIMIT as u8).contains(&stage) {
             return Err(fail("stage_outside_ground_window"));
         }
@@ -553,9 +661,16 @@ impl GroundCollapseProbeBatch {
                     return Err(fail("base_request_changed"));
                 }
                 Some(_) => {}
-                None => self
+                None if initialize_base_request => self
                     .journal
                     .save_checkpoint("immutable/ground-collapse/base-request", &value(&base)?)?,
+                None => {
+                    return Err(WorkerError::new(
+                        "base_request_checkpoint_missing",
+                        "ground_collapse_probe",
+                        "read-only stage receipt has no base request checkpoint",
+                    ))
+                }
             }
             return Ok(());
         }
@@ -610,7 +725,7 @@ impl GroundCollapseProbeBatch {
                 .ok_or_else(|| fail("receipt_request_missing"))?,
         )
         .map_err(|error| fail(&error.to_string()))?;
-        self.validate_request(stage, &request)?;
+        self.validate_request_inner(stage, &request, false)?;
         let outcome: Result<DuelResult, WorkerError> = serde_json::from_value(
             receipt
                 .get("result")
@@ -688,9 +803,23 @@ impl GroundCollapseProbeBatch {
         stage: u8,
         request: &RunDuelRequest,
     ) -> Result<DuelResult, WorkerError> {
+        self.run_with_time_check(adapter, stage, request, || self.require_call_time())
+    }
+
+    fn run_with_time_check<A, F>(
+        &self,
+        adapter: A,
+        stage: u8,
+        request: &RunDuelRequest,
+        mut require_call_time: F,
+    ) -> Result<DuelResult, WorkerError>
+    where
+        A: EngineAdapter,
+        F: FnMut() -> Result<(), WorkerError>,
+    {
         let _guard = self.gate.lock().map_err(|_| fail("poisoned_scope_gate"))?;
         self.validate_request(stage, request)?;
-        self.require_call_time()?;
+        require_call_time()?;
         let stats = self.stats()?;
         if stats.consumed != stage as usize - 1
             || stats.unknown != 0
@@ -708,12 +837,12 @@ impl GroundCollapseProbeBatch {
         } else {
             CallPurpose::Execution
         };
+        require_call_time()?;
         self.journal.save_checkpoint(
             &intent_name(stage)?,
             &json!({"stage":stage,"purpose":purpose,"request":request}),
         )?;
-        self.require_call_time()?;
-        JournaledAdapter::new(adapter, self.journal.clone(), purpose).run(request)
+        JournaledAdapter::new(adapter, self.journal.writable()?, purpose).run(request)
     }
 
     pub fn save_assets_before(&self, stage: u8, identity: &Value) -> Result<(), WorkerError> {
@@ -736,6 +865,7 @@ impl GroundCollapseProbeBatch {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::{fs::OpenOptions, io::Write};
 
     #[derive(Clone)]
     struct SyntheticGroundEngine(Arc<AtomicU64>);
@@ -953,7 +1083,11 @@ mod tests {
             &original.unwrap(),
             &replay.unwrap()
         ));
-        assert_eq!(batch.journal.call_purpose(4).unwrap(), CallPurpose::Replay);
+        let replay_purpose = match &batch.journal {
+            ProbeJournal::Writable(journal) => journal.call_purpose(4).unwrap(),
+            ProbeJournal::ReadOnly(_) => panic!("running batch must use a writable journal"),
+        };
+        assert_eq!(replay_purpose, CallPurpose::Replay);
         assert_eq!(batch.stats().unwrap().consumed, 4);
         assert_eq!(batch.stats().unwrap().completed, 4);
         assert_eq!(batch.stats().unwrap().unknown, 0);
@@ -975,6 +1109,143 @@ mod tests {
             CallJournal::open(&ledger, "tenki-prompt-probe-v1", "synthetic-context", 6).is_err()
         );
         assert!(batch.validate_request(6, &frozen_request()).is_err());
+        let consumed_before = batch.stats().unwrap().consumed;
+        assert!(batch
+            .run(
+                SyntheticGroundEngine(Arc::new(AtomicU64::new(0))),
+                6,
+                &frozen_request()
+            )
+            .is_err());
+        assert_eq!(batch.stats().unwrap().consumed, consumed_before);
+        drop(batch);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn final_time_check_fails_before_persisting_stage_intent() {
+        let root = test_root("time-check-before-intent");
+        let started = now().unwrap();
+        let ledger = root.join("calls.jsonl");
+        let batch = GroundCollapseProbeBatch::open(&ledger, "synthetic-context", started).unwrap();
+        let request = frozen_request();
+        batch.validate_request(1, &request).unwrap();
+        batch
+            .save_assets_before(1, &json!({"synthetic":true}))
+            .unwrap();
+        let engine_calls = Arc::new(AtomicU64::new(0));
+        let mut time_checks = 0;
+
+        let result = batch.run_with_time_check(
+            SyntheticGroundEngine(engine_calls.clone()),
+            1,
+            &request,
+            || {
+                time_checks += 1;
+                if time_checks == 2 {
+                    assert!(
+                        batch
+                            .journal
+                            .checkpoint(&intent_name(1).unwrap())
+                            .unwrap()
+                            .is_none(),
+                        "the final time check ran after the stage intent was saved"
+                    );
+                    return Err(fail("insufficient_window_for_request"));
+                }
+                Ok(())
+            },
+        );
+
+        assert_eq!(
+            result.unwrap_err().message,
+            "insufficient_window_for_request"
+        );
+        assert_eq!(time_checks, 2);
+        assert_eq!(engine_calls.load(Ordering::SeqCst), 0);
+        assert!(batch
+            .journal
+            .checkpoint(&intent_name(1).unwrap())
+            .unwrap()
+            .is_none());
+        drop(batch);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn read_only_inspection_requires_start_and_preserves_torn_ledger_bytes() {
+        let root = test_root("readonly-start");
+        let started = now().unwrap();
+        let missing_start = root.join("missing-start.jsonl");
+        let journal = CallJournal::open(
+            &missing_start,
+            GROUND_COLLAPSE_PROBE_SCOPE,
+            "synthetic-context",
+            GROUND_COLLAPSE_PROBE_LIMIT,
+        )
+        .unwrap();
+        drop(journal);
+        let before = std::fs::read(&missing_start).unwrap();
+        assert_eq!(
+            GroundCollapseProbeBatch::inspect_existing(
+                &missing_start,
+                "synthetic-context",
+                started
+            )
+            .err()
+            .unwrap()
+            .code,
+            "start_checkpoint_missing"
+        );
+        assert_eq!(std::fs::read(&missing_start).unwrap(), before);
+
+        let torn = root.join("torn.jsonl");
+        let batch = GroundCollapseProbeBatch::open(&torn, "synthetic-context", started).unwrap();
+        drop(batch);
+        let mut file = OpenOptions::new().append(true).open(&torn).unwrap();
+        file.write_all(b"{\"torn\":").unwrap();
+        file.sync_all().unwrap();
+        drop(file);
+        let before = std::fs::read(&torn).unwrap();
+        assert!(
+            GroundCollapseProbeBatch::inspect_existing(&torn, "synthetic-context", started)
+                .is_err()
+        );
+        assert_eq!(std::fs::read(&torn).unwrap(), before);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn read_only_evidence_validation_never_creates_missing_base_checkpoint() {
+        let root = test_root("readonly-base");
+        let started = now().unwrap();
+        let ledger = root.join("calls.jsonl");
+        let batch = GroundCollapseProbeBatch::open(&ledger, "synthetic-context", started).unwrap();
+        drop(batch);
+        let before = std::fs::read(&ledger).unwrap();
+        let batch =
+            GroundCollapseProbeBatch::inspect_existing(&ledger, "synthetic-context", started)
+                .unwrap();
+
+        assert_eq!(batch.stats().unwrap().consumed, 0);
+        batch.verify().unwrap();
+        let receipt = json!({
+            "stage": 1,
+            "scope": GROUND_COLLAPSE_PROBE_SCOPE,
+            "context": "synthetic-context",
+            "started_at": started,
+            "request": frozen_request()
+        });
+        assert_eq!(
+            batch.verify_evidence(1, &receipt).unwrap_err().code,
+            "base_request_checkpoint_missing"
+        );
+        assert!(batch
+            .journal
+            .checkpoint("immutable/ground-collapse/base-request")
+            .unwrap()
+            .is_none());
+        assert_eq!(std::fs::read(&ledger).unwrap(), before);
         drop(batch);
         std::fs::remove_dir_all(root).unwrap();
     }

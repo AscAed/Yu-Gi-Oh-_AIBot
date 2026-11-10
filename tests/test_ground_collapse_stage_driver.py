@@ -254,6 +254,7 @@ def test_coordinator_uses_synthetic_runner_and_completes_direct_route(monkeypatc
         first_request = copy.deepcopy(initial)
 
         def fake_runner(command, **_kwargs):
+            assert _kwargs["timeout"] == module.RUNNER_TIMEOUT_SECONDS
             invocation = json.loads(Path(command[1]).read_bytes())
             stage = invocation["stage"]
             request = invocation["request"]
@@ -310,6 +311,105 @@ def test_coordinator_uses_synthetic_runner_and_completes_direct_route(monkeypatc
         assert report["worker_process_calls"] == 4
         assert report["actual_unknown"] == 0
         assert report["proof_ready"] is False
+
+
+def test_coordinator_reserves_runner_timeout_before_scope_window_end(monkeypatch):
+    from test_prompt_probe_prepare import temporary_directory
+
+    with temporary_directory() as temporary:
+        module, repo, runner, output, manifest, initial, identity = run_manifest(
+            temporary, monkeypatch, base_request()
+        )
+        manifest["started_at"] = (
+            int(module.time.time()) - module.WINDOW_SECONDS + module.RUNNER_TIMEOUT_SECONDS - 5
+        )
+        unsigned = {key: value for key, value in manifest.items() if key != "context"}
+        manifest["context"] = digest(canonical(unsigned))
+        calls = []
+
+        def unexpected_runner(command, **_kwargs):
+            calls.append(command)
+            raise AssertionError("runner must not start without its full timeout window")
+
+        report = run_ground_collapse_stages(
+            runner, output, manifest, initial, identity, lambda: None,
+            repo=repo, process_runner=unexpected_runner,
+        )
+
+        assert calls == []
+        assert report["runner_process_calls"] == 0
+        assert report["diagnostic"] == "scope_window_exhausted_before_request"
+
+
+def test_stage_derivation_failure_persists_summary_for_authenticated_receipt(monkeypatch):
+    from test_prompt_probe_prepare import temporary_directory
+
+    with temporary_directory() as temporary:
+        module, repo, runner, output, manifest, initial, identity = run_manifest(
+            temporary, monkeypatch, base_request()
+        )
+
+        def fake_runner(command, **_kwargs):
+            invocation = json.loads(Path(command[1]).read_bytes())
+            request = invocation["request"]
+            result = {"Ok": idle_result()}
+            validation = module.validate_ground_stage_result(1, request, result)
+            stats = {"limit": 5, "consumed": 1, "completed": 1,
+                     "unknown": 0, "reserved": 0, "abandoned": 0}
+            receipt_value = {
+                "schema_version": 1,
+                "kind": "ground_collapse_probe_stage",
+                "scope": module.GROUND_COLLAPSE_SCOPE,
+                "context": manifest["context"],
+                "stage": 1,
+                "request": request,
+                "result": result,
+                "validation": {"Ok": validation},
+                "assets_before": identity,
+                "assets_after": identity,
+                "assets_unchanged": True,
+                "independent_replay_matches": None,
+                "successful": True,
+                "diagnostic": None,
+                "ledger": stats,
+                "started_at": manifest["started_at"],
+                "native_calls": 1,
+                "runner_process_calls": 1,
+                "worker_process_calls": 1,
+                "ffi_calls": None,
+                "proof_ready": False,
+                "complete_action_coverage": False,
+                "global_optimality": False,
+                "native_probability_verified": False,
+            }
+            Path(invocation["output"]).write_text(json.dumps(receipt_value), encoding="utf8")
+            stdout = canonical({
+                "successful": True,
+                "native_calls": 1,
+                "runner_process_calls": 1,
+                "worker_process_calls": 1,
+                "ffi_calls": None,
+                "ledger": stats,
+            })
+            return subprocess.CompletedProcess(command, 0, stdout=stdout, stderr=b"")
+
+        def fail_derivation(_stage, _receipt):
+            raise ValueError("synthetic stage derivation failure")
+
+        monkeypatch.setattr(module, "derive_ground_stage_request", fail_derivation)
+        report = run_ground_collapse_stages(
+            runner, output, manifest, initial, identity, lambda: None,
+            repo=repo, process_runner=fake_runner,
+        )
+
+        summaries = list(output.glob("summary-*.json"))
+        assert len(summaries) == 1
+        assert json.loads(summaries[0].read_bytes()) == report
+        assert report["diagnostic"] == "stage_derivation_failed"
+        assert report["stage_count"] == 1
+        assert report["native_calls"] == 1
+        assert report["ledger"]["consumed"] == 1
+        assert report["actual_unknown"] == 0
 
 
 def test_coordinator_does_not_retry_uncertain_runner_timeout(monkeypatch):
@@ -404,7 +504,17 @@ def test_later_uncertain_runner_timeout_does_not_reuse_previous_actual_unknown(m
         assert report["diagnostic"] == "runner_or_frozen_input_failure"
 
 
-def test_coordinator_keeps_complete_ledger_when_protocol_validation_disagrees(monkeypatch):
+@pytest.mark.parametrize(
+    "result,validation,successful",
+    [
+        ({"Ok": idle_result()}, {"Ok": {"phase": "incorrect"}}, True),
+        ({"Err": {"message": "worker failure"}}, "malformed", False),
+        ({"Err": "malformed"}, {"Err": "malformed"}, False),
+    ],
+)
+def test_coordinator_keeps_complete_ledger_when_protocol_validation_disagrees(
+    monkeypatch, result, validation, successful
+):
     from test_prompt_probe_prepare import temporary_directory
     with temporary_directory() as temporary:
         module, repo, runner, output, manifest, initial, identity = run_manifest(
@@ -420,14 +530,14 @@ def test_coordinator_keeps_complete_ledger_when_protocol_validation_disagrees(mo
                 "context": manifest["context"],
                 "stage": 1,
                 "request": invocation["request"],
-                "result": {"Ok": idle_result()},
-                "validation": {"Ok": {"phase": "incorrect"}},
+                "result": result,
+                "validation": validation,
                 "assets_before": identity,
                 "assets_after": identity,
                 "assets_unchanged": True,
                 "independent_replay_matches": None,
-                "successful": True,
-                "diagnostic": None,
+                "successful": successful,
+                "diagnostic": None if successful else "engine_or_journal_error",
                 "ledger": {"limit": 5, "consumed": 1, "completed": 1,
                            "unknown": 0, "reserved": 0, "abandoned": 0},
                 "started_at": manifest["started_at"],
@@ -441,7 +551,7 @@ def test_coordinator_keeps_complete_ledger_when_protocol_validation_disagrees(mo
                 "native_probability_verified": False,
             }
             Path(invocation["output"]).write_text(json.dumps(receipt), encoding="utf8")
-            stdout = canonical({"successful": True, "native_calls": 1,
+            stdout = canonical({"successful": successful, "native_calls": 1,
                                 "runner_process_calls": 1, "worker_process_calls": 1,
                                 "ffi_calls": None, "ledger": receipt["ledger"]})
             return subprocess.CompletedProcess(command, 0, stdout=stdout, stderr=b"")
@@ -457,6 +567,9 @@ def test_coordinator_keeps_complete_ledger_when_protocol_validation_disagrees(mo
         assert report["actual_unknown"] == 0
         assert report["ledger"]["consumed"] == 1
         assert report["stage_count"] == 1
+        summaries = list(output.glob("summary-*.json"))
+        assert len(summaries) == 1
+        assert json.loads(summaries[0].read_bytes()) == report
 
 
 def test_prepare_only_creates_no_scope_or_runner_call(monkeypatch):

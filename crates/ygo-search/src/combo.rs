@@ -836,41 +836,58 @@ where
                     error,
                 ))
             })?;
-            let mut record_ffi = |event: ygo_engine_adapter::FfiReceiptEvent| match event {
-                ygo_engine_adapter::FfiReceiptEvent::Entered {
-                    sequence,
-                    call_id,
-                    direction,
-                    name,
-                } => record_event(SearchAttemptJournalEvent::FfiEntered(
-                    SearchAttemptFfiEntry {
-                        attempt_ordinal: ordinal,
-                        attempt_id: attempt_id.clone(),
-                        call_id,
-                        direction: match direction.as_str() {
-                            "into_core" => SearchAttemptFfiDirection::HostToOcgcore,
-                            "out_of_core" => SearchAttemptFfiDirection::OcgcoreCallbackToHost,
-                            _ => return Err("invalid FFI direction".into()),
+            let mut ffi_receipt_failure = None;
+            let outcome = {
+                let mut record_ffi = |event: ygo_engine_adapter::FfiReceiptEvent| {
+                    let result = match event {
+                        ygo_engine_adapter::FfiReceiptEvent::Entered {
+                            sequence,
+                            call_id,
+                            direction,
+                            name,
+                        } => match direction.as_str() {
+                            "into_core" => record_event(SearchAttemptJournalEvent::FfiEntered(
+                                SearchAttemptFfiEntry {
+                                    attempt_ordinal: ordinal,
+                                    attempt_id: attempt_id.clone(),
+                                    call_id,
+                                    direction: SearchAttemptFfiDirection::HostToOcgcore,
+                                    name,
+                                    ffi_ordinal: sequence,
+                                },
+                            )),
+                            "out_of_core" => record_event(SearchAttemptJournalEvent::FfiEntered(
+                                SearchAttemptFfiEntry {
+                                    attempt_ordinal: ordinal,
+                                    attempt_id: attempt_id.clone(),
+                                    call_id,
+                                    direction: SearchAttemptFfiDirection::OcgcoreCallbackToHost,
+                                    name,
+                                    ffi_ordinal: sequence,
+                                },
+                            )),
+                            _ => Err("invalid FFI direction".into()),
                         },
-                        name,
-                        ffi_ordinal: sequence,
-                    },
-                )),
-                ygo_engine_adapter::FfiReceiptEvent::Returned {
-                    sequence: _,
-                    call_id,
-                } => record_event(SearchAttemptJournalEvent::FfiReturned(
-                    SearchAttemptFfiReturn {
-                        attempt_ordinal: ordinal,
-                        attempt_id: attempt_id.clone(),
-                        call_id,
-                        status: SearchAttemptFfiReturnStatus::Returned,
-                        result_sha256: None,
-                    },
-                )),
+                        ygo_engine_adapter::FfiReceiptEvent::Returned {
+                            sequence: _,
+                            call_id,
+                        } => record_event(SearchAttemptJournalEvent::FfiReturned(
+                            SearchAttemptFfiReturn {
+                                attempt_ordinal: ordinal,
+                                attempt_id: attempt_id.clone(),
+                                call_id,
+                                status: SearchAttemptFfiReturnStatus::Returned,
+                                result_sha256: None,
+                            },
+                        )),
+                    };
+                    if let Err(error) = &result {
+                        ffi_receipt_failure.get_or_insert_with(|| error.clone());
+                    }
+                    result
+                };
+                adapter.run_process_observed_with_ffi(run_request, &attempt_id, &mut record_ffi)
             };
-            let outcome =
-                adapter.run_process_observed_with_ffi(run_request, &attempt_id, &mut record_ffi);
             let result = match &outcome.result {
                 Ok(result) => SearchAttemptResult::DuelResult {
                     status: result.status.clone(),
@@ -895,7 +912,14 @@ where
                     error,
                 ))
             })?;
-            outcome.result.map_err(SearchRunError::adapter)
+            match (ffi_receipt_failure, outcome.result) {
+                (Some(_), Err(error)) => Err(SearchRunError::attempt_gate_after_adapter(error)),
+                (Some(error), Ok(_)) => Err(SearchRunError::attempt_gate_after_adapter(
+                    WorkerError::new("attempt_receipt_write_failed", "attempt_receipt", error),
+                )),
+                (None, Err(error)) => Err(SearchRunError::adapter(error)),
+                (None, Ok(result)) => Ok(result),
+            }
         },
         request,
         budget,

@@ -396,7 +396,7 @@ def verify_receipt_chain(
             call_id = payload["call_id"]
             _require(call_id not in seen_call_ids, "duplicate_ffi_call_id")
             seen_call_ids.add(call_id)
-            state["ffi_calls"][call_id] = payload
+            state["ffi_calls"][call_id] = {"returned": False}
             state["ffi_ordinals"].append(payload["ordinal"])
             state["ffi_stack"].append(call_id)
             counts["ffi_entries_observed"] += 1
@@ -404,7 +404,7 @@ def verify_receipt_chain(
             _require(not state["saw_protocol_response"], "ffi_return_after_protocol_response")
             call_id = payload["call_id"]
             _require(
-                call_id in state["ffi_calls"] and "returned" not in state["ffi_calls"][call_id],
+                call_id in state["ffi_calls"] and not state["ffi_calls"][call_id]["returned"],
                 "ffi_return_without_unique_entry",
             )
             _require(
@@ -435,7 +435,7 @@ def verify_receipt_chain(
     for state in attempts:
         ffi_ordinals = state["ffi_ordinals"]
         _require(ffi_ordinals == list(range(1, len(ffi_ordinals) + 1)), "ffi_ordinals_not_contiguous")
-        attempt_outstanding = sum("returned" not in call for call in state["ffi_calls"].values())
+        attempt_outstanding = sum(not call["returned"] for call in state["ffi_calls"].values())
         outstanding_ffi += attempt_outstanding
         if state["saw_protocol_response"] and state["ffi_receipt_status"] == "complete":
             _require(attempt_outstanding == 0, "complete_ffi_stream_has_unreturned_call")

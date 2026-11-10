@@ -25,6 +25,7 @@ from ygo_eval.terminal_regression import immutable_write
 GROUND_COLLAPSE_SCOPE = "p1-ground-collapse-opcode24-reachability-v1"
 MAX_REQUESTS = 5
 WINDOW_SECONDS = 1800
+RUNNER_TIMEOUT_SECONDS = 60
 REQUEST_TIMEOUT_MS = 30000
 TARGET_CARD_ID = 90502999
 TARGET_ZONES = [
@@ -525,8 +526,12 @@ def run_ground_collapse_stages(
 
     for stage in range(1, MAX_REQUESTS + 1):
         if stage > 1:
-            request = derive_ground_stage_request(stage, receipts[-1])
-        if int(time.time()) + 30 >= started_at + WINDOW_SECONDS:
+            try:
+                request = derive_ground_stage_request(stage, receipts[-1])
+            except (ValueError, TypeError, KeyError):
+                diagnostic = "stage_derivation_failed"
+                break
+        if int(time.time()) + RUNNER_TIMEOUT_SECONDS >= started_at + WINDOW_SECONDS:
             diagnostic = "scope_window_exhausted_before_request"
             break
         try:
@@ -548,7 +553,7 @@ def run_ground_collapse_stages(
             completed = process_runner(
                 [str(runner), str(input_path), "--input-sha", digest(canonical(input_value))],
                 capture_output=True,
-                timeout=60,
+                timeout=RUNNER_TIMEOUT_SECONDS,
                 cwd=str(repo),
             )
             unchanged()
@@ -609,9 +614,12 @@ def run_ground_collapse_stages(
                          "python_rust_validation_disagreement")
             else:
                 validation = None
+                validation_value = receipt.get("validation")
+                error_value = outcome.get("Err") if isinstance(outcome, dict) else None
                 _require(isinstance(outcome, dict) and set(outcome) == {"Err"}
-                         and receipt.get("validation", {}).get("Err")
-                         == outcome["Err"].get("message"),
+                         and isinstance(validation_value, dict)
+                         and isinstance(error_value, dict)
+                         and validation_value.get("Err") == error_value.get("message"),
                          "failed_stage_result_binding_mismatch")
             if receipt.get("successful") is True:
                 _require(receipt.get("assets_unchanged") is True

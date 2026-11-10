@@ -96,6 +96,10 @@ pub struct PersistentAnalysisJobStore {
     #[cfg(test)]
     pub(super) logical_fault_hits: std::sync::Arc<AtomicUsize>,
     pub(super) root: PathBuf,
+    pub(super) attempt_receipt_states:
+        std::sync::Mutex<BTreeMap<String, super::attempt_receipts::AttemptReceiptAppendState>>,
+    #[cfg(test)]
+    pub(super) attempt_receipt_history_reads: AtomicUsize,
     #[cfg(test)]
     pub(super) operation_failure: AtomicUsize,
     // Kept alive for the entire store lifetime; dropping releases the OS lock.
@@ -200,6 +204,9 @@ impl PersistentAnalysisJobStore {
             #[cfg(test)]
             logical_fault_hits: std::sync::Arc::new(AtomicUsize::new(0)),
             root,
+            attempt_receipt_states: std::sync::Mutex::new(BTreeMap::new()),
+            #[cfg(test)]
+            attempt_receipt_history_reads: AtomicUsize::new(0),
             #[cfg(test)]
             operation_failure: AtomicUsize::new(usize::MAX),
             _lock: lock,
@@ -628,16 +635,9 @@ impl PersistentAnalysisJobStore {
             let name = entry.file_name().to_string_lossy().into_owned();
             let metadata = ygo_storage::safe_store_metadata(&entry.path())
                 .map_err(|_| PersistenceError::InvalidPath)?;
-            if let Some(temporary_id) = name
-                .strip_prefix(".ygo-draft-")
-                .and_then(|name| name.strip_suffix(".tmp"))
+            if is_unpublished_store_file(&name, &metadata, MAX_REPORT_BYTES as u64)
+                .map_err(|_| PersistenceError::ReportInvalid)?
             {
-                if !valid_id(temporary_id)
-                    || !metadata.is_file()
-                    || metadata.len() > MAX_REPORT_BYTES as u64
-                {
-                    return Err(PersistenceError::ReportInvalid);
-                }
                 // An interrupted exclusive publish can leave its synced,
                 // unpublished temporary bytes behind. Preserve them as
                 // evidence, but never treat them as an indexed report.
@@ -691,6 +691,9 @@ impl PersistentAnalysisJobStore {
             let name = entry.file_name().to_string_lossy().into_owned();
             let metadata = ygo_storage::safe_store_metadata(&entry.path())
                 .map_err(|_| PersistenceError::InvalidPath)?;
+            if is_unpublished_store_file(&name, &metadata, 1024 * 1024)? {
+                continue;
+            }
             if !metadata.is_file() || !name.ends_with(".json") {
                 return Err(PersistenceError::InvalidChain);
             }
@@ -943,6 +946,25 @@ fn valid_id(id: &str) -> bool {
         && id
             .bytes()
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+pub(super) fn unpublished_store_file_id(name: &str) -> Option<&str> {
+    let id = name.strip_prefix(".ygo-draft-")?.strip_suffix(".tmp")?;
+    valid_id(id).then_some(id)
+}
+
+pub(super) fn is_unpublished_store_file(
+    name: &str,
+    metadata: &fs::Metadata,
+    max_bytes: u64,
+) -> Result<bool, PersistenceError> {
+    if unpublished_store_file_id(name).is_none() {
+        return Ok(false);
+    }
+    if !metadata.is_file() || metadata.len() > max_bytes {
+        return Err(PersistenceError::InvalidPath);
+    }
+    Ok(true)
 }
 
 pub(super) fn now_ms() -> Result<u64, PersistenceError> {

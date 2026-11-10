@@ -717,69 +717,82 @@ impl DurableAnalysisCoordinator {
             reservation: Mutex::new(None),
         })
     }
-    /// Pure inspection under the existing store lock, including when stopped.
+    /// Authenticates one committed store snapshot, including when stopped.
+    ///
+    /// Revisions are immutable and atomically published, so inspection can read
+    /// a valid committed prefix without holding the dispatch mutex.
     pub fn inspect_operation(&self, id: &str) -> Result<Vec<Operation>, DurableCoordinatorError> {
-        let _guard = self
-            .stopped
-            .lock()
-            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
-        self.store
-            .authenticate_operation_bindings()
+        let chains = self
+            .store
+            .authenticate_chains()
             .map_err(DurableCoordinatorError::Persistence)?;
-        self.store
-            .operation_history(id)
-            .map_err(DurableCoordinatorError::Persistence)
+        let history =
+            chains
+                .operations
+                .get(id)
+                .cloned()
+                .ok_or(DurableCoordinatorError::Persistence(
+                    PersistenceError::InvalidPath,
+                ))?;
+        if history.is_empty() {
+            return Err(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidChain,
+            ));
+        }
+        Ok(history)
     }
     pub fn inspect_job(
         &self,
         id: &str,
     ) -> Result<Vec<AnalysisJobRecordV1>, DurableCoordinatorError> {
-        let _guard = self
-            .stopped
-            .lock()
-            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
-        self.store
-            .authenticate_operation_bindings()
+        let chains = self
+            .store
+            .authenticate_chains()
             .map_err(DurableCoordinatorError::Persistence)?;
-        self.store
-            .history(id)
-            .map_err(DurableCoordinatorError::Persistence)
+        chains
+            .jobs
+            .get(id)
+            .cloned()
+            .ok_or(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidPath,
+            ))
     }
     /// Distinguishes an authenticated absence from an unreadable or corrupt chain.
     pub fn inspect_operation_optional(
         &self,
         id: &str,
     ) -> Result<Option<Operation>, DurableCoordinatorError> {
-        let _guard = self
-            .stopped
-            .lock()
-            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
-        self.store
-            .authenticate_operation_bindings()
-            .map_err(DurableCoordinatorError::Persistence)?;
-        let mut all = self
+        let chains = self
             .store
-            .scan_operations()
+            .authenticate_chains()
             .map_err(DurableCoordinatorError::Persistence)?;
-        Ok(all.remove(id).and_then(|mut history| history.pop()))
+        match chains.operations.get(id) {
+            Some(history) => {
+                history
+                    .last()
+                    .cloned()
+                    .map(Some)
+                    .ok_or(DurableCoordinatorError::Persistence(
+                        PersistenceError::InvalidChain,
+                    ))
+            }
+            None => Ok(None),
+        }
     }
 
     pub fn inspect_job_optional(
         &self,
         id: &str,
     ) -> Result<Option<AnalysisJobRecordV1>, DurableCoordinatorError> {
-        let _guard = self
-            .stopped
-            .lock()
-            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
-        self.store
-            .authenticate_operation_bindings()
-            .map_err(DurableCoordinatorError::Persistence)?;
-        let mut all = self
+        let chains = self
             .store
-            .scan()
+            .authenticate_chains()
             .map_err(DurableCoordinatorError::Persistence)?;
-        Ok(all.remove(id).and_then(|mut history| history.pop()))
+        Ok(chains
+            .jobs
+            .get(id)
+            .and_then(|history| history.last())
+            .cloned())
     }
 
     /// Prevents further dispatch without changing authenticated saved history.
@@ -800,17 +813,16 @@ impl DurableAnalysisCoordinator {
 
     /// Authenticates a historical report without reconstructing runtime assets.
     pub fn inspect_report(&self, id: &str) -> Result<AnalysisReport, DurableCoordinatorError> {
-        let _guard = self
-            .stopped
-            .lock()
-            .map_err(|_| DurableCoordinatorError::LockUnavailable)?;
-        self.store
-            .authenticate_operation_bindings()
-            .map_err(DurableCoordinatorError::Persistence)?;
-        let history = self
+        let chains = self
             .store
-            .history(id)
+            .authenticate_chains()
             .map_err(DurableCoordinatorError::Persistence)?;
+        let history = chains
+            .jobs
+            .get(id)
+            .ok_or(DurableCoordinatorError::Persistence(
+                PersistenceError::InvalidPath,
+            ))?;
         let record = history.last().ok_or(DurableCoordinatorError::Persistence(
             PersistenceError::InvalidChain,
         ))?;
@@ -1393,6 +1405,26 @@ mod operation_tests {
     }
 
     #[test]
+    fn authenticated_inspection_does_not_wait_for_dispatch_mutex() {
+        let root = root();
+        let coordinator =
+            Arc::new(DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap());
+        let dispatch_guard = coordinator.stopped.lock().unwrap();
+        let inspector = Arc::clone(&coordinator);
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            sender
+                .send(inspector.inspect_job_optional(&"a".repeat(32)))
+                .unwrap();
+        });
+
+        let result = receiver.recv_timeout(std::time::Duration::from_secs(2));
+        drop(dispatch_guard);
+        worker.join().unwrap();
+        assert!(result.unwrap().unwrap().is_none());
+    }
+
+    #[test]
     fn split_completion_time_rollback_stops_without_publishing_task() {
         let root = root();
         let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
@@ -1438,6 +1470,213 @@ mod operation_tests {
         assert_eq!(accepted.state(), OperationState::Accepted);
         assert_eq!(accepted.updated_at_ms(), 103);
     }
+
+    #[test]
+    fn interrupted_publish_temp_files_do_not_block_cross_chain_reopen() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let store_path = root.join("store");
+        let coordinator = DurableAnalysisCoordinator::open_operations(store_path.clone()).unwrap();
+        let operation = coordinator.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepted = coordinator
+            .submit_operation(
+                operation.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let job_id = accepted.job_id().unwrap().to_owned();
+        let temporary_name = format!(".ygo-draft-{}.tmp", "a".repeat(32));
+        let paths = [
+            store_path
+                .join("operations")
+                .join(operation.operation_id())
+                .join("revisions")
+                .join(&temporary_name),
+            store_path
+                .join("jobs")
+                .join(&job_id)
+                .join("revisions")
+                .join(&temporary_name),
+            store_path
+                .join("jobs")
+                .join(&job_id)
+                .join("attempt_receipts")
+                .join(&temporary_name),
+        ];
+        for (index, path) in paths.iter().enumerate() {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, format!("unpublished evidence {index}")).unwrap();
+        }
+        drop(coordinator);
+
+        let reopened = DurableAnalysisCoordinator::open_operations(store_path).unwrap();
+
+        assert_eq!(
+            reopened
+                .inspect_operation(operation.operation_id())
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            AnalysisOperationState::Accepted
+        );
+        assert_eq!(
+            reopened
+                .inspect_job(&job_id)
+                .unwrap()
+                .last()
+                .unwrap()
+                .state(),
+            AnalysisJobState::Interrupted
+        );
+        for (index, path) in paths.iter().enumerate() {
+            assert_eq!(
+                std::fs::read(path).unwrap(),
+                format!("unpublished evidence {index}").as_bytes()
+            );
+        }
+    }
+
+    #[test]
+    fn malformed_or_non_file_publish_temps_still_reject_reopen() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let store_path = root.join("store");
+        let coordinator = DurableAnalysisCoordinator::open_operations(store_path.clone()).unwrap();
+        let operation = coordinator.allocate_operation(ctx.clone(), 100).unwrap();
+        let accepted = coordinator
+            .submit_operation(
+                operation.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let operation_revisions = store_path
+            .join("operations")
+            .join(operation.operation_id())
+            .join("revisions");
+        let invalid_name = operation_revisions.join(".ygo-draft-not-hex.tmp");
+        std::fs::write(&invalid_name, b"unexpected").unwrap();
+        drop(coordinator);
+        assert!(DurableAnalysisCoordinator::open_operations(store_path.clone()).is_err());
+        std::fs::remove_file(invalid_name).unwrap();
+
+        let receipt_temp_dir = store_path
+            .join("jobs")
+            .join(accepted.job_id().unwrap())
+            .join("attempt_receipts")
+            .join(format!(".ygo-draft-{}.tmp", "b".repeat(32)));
+        std::fs::create_dir_all(&receipt_temp_dir).unwrap();
+
+        assert!(DurableAnalysisCoordinator::open_operations(store_path).is_err());
+    }
+    #[test]
+    fn attempt_receipt_appends_reuse_the_validated_in_memory_tail() {
+        let root = root();
+        let (drafts, snapshots, engine, ctx, cmd) = setup(&root);
+        let coordinator = DurableAnalysisCoordinator::open_operations(root.join("store")).unwrap();
+        let operation = coordinator.allocate_operation(ctx.clone(), 100).unwrap();
+        coordinator
+            .submit_operation(
+                operation.operation_id(),
+                cmd,
+                &ctx,
+                101,
+                &drafts,
+                &snapshots,
+                engine,
+            )
+            .unwrap();
+        let ticket = coordinator.claim_next(102).unwrap().unwrap();
+        let receipt_context = coordinator.attempt_receipt_context(&ticket).unwrap();
+        coordinator
+            .store
+            .attempt_receipt_history_reads
+            .store(0, Ordering::SeqCst);
+        let attempt_id = "c".repeat(32);
+        let call_id = "d".repeat(32);
+        let phase = ygo_search::combo::SearchAttemptPhase::Initial;
+
+        coordinator
+            .append_attempt_receipt(
+                &ticket,
+                &receipt_context,
+                AttemptReceiptEventV1::Started {
+                    ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    phase,
+                },
+            )
+            .unwrap();
+        coordinator
+            .append_attempt_receipt(
+                &ticket,
+                &receipt_context,
+                AttemptReceiptEventV1::FfiEntered {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id: call_id.clone(),
+                    direction: ygo_search::combo::SearchAttemptFfiDirection::HostToOcgcore,
+                    name: "OCG_DuelProcess".into(),
+                    ffi_ordinal: 1,
+                },
+            )
+            .unwrap();
+        coordinator
+            .append_attempt_receipt(
+                &ticket,
+                &receipt_context,
+                AttemptReceiptEventV1::FfiReturned {
+                    attempt_ordinal: 1,
+                    attempt_id: attempt_id.clone(),
+                    call_id,
+                    status: ygo_search::combo::SearchAttemptFfiReturnStatus::Returned,
+                    result_sha256: None,
+                },
+            )
+            .unwrap();
+        coordinator
+            .append_attempt_receipt(
+                &ticket,
+                &receipt_context,
+                AttemptReceiptEventV1::HostResult {
+                    ordinal: 1,
+                    attempt_id,
+                    phase,
+                    result: ygo_search::combo::SearchAttemptResult::DuelResult {
+                        status: ygo_engine_adapter::DuelStatus::Failed,
+                    },
+                    process_observation: ygo_engine_adapter::ProcessRunObservation::default(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(
+            coordinator
+                .store
+                .attempt_receipt_history_reads
+                .load(Ordering::SeqCst),
+            1
+        );
+        assert_eq!(
+            coordinator
+                .store
+                .read_attempt_receipts(ticket.record().job_id())
+                .unwrap()
+                .len(),
+            4
+        );
+    }
+
     #[test]
     fn operation_actual_freeze_duplicate_and_restart_do_not_resubmit() {
         let root = root();

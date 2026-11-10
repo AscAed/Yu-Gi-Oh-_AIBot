@@ -33,6 +33,7 @@ fn prepared_fixture() -> &'static (harness::Prepared, PathBuf) {
 }
 
 #[test]
+#[ignore = "requires frozen tournament assets and an in-repository worker build"]
 fn prepare_only_does_not_create_scope_or_charge_calls() {
     let (prepared, output_root) = prepared_fixture();
     assert!(!output_root.exists());
@@ -57,6 +58,7 @@ fn prepare_only_does_not_create_scope_or_charge_calls() {
 }
 
 #[test]
+#[ignore = "requires frozen tournament assets and an in-repository worker build"]
 fn prepare_only_rejects_changed_fixture_assets_or_route() {
     let (prepared, _) = prepared_fixture();
     assert!(harness::validate_digest("fixture", &prepared.trace_sha256, &"0".repeat(64)).is_err());
@@ -68,6 +70,7 @@ fn prepare_only_rejects_changed_fixture_assets_or_route() {
 }
 
 #[test]
+#[ignore = "requires frozen tournament assets and an in-repository worker build"]
 fn event49_gate_compares_public_witness_not_private_checkpoint_encoding() {
     let (prepared, _) = prepared_fixture();
     let witness = prepared

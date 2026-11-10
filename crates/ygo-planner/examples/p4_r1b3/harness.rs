@@ -206,6 +206,7 @@ pub fn prepare_for_run(
     reject_existing_symlink(&output_root)?;
 
     let mut assets = BTreeMap::new();
+    let mut verified_fixtures = BTreeMap::new();
     for (name, relative, expected) in [
         (
             "assets_config",
@@ -238,18 +239,19 @@ pub fn prepare_for_run(
         let actual = digest(&bytes);
         validate_digest(name, &actual, expected)?;
         assets.insert(name.to_owned(), actual);
+        if matches!(name, "rules_fixture" | "trace_fixture") {
+            verified_fixtures.insert(name.to_owned(), bytes);
+        }
     }
 
-    let rules_bytes = read_checked(
-        &root,
-        &root.join("tests/fixtures/tournament-2026.rules-resource.contract.json"),
-    )?;
-    let trace_bytes = read_checked(
-        &root,
-        &root.join("tests/fixtures/tournament-2026.trace-resource.json"),
-    )?;
-    let rules: Value = serde_json::from_slice(&rules_bytes).map_err(|e| e.to_string())?;
-    let trace: Value = serde_json::from_slice(&trace_bytes).map_err(|e| e.to_string())?;
+    let rules_bytes = verified_fixtures
+        .get("rules_fixture")
+        .ok_or("verified rules fixture missing")?;
+    let trace_bytes = verified_fixtures
+        .get("trace_fixture")
+        .ok_or("verified trace fixture missing")?;
+    let rules: Value = serde_json::from_slice(rules_bytes).map_err(|e| e.to_string())?;
+    let trace: Value = serde_json::from_slice(trace_bytes).map_err(|e| e.to_string())?;
     let case = rules
         .get("cases")
         .and_then(Value::as_array)
@@ -655,13 +657,31 @@ fn normalize_existing_prefix(path: &Path) -> Result<PathBuf, String> {
 
 fn reject_path_symlinks(root: &Path, path: &Path) -> Result<(), String> {
     let canonical_root = root.canonicalize().map_err(|e| e.to_string())?;
-    let normalized = normalize_existing_prefix(path)?;
-    let relative = normalized
-        .strip_prefix(&canonical_root)
+    let absolute_root = if root.is_absolute() {
+        root.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|e| e.to_string())?
+            .join(root)
+    };
+    let absolute_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        absolute_root.join(path)
+    };
+    let relative = absolute_path
+        .strip_prefix(&absolute_root)
+        .or_else(|_| absolute_path.strip_prefix(&canonical_root))
         .map_err(|_| format!("path escapes repository: {}", path.display()))?;
     let mut current = canonical_root;
     for component in relative.components() {
-        current.push(component.as_os_str());
+        match component {
+            Component::Normal(part) => current.push(part),
+            Component::CurDir => continue,
+            Component::ParentDir | Component::Prefix(_) | Component::RootDir => {
+                return Err(format!("path escapes repository: {}", path.display()));
+            }
+        }
         match fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
                 return Err(format!(
@@ -707,4 +727,40 @@ fn collect_files(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod path_security_tests {
+    use super::*;
+
+    #[test]
+    #[cfg_attr(
+        windows,
+        ignore = "requires Windows permission to create directory symlinks"
+    )]
+    fn read_checked_rejects_in_repository_symlink_components() {
+        let root = std::env::temp_dir().join(format!(
+            "p4-r1b3-symlink-check-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let target = root.join("target");
+        let link = root.join("link");
+        fs::create_dir_all(&target).unwrap();
+        fs::write(target.join("asset.bin"), b"asset").unwrap();
+
+        #[cfg(windows)]
+        let link_result = std::os::windows::fs::symlink_dir(&target, &link);
+        #[cfg(unix)]
+        let link_result = std::os::unix::fs::symlink(&target, &link);
+
+        link_result.unwrap_or_else(|error| panic!("failed to create symlink fixture: {error}"));
+
+        let result = read_checked(&root, &link.join("asset.bin"));
+        assert!(result.is_err(), "symlink component was accepted");
+        fs::remove_dir_all(root).unwrap();
+    }
 }

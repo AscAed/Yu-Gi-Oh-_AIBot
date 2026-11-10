@@ -1,6 +1,6 @@
 use crate::stream_protocol::{
-    call_id, write_frame, FfiDirection, HostAck, StreamRequest, StreamResult, WorkerFrame,
-    WorkerFrameKind, MAX_EVENT_FRAME_BYTES, MAX_FRAME_BYTES, STREAM_VERSION,
+    call_id, FfiDirection, HostAck, StreamRequest, StreamResult, WorkerFrame, WorkerFrameKind,
+    MAX_EVENT_FRAME_BYTES, MAX_FRAME_BYTES, STREAM_VERSION,
 };
 use crate::*;
 use sha2::{Digest, Sha256};
@@ -263,7 +263,7 @@ impl ProcessEngineAdapter {
         };
         observation.spawn_status = ProcessSpawnStatus::Spawned;
         observation.worker_pid = Some(child.id());
-        let Some(mut stdin) = child.stdin.take() else {
+        let Some(stdin) = child.stdin.take() else {
             let _ = child.kill();
             let _ = child.wait();
             return fail!("stdin_missing", "stream", "worker stdin unavailable");
@@ -297,12 +297,94 @@ impl ProcessEngineAdapter {
                 return fail!("request_size", "stream", "request frame exceeds limit",);
             }
         };
-        if let Err(error) = stdin.write_all(&request_bytes).and_then(|_| stdin.flush()) {
+        let (writer_sender, writer_receiver) =
+            mpsc::channel::<(Vec<u8>, mpsc::SyncSender<Result<(), String>>)>();
+        let writer = std::thread::spawn(move || {
+            let mut stdin = stdin;
+            for (bytes, completed) in writer_receiver {
+                let result = stdin
+                    .write_all(&bytes)
+                    .and_then(|_| stdin.flush())
+                    .map_err(|error| error.to_string());
+                let failed = result.is_err();
+                let _ = completed.send(result);
+                if failed {
+                    return;
+                }
+            }
+        });
+        let (request_written_sender, request_written_receiver) = mpsc::sync_channel(1);
+        if writer_sender
+            .send((request_bytes.clone(), request_written_sender))
+            .is_err()
+        {
             let _ = child.kill();
-            let _ = child.wait();
+            let status = child.wait().ok();
             observation.request_status = ProcessIoStatus::Failed;
             observation.termination = ProcessTermination::Exited;
-            return fail!("request_write_failed", "stream", error.to_string());
+            observation.exit_code = status.and_then(|status| status.code());
+            drop(writer_sender);
+            let _ = writer.join();
+            return fail!(
+                "request_write_failed",
+                "stream",
+                "request writer stopped before accepting the frame"
+            );
+        }
+        let Some(remaining) = timeout.checked_sub(start.elapsed()) else {
+            let _ = child.kill();
+            let status = child.wait().ok();
+            observation.request_status = ProcessIoStatus::Unknown;
+            observation.termination = ProcessTermination::TimedOut;
+            observation.exit_code = status.and_then(|status| status.code());
+            drop(writer_sender);
+            let _ = writer.join();
+            return fail!(
+                "timeout",
+                "stream",
+                "operation deadline while writing request"
+            );
+        };
+        match request_written_receiver.recv_timeout(remaining) {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                let _ = child.kill();
+                let status = child.wait().ok();
+                observation.request_status = ProcessIoStatus::Failed;
+                observation.termination = ProcessTermination::Exited;
+                observation.exit_code = status.and_then(|status| status.code());
+                drop(writer_sender);
+                let _ = writer.join();
+                return fail!("request_write_failed", "stream", error);
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                let _ = child.kill();
+                let status = child.wait().ok();
+                observation.request_status = ProcessIoStatus::Unknown;
+                observation.termination = ProcessTermination::TimedOut;
+                observation.exit_code = status.and_then(|status| status.code());
+                drop(writer_sender);
+                let _ = writer.join();
+                return fail!(
+                    "timeout",
+                    "stream",
+                    "operation deadline while writing request"
+                );
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                let _ = child.kill();
+                let status = child.wait().ok();
+                observation.request_status = ProcessIoStatus::Unknown;
+                observation.termination = ProcessTermination::Exited;
+                observation.exit_code = status.and_then(|status| status.code());
+                drop(writer_sender);
+                let _ = writer.join();
+                return fail!(
+                    "request_write_failed",
+                    "stream",
+                    "request writer stopped before completing the frame"
+                );
+            }
         }
         observation.request_status = ProcessIoStatus::Complete;
         observation.request_sha256 = Some(digest(&request_bytes));
@@ -355,9 +437,16 @@ impl ProcessEngineAdapter {
                         Some(format!("{:x}", response_hasher.clone().finalize()));
                     let payload = &bytes[..bytes.len() - 1];
                     if let Ok(frame) = serde_json::from_slice::<WorkerFrame>(payload) {
-                        if bytes.len().saturating_sub(1) > MAX_EVENT_FRAME_BYTES
-                            || frame.attempt_id != attempt_id
-                        {
+                        if bytes.len().saturating_sub(1) > MAX_EVENT_FRAME_BYTES {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                            break Err(WorkerError::new(
+                                "event_frame_size",
+                                "stream",
+                                "worker event frame exceeds limit",
+                            ));
+                        }
+                        if frame.attempt_id != attempt_id {
                             let _ = child.kill();
                             let _ = child.wait();
                             break Err(WorkerError::new(
@@ -423,7 +512,11 @@ impl ProcessEngineAdapter {
                             let status = child.wait().ok();
                             observation.termination = ProcessTermination::Exited;
                             observation.exit_code = status.and_then(|status| status.code());
-                            break Err(WorkerError::new("receipt_write_failed", "stream", error));
+                            break Err(WorkerError::new(
+                                "host_receipt_callback_failed",
+                                "receipt_callback",
+                                error,
+                            ));
                         }
                         if start.elapsed() >= timeout {
                             let _ = child.kill();
@@ -443,12 +536,75 @@ impl ProcessEngineAdapter {
                             call_id: frame.call_id,
                             accepted: true,
                         };
-                        if let Err(error) = write_frame(&mut stdin, &ack) {
+                        let mut ack_bytes = match serde_json::to_vec(&ack) {
+                            Ok(bytes) => bytes,
+                            Err(error) => {
+                                let _ = child.kill();
+                                let status = child.wait().ok();
+                                observation.termination = ProcessTermination::Exited;
+                                observation.exit_code = status.and_then(|status| status.code());
+                                break Err(WorkerError::new(
+                                    "ack_write_failed",
+                                    "stream",
+                                    error.to_string(),
+                                ));
+                            }
+                        };
+                        ack_bytes.push(b'\n');
+                        let (ack_written_sender, ack_written_receiver) = mpsc::sync_channel(1);
+                        if writer_sender.send((ack_bytes, ack_written_sender)).is_err() {
                             let _ = child.kill();
                             let status = child.wait().ok();
                             observation.termination = ProcessTermination::Exited;
                             observation.exit_code = status.and_then(|status| status.code());
-                            break Err(WorkerError::new("ack_write_failed", "stream", error));
+                            break Err(WorkerError::new(
+                                "ack_write_failed",
+                                "stream",
+                                "request writer stopped before accepting acknowledgement",
+                            ));
+                        }
+                        let Some(remaining) = timeout.checked_sub(start.elapsed()) else {
+                            let _ = child.kill();
+                            let status = child.wait().ok();
+                            observation.termination = ProcessTermination::TimedOut;
+                            observation.exit_code = status.and_then(|status| status.code());
+                            break Err(WorkerError::new(
+                                "timeout",
+                                "stream",
+                                "operation deadline while writing acknowledgement",
+                            ));
+                        };
+                        match ack_written_receiver.recv_timeout(remaining) {
+                            Ok(Ok(())) => {}
+                            Ok(Err(error)) => {
+                                let _ = child.kill();
+                                let status = child.wait().ok();
+                                observation.termination = ProcessTermination::Exited;
+                                observation.exit_code = status.and_then(|status| status.code());
+                                break Err(WorkerError::new("ack_write_failed", "stream", error));
+                            }
+                            Err(mpsc::RecvTimeoutError::Timeout) => {
+                                let _ = child.kill();
+                                let status = child.wait().ok();
+                                observation.termination = ProcessTermination::TimedOut;
+                                observation.exit_code = status.and_then(|status| status.code());
+                                break Err(WorkerError::new(
+                                    "timeout",
+                                    "stream",
+                                    "operation deadline while writing acknowledgement",
+                                ));
+                            }
+                            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                                let _ = child.kill();
+                                let status = child.wait().ok();
+                                observation.termination = ProcessTermination::Exited;
+                                observation.exit_code = status.and_then(|status| status.code());
+                                break Err(WorkerError::new(
+                                    "ack_write_failed",
+                                    "stream",
+                                    "request writer stopped before completing acknowledgement",
+                                ));
+                            }
                         }
                     } else if let Ok(frame) = serde_json::from_slice::<StreamResult>(payload) {
                         if !stack.is_empty() || frame.validate(attempt_id).is_err() {
@@ -537,6 +693,26 @@ impl ProcessEngineAdapter {
                             }
                         };
                         if exit_result.is_ok() {
+                            if frame.result.protocol_version != input.protocol_version {
+                                observation.response_validation =
+                                    ProcessResponseValidation::ProtocolVersionMismatch;
+                                break Err(WorkerError::new(
+                                    "protocol_version",
+                                    "decode",
+                                    format!("expected v{}", input.protocol_version),
+                                ));
+                            }
+                            if frame.result.status != DuelStatus::Failed
+                                && frame.result.versions != input.versions
+                            {
+                                observation.response_validation =
+                                    ProcessResponseValidation::RuntimeVersionMismatch;
+                                break Err(WorkerError::new(
+                                    "version_mismatch",
+                                    "decode",
+                                    "worker returned different runtime versions",
+                                ));
+                            }
                             break Ok(frame.result);
                         }
                         break Err(exit_result.unwrap_err());
@@ -574,6 +750,8 @@ impl ProcessEngineAdapter {
                 }
             }
         };
+        drop(writer_sender);
+        let _ = writer.join();
         if observation.spawn_status == ProcessSpawnStatus::Spawned
             && observation.termination == ProcessTermination::NotStarted
         {

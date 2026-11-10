@@ -1,5 +1,11 @@
 # 项目评估与双轨路线（2026-11-04更新）
 
+## 2026-11-10 PR #17审阅续接
+
+当前事实以[TASKS](../../../TASKS.md)为准。PR #17仍为Open Draft，远端head为`c9455d577fc08c1e51663eed079f166d282ab61c`；CodeRabbit对该已发布head的第七轮远端Deep Review返回15项（7 major、8 minor）。15项均已逐条映射到隔离候选的代码或文档处置，但审阅结果不包含候选未提交改动。当前下一步是完成候选级代码复核和约定的离线回归，再据范围、兼容性与剩余证据决定如何集成；不自动合并或推送。
+
+host-ack合成通道已在PR分支实现，但真实worker/ocgcore事件、源码与构建身份、报告producer来源、ResearchBatch消费及unknown消费仍开放。候选审阅不授予真实执行、研究或发布资格；普通启动仍`analysis_not_configured`，P4-R5继续开放。逐项审查和验证数字见[PR #17审阅交接](2026-11-09-pr17-review.md)与[TESTING](../../TESTING.md)。
+
 ## 2026-11-04 复核与小批安排
 
 当前事实以[TASKS](../../../TASKS.md)为准。W1-C已完成隔离候选的单次Rabbit有限分析，160节点、165 engine_calls，`time_budget`截断；报告来源和底层FFI/消费未独立认证。普通启动仍`analysis_not_configured`。下文较早时点称W1-C尚未验收的段落仅是历史，不覆盖此结果。引用的实施对话曾在2b-2未完成时中断，后续汇总及日期化测试已记录限定窗口验收；不可用早期状态覆盖后续证据。
@@ -10,7 +16,7 @@
 | 已完成：W1-C证据链复核 | 2026-11-04离线重算执行包56/56项及包/资产身份记录14/14项哈希；operation、job、result及11文件存储清单重开前后字节稳定。报告明确将report_origin_authenticated设为false；按当前源码165 engine_calls是应用层adapter调用计数，OS worker创建、FFI调用和消费仍未知。旧运行的3/5个未跟踪构建输入原字节无法从当前树或Git历史找回，tracked diff摘要也无法复算。单次有限分析验收保持不变；详见[TESTING审计](../../TESTING.md)。 |
 | 已完成第一子批：W1-C源码字节包v1 | 当前工作树跟踪及非忽略未跟踪文件已进入版本化ZIP包，清单和每个成员可离线复核；Schema及全Python回归通过。包只保全路径/字节，不含Git index、模式、忽略资产、构建复现、执行或消费认证。记录与命令见[TESTING](../../TESTING.md)和[部署合同](../../DEPLOYMENT.md)。 |
 | 已完成第二子批：W1-C观察式离线候选构建绑定v1 | 当前源码包绑定Cargo `dev` profile命令、工具链版本、CLI/worker候选哈希和9项固定输入/资产；隔离`--offline --locked`构建、实际记录Schema及产物/资产校验通过。记录身份与限制见[TESTING](../../TESTING.md)：这是观察式记录，不证明构建可重现，也不认证worker运行、报告来源或消费。精确workspace patch、Git index/模式仍开放。 |
-| W1-C执行来源与计量合同 | 多attempt合成回执合同及job绑定host日志已实现；另有合成FFI entered/returned事件，验证LIFO返回、唯一call ID、连续序号、未返回现场和写入失败停派。生产worker确认通道、真实ocgcore事件、报告producer来源与ResearchBatch消费仍开放。attempt-start后强杀恢复、持久链及FFI合成矩阵见[TESTING](../../TESTING.md)与[设计计划](2026-11-04-w1c-provenance-accounting-plan.md)。下一批先按[FFI worker确认流计划](2026-11-04-w1c-worker-ffi-ack-stream-plan.md)设计向后兼容的host-ack通道并仅用假worker验收；普通分析仍另立scope，合成事件不作为原生执行、来源或消费认证。 |
+| W1-C执行来源与计量合同 | 本行记录2026-11-04时的下一批计划：当时已有多attempt合成回执合同、job绑定host日志及合成FFI entered/returned事件，计划随后用假worker验收向后兼容的host-ack通道。该通道后来在PR #17分支实现；当前集成状态见[TASKS](../../../TASKS.md)和[PR #17审阅记录](2026-11-09-pr17-review.md)。真实worker/ocgcore事件、报告producer来源与ResearchBatch消费仍开放；普通分析仍另立scope，合成事件不认证原生执行、来源或消费。 |
 | Ground/P1 | Ground候选保持hold；先复核固定请求、源码/资产身份与预算，形成准入决定，任何变化或来源缺口即停。另选一个动作、观察、概率或循环阻断项，交付可复现设计与失败判据；真实调用另行授权。 |
 | R1b-3 | 旧run只完成一次Execution且不能续跑；先对齐修正后的对手牌组/手牌见证、输入、driver与worker身份，设计新的独立scope、暂停/重开及replay。身份不符或消费不确定即停；真实恢复须另授权。 |
 | L1 | 已对照39张zh-CN及38张有值zh-SC候选；逐批解决名称/类别差异和别名映射，单独核实使用与再分发依据。缺字段或权利依据时保持unknown，不提升正式资格。 |

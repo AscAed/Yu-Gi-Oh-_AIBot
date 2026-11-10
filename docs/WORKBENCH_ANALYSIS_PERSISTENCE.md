@@ -48,13 +48,13 @@ job/report ID均为服务生成的32位小写十六进制；不接受浏览器�
 
 旧queue.enqueue/claim_next/cancel/settle保留B2内存语义；`DurableAnalysisCoordinator`通过同一队列状态/绑定核心的私有提交钩子执行持久先行事务，不在锁外拼装第二套状态转换。
 
-存储钩子为私有实现，不允许用户回调重入队列；锁顺序固定为任务根独占锁（进程生命周期）→ 协调互斥锁 → 存储操作锁。磁盘提交可能短时阻塞状态查询，首版接受此成本；实际搜索、报告解析和昂贵计算在队列锁外。领取已提交后、构造适配器或实际调用前必须重新核对实时资产与冻结身份；不得用新扫描结果改写期望。资产复核失败且可认证尚未启动时提交failed，不调用适配器；无法认证是否启动时保留unknown。最终发布前在协调锁内再次核对票据、revision及摘要。
+存储钩子为私有实现，不允许用户回调重入队列；写操作仍由协调互斥锁串行化，文件通过原子发布形成不可变修订。只读检查每次完整认证操作、任务、回执及报告引用，但不持有调度互斥锁；它可观察并发写入前的有效提交前缀，磁盘读取仍可能与写入产生 I/O 竞争。实际搜索、报告解析和昂贵计算在队列锁外。领取已提交后、构造适配器或实际调用前必须重新核对实时资产与冻结身份；不得用新扫描结果改写期望。资产复核失败且可认证尚未启动时提交failed，不调用适配器；无法认证是否启动时保留unknown。最终发布前在协调锁内再次核对票据、revision及摘要。
 
 2026-11-03的单点K验收将claim边界拆开观察：running修订持久化后、队列更新前；队列更新及资产核验后、票据返回前；票据返回后、执行器调用前。新窗口通过测试专用握手和真实目录锁恢复检查；它验证既有running重开分类为unknown的合同，不增加新的持久化状态、公开API或schema。详见[本批交接](superpowers/plans/2026-11-03-running-queue-updated-before-ticket-return-handoff.md)与[验证记录](TESTING.md)。
 
 2026-11-04新增两项测试观察：`time_budget`报告原因作为既有`budget_limited`保存后K点的第二个输入场景；它与`node_budget`共用同一物理回调，不形成新逻辑窗口。显式`mark_unknown`另有独立K：`CompletionUncertain`终态revision已落盘、内存running槽尚未结算时终止，重开保留原终态且不再追加revision。此测试不代表真实worker或不确定调用已被证明；消费仍保持unknown。结果见[窗口交接](superpowers/plans/2026-11-04-unknown-terminal-persisted-before-queue-update.md)、[原因分类交接](superpowers/plans/2026-11-04-time-budget-recovery-handoff.md)与[TESTING](TESTING.md)。
 
-2026-11-04 W1-C在job目录增加可选的`attempt_receipts/<sequence>.json`私有追加日志，不改变job revision、HTTP或报告schema。每个事件绑定operation ID、job ID、running revision、command摘要、job input binding、input与冻结资产摘要；source bundle/build record身份由当前workbench执行器标为null。adapter调用前先同步发布`Started`，返回后再发布host观察结果；事件按序号、前驱摘要和事件摘要组成链。未完成的末尾`Started`是可认证的崩溃现场；持久化失败或提交结果不确定时协调器停止派发，重开将仍处于running的job分类为unknown，不自动重试。跨链重开同时验证receipt与accepted operation及历史running job revision的绑定。该日志已接受合成`ffi_entered`/`ffi_returned`事件；同一attempt内按连续序号和job级唯一call ID配对，嵌套调用按LIFO返回，未返回入口保留为未决记录，HostResult拒绝关闭未决FFI调用。追加校验和整条磁盘历史重验均检查call ID唯一性，损坏或伪造链拒绝恢复。当前workbench和worker transport尚未产生这些真实FFI事件，因此该合同不证明OS worker/ocgcore调用、报告生产来源或消费；详见[W1-C验证记录](TESTING.md)及[来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+2026-11-04 W1-C在job目录增加可选的`attempt_receipts`私有追加日志，不改变job revision、HTTP或报告schema。每个事件绑定operation ID、job ID、running revision、command摘要、job input binding、input与冻结资产摘要；source bundle/build record身份由当前workbench执行器标为null。adapter调用前先同步发布`Started`，返回后再发布host观察结果；事件按序号、前驱摘要和事件摘要组成链。新写入的序号1–4,096仍使用`<sequence>.json`，之后写入`segments/segment-<index>/<sequence>.json`，每段最多4,096条；读取器继续接受旧版序号1–20,000的平铺文件。单事件仍限制为256 KiB，没有固定的总事件数上限；实际存储或完整链读取/校验失败时协调器停止派发，重开将仍处于running的job分类为unknown，不自动重试。当前读取器将整条历史载入内存校验，因此超大日志仍受可用磁盘、内存和运行时间限制。未完成的末尾`Started`是可认证的崩溃现场；跨链重开同时验证receipt与accepted operation及历史running job revision的绑定。该日志已接受合成`ffi_entered`/`ffi_returned`事件；同一attempt内按连续序号和job级唯一call ID配对，嵌套调用按LIFO返回，未返回入口保留为未决记录，HostResult拒绝关闭未决FFI调用。追加校验和整条磁盘历史重验均检查call ID唯一性，损坏或伪造链拒绝恢复。当前workbench和worker transport尚未产生这些真实FFI事件，因此该合同不证明OS worker/ocgcore调用、报告生产来源或消费；详见[W1-C验证记录](TESTING.md)及[来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
 
 | 操作 | 必须先提交 | 然后允许 |
 |---|---|---|
@@ -139,6 +139,6 @@ job/report ID均为服务生成的32位小写十六进制；不接受浏览器�
 
 测试专用选择器按操作/任务/报告链、目标状态和 revision 定位提交，分别模拟发布前明确失败、发布后不确定和写后复读失败；生产参数、报告和公开HTTP合同不变。已发出的202只代表接受中记录已保存，后台故障通过后续保存状态和停派发状态反映，不能修改原响应。同步提交失败必须为503，不能套用原业务拒绝。
 
-提交结果不确定时保留正式文件和内存槽位并停止派发；queued已保存而accepted未保存时不能领取。报告已保存而终态缺失时保留孤立报告，GET不据此补认完成。停止后GET通过同一持锁存储认证操作/任务链和引用报告，不追加重启分类、不返回缓存成功；健康历史可读、明确不存在404，无法认证503。
+提交结果不确定时保留正式文件和内存槽位并停止派发；queued已保存而accepted未保存时不能领取。报告已保存而终态缺失时保留孤立报告，GET不据此补认完成。停止后GET仍对操作/任务链、回执及报告引用执行完整存储认证，不追加重启分类、不返回缓存成功，也不占用调度互斥锁；健康历史可读、明确不存在404，无法认证503。
 
 该矩阵只覆盖列出的逻辑提交点，不代表每条文件系统调用、断电、OS崩溃或响应丢失验收。H2.2-B重复提交、容量及取消/领取调度见[并发交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。H2.2-A/B合成门禁通过；H3和W1-C仍需独立完成。

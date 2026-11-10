@@ -38,6 +38,14 @@ cargo run -p ygo-cli --offline --locked -- workbench serve
 --port PORT       固定本机端口；不提供时由系统分配
 ```
 
+启用`--analysis-config`时还必须提供`--catalog-id`，且该ID必须能在`--store`指定的快照根目录（默认`data/snapshots`）中读取。固定W1-C入口要求固定catalog `catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d`、匹配的本地快照及`target/w1c-executor/cargo`隔离target内构建的CLI和worker；两者必须位于同一Cargo profile目录。普通`cargo run`会启动`target/debug`中的CLI，不满足该准入条件。只有本机固定快照、配置及引擎资产均通过身份校验时，以下命令才会启动显式固定Rabbit分析入口：
+
+```powershell
+cargo build -p ygo-cli --offline --locked --target-dir target/w1c-executor/cargo
+cargo build -p ygo-engine-adapter --bin ygo-engine-worker --offline --locked --target-dir target/w1c-executor/cargo
+& .\target\w1c-executor\cargo\debug\ygo-cli.exe workbench serve --store data/snapshots --catalog-id catalog-1b0564fd61eec4730828fea1d48391aa1598bca3157c255454a8dcf487485d6d --analysis-config configs/w1c-analysis.example.toml --analysis-store data/runtime/workbench/analysis
+```
+
 指定catalog时，启动过程通过`SnapshotStore`读取并验证快照。检索只使用该快照的卡号和原始名称；界面始终标示中文译文未核验。未指定catalog也可编辑任意非零u32卡号。
 
 ## HTTP接口

@@ -127,6 +127,16 @@ class ExecutionReceiptContractTests(unittest.TestCase):
         self.assertFalse(result["report_origin_authenticated"])
         self.assertEqual(result["consumption"], {"status": "unknown", "unit": None, "count": None})
 
+    def test_repeated_verification_does_not_mutate_receipt(self):
+        receipt = make_receipt(complete_specs())
+        original = copy.deepcopy(receipt)
+
+        first = verify_receipt_chain(receipt, REPORT_RAW)
+        second = verify_receipt_chain(receipt, REPORT_RAW)
+
+        self.assertEqual(receipt, original)
+        self.assertEqual(first, second)
+
     def test_schema_accepts_complete_fixture_and_rejects_unknown_consumption(self):
         schema = json.loads((ROOT / "schemas/w1c-execution-receipt-chain-v1.schema.json").read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(schema)

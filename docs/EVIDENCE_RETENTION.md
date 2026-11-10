@@ -43,7 +43,7 @@
 
 路径相对于仓库根目录。`被引用文档`列出当前已知消费者；相同产物可能还有未扫描的代码、报告或本地消费者。
 
-### `data/runtime/`：14个目标
+### `data/runtime/`：15个目标
 
 | 目标 | 被引用文档 |
 |---|---|
@@ -61,6 +61,7 @@
 | `data/runtime/p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2/preparation.json` | `TASKS.md`, `docs/TESTING.md` |
 | `data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-1/preparation.json` | `TASKS.md`, `docs/TESTING.md` |
 | `data/runtime/p1-ground-collapse-preparation-current-2026-11-03-driver-review-2/preparation.json` | `TASKS.md`, `docs/TESTING.md` |
+| `data/runtime/p4-r1b3/p4-r1b3-1793625696606077800-54284/read-only-journal-audit.json` | `TASKS.md` |
 
 ### `target/`：35个目标
 

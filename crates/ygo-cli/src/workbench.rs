@@ -324,7 +324,7 @@ fn set_read_timeout_until(stream: &TcpStream, deadline: Instant) -> Result<(), H
     }
     stream
         .set_read_timeout(Some(remaining))
-        .map_err(|_| HttpFailure::new(400, "request_timeout"))
+        .map_err(|_| HttpFailure::new(400, "request_read_failed"))
 }
 
 fn read_http_request_head(
@@ -966,6 +966,7 @@ fn status_text(status: u16) -> &'static str {
         200 => "OK",
         201 => "Created",
         202 => "Accepted",
+        408 => "Request Timeout",
         422 => "Unprocessable Entity",
         503 => "Service Unavailable",
         400 => "Bad Request",
@@ -1052,6 +1053,7 @@ mod tests {
         let _client = TcpStream::connect(address).unwrap();
 
         assert_eq!(server.join().unwrap(), 408);
+        assert_eq!(status_text(408), "Request Timeout");
     }
 
     fn test_root(name: &str) -> PathBuf {

@@ -17,7 +17,7 @@ H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026
 | 方法/路径 | 必填输入及来源 | 成功响应（kind） | 失败与重试 |
 |---|---|---|---|
 | POST /api/analysis-operations | schema_version=1，kind=analysis_operation_allocate；无其他字段 | 201 analysis_operation：服务operation_id、revision、allocated状态、时间及可空指令/任务绑定 | 503配置/存储不可用；丢失分配响应可重新分配，旧空操作不产生任务 |
-| PUT /api/analysis-operations/{id} | schema_version=1，kind=analysis_submit；draft_id、draft_revision、opening_hand、seed、rules、catalog_id（可空）、banlist_id、as_of、search | 首次接受202 analysis_operation；已接受重复200，同一job_id | 400格式；409指令冲突/revision/容量；422准备失败或显式W1-C profile不符；503停派发/提交不确定。先查询原ID，不生成替代任务 |
+| PUT /api/analysis-operations/{id} | schema_version=1，kind=analysis_submit；draft_id、draft_revision、opening_hand、seed、rules、catalog_id（可空）、banlist_id、as_of、search | 首次有效提交先返回202 analysis_operation（accepting）；后台冻结后以GET观察accepted或rejected；已接受重复200，同一job_id | 400格式；409指令冲突/容量；422用于allocated阶段同步拒绝（如固定profile不符）；后台冻结失败保存在rejected及原错误码，后续GET返回状态，重复PUT重放已保存拒绝；503停派发/提交不确定。先查询原ID，不生成替代任务 |
 | GET /api/analysis-operations/{id} | ID；无body | 200 analysis_operation：allocated/accepting/accepted/rejected/unknown及绑定 | 404明确不存在；503不能认证。404不推定旧调用消费为0 |
 | GET /api/analysis-jobs/{id} | ID；无body | 200 analysis_job_status：已认证保存记录的白名单 | 404不存在；503存储不可认证，不能返回空成功 |
 | GET /api/analysis-jobs/{id}/result | ID；无body | 200 analysis_job_result：完成或预算截断报告投影 | 409 job_result_unavailable（未完成或其他终态）；503报告损坏/不可认证 |
@@ -67,7 +67,7 @@ H1设计时提出新增独立AnalysisOperationRecordV1及严格schema、不可�
 
 指令摘要使用固定域workbench-analysis-command-v1与固定顺序的类型化紧凑JSON元组，依次含draft_id/revision、起手（保序）、seed、rules、catalog选择、banlist选择、as_of、search、分配时服务评分和默认catalog ID。JSON成员输入顺序不影响摘要。保存客户端选择（包括null和latest-ocg），不能先重新解析可变别名再判断重复。冻结后另存B1 binding_sha256及实际解析身份，不混用两种摘要。
 
-提交流程：严格解码 → 读取同一操作原记录与上下文 → 比较指令摘要 → 已accepted/rejected/unknown直接返回保存结果，不冻结、不扫描、不入队 → 同一协调锁下检查容量并预占唯一待入队槽 → 保存accepting（含指令、摘要及预分配job_id）→ 锁外执行W1-A冻结 → 锁内复核操作与预占 → 保存已冻结输入绑定的操作修订 → 以预分配job_id持久提交queued任务 → 保存accepted操作修订 → 更新内存并返回202。
+提交流程：严格解码 → 读取同一操作原记录与上下文 → 比较指令摘要 → 已accepted/rejected/unknown直接返回保存结果，不冻结、不扫描、不入队 → 同一协调锁下检查容量并预占唯一待入队槽 → 保存accepting（含指令、摘要及预分配job_id），首次PUT立即返回202 → 后台锁外执行W1-A冻结 → 锁内复核操作与预占 → 保存已冻结输入绑定的操作修订 → 以预分配job_id持久提交queued任务 → 保存accepted操作修订并更新内存队列。后台冻结失败时保存rejected；客户端继续查询同一操作以读取最终状态。
 
 预占不是queued或running，不产生可执行票据；冻结期间仍可查询/取消其他任务，其他创建不能抢该预占。本机请求线程断开不撤销已保存accepting。并发同ID：相同指令返回202 accepting或保存结果，不重复冻结；不同指令409 analysis_operation_conflict。不同ID继续受一运行一排队限制。容量拒绝和准备拒绝均保存rejected；同ID重试返回同一拒绝，用户调整后须明确新建操作。
 
@@ -90,12 +90,12 @@ evidence固定区分report_contract_validated=true与report_origin_authenticated
 | 服务情形 | 允许 | 拒绝 |
 |---|---|---|
 | 正常且分析配置齐备 | 操作/任务查询、提交、排队取消 | 运行取消、终态再执行 |
-| 分析未配置/后端未启用 | 原草稿功能；可认证的分析历史GET | 分配/提交503 analysis_not_configured，不回退真实执行器 |
-| 协调器因不确定提交停止 | 单独只读诊断；可独立认证的保存链GET，service_state=stopped | 所有分析写操作503 job_coordinator_stopped |
-| 根锁被其他进程占用 | 原草稿功能 | 分析读写503 analysis_store_locked，不无锁读取 |
+| 分析未配置/后端未启用 | 原草稿功能 | 所有分析路由503 analysis_not_configured；不回退真实执行器 |
+| 协调器因不确定提交停止 | 单独只读诊断；已启动服务中的操作/任务GET可读取认证保存链并标示service_state=stopped | 所有分析写操作503 analysis_coordinator_stopped |
+| 根锁被其他进程占用 | 草稿和HTTP服务均未启动 | 配置分析服务时存储打开失败，HTTP listener启动前退出；不无锁读取 |
 | 材料损坏或来源不可认证 | 固定逻辑角色诊断 | 相关GET/全部分析写入503 analysis_store_unverifiable，不返回旧缓存冒充当前 |
 
-历史设计基线中的`coordinator.history`在stopped时拒绝。H2.1现提供同一锁所有者的`inspect_operation/inspect_job`纯只读查询；HTTP GET仍需调用这类不追加重启分类的查询，不另开可写存储。新状态不代表统计消费为0。原错误原文只保留私有诊断，所有公开值递归经过白名单；无法识别的评价profile、Choice/状态或非有限分数应拒绝投影，不把未知自由字符串作为标识直出。
+历史设计基线中的`coordinator.history`在stopped时拒绝。H2.1现提供`inspect_operation/inspect_job`纯只读查询；HTTP GET完整认证保存链与报告引用，但不持有调度互斥锁，也不追加重启分类。并发提交期间查询可观察到一个有效的已提交前缀。新状态不代表统计消费为0。原错误原文只保留私有诊断，所有公开值递归经过白名单；无法识别的评价profile、Choice/状态或非有限分数应拒绝投影，不把未知自由字符串作为标识直出。
 
 ## 4. 静态场景矩阵（不是已运行测试）
 
@@ -103,12 +103,12 @@ Rabbit走查采用tests/fixtures/rabbit.request.json：40/3/0、五张起手8513
 
 | 场景 | 保存状态与响应 | 客户端动作/禁止行为 |
 |---|---|---|
-| 首次合法提交 | accepting→queued任务→accepted，202 | 查询同一操作/任务，不声称执行成功 |
+| 首次有效提交 | 先持久保存accepting并立即返回202；后台随后冻结、创建queued任务并保存accepted，或保存rejected及冻结错误 | 继续轮询同一操作；只有观察到accepted及job_id后再查询任务，不声称执行成功；rejected后停止该操作并按已保存错误修正输入 |
 | 同ID相同指令、默认快照已变化 | 返回原绑定200；无冻结/扫描 | 不生成新任务 |
 | 同ID不同指令 | 原记录不变，409 conflict | 明确新建操作，不替换旧绑定 |
 | 同ID并发 | 一个accepting，其他202同状态 | GET等待，不第二次冻结 |
 | 不同ID容量满 | rejected，409 analysis_queue_full | 槽位空后明确新操作，不暗中排队 |
-| 草稿revision/起手/预算错误 | rejected，409 revision或422对应W1-A码 | 修正输入后明确新操作 |
+| accepting后发现草稿revision/起手/预算错误 | 初始PUT仍为202；后台保存rejected及409 revision或422 W1-A错误码，GET返回该状态 | 同ID重试会重放拒绝；修正输入后明确新操作 |
 | accepting保存前失败 | 无任务，503 | GET确认；不据缺失推定收费0 |
 | accepting后冻结中断 | 操作unknown，无新任务 | 停止自动提交；不换ID重发 |
 | queued已存、accepted未存或回复丢失 | 保留同job_id；恢复认证后绑定原任务 | 查询原操作，不重新执行 |
@@ -120,7 +120,7 @@ Rabbit走查采用tests/fixtures/rabbit.request.json：40/3/0、五张起手8513
 | queued/running重启 | interrupted/unknown，不重排 | 只读展示；重复重启不重复分类 |
 | 报告损坏/根漂移/提交不确定 | 503、停写停派发 | 保留证据，不重试执行 |
 | 错Host/token/Origin、超大、重复键 | 沿安全门禁400/403/413或业务400 | 不创建操作或任务 |
-| 结果包含路径/令牌/原始异常 | 投影拒绝，503 result_projection_invalid | 不回退返回完整报告 |
+| 结果包含路径/令牌/原始异常 | 投影拒绝，503 analysis_projection_invalid | 不回退返回完整报告 |
 
 ## 5. H2/H3实施前置与本批验收
 
@@ -143,6 +143,6 @@ H3覆盖响应丢失、并发重复、所有跨链发布缺口、停派发只读
 
 测试专用选择器按操作/任务/报告链、目标状态和 revision 定位提交，分别模拟发布前明确失败、发布后不确定和写后复读失败；生产参数、报告和公开HTTP合同不变。已发出的202只代表接受中记录已保存，后台故障通过后续保存状态和停派发状态反映，不能修改原响应。同步提交失败必须为503，不能套用原业务拒绝。
 
-提交结果不确定时保留正式文件和内存槽位并停止派发；queued已保存而accepted未保存时不能领取。报告已保存而终态缺失时保留孤立报告，GET不据此补认完成。停止后GET通过同一持锁存储认证操作/任务链和引用报告，不追加重启分类、不返回缓存成功；健康历史可读、明确不存在404，无法认证503。
+提交结果不确定时保留正式文件和内存槽位并停止派发；queued已保存而accepted未保存时不能领取。报告已保存而终态缺失时保留孤立报告，GET不据此补认完成。停止后GET仍完整认证操作/任务链及引用报告，不持有调度互斥锁、不追加重启分类、不返回缓存成功；健康历史可读、明确不存在404，无法认证503。
 
 该矩阵只覆盖列出的逻辑提交点，不代表每条文件系统调用、断电、OS崩溃或响应丢失验收。H2.2-B重复提交、容量及取消/领取调度见[并发交接](superpowers/plans/2026-11-01-w1h22b-concurrency-handoff.md)。H2.2-A/B合成门禁通过；H3和W1-C仍需独立完成。

@@ -118,10 +118,19 @@ fn request() -> RunDuelRequest {
     }
 }
 
+#[derive(Clone, Copy)]
+enum FfiCallbackFailureBehavior {
+    CallbackError,
+    OtherAdapterError,
+    Success,
+}
+
 struct ObservedTree {
     calls: AtomicUsize,
     error_stage: &'static str,
     emit_ffi: bool,
+    invalid_ffi_direction: bool,
+    ffi_callback_failure_behavior: FfiCallbackFailureBehavior,
 }
 
 impl ObservedTree {
@@ -130,6 +139,8 @@ impl ObservedTree {
             calls: AtomicUsize::new(0),
             error_stage: "process",
             emit_ffi: false,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
         }
     }
 
@@ -138,6 +149,8 @@ impl ObservedTree {
             calls: AtomicUsize::new(0),
             error_stage,
             emit_ffi: false,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
         }
     }
 
@@ -146,6 +159,57 @@ impl ObservedTree {
             calls: AtomicUsize::new(0),
             error_stage: "process",
             emit_ffi: true,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
+        }
+    }
+
+    fn with_ffi_callback_failure_behavior(
+        ffi_callback_failure_behavior: FfiCallbackFailureBehavior,
+    ) -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: true,
+            invalid_ffi_direction: false,
+            ffi_callback_failure_behavior,
+        }
+    }
+
+    fn with_invalid_ffi_direction() -> Self {
+        Self {
+            calls: AtomicUsize::new(0),
+            error_stage: "process",
+            emit_ffi: true,
+            invalid_ffi_direction: true,
+            ffi_callback_failure_behavior: FfiCallbackFailureBehavior::CallbackError,
+        }
+    }
+
+    fn observed_result(&self, r: &RunDuelRequest, call: usize) -> ProcessObservedOutcome {
+        let result = self.run(r);
+        let failed = result.is_err();
+        ProcessObservedOutcome {
+            result,
+            observation: ProcessRunObservation {
+                worker_executable_sha256: Some("a".repeat(64)),
+                spawn_status: ProcessSpawnStatus::Spawned,
+                worker_pid: Some(1000 + call as u32),
+                request_status: ProcessIoStatus::Complete,
+                request_sha256: Some(format!("{call:064x}")),
+                request_bytes: Some(1),
+                response_status: ProcessIoStatus::Complete,
+                response_sha256: Some(format!("{:064x}", call + 1)),
+                response_bytes: Some(2),
+                response_validation: if failed {
+                    ProcessResponseValidation::NotAttempted
+                } else {
+                    ProcessResponseValidation::Parsed
+                },
+                termination: ProcessTermination::Exited,
+                exit_code: Some(if failed { 7 } else { 0 }),
+                elapsed_ms: call as u64,
+            },
         }
     }
 }
@@ -176,30 +240,7 @@ impl EngineAdapter for ObservedTree {
 impl ProcessObservedAdapter for ObservedTree {
     fn run_process_observed(&self, r: &RunDuelRequest) -> ProcessObservedOutcome {
         let call = self.calls.fetch_add(1, Ordering::SeqCst);
-        let result = self.run(r);
-        let failed = result.is_err();
-        ProcessObservedOutcome {
-            result,
-            observation: ProcessRunObservation {
-                worker_executable_sha256: Some("a".repeat(64)),
-                spawn_status: ProcessSpawnStatus::Spawned,
-                worker_pid: Some(1000 + call as u32),
-                request_status: ProcessIoStatus::Complete,
-                request_sha256: Some(format!("{call:064x}")),
-                request_bytes: Some(1),
-                response_status: ProcessIoStatus::Complete,
-                response_sha256: Some(format!("{:064x}", call + 1)),
-                response_bytes: Some(2),
-                response_validation: if failed {
-                    ProcessResponseValidation::NotAttempted
-                } else {
-                    ProcessResponseValidation::Parsed
-                },
-                termination: ProcessTermination::Exited,
-                exit_code: Some(if failed { 7 } else { 0 }),
-                elapsed_ms: call as u64,
-            },
-        }
+        self.observed_result(r, call)
     }
 
     fn run_process_observed_with_ffi(
@@ -208,8 +249,9 @@ impl ProcessObservedAdapter for ObservedTree {
         attempt_id: &str,
         record: &mut dyn FnMut(ygo_engine_adapter::FfiReceiptEvent) -> Result<(), String>,
     ) -> ProcessObservedOutcome {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst);
         if !self.emit_ffi {
-            return self.run_process_observed(r);
+            return self.observed_result(r, call);
         }
         let outer = "0".repeat(32);
         let inner = "1".repeat(32);
@@ -218,7 +260,11 @@ impl ProcessObservedAdapter for ObservedTree {
             ygo_engine_adapter::FfiReceiptEvent::Entered {
                 sequence: 1,
                 call_id: outer.clone(),
-                direction: "into_core".into(),
+                direction: if self.invalid_ffi_direction {
+                    "invalid".into()
+                } else {
+                    "into_core".into()
+                },
                 name: "OCG_DuelProcess".into(),
             },
             ygo_engine_adapter::FfiReceiptEvent::Entered {
@@ -237,17 +283,34 @@ impl ProcessObservedAdapter for ObservedTree {
             },
         ] {
             if let Err(error) = record(event) {
-                return ProcessObservedOutcome {
-                    result: Err(WorkerError::new(
-                        "receipt_write_failed",
-                        "attempt_receipt",
-                        error,
-                    )),
-                    observation: ProcessRunObservation::default(),
-                };
+                match self.ffi_callback_failure_behavior {
+                    FfiCallbackFailureBehavior::CallbackError => {
+                        return ProcessObservedOutcome {
+                            result: Err(WorkerError::new(
+                                "host_receipt_callback_failed",
+                                "receipt_callback",
+                                error,
+                            )),
+                            observation: ProcessRunObservation::default(),
+                        };
+                    }
+                    FfiCallbackFailureBehavior::OtherAdapterError => {
+                        return ProcessObservedOutcome {
+                            result: Err(WorkerError::new(
+                                "fixture_timeout",
+                                "worker_timeout",
+                                error,
+                            )),
+                            observation: ProcessRunObservation::default(),
+                        };
+                    }
+                    FfiCallbackFailureBehavior::Success => {
+                        return self.observed_result(r, call);
+                    }
+                }
             }
         }
-        self.run_process_observed(r)
+        self.observed_result(r, call)
     }
 }
 
@@ -486,6 +549,95 @@ fn ffi_receipts_are_persisted_between_started_and_host_result() {
         })
     ));
     assert!(matches!(events[5], SearchAttemptJournalEvent::Finished(_)));
+}
+
+#[test]
+fn ffi_receipt_callback_failure_stops_search_after_one_adapter_call() {
+    let adapter = ObservedTree::with_ffi();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 4,
+            node_budget: 100,
+            max_depth: 5,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || Ok("c".repeat(32)),
+        |event| match event {
+            SearchAttemptJournalEvent::FfiEntered(_) => {
+                Err("simulated FFI receipt append failure".into())
+            }
+            _ => Ok(()),
+        },
+    );
+
+    assert!(outcome.report.is_err());
+    assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(outcome.attempts.len(), 1);
+    assert!(matches!(
+        outcome.attempts[0].result,
+        SearchAttemptResult::AdapterError {
+            ref code,
+            ref stage
+        } if code == "host_receipt_callback_failed" && stage == "receipt_callback"
+    ));
+}
+
+#[test]
+fn ffi_receipt_callback_failure_gates_other_adapter_outcomes() {
+    for behavior in [
+        FfiCallbackFailureBehavior::OtherAdapterError,
+        FfiCallbackFailureBehavior::Success,
+    ] {
+        let adapter = ObservedTree::with_ffi_callback_failure_behavior(behavior);
+        let outcome = search_with_receipts(
+            &adapter,
+            &request(),
+            &SearchBudget {
+                beam_width: 4,
+                node_budget: 100,
+                max_depth: 5,
+                ..Default::default()
+            },
+            &ScoringConfig::default(),
+            || Ok("f".repeat(32)),
+            |event| {
+                if matches!(event, SearchAttemptJournalEvent::FfiEntered(_)) {
+                    Err("simulated FFI receipt append failure".into())
+                } else {
+                    Ok(())
+                }
+            },
+        );
+
+        assert!(outcome.report.is_err());
+        assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+        assert_eq!(outcome.attempts.len(), 1);
+    }
+}
+
+#[test]
+fn invalid_ffi_direction_gates_later_adapter_calls() {
+    let adapter = ObservedTree::with_invalid_ffi_direction();
+    let outcome = search_with_receipts(
+        &adapter,
+        &request(),
+        &SearchBudget {
+            beam_width: 4,
+            node_budget: 100,
+            max_depth: 5,
+            ..Default::default()
+        },
+        &ScoringConfig::default(),
+        || Ok("d".repeat(32)),
+        |_| Ok(()),
+    );
+
+    assert!(outcome.report.is_err());
+    assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(outcome.attempts.len(), 1);
 }
 
 #[test]

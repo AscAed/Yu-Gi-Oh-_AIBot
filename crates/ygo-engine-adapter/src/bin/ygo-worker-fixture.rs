@@ -39,8 +39,12 @@ fn stream_fixture(name: &str) {
     use std::io::{BufReader, Write};
     use ygo_engine_adapter::stream_protocol::{
         read_frame, write_frame, FfiDirection, HostAck, StreamRequest, StreamResult, WorkerFrame,
-        WorkerFrameKind, STREAM_VERSION,
+        WorkerFrameKind, MAX_EVENT_FRAME_BYTES, STREAM_VERSION,
     };
+    if name.contains("stream-no-read") {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        return;
+    }
     let stdin = std::io::stdin();
     let mut input = BufReader::new(stdin);
     let request: StreamRequest = read_frame(&mut input).unwrap();
@@ -48,6 +52,15 @@ fn stream_fixture(name: &str) {
     let mut output = stdout.lock();
     let frames = if name.contains("stream-no-events") {
         vec![]
+    } else if name.contains("stream-oversized-event") {
+        let mut frame = frame(
+            &request.attempt_id,
+            1,
+            "OCG_DuelProcess",
+            WorkerFrameKind::FfiEntered,
+        );
+        frame.attempt_id = "x".repeat(MAX_EVENT_FRAME_BYTES + 1);
+        vec![frame]
     } else if name.contains("stream-invalid") {
         vec![WorkerFrame {
             version: STREAM_VERSION,
@@ -105,9 +118,20 @@ fn stream_fixture(name: &str) {
     let result = StreamResult {
         version: STREAM_VERSION,
         attempt_id: request.attempt_id.clone(),
-        result: ygo_engine_adapter::DuelResult::failure(ygo_engine_adapter::WorkerError::new(
-            "fixture", "stream", "",
-        )),
+        result: {
+            let mut result = ygo_engine_adapter::DuelResult::failure(
+                ygo_engine_adapter::WorkerError::new("fixture", "stream", ""),
+            );
+            result.protocol_version = request.request.protocol_version;
+            result.versions = request.request.versions.clone();
+            if name.contains("stream-protocol-mismatch") {
+                result.protocol_version = u16::MAX;
+            } else if name.contains("stream-runtime-mismatch") {
+                result.status = ygo_engine_adapter::DuelStatus::ProbePassed;
+                result.versions.rules.push_str("-mismatch");
+            }
+            result
+        },
     };
     write_frame(&mut output, &result).unwrap();
     if name.contains("stream-after-result") {

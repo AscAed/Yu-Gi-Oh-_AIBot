@@ -279,7 +279,10 @@ fn stream_supervisor_kills_worker_when_receipt_persistence_fails() {
             Err("simulated durable append failure".into())
         });
 
-    assert_eq!(outcome.result.unwrap_err().code, "receipt_write_failed");
+    assert_eq!(
+        outcome.result.unwrap_err().code,
+        "host_receipt_callback_failed"
+    );
     assert_eq!(events, 1);
     assert_eq!(outcome.observation.termination, ProcessTermination::Exited);
 
@@ -300,6 +303,22 @@ fn stream_supervisor_rejects_out_of_order_frames() {
     assert_eq!(outcome.result.unwrap_err().code, "event_order");
     assert_eq!(events, 0);
 
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_reports_oversized_event_frames_separately() {
+    let (request, adapter, path, directory) = stream_fixture("stream-oversized-event");
+    let mut events = 0;
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "c".repeat(32).as_str(), &mut |_| {
+            events += 1;
+            Ok(())
+        });
+
+    assert_eq!(outcome.result.unwrap_err().code, "event_frame_size");
+    assert_eq!(events, 0);
     std::fs::remove_file(path).unwrap();
     std::fs::remove_dir(directory).unwrap();
 }
@@ -328,6 +347,27 @@ fn stream_supervisor_times_out_when_receipt_persistence_exceeds_deadline() {
 }
 
 #[test]
+fn stream_supervisor_deadline_covers_a_blocked_request_pipe_write() {
+    let (mut request, _, path, directory) = stream_fixture("stream-no-read");
+    request.engine.timeout_ms = 200;
+    request.engine.ocgcore_path = PathBuf::from(format!("{}.dll", "x".repeat(8 * 1024 * 1024)));
+    let adapter = ProcessEngineAdapter::new(request.engine.clone());
+    let start = std::time::Instant::now();
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "9".repeat(32).as_str(), &mut |_| Ok(()));
+
+    assert_eq!(outcome.result.unwrap_err().code, "timeout");
+    assert!(start.elapsed().as_secs() < 3);
+    assert_eq!(outcome.observation.request_status, ProcessIoStatus::Unknown);
+    assert_eq!(
+        outcome.observation.termination,
+        ProcessTermination::TimedOut
+    );
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
 fn stream_supervisor_classifies_exit_after_entered_as_unresolved() {
     let (request, adapter, path, directory) = stream_fixture("stream-exit-after-entry");
     let mut events = Vec::new();
@@ -337,7 +377,12 @@ fn stream_supervisor_classifies_exit_after_entered_as_unresolved() {
             Ok(())
         });
 
-    assert_eq!(outcome.result.unwrap_err().code, "worker_eof");
+    let error = outcome.result.unwrap_err();
+    assert!(
+        matches!(error.code.as_str(), "worker_eof" | "ack_write_failed"),
+        "unexpected unresolved worker exit error: {}",
+        error.code
+    );
     assert_eq!(events.len(), 1);
     assert!(matches!(
         events.first(),
@@ -373,6 +418,41 @@ fn stream_supervisor_accepts_result_without_ffi_events() {
     assert_eq!(
         outcome.observation.response_validation,
         ProcessResponseValidation::Parsed
+    );
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_rejects_result_with_mismatched_protocol_version() {
+    let (mut request, _, path, directory) = stream_fixture("stream-protocol-mismatch");
+    request.protocol_version = 4;
+    let adapter = ProcessEngineAdapter::new(request.engine.clone());
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "1".repeat(32).as_str(), &mut |_| Ok(()));
+
+    assert_eq!(outcome.result.unwrap_err().code, "protocol_version");
+    assert_eq!(
+        outcome.observation.response_validation,
+        ProcessResponseValidation::ProtocolVersionMismatch
+    );
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
+fn stream_supervisor_rejects_nonfailure_result_with_mismatched_runtime_versions() {
+    let (mut request, _, path, directory) = stream_fixture("stream-runtime-mismatch");
+    request.protocol_version = 4;
+    request.versions.rules = "rules-v1".into();
+    let adapter = ProcessEngineAdapter::new(request.engine.clone());
+    let outcome =
+        adapter.run_process_observed_with_ffi(&request, "2".repeat(32).as_str(), &mut |_| Ok(()));
+
+    assert_eq!(outcome.result.unwrap_err().code, "version_mismatch");
+    assert_eq!(
+        outcome.observation.response_validation,
+        ProcessResponseValidation::RuntimeVersionMismatch
     );
     std::fs::remove_file(path).unwrap();
     std::fs::remove_dir(directory).unwrap();

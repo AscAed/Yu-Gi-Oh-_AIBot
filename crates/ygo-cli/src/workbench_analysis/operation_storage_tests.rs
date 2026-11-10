@@ -1,7 +1,11 @@
 //! Independent negative cases exercise storage parsing and cross-chain checks.
 use super::{
+    durable::{DurableAnalysisCoordinator, DurableCoordinatorError},
     jobs::AnalysisJobRecordV1,
-    operations::{AnalysisOperationCommand, AnalysisOperationContext, AnalysisOperationRecordV1},
+    operations::{
+        AnalysisOperationCommand, AnalysisOperationContext, AnalysisOperationRecordV1,
+        AnalysisOperationState,
+    },
     persistence::{PersistenceError, PersistentAnalysisJobStore},
     tests::{fixtures, spec},
     *,
@@ -59,6 +63,60 @@ fn every_operation_envelope_field_is_required_including_explicit_null() {
             "{field}"
         );
     }
+}
+
+#[test]
+fn empty_operation_revision_directory_can_resume_first_publication() {
+    let path = root();
+    let store = PersistentAnalysisJobStore::open_unclassified(path.clone()).unwrap();
+    let operation = allocated();
+    let revisions = path
+        .join("operations")
+        .join(operation.operation_id())
+        .join("revisions");
+    fs::create_dir_all(&revisions).unwrap();
+    let temporary = revisions.join(format!(".ygo-draft-{}.tmp", "f".repeat(32)));
+    fs::write(&temporary, b"unpublished").unwrap();
+
+    assert!(store
+        .scan_operations()
+        .unwrap()
+        .get(operation.operation_id())
+        .unwrap()
+        .is_empty());
+    assert!(store
+        .operation_history(operation.operation_id())
+        .unwrap()
+        .is_empty());
+    drop(store);
+    let coordinator = DurableAnalysisCoordinator::open_operations(path.clone()).unwrap();
+    assert!(matches!(
+        coordinator.inspect_operation_optional(operation.operation_id()),
+        Err(DurableCoordinatorError::Persistence(
+            PersistenceError::InvalidChain
+        ))
+    ));
+    drop(coordinator);
+    let store = PersistentAnalysisJobStore::open_unclassified(path.clone()).unwrap();
+    store.append_operation(&operation).unwrap();
+    let history = store.operation_history(operation.operation_id()).unwrap();
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].operation_id(), operation.operation_id());
+    assert_eq!(history[0].state(), AnalysisOperationState::Allocated);
+    assert!(temporary.exists());
+
+    let damaged_id = "d".repeat(32);
+    let damaged_revisions = path.join("operations").join(&damaged_id).join("revisions");
+    fs::create_dir_all(&damaged_revisions).unwrap();
+    fs::write(damaged_revisions.join("2.json"), b"{}").unwrap();
+    assert_eq!(
+        store.operation_history(&damaged_id).unwrap_err(),
+        PersistenceError::InvalidChain
+    );
+    assert_eq!(
+        store.scan_operations().unwrap_err(),
+        PersistenceError::InvalidChain
+    );
 }
 
 #[test]

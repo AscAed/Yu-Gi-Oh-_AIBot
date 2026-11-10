@@ -1,11 +1,15 @@
 use super::{
     jobs::AnalysisJobRecordV1,
-    persistence::{PersistenceError, PersistentAnalysisJobStore},
+    persistence::{is_unpublished_store_file, PersistenceError, PersistentAnalysisJobStore},
     FrozenAnalysisInput,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::PathBuf,
+};
 use ygo_search::combo::{
     SearchAttemptFfiDirection, SearchAttemptFfiReturnStatus, SearchAttemptJournalEvent,
     SearchAttemptObservation, SearchAttemptPhase, SearchAttemptResult,
@@ -13,8 +17,20 @@ use ygo_search::combo::{
 
 const ZERO_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 const RECEIPTS_DIR: &str = "attempt_receipts";
-const MAX_RECEIPT_EVENTS: usize = 20_000;
+const RECEIPT_SEGMENT_EVENTS: u64 = 4_096;
+const LEGACY_FLAT_RECEIPT_EVENTS: u64 = 20_000;
 const MAX_RECEIPT_EVENT_BYTES: u64 = 256 * 1024;
+
+fn receipt_event_path(dir: &std::path::Path, sequence: u64) -> PathBuf {
+    if sequence <= RECEIPT_SEGMENT_EVENTS {
+        dir.join(format!("{sequence}.json"))
+    } else {
+        let segment = (sequence - 1) / RECEIPT_SEGMENT_EVENTS;
+        dir.join("segments")
+            .join(format!("segment-{segment:08}"))
+            .join(format!("{sequence}.json"))
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -158,6 +174,194 @@ pub(super) struct AttemptReceiptEnvelopeV1 {
     pub event_sha256: String,
 }
 
+pub(super) struct AttemptReceiptAppendState {
+    sequence: u64,
+    previous_sha256: String,
+    context: Option<AttemptReceiptContextV1>,
+    context_sha256: Option<String>,
+    pending: Option<(u64, String, SearchAttemptPhase)>,
+    ffi_calls: BTreeMap<String, bool>,
+    ffi_stack: Vec<String>,
+    ffi_ordinal: u64,
+    next_ordinal: u64,
+    seen_attempt_ids: BTreeSet<String>,
+    seen_ffi_call_ids: BTreeSet<String>,
+}
+
+impl AttemptReceiptAppendState {
+    fn empty() -> Self {
+        Self {
+            sequence: 0,
+            previous_sha256: ZERO_HASH.to_owned(),
+            context: None,
+            context_sha256: None,
+            pending: None,
+            ffi_calls: BTreeMap::new(),
+            ffi_stack: Vec::new(),
+            ffi_ordinal: 0,
+            next_ordinal: 1,
+            seen_attempt_ids: BTreeSet::new(),
+            seen_ffi_call_ids: BTreeSet::new(),
+        }
+    }
+
+    fn from_history(
+        history: &[AttemptReceiptEnvelopeV1],
+        job_id: &str,
+    ) -> Result<Self, PersistenceError> {
+        let mut state = Self::empty();
+        for receipt in history {
+            if receipt.context.job_id != job_id {
+                return Err(PersistenceError::InvalidChain);
+            }
+            state.append(receipt)?;
+        }
+        Ok(state)
+    }
+
+    fn validate_next(
+        &self,
+        context: &AttemptReceiptContextV1,
+        event: &AttemptReceiptEventV1,
+    ) -> Result<(), PersistenceError> {
+        validate_context(context)?;
+        let next_context_sha256 = context_digest(context)?;
+        if self
+            .context
+            .as_ref()
+            .is_some_and(|existing| existing != context)
+            || self
+                .context_sha256
+                .as_ref()
+                .is_some_and(|existing| existing != &next_context_sha256)
+        {
+            return Err(PersistenceError::InvalidChain);
+        }
+        let valid = match event {
+            AttemptReceiptEventV1::Started {
+                ordinal,
+                attempt_id,
+                ..
+            } => {
+                self.pending.is_none()
+                    && *ordinal == self.next_ordinal
+                    && valid_id(attempt_id)
+                    && !self.seen_attempt_ids.contains(attempt_id)
+            }
+            AttemptReceiptEventV1::HostResult {
+                ordinal,
+                attempt_id,
+                phase,
+                ..
+            } => {
+                self.pending.as_ref() == Some(&(*ordinal, attempt_id.clone(), *phase))
+                    && self.ffi_calls.values().all(|returned| *returned)
+                    && self.ffi_stack.is_empty()
+            }
+            AttemptReceiptEventV1::FfiEntered {
+                attempt_ordinal,
+                attempt_id,
+                call_id,
+                name,
+                ffi_ordinal,
+                ..
+            } => {
+                pending_matches(self.pending.as_ref(), *attempt_ordinal, attempt_id)
+                    && valid_id(attempt_id)
+                    && valid_id(call_id)
+                    && valid_ffi_name(name)
+                    && !self.ffi_calls.contains_key(call_id)
+                    && !self.seen_ffi_call_ids.contains(call_id)
+                    && *ffi_ordinal == self.ffi_ordinal + 1
+            }
+            AttemptReceiptEventV1::FfiReturned {
+                attempt_ordinal,
+                attempt_id,
+                call_id,
+                result_sha256,
+                ..
+            } => {
+                pending_matches(self.pending.as_ref(), *attempt_ordinal, attempt_id)
+                    && valid_id(call_id)
+                    && self
+                        .ffi_calls
+                        .get(call_id)
+                        .is_some_and(|returned| !returned)
+                    && self.ffi_stack.last() == Some(call_id)
+                    && result_sha256.as_deref().map_or(true, valid_hash)
+            }
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(PersistenceError::InvalidChain)
+        }
+    }
+
+    fn append(&mut self, envelope: &AttemptReceiptEnvelopeV1) -> Result<(), PersistenceError> {
+        let expected_sequence = self
+            .sequence
+            .checked_add(1)
+            .ok_or(PersistenceError::InvalidChain)?;
+        let context_sha256 = context_digest(&envelope.context)?;
+        if envelope.schema_version != 1
+            || envelope.kind != "w1c_search_attempt_journal_event"
+            || envelope.sequence != expected_sequence
+            || envelope.previous_sha256 != self.previous_sha256
+            || envelope.context_sha256 != context_sha256
+            || envelope.event_sha256
+                != event_digest(
+                    &context_sha256,
+                    envelope.sequence,
+                    &envelope.previous_sha256,
+                    &envelope.event,
+                )?
+        {
+            return Err(PersistenceError::InvalidChain);
+        }
+        self.validate_next(&envelope.context, &envelope.event)?;
+        match &envelope.event {
+            AttemptReceiptEventV1::Started {
+                ordinal,
+                attempt_id,
+                phase,
+            } => {
+                self.pending = Some((*ordinal, attempt_id.clone(), *phase));
+                self.next_ordinal += 1;
+                self.seen_attempt_ids.insert(attempt_id.clone());
+                self.ffi_calls.clear();
+                self.ffi_stack.clear();
+                self.ffi_ordinal = 0;
+            }
+            AttemptReceiptEventV1::HostResult { .. } => {
+                self.pending = None;
+                self.ffi_calls.clear();
+                self.ffi_stack.clear();
+                self.ffi_ordinal = 0;
+            }
+            AttemptReceiptEventV1::FfiEntered {
+                call_id,
+                ffi_ordinal,
+                ..
+            } => {
+                self.ffi_ordinal = *ffi_ordinal;
+                self.ffi_calls.insert(call_id.clone(), false);
+                self.ffi_stack.push(call_id.clone());
+                self.seen_ffi_call_ids.insert(call_id.clone());
+            }
+            AttemptReceiptEventV1::FfiReturned { call_id, .. } => {
+                self.ffi_calls.insert(call_id.clone(), true);
+                self.ffi_stack.pop();
+            }
+        }
+        self.sequence = envelope.sequence;
+        self.previous_sha256 = envelope.event_sha256.clone();
+        self.context = Some(envelope.context.clone());
+        self.context_sha256 = Some(context_sha256);
+        Ok(())
+    }
+}
+
 impl PersistentAnalysisJobStore {
     pub(super) fn append_attempt_receipt(
         &self,
@@ -165,16 +369,24 @@ impl PersistentAnalysisJobStore {
         event: AttemptReceiptEventV1,
     ) -> Result<(), PersistenceError> {
         validate_context(context)?;
-        let history = self.read_attempt_receipts(&context.job_id)?;
-        validate_next_event(&history, context, &event)?;
-        if history.len() >= MAX_RECEIPT_EVENTS {
-            return Err(PersistenceError::InvalidChain);
+        let mut states = self
+            .attempt_receipt_states
+            .lock()
+            .map_err(|_| PersistenceError::CommitUncertain)?;
+        if !states.contains_key(&context.job_id) {
+            let history = self.read_attempt_receipts(&context.job_id)?;
+            let state = AttemptReceiptAppendState::from_history(&history, &context.job_id)?;
+            states.insert(context.job_id.clone(), state);
         }
-        let sequence = history.len() as u64 + 1;
-        let previous_sha256 = history
-            .last()
-            .map(|receipt| receipt.event_sha256.clone())
-            .unwrap_or_else(|| ZERO_HASH.to_owned());
+        let state = states
+            .get(&context.job_id)
+            .ok_or(PersistenceError::CommitUncertain)?;
+        state.validate_next(context, &event)?;
+        let sequence = state
+            .sequence
+            .checked_add(1)
+            .ok_or(PersistenceError::InvalidChain)?;
+        let previous_sha256 = state.previous_sha256.clone();
         let context_sha256 = context_digest(context)?;
         let event_sha256 = event_digest(&context_sha256, sequence, &previous_sha256, &event)?;
         let envelope = AttemptReceiptEnvelopeV1 {
@@ -193,29 +405,60 @@ impl PersistentAnalysisJobStore {
             return Err(PersistenceError::RecordInvalid);
         }
         let dir = self.attempt_receipt_dir(&context.job_id);
-        ygo_storage::prepare_store_directory(&dir).map_err(|_| PersistenceError::InvalidPath)?;
-        let path = dir.join(format!("{sequence}.json"));
+        let path = receipt_event_path(&dir, sequence);
+        ygo_storage::prepare_store_directory(path.parent().ok_or(PersistenceError::InvalidPath)?)
+            .map_err(|_| PersistenceError::InvalidPath)?;
         #[cfg(test)]
         self.fail_attempt_receipt_before_publish()?;
-        ygo_storage::publish_exclusive_file(&path, &bytes).map_err(|error| {
-            if error.starts_with("store_commit_uncertain:") || path.exists() {
+        if let Err(error) = ygo_storage::publish_exclusive_file(&path, &bytes) {
+            let persistence_error = if error.starts_with("store_commit_uncertain:") || path.exists()
+            {
                 PersistenceError::CommitUncertain
             } else if error.contains("already exists") || error.contains("File exists") {
                 PersistenceError::RevisionConflict
             } else {
                 PersistenceError::Io
+            };
+            if persistence_error == PersistenceError::CommitUncertain {
+                states.remove(&context.job_id);
             }
-        })?;
+            return Err(persistence_error);
+        }
 
-        // If the caller cannot prove the new bytes were committed, leave the
-        // evidence in place and prevent any later adapter call.
+        // An uncertain post-publish result invalidates the in-memory tail; the
+        // next open must authenticate the durable chain again.
         #[cfg(test)]
-        self.fail_attempt_receipt_after_publish()?;
+        if let Err(error) = self.fail_attempt_receipt_after_publish() {
+            states.remove(&context.job_id);
+            return Err(error);
+        }
 
-        let reread = self
-            .read_attempt_receipts(&context.job_id)
-            .map_err(|_| PersistenceError::CommitUncertain)?;
-        if reread.last() != Some(&envelope) {
+        let published_file_is_safe = matches!(
+            ygo_storage::safe_store_metadata(&path),
+            Ok(metadata)
+                if metadata.is_file() && metadata.len() <= MAX_RECEIPT_EVENT_BYTES
+        );
+        if !published_file_is_safe {
+            states.remove(&context.job_id);
+            return Err(PersistenceError::CommitUncertain);
+        }
+        let reread = match fs::read(&path) {
+            Ok(reread) => reread,
+            Err(_) => {
+                states.remove(&context.job_id);
+                return Err(PersistenceError::CommitUncertain);
+            }
+        };
+        if reread != bytes {
+            states.remove(&context.job_id);
+            return Err(PersistenceError::CommitUncertain);
+        }
+        let append_result = states
+            .get_mut(&context.job_id)
+            .ok_or(PersistenceError::CommitUncertain)?
+            .append(&envelope);
+        if append_result.is_err() {
+            states.remove(&context.job_id);
             return Err(PersistenceError::CommitUncertain);
         }
         Ok(())
@@ -225,6 +468,9 @@ impl PersistentAnalysisJobStore {
         &self,
         job_id: &str,
     ) -> Result<Vec<AttemptReceiptEnvelopeV1>, PersistenceError> {
+        #[cfg(test)]
+        self.attempt_receipt_history_reads
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         if !valid_id(job_id) {
             return Err(PersistenceError::InvalidChain);
         }
@@ -246,6 +492,72 @@ impl PersistentAnalysisJobStore {
                 .map_err(|_| PersistenceError::InvalidPath)?;
             let metadata = ygo_storage::safe_store_metadata(&entry.path())
                 .map_err(|_| PersistenceError::InvalidPath)?;
+            if name == "segments" {
+                if !metadata.is_dir() {
+                    return Err(PersistenceError::InvalidPath);
+                }
+                for segment_entry in fs::read_dir(entry.path()).map_err(|_| PersistenceError::Io)? {
+                    let segment_entry = segment_entry.map_err(|_| PersistenceError::Io)?;
+                    let segment_name = segment_entry
+                        .file_name()
+                        .into_string()
+                        .map_err(|_| PersistenceError::InvalidPath)?;
+                    let segment_metadata = ygo_storage::safe_store_metadata(&segment_entry.path())
+                        .map_err(|_| PersistenceError::InvalidPath)?;
+                    let segment = segment_name
+                        .strip_prefix("segment-")
+                        .and_then(|text| text.parse::<u64>().ok())
+                        .filter(|segment| *segment > 0)
+                        .ok_or(PersistenceError::InvalidChain)?;
+                    if segment_name != format!("segment-{segment:08}") || !segment_metadata.is_dir()
+                    {
+                        return Err(PersistenceError::InvalidPath);
+                    }
+                    let mut segment_files = Vec::new();
+                    for event_entry in
+                        fs::read_dir(segment_entry.path()).map_err(|_| PersistenceError::Io)?
+                    {
+                        let event_entry = event_entry.map_err(|_| PersistenceError::Io)?;
+                        let event_name = event_entry
+                            .file_name()
+                            .into_string()
+                            .map_err(|_| PersistenceError::InvalidPath)?;
+                        let event_metadata = ygo_storage::safe_store_metadata(&event_entry.path())
+                            .map_err(|_| PersistenceError::InvalidPath)?;
+                        if is_unpublished_store_file(
+                            &event_name,
+                            &event_metadata,
+                            MAX_RECEIPT_EVENT_BYTES,
+                        )? {
+                            continue;
+                        }
+                        if !event_metadata.is_file()
+                            || event_metadata.len() > MAX_RECEIPT_EVENT_BYTES
+                        {
+                            return Err(PersistenceError::InvalidPath);
+                        }
+                        let sequence = event_name
+                            .strip_suffix(".json")
+                            .and_then(|text| text.parse::<u64>().ok())
+                            .filter(|sequence| *sequence > RECEIPT_SEGMENT_EVENTS)
+                            .ok_or(PersistenceError::InvalidChain)?;
+                        if event_name != format!("{sequence}.json")
+                            || (sequence - 1) / RECEIPT_SEGMENT_EVENTS != segment
+                        {
+                            return Err(PersistenceError::InvalidChain);
+                        }
+                        segment_files.push((sequence, event_entry.path()));
+                    }
+                    if segment_files.len() as u64 > RECEIPT_SEGMENT_EVENTS {
+                        return Err(PersistenceError::InvalidChain);
+                    }
+                    files.extend(segment_files);
+                }
+                continue;
+            }
+            if is_unpublished_store_file(&name, &metadata, MAX_RECEIPT_EVENT_BYTES)? {
+                continue;
+            }
             if !metadata.is_file() || metadata.len() > MAX_RECEIPT_EVENT_BYTES {
                 return Err(PersistenceError::InvalidPath);
             }
@@ -254,13 +566,10 @@ impl PersistentAnalysisJobStore {
                 .and_then(|text| text.parse::<u64>().ok())
                 .filter(|sequence| *sequence > 0)
                 .ok_or(PersistenceError::InvalidChain)?;
-            if name != format!("{sequence}.json") {
+            if name != format!("{sequence}.json") || sequence > LEGACY_FLAT_RECEIPT_EVENTS {
                 return Err(PersistenceError::InvalidChain);
             }
             files.push((sequence, entry.path()));
-            if files.len() > MAX_RECEIPT_EVENTS {
-                return Err(PersistenceError::InvalidChain);
-            }
         }
         files.sort_by_key(|(sequence, _)| *sequence);
         if files
@@ -449,144 +758,6 @@ fn validate_history(
     Ok(())
 }
 
-fn validate_next_event(
-    history: &[AttemptReceiptEnvelopeV1],
-    context: &AttemptReceiptContextV1,
-    event: &AttemptReceiptEventV1,
-) -> Result<(), PersistenceError> {
-    validate_history(history, &context.job_id)?;
-    if history
-        .first()
-        .is_some_and(|receipt| receipt.context != *context)
-    {
-        return Err(PersistenceError::InvalidChain);
-    }
-    let mut pending: Option<(u64, String, SearchAttemptPhase)> = None;
-    let mut ffi_calls = std::collections::BTreeMap::<String, bool>::new();
-    let mut ffi_stack = Vec::<String>::new();
-    let mut ffi_ordinal = 0;
-    for receipt in history {
-        match &receipt.event {
-            AttemptReceiptEventV1::Started {
-                ordinal,
-                attempt_id,
-                phase,
-            } => {
-                pending = Some((*ordinal, attempt_id.clone(), *phase));
-                ffi_calls.clear();
-                ffi_stack.clear();
-                ffi_ordinal = 0;
-            }
-            AttemptReceiptEventV1::FfiEntered {
-                attempt_id,
-                call_id,
-                ffi_ordinal: entry_ordinal,
-                ..
-            } => {
-                if pending.as_ref().map_or(true, |(_, id, _)| id != attempt_id)
-                    || ffi_calls.contains_key(call_id)
-                    || *entry_ordinal != ffi_ordinal + 1
-                {
-                    return Err(PersistenceError::InvalidChain);
-                }
-                ffi_ordinal = *entry_ordinal;
-                ffi_calls.insert(call_id.clone(), false);
-                ffi_stack.push(call_id.clone());
-            }
-            AttemptReceiptEventV1::FfiReturned { call_id, .. } => {
-                if !ffi_calls.get(call_id).is_some_and(|returned| !returned)
-                    || ffi_stack.last() != Some(call_id)
-                {
-                    return Err(PersistenceError::InvalidChain);
-                }
-                ffi_calls.insert(call_id.clone(), true);
-                ffi_stack.pop();
-            }
-            AttemptReceiptEventV1::HostResult { .. } => {
-                pending = None;
-                ffi_calls.clear();
-                ffi_stack.clear();
-                ffi_ordinal = 0;
-            }
-        }
-    }
-    let previous_ordinal = history
-        .iter()
-        .filter_map(|receipt| match receipt.event {
-            AttemptReceiptEventV1::Started { ordinal, .. } => Some(ordinal),
-            _ => None,
-        })
-        .next_back()
-        .unwrap_or(0);
-    match event {
-        AttemptReceiptEventV1::Started {
-            ordinal,
-            attempt_id,
-            ..
-        } if pending.is_none()
-            && *ordinal == previous_ordinal + 1
-            && valid_id(attempt_id)
-            && !history.iter().any(|receipt| {
-                matches!(&receipt.event,
-                    AttemptReceiptEventV1::Started { attempt_id: existing, .. }
-                    | AttemptReceiptEventV1::HostResult { attempt_id: existing, .. }
-                    if existing == attempt_id)
-            }) =>
-        {
-            Ok(())
-        }
-        AttemptReceiptEventV1::HostResult {
-            ordinal,
-            attempt_id,
-            phase,
-            ..
-        } if pending.as_ref() == Some(&(*ordinal, attempt_id.clone(), *phase))
-            && ffi_calls.values().all(|returned| *returned)
-            && ffi_stack.is_empty() =>
-        {
-            Ok(())
-        }
-        AttemptReceiptEventV1::FfiEntered {
-            attempt_ordinal,
-            attempt_id,
-            call_id,
-            name,
-            ffi_ordinal: entry_ordinal,
-            ..
-        } if pending
-            .as_ref()
-            .is_some_and(|(ordinal, id, _)| *ordinal == *attempt_ordinal && id == attempt_id)
-            && valid_id(call_id)
-            && valid_ffi_name(name)
-            && !ffi_calls.contains_key(call_id)
-            && !history.iter().any(|receipt| {
-                matches!(&receipt.event,
-                    AttemptReceiptEventV1::FfiEntered { call_id: existing, .. }
-                    if existing == call_id)
-            })
-            && *entry_ordinal == ffi_ordinal + 1 =>
-        {
-            Ok(())
-        }
-        AttemptReceiptEventV1::FfiReturned {
-            attempt_ordinal,
-            attempt_id,
-            call_id,
-            result_sha256,
-            ..
-        } if pending
-            .as_ref()
-            .is_some_and(|(ordinal, id, _)| *ordinal == *attempt_ordinal && id == attempt_id)
-            && ffi_calls.get(call_id).is_some_and(|returned| !returned)
-            && ffi_stack.last() == Some(call_id)
-            && result_sha256.as_deref().map_or(true, valid_hash) =>
-        {
-            Ok(())
-        }
-        _ => Err(PersistenceError::InvalidChain),
-    }
-}
-
 fn validate_context(context: &AttemptReceiptContextV1) -> Result<(), PersistenceError> {
     if !valid_id(&context.operation_id)
         || !valid_id(&context.job_id)
@@ -673,6 +844,133 @@ fn valid_ffi_name(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn receipt_event_paths_segment_after_the_legacy_flat_region() {
+        let dir = std::path::Path::new("attempt_receipts");
+        assert_eq!(receipt_event_path(dir, 1), dir.join("1.json"));
+        assert_eq!(
+            receipt_event_path(dir, RECEIPT_SEGMENT_EVENTS),
+            dir.join(format!("{RECEIPT_SEGMENT_EVENTS}.json"))
+        );
+        assert_eq!(
+            receipt_event_path(dir, RECEIPT_SEGMENT_EVENTS + 1),
+            dir.join("segments/segment-00000001/4097.json")
+        );
+        assert_eq!(
+            receipt_event_path(dir, 20_001),
+            dir.join("segments/segment-00000004/20001.json")
+        );
+    }
+
+    #[test]
+    fn legacy_flat_receipt_history_appends_to_segments_past_twenty_thousand_events() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let root = std::env::temp_dir().join(format!(
+            "ygo-receipt-segments-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system clock after epoch")
+                .as_nanos()
+        ));
+        let context = AttemptReceiptContextV1 {
+            operation_id: "1".repeat(32),
+            job_id: "2".repeat(32),
+            running_job_revision: 2,
+            command_sha256: "3".repeat(64),
+            job_input_binding_sha256: "4".repeat(64),
+            input_sha256: "5".repeat(64),
+            source_bundle_identity: None,
+            build_record_identity: None,
+            assets: AttemptReceiptAssetsV1 {
+                engine_sha256: "6".repeat(64),
+                worker_sha256: "7".repeat(64),
+                cdb_sha256: "8".repeat(64),
+                scripts_sha256: "9".repeat(64),
+                engine_manifest_sha256: "a".repeat(64),
+            },
+        };
+        let context_sha256 = context_digest(&context).unwrap();
+        let store = PersistentAnalysisJobStore::open(root.clone()).unwrap();
+        let receipt_dir = store.attempt_receipt_dir(&context.job_id);
+        fs::create_dir_all(&receipt_dir).unwrap();
+        let mut previous_sha256 = ZERO_HASH.to_owned();
+        let mut sequence = 0_u64;
+
+        for ordinal in 1..=10_000_u64 {
+            let attempt_id = format!("{ordinal:032x}");
+            let events = [
+                AttemptReceiptEventV1::Started {
+                    ordinal,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                },
+                AttemptReceiptEventV1::HostResult {
+                    ordinal,
+                    attempt_id,
+                    phase: SearchAttemptPhase::Initial,
+                    result: SearchAttemptResult::DuelResult {
+                        status: ygo_engine_adapter::DuelStatus::Failed,
+                    },
+                    process_observation: ygo_engine_adapter::ProcessRunObservation::default(),
+                },
+            ];
+            for event in events {
+                sequence += 1;
+                let event_sha256 =
+                    event_digest(&context_sha256, sequence, &previous_sha256, &event).unwrap();
+                let envelope = AttemptReceiptEnvelopeV1 {
+                    schema_version: 1,
+                    kind: "w1c_search_attempt_journal_event".into(),
+                    context: context.clone(),
+                    context_sha256: context_sha256.clone(),
+                    sequence,
+                    previous_sha256,
+                    event,
+                    event_sha256: event_sha256.clone(),
+                };
+                let path = receipt_dir.join(format!("{sequence}.json"));
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, serde_json::to_vec(&envelope).unwrap()).unwrap();
+                previous_sha256 = event_sha256;
+            }
+        }
+        let ordinal = 10_001;
+        let attempt_id = format!("{ordinal:032x}");
+        store
+            .append_attempt_receipt(
+                &context,
+                AttemptReceiptEventV1::Started {
+                    ordinal,
+                    attempt_id: attempt_id.clone(),
+                    phase: SearchAttemptPhase::Initial,
+                },
+            )
+            .unwrap();
+        store
+            .append_attempt_receipt(
+                &context,
+                AttemptReceiptEventV1::HostResult {
+                    ordinal,
+                    attempt_id,
+                    phase: SearchAttemptPhase::Initial,
+                    result: SearchAttemptResult::DuelResult {
+                        status: ygo_engine_adapter::DuelStatus::Failed,
+                    },
+                    process_observation: ygo_engine_adapter::ProcessRunObservation::default(),
+                },
+            )
+            .unwrap();
+        let history = store.read_attempt_receipts(&context.job_id).unwrap();
+        assert_eq!(history.len(), 20_002);
+        assert_eq!(history.last().unwrap().sequence, 20_002);
+        assert!(receipt_event_path(&receipt_dir, 20_001).is_file());
+        assert!(receipt_event_path(&receipt_dir, 20_002).is_file());
+        drop(store);
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn disk_history_rejects_ffi_call_id_reused_by_a_later_attempt() {

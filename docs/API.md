@@ -24,7 +24,7 @@ H2.2-A/B所列合成HTTP验收已关闭，测试服务装配分析协调器；�
 - `engine identity --config <toml> [--output <json>]`：只读资产身份及脚本清单差异；不运行决斗，不授予构建或规则资格。
 - `catalog`、`banlist`、`deck validate`：本地快照导入/查询和牌组合法性校验。
 - `deck draft create|show|edit|import|export`：独立可保存草稿工具；允许残缺草稿，YDK/JSON仅承诺卡号、分区及数量往返，不替代`deck validate`。
-- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；可通过`--language-status FILE`加载只读C1字段状态，不返回候选正文。参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
+- `workbench serve`：启动本机中文草稿网页，默认使用系统分配端口及`data/runtime/workbench/drafts`；支持`--language-status FILE`读取只读C1字段状态，也可显式提供`--analysis-config FILE`和匹配的`--catalog-id ID`启用固定W1-C分析入口。参数、端点、令牌和限制见[WORKBENCH](WORKBENCH.md)。
 - `combo analyze`、`combo replay`：通用引擎前缀搜索和独立重放。
 - `combo plan`、`combo plan-replay`：读取并分派规划合同 v1–v5；旧报告按各自版本验证。
 - `knowledge validate`、`knowledge verify`：知识来源/合同检查、独立原生规则案例验真。
@@ -81,4 +81,4 @@ First-turn 的 A3 可恢复进度接口见[`EXECUTION_RECOVERY.md`](EXECUTION_RE
 P1离线入口：`python -m ygo_eval.research audit-corpus --evidence ROLE=PATH [可重复] --runner PATH --output PATH`；独立报告合同为`schemas/prompt-corpus-audit.schema.json`，不会执行worker或写原生账本。退出0/1/2、来源与资格边界见[研究审计](RESEARCH_AUDIT.md)。
 # W1-H2.2 实施补充（2026-11-01）
 
-分析操作/任务六端点已按[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)接入。普通启动统一返回分析未配置，不新增CLI启用参数；测试编译可装配合成服务。首次提交持久保存accepting后202返回，冻结在后台完成；GET读取认证历史，结果仅返回白名单投影。见[本批交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)。以下历史设计描述按原时点保留。
+分析操作/任务六端点已按[HTTP合同](WORKBENCH_ANALYSIS_HTTP.md)接入。H2.2交付时普通启动统一返回分析未配置，尚无CLI启用参数；后续W1-C增加了显式`--analysis-config FILE`入口，并要求提供匹配的`--catalog-id ID`，默认启动仍不配置分析。首次提交持久保存accepting后立即返回202，冻结在后台完成；GET读取认证历史，结果仅返回白名单投影。见[本批交接](superpowers/plans/2026-11-01-w1h22-analysis-http-handoff.md)及[工作台参数](WORKBENCH.md#启动与停止)。以下历史设计描述按原时点保留。

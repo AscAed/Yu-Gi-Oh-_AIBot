@@ -10,6 +10,30 @@ use std::{
 };
 use ygo_engine_adapter::*;
 
+fn charged_call_delta(before: usize, after: usize) -> Result<usize, &'static str> {
+    let charged = after
+        .checked_sub(before)
+        .ok_or("ledger consumed count moved backwards")?;
+    if charged > 1 {
+        return Err("a single stage charged more than one call");
+    }
+    Ok(charged)
+}
+
+fn require_charged_stage(
+    result: Result<DuelResult, WorkerError>,
+    native_calls: usize,
+) -> Result<Result<DuelResult, WorkerError>, String> {
+    match native_calls {
+        0 => Err(result
+            .err()
+            .map(|error| error.message)
+            .unwrap_or_else(|| "stage returned without a charged ledger call".into())),
+        1 => Ok(result),
+        _ => Err("a single stage charged more than one call".into()),
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
@@ -185,6 +209,30 @@ fn verify_artifact(
     Ok(())
 }
 
+fn verify_manifest_context(
+    manifest: &mut Value,
+    expected_context: &str,
+    input_context: &str,
+) -> Result<(), String> {
+    let context = manifest
+        .get("context")
+        .and_then(Value::as_str)
+        .ok_or("scope manifest context missing")?;
+    if context != input_context || context != expected_context {
+        return Err("scope manifest context differs".into());
+    }
+    manifest
+        .as_object_mut()
+        .ok_or("scope manifest must be an object")?
+        .remove("context")
+        .ok_or("scope manifest context missing")?;
+    let bytes = serde_json::to_vec(manifest).map_err(|error| error.to_string())?;
+    if digest(&bytes) != expected_context {
+        return Err("scope manifest context hash mismatch".into());
+    }
+    Ok(())
+}
+
 fn verify_manifest(
     input: &Input,
     raw_input: &Value,
@@ -195,22 +243,7 @@ fn verify_manifest(
     safe(&manifest_path)?;
     let manifest_bytes = fs::read(&manifest_path)?;
     let StrictValue(mut manifest) = serde_json::from_slice(&manifest_bytes)?;
-    let context = manifest
-        .get("context")
-        .and_then(Value::as_str)
-        .ok_or("scope manifest context missing")?
-        .to_owned();
-    if context != input.context {
-        return Err("scope manifest context differs".into());
-    }
-    let unsigned = manifest
-        .as_object_mut()
-        .ok_or("scope manifest must be an object")?
-        .remove("context")
-        .ok_or("scope manifest context missing")?;
-    if digest(&serde_json::to_vec(&unsigned)?) != context {
-        return Err("scope manifest context hash mismatch".into());
-    }
+    verify_manifest_context(&mut manifest, &input.context, &input.context)?;
     if manifest["kind"] != "ground_collapse_probe_manifest"
         || manifest["schema_version"] != 1
         || manifest["scope"] != GROUND_COLLAPSE_PROBE_SCOPE
@@ -327,8 +360,12 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     if (verify || stats_only) && !input.ledger.exists() {
         return Err("existing Ground Collapse ledger required".into());
     }
-    let batch = GroundCollapseProbeBatch::open(&input.ledger, &input.context, input.started_at)
-        .map_err(|error| error.message)?;
+    let batch = if verify || stats_only {
+        GroundCollapseProbeBatch::inspect_existing(&input.ledger, &input.context, input.started_at)
+    } else {
+        GroundCollapseProbeBatch::open(&input.ledger, &input.context, input.started_at)
+    }
+    .map_err(|error| error.message)?;
     if stats_only {
         batch.verify().map_err(|error| error.message)?;
         let stats = batch.stats().map_err(|error| error.message)?;
@@ -368,6 +405,7 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
         .save_assets_before(input.stage, &before)
         .map_err(|error| error.message)?;
     batch.require_time().map_err(|error| error.message)?;
+    let consumed_before = batch.stats().map_err(|error| error.message)?.consumed;
     let started = Instant::now();
     let result = batch.run(
         ProcessEngineAdapter::new(input.request.engine.clone()),
@@ -375,6 +413,9 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
         &input.request,
     );
     let elapsed_ms = started.elapsed().as_millis();
+    let ledger = batch.stats().map_err(|error| error.message)?;
+    let native_calls = charged_call_delta(consumed_before, ledger.consumed)?;
+    let result = require_charged_stage(result, native_calls)?;
     let after = identity(&input.request).ok();
     let assets_unchanged =
         after.as_ref() == Some(&before) && after.as_ref() == Some(&input.expected_identity);
@@ -418,7 +459,6 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
-    let ledger = batch.stats().map_err(|error| error.message)?;
     let receipt = json!({
         "schema_version":1,
         "kind":"ground_collapse_probe_stage",
@@ -437,9 +477,9 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
         "elapsed_ms":elapsed_ms,
         "ledger":ledger,
         "started_at":input.started_at,
-        "native_calls":1,
+        "native_calls":native_calls,
         "runner_process_calls":1,
-        "worker_process_calls":1,
+        "worker_process_calls":native_calls,
         "ffi_calls":null,
         "proof_ready":false,
         "complete_action_coverage":false,
@@ -452,8 +492,8 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     publish(&input.output, &receipt)?;
     println!(
         "{}",
-        json!({"successful":successful,"native_calls":1,
-        "runner_process_calls":1,"worker_process_calls":1,"ffi_calls":null,
+        json!({"successful":successful,"native_calls":native_calls,
+        "runner_process_calls":1,"worker_process_calls":native_calls,"ffi_calls":null,
         "ledger":receipt["ledger"]})
     );
     if !successful {
@@ -472,6 +512,64 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn charged_call_delta_matches_the_ledger_and_rejects_invalid_counts() {
+        assert_eq!(charged_call_delta(0, 0), Ok(0));
+        assert_eq!(charged_call_delta(4, 5), Ok(1));
+        assert_eq!(
+            charged_call_delta(4, 3),
+            Err("ledger consumed count moved backwards")
+        );
+        assert_eq!(
+            charged_call_delta(4, 6),
+            Err("a single stage charged more than one call")
+        );
+    }
+
+    #[test]
+    fn uncharged_stage_errors_cannot_be_persisted_as_receipts() {
+        let error = WorkerError::new("preflight", "ledger", "no call was charged");
+        assert_eq!(
+            require_charged_stage(Err(error), 0).unwrap_err(),
+            "no call was charged"
+        );
+
+        let error = WorkerError::new("worker", "process", "charged worker failed");
+        assert!(require_charged_stage(Err(error), 1).unwrap().is_err());
+    }
+
+    #[test]
+    fn manifest_context_hash_covers_all_fields_except_context() {
+        let mut manifest = json!({
+            "kind": "ground_collapse_probe_manifest",
+            "schema_version": 1,
+            "scope_authorized": true
+        });
+        let expected_context = digest(&serde_json::to_vec(&manifest).unwrap());
+        manifest["context"] = json!(expected_context);
+
+        verify_manifest_context(&mut manifest, &expected_context, &expected_context).unwrap();
+        assert_eq!(
+            manifest,
+            json!({
+                "kind": "ground_collapse_probe_manifest",
+                "schema_version": 1,
+                "scope_authorized": true
+            })
+        );
+
+        let mut changed = json!({
+            "kind": "ground_collapse_probe_manifest",
+            "schema_version": 1,
+            "scope_authorized": true,
+            "context": expected_context
+        });
+        changed["scope_authorized"] = json!(false);
+        assert!(
+            verify_manifest_context(&mut changed, &expected_context, &expected_context).is_err()
+        );
+    }
 
     #[test]
     fn scope_is_isolated_and_request_budget_is_five() {

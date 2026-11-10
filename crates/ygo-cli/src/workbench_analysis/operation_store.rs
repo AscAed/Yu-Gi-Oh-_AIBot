@@ -2,7 +2,9 @@
 use super::{
     jobs::strict_json_value,
     operations::{AnalysisOperationRecordV1 as Record, AnalysisOperationState as State},
-    persistence::{PersistenceError as Error, PersistentAnalysisJobStore},
+    persistence::{
+        is_unpublished_store_file, PersistenceError as Error, PersistentAnalysisJobStore,
+    },
     queue::DispatchTicket,
 };
 use serde::{Deserialize, Serialize};
@@ -89,7 +91,9 @@ impl PersistentAnalysisJobStore {
         self.validate_attempt_receipt_bindings(&operations, &jobs)?;
         let mut heads = BTreeMap::new();
         for (id, history) in &operations {
-            let last = history.last().ok_or(Error::InvalidChain)?;
+            let Some(last) = history.last() else {
+                continue;
+            };
             let path = self
                 .root
                 .join("operations")
@@ -201,7 +205,9 @@ impl PersistentAnalysisJobStore {
         let mut jobs = Vec::new();
         // Construct every transition before publishing any recovery revision.
         for history in chains.operations.values() {
-            let old = history.last().ok_or(Error::InvalidChain)?;
+            let Some(old) = history.last() else {
+                continue;
+            };
             if old.state() == State::Accepting {
                 let next = if old.job_id().is_some_and(|id| chains.jobs.contains_key(id)) {
                     old.accept(old.updated_at_ms())
@@ -335,22 +341,22 @@ impl PersistentAnalysisJobStore {
                 .file_name()
                 .into_string()
                 .map_err(|_| Error::InvalidPath)?;
+            let metadata =
+                ygo_storage::safe_store_metadata(&e.path()).map_err(|_| Error::InvalidPath)?;
+            if is_unpublished_store_file(&name, &metadata, 1024 * 1024)? {
+                continue;
+            }
             let n = name
                 .strip_suffix(".json")
                 .and_then(|s| s.parse::<u64>().ok())
                 .ok_or(Error::InvalidPath)?;
-            if n == 0
-                || name != format!("{n}.json")
-                || !ygo_storage::safe_store_metadata(&e.path())
-                    .map_err(|_| Error::InvalidPath)?
-                    .is_file()
-            {
+            if n == 0 || name != format!("{n}.json") || !metadata.is_file() {
                 return Err(Error::InvalidPath);
             }
             files.insert(n, e.path());
         }
         if files.is_empty() {
-            return Err(Error::InvalidChain);
+            return Ok(Vec::new());
         }
         let mut history = Vec::new();
         let mut previous = None;
@@ -412,7 +418,7 @@ impl PersistentAnalysisJobStore {
             .join(record.operation_id())
             .join("revisions");
         let previous = if record.revision() == 1 {
-            if dir.exists() {
+            if dir.exists() && !self.operation_history(record.operation_id())?.is_empty() {
                 return Err(Error::RevisionConflict);
             }
             None

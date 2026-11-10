@@ -4,7 +4,7 @@
 
 [W1-H1 HTTP设计](WORKBENCH_ANALYSIS_HTTP.md)定义操作合同与公开DTO，不修改本v1任务合同。H2.1已实现内部操作存储；操作ID与任务ID分开，草稿revision为内容摘要字符串、任务revision为整数，操作链不套用任务1/2/3状态图。H2.2已接入HTTP及结果投影；完整验收状态见[当前任务](../TASKS.md)。
 
-W1-B1只实现Rust库中的无路径记录、严格JSON读取及纯状态转换，没有任务文件存储、HTTP任务接口、队列或界面。源码入口为`ygo_cli::workbench_analysis::jobs`，结构合同见[workbench-analysis-job-v1](../schemas/workbench-analysis-job-v1.schema.json)。原[W1-A冻结接口](WORKBENCH.md#分析接入设计状态)、分析请求和分析报告保持可用。
+W1-B1只实现Rust库中的无路径记录、严格JSON读取及纯状态转换，没有任务文件存储、HTTP任务接口、队列或界面。源码入口为`ygo_cli::workbench_analysis::jobs`，结构合同见[workbench-analysis-job-v1](../schemas/workbench-analysis-job-v1.schema.json)。原[W1-A冻结接口](WORKBENCH.md#分析-http-接入与运行状态)、分析请求和分析报告保持可用。
 
 ## 记录与输入
 

@@ -20,6 +20,6 @@ H3证据映射仍把`unknown`终态提交和其他恢复状态组合列为开放
 
 已完成一个合成H3逻辑窗口。无挂点时，聚焦矩阵子进程执行到保护性panic、exit 101，父进程没有收到marker，红测符合预期。加入`#[cfg(test)]`检查点后，聚焦矩阵**1 passed**（最终运行22.88秒）。父进程在终止前认证操作修订链、job三修订封套/前驱/记录哈希、accepted→queued→running→unknown迁移及`CompletionUncertain`；报告为0，freeze/claim各1，事件日志仅有`freeze`和`claim`。真实锁重开两次后job仍为revision 3 `unknown`，未追加修订，没有队列或可领取工作，持久文件字节稳定。
 
-最终验证均使用隔离目录`target/h3-time-budget-recovery`和Cargo `--offline --locked`：聚焦测试1 passed；CLI默认串行测试127 passed、0 failed、0 ignored；workspace默认串行测试92个结果组，480 passed、0 failed、36 ignored，完整日志SHA-256=`BFFE89CF15FA9B196A8D42E4D3BAA9B2B3CFAC16504F16EEA8FEDEF44EA007A`；fmt与workspace全目标Clippy通过；相关schema回归16 passed，pytest有一条既有`cache_dir`未知配置警告。完整范围和36个opt-in忽略项见[TESTING](../../TESTING.md)。
+最终验证均使用隔离目录`target/h3-time-budget-recovery`和Cargo `--offline --locked`：聚焦测试1 passed；CLI默认串行测试127 passed、0 failed、0 ignored；workspace默认串行测试92个结果组，480 passed、0 failed、36 ignored，完整日志SHA-256=`BFFE89CF15FA9B196A8D42E4D3BAA9B2B3CFAC16504F16EEA8FEDEF44EA007A3`；fmt与workspace全目标Clippy通过；相关schema回归16 passed，pytest有一条既有`cache_dir`未知配置警告。完整范围和36个opt-in忽略项见[TESTING](../../TESTING.md)。
 
 此结果只关闭“显式`mark_unknown` revision持久化后、内存队列结算前”这个点。报告来源、真实执行/worker、FFI、消费、其他H3状态组合/调度及syscall/断电/介质故障仍开放。公开API、schema和生产重试语义没有修改；未运行doctor、runner、worker、引擎、FFI、真实分析或部署，未创建scope，未提交或推送。当前开放清单见[TASKS](../../../TASKS.md)和[证据映射](2026-11-02-h3-evidence-gate-map.md)。

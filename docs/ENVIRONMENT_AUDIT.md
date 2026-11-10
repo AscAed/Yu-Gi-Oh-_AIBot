@@ -4,17 +4,17 @@
 
 本轮开始时HEAD为`b35b12dec226b3b71eb36896e27452ec7fd12015`；在该基线上完成安全整改与Rust复核。Codex Security Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`检查的是旧基线`50c279b`，715文件清单中完成12个独立审阅并报告5项发现；覆盖按部分记录。扫描与整改结果、五项处置、验证和残余风险见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
 
-用户于2026-11-04选择保留已观察的ACL，不调整`D:\`、项目父目录或工作区权限；该卷根的Authenticated Users Modify及四个未映射SID继续作为本机残余风险登记。当前源码变化不会自动更新`dist/ygo-local`；部署身份仍以[DEPLOYMENT](DEPLOYMENT.md)记录为准。
+用户于2026-11-04选择保留已观察的ACL，不调整卷根、项目父目录或工作区权限；卷根的Authenticated Users Modify及四个未映射SID继续作为本机残余风险登记。当前源码变化不会自动更新`dist/ygo-local`；部署身份仍以[DEPLOYMENT](DEPLOYMENT.md)记录为准。
 
 ## 历史现场（2026-11-03；本轮Deep Scan之前）
 
 本轮可执行代码审计基线为`main` / `50c279b0605c55f8e1f05240078700d63c01dd9d`；该验证时点工作树干净，较`origin/main`领先13个本地提交。后续仅补充审计文档，未改变可执行代码。本次文档续审开始时，HEAD为`87e6d57`，main较origin/main领先21个本地提交且工作区干净；`crates/`、`python/`、Cargo清单、`schemas/`、`scripts/`相对`50c279b`无可执行代码差异。Codex Security差异扫描 `e230fb47-c1cf-4f21-a4d6-edd97e12c61e`关闭25/25审阅项，覆盖范围明确为diff/partial。全仓Deep Scan原执行句柄`214`于2026-11-03恢复时返回`not found`。用户随后提供的界面截图显示条目“Yu-Gi-Oh!_AIBot · 11月3日 16:10”针对提交`50c279b`扫描全仓715个文件；截图时处于第8轮汇总，9项已完成、4项进行中。该截图只证明当时仍在运行；没有提供该扫描的`scanId`/handoff token或最终报告，用户确认没有续接凭据，因此当前状态和最终结果无法核验，不记为完成或通过。按扫描协议，不以新扫描替换缺少恢复上下文的任务。差异扫描记录1项低严重度本机权限问题。`dist/ygo-local`仍为2026-10-19旧包，`build-hashes.json`只记录CLI与worker哈希且与当前文件匹配；包内没有`manifest.json`，该结果只证明旧包文件与自身清单一致。W1-C隔离候选另完成一次固定Rabbit有限分析，结果为`budget_limited/time_budget`；它没有部署进普通包，P4-R5仍开放。
 
-只读ACL复查把权限来源追到`D:\`根目录：`NT AUTHORITY\Authenticated Users`在该卷根上有直接`Modify` ACE，并继承到`D:\PUBLIC`及下层项目文件。`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot`父目录还有两个无法映射到当前本机账户名的显式Modify SID；工作区再有两个此类显式SID，另继承父目录的两个SID。当前令牌是标准用户`LAPTOP-7SAI5TBV\AscAed`；本机账户枚举受拒，且四个SID在ProfileList中均无账户配置文件记录，无法确认对应主体。`.git`对这四个SID另有显式写入/删除Deny ACE，同时继承Authenticated Users的Modify；未评估任一具体账户令牌的有效访问结果。项目父目录含两个兄弟工作区，因此修改父级ACL会影响兄弟目录；删除卷根ACE则会影响D盘其他内容。配置仍指向包内worker及`data/runtime`中的引擎资产。源码hash只绑定所选文件，不证明文件由可信主体发布。普通工作台保持`analysis_not_configured`，检查时没有观察到`ygo`进程。用户于2026-11-03选择保留当前ACL并记录风险，本轮未调整权限。详细部署界限见[DEPLOYMENT](DEPLOYMENT.md)。
+只读ACL复查把权限来源追到卷根：`NT AUTHORITY\Authenticated Users`在卷根上有直接`Modify` ACE，并继承到项目父目录及下层工作区文件。项目父目录还有两个无法映射到当前本机账户名的显式Modify SID；工作区再有两个此类显式SID，另继承父目录的两个SID。检查使用本机标准用户令牌；本机账户枚举受拒，且四个SID在ProfileList中均无账户配置文件记录，无法确认对应主体。`.git`对这四个SID另有显式写入/删除Deny ACE，同时继承Authenticated Users的Modify；未评估任一具体账户令牌的有效访问结果。项目父目录含两个兄弟工作区，因此修改父级ACL会影响兄弟目录；删除卷根ACE则会影响该卷其他内容。配置仍指向包内worker及`data/runtime`中的引擎资产。源码hash只绑定所选文件，不证明文件由可信主体发布。普通工作台保持`analysis_not_configured`，检查时没有观察到`ygo`进程。用户于2026-11-03选择保留当前ACL并记录风险，本轮未调整权限。详细部署界限见[DEPLOYMENT](DEPLOYMENT.md)。
 
 ### 组件与依赖复核
 
-- 没有发现可依据源码消费者和历史证据安全删除的源码模块、运行组件或兼容路径。2026-11-03只清理了11个逐一核验、仅含可重建Cargo `debug`构建输出且不含日志、状态、manifest、研究证据或资产的缓存目录：118,131个文件、81,243,791,398字节（75.664 GiB逻辑大小）。保留其余`target/`内容、`data/runtime/`、`dist/`、release产物和兼容路径；Markdown中的忽略路径和缺失目标集中登记于[EVIDENCE_RETENTION](#ignored-evidence-links)。
+- 没有发现可依据源码消费者和历史证据安全删除的源码模块、运行组件或兼容路径。2026-11-03只清理了11个逐一核验、仅含可重建Cargo `debug`构建输出且不含日志、状态、manifest、研究证据或资产的缓存目录：118,131个文件、81,243,791,398字节（75.664 GiB逻辑大小）。保留其余`target/`内容、`data/runtime/`、`dist/`、release产物和兼容路径；Markdown中的忽略路径和缺失目标集中登记于[证据保留清单](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)。
 - 清理后可访问的`target/`文件清点为1,086,097个文件、36,348,084,528字节（33.852 GiB逻辑大小）；排除了1个目录联接，受ACL保护的Python依赖子树无法枚举且未触碰。逻辑大小不等于NTFS实际占用或可回收空间。该批清理期间D盘可用空间增加77,289,877,504字节；记录和11个精确路径见忽略文件`data/runtime/cleanup-audit/target-build-cache-cleanup-20261103-220156.json`。
 - 对9个Rust crate逐项扫描直接依赖的crate标识符，覆盖该crate下的Rust源码、测试和示例；每个直接依赖至少有一个文本引用，没有发现零引用候选。该词法筛查不证明运行时实际使用，也不替代专用未用依赖分析器。`cargo-machete`、`cargo-audit`和`cargo-deny`未安装。
 - `cargo tree --workspace --duplicates --offline --locked`显示两个`hashbrown`版本：`0.14.5`经`rusqlite 0.32.1`/`hashlink`引入，`0.17.1`经`toml 0.8.23`/`toml_edit`引入。它们来自不同传递依赖约束；未作强制覆盖或升级。
@@ -42,7 +42,7 @@
 
 ### 历史快照（2026-11-01，main / 8d8c492）
 
-当时主工作区为`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\Yu-Gi-Oh!_AIBot`本地`main`；`C:\Users\AscAed\.codex\worktrees\p4-r5-audit\Yu-Gi-Oh!_AIBot`是仍保留的`e684f4e`隔离候选worktree，PR审查worktree也单独保留。两者不应当作当时主源码。GitHub连接器在2026-11-01确认远端`main`为`577924b`；当时本地主分支基线`8d8c492`领先6个提交。历史证据不迁移，原SHA-256清单保留且不代表已有备份。
+当时主工作区为主仓库的本地`main`；独立的`e684f4e`隔离候选worktree和PR审查worktree均另行保留，不能当作主源码。GitHub连接器在2026-11-01确认远端`main`为`577924b`；当时本地主分支基线`8d8c492`领先6个提交。历史证据不迁移，原SHA-256清单保留且不代表已有备份。
 
 ### 历史快照（2026-11-01，main / a21d587源码与普通dist核对）
 

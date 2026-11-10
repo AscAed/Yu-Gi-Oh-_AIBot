@@ -47,7 +47,7 @@
 
 **已验证·具备双时点材料的指定批次：**Curry再验真按其合同绑定执行当时的源码归档、文件清单、build record、runner/worker/CLI字节、资产身份、请求及账本。文档收尾会改变workspace identity，最终交付另外绑定完整当前源码及材料索引。不能用文档后identity替换原生时点build record的source identity，也不能反向声称旧二进制对应包含新文档/源码的完整最终工作区。这不是所有历史原生批次都已具备的保证：早期九次请求的旧runner来源不可得，缺失或未认证来源保持未知；当前归档、哈希或后续成功不能为它补签，见[独立历史核验交接](superpowers/plans/2026-10-21-history-followup-handoff.md)及[历史完整性工具边界](RESEARCH_AUDIT.md)。
 
-**仅历史scope·Curry再验真：**[交接](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)及[最终delivery](../data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json)分别保留原生时点与最终源码/构建材料。[Ground最终delivery](#ignored-evidence-links)进一步固定这两份来源。文档修改不为旧原生结果新增规则资格；最终身份变化也不表示原生证据失效，应按各自绑定及允许源码差异检查。
+**仅历史scope·Curry再验真：**[交接](superpowers/plans/2026-10-27-curry-option-revalidation-handoff.md)及[最终delivery](../data/runtime/p1-curry-option-revalidation-native-2026-10-26/final-build/delivery-final.json)分别保留原生时点与最终源码/构建材料。[Ground最终delivery](EVIDENCE_RETENTION.md#ignored-evidence-links-checked-2026-11-03)进一步固定这两份来源。文档修改不为旧原生结果新增规则资格；最终身份变化也不表示原生证据失效，应按各自绑定及允许源码差异检查。
 
 **已验证·恢复V3的细节：**成功报告发布重建要求工具身份绑定本次workspace，发布源签名包含`tool`；保存报告的verify-only允许文档更新后workspace变化，但仍核验保存工具包及来源，并要求本次读取稳定。这个兼容不是“忽略任意源码变化”，更不是允许篡改旧报告。[恢复器](../python/ygo_eval/curry_ledger_handoff_recovery.py)与[V3 schema](../schemas/curry-ledger-handoff-recovery-v3.schema.json)是具体边界。
 

@@ -4,7 +4,7 @@
 
 ## 交付与审阅
 
-设计唯一入口为[WORKBENCH_ANALYSIS_HTTP](../../WORKBENCH_ANALYSIS_HTTP.md)。已定义六个拟议端点、严格字段、操作/任务分离、固定指令与实际冻结身份双摘要、跨链提交顺序、容量预占、重复提交与重启分类、历史终态查询、无路径状态/结果投影、安全与停派发矩阵。H1时全部未实现；当前仅内部操作存储已在H2.1交付，HTTP接口及DTO仍未实现。
+设计唯一入口为[WORKBENCH_ANALYSIS_HTTP](../../WORKBENCH_ANALYSIS_HTTP.md)。已定义六个拟议端点、严格字段、操作/任务分离、固定指令与实际冻结身份双摘要、跨链提交顺序、容量预占、重复提交与重启分类、历史终态查询、无路径状态/结果投影、安全与停派发矩阵。上述“未实现”仅描述H1设计时点；后续H2.1交付了内部操作存储，H2.2交付了HTTP接口及DTO。当前能力和默认`analysis_not_configured`边界见[TASKS](../../../TASKS.md)及[HTTP合同](../../WORKBENCH_ANALYSIS_HTTP.md)。
 
 独立只读审阅对照当前路由、安全、冻结、jobs/queue/durable/persistence、报告校验及Rabbit类型；未发现提交策略阻断。已采纳字段类型、操作状态边、重复拒绝语义和结果自由文本隔离建议。没有构建或运行接口/恢复测试。
 
