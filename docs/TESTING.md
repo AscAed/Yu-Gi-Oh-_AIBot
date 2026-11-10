@@ -59,6 +59,95 @@ PR仍Open，发布head和base未变；候选仍未提交/推送，因此没有�
 `cargo test --workspace --offline --locked --target-dir target/w1c-ffi-stream-rust -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets --skip event49_gate_compares_public_witness_not_private_checkpoint_encoding --skip prepare_only_does_not_create_scope_or_charge_calls --skip prepare_only_rejects_changed_fixture_assets_or_route`退出码0。三个被过滤的P4-R1b3 harness用例需要本机冻结赛事运行资产；本隔离worktree没有`data/runtime/tournament-2026`，未复制这些资产。首次未过滤尝试还因`data/snapshots`未提供导致一个工作台用例失败；从主工作区仅复制两份固定快照到本worktree忽略目录后，该用例单独通过并纳入成功复跑。doctor诊断用例由命令显式过滤。已知36个`ignored` opt-in用例保留默认状态。聚焦的adapter、search、CLI及Python receipt/schema测试见本批运行记录；Python schema/执行回执共31 passed、2 skipped。
 
 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --offline --locked --target-dir target/w1c-ffi-stream-rust -- -D warnings`及`git diff --check`均通过。Python `tests/test_schemas.py`与`tests/test_execution_receipts.py`共31 passed、2 skipped；禁用pytest cacheprovider时有既有`cache_dir`未知配置warning。忽略目录`target/w1c-ffi-stream-20261109/`中的source bundle（732个文件）及绑定的workspace-state bundle均创建并离线校验通过。该批没有启动生产worker、ocgcore/FFI、doctor、runner、真实分析、研究scope或Deep Scan；没有切换部署。真实进程映像认证、真实FFI调用证据、报告来源和研究消费仍未通过。本次不以合成成功提升这些门禁。
+## 2026-11-10 PR #17文档同步前head CI复核
+
+文档同步前，PR #17 head为`887e3430cff88704e8b8e183a3df1b94dfbb6960`，base为`577924bc0c2af06044b77c065eea769c465ff2fe`。GitHub Actions run `42767483602`通过，包含fmt、workspace Clippy、workspace tests、adapter examples及Python editable installation。该时点GitHub比较范围为30个提交、190个文件；后续分支提交会改变head和比较范围。该CI结果绑定原PR head，不证明普通部署、真实worker/ocgcore执行、消费计量或报告来源。
+
+CodeRabbit最新一次完成的远端审阅只覆盖`c9455d5..0aaf04b`增量；没有覆盖`887e343`或完整30提交范围。PR保持Draft，完整人工兼容性审阅仍开放。
+
+## 2026-11-10 CodeRabbit CLI用户级安装与候选审阅重试
+
+用户明确授权后，经仓库规定的本地代理执行官方Windows安装脚本`https://cli.coderabbit.ai/install.ps1`。首次运行因当前进程缺少`PROCESSOR_ARCHITECTURE`在平台预检处停止，未下载或写入；按当前x64环境设置`PROCESSOR_ARCHITECTURE=AMD64`后重试成功。安装器验证通过，版本`0.9.3`，路径为`%LOCALAPPDATA%\Programs\coderabbit\coderabbit.exe`，用户PATH已包含安装目录。独立检查得到Authenticode `Valid`，签名主体`CN=CodeRabbit Inc., O=CodeRabbit Inc., L=San Francisco, S=California, C=US`，SHA-256 `9853E9A9BE139D1782BE0AF244937B6C82418C9EEFCC7A88FB2EF5EC5C120F59`；`auth status --agent`为authenticated。
+
+在隔离PR候选worktree（HEAD `c9455d577fc08c1e51663eed079f166d282ab61c`，base `577924bc0c2af06044b77c065eea769c465ff2fe`）中，Git 2.40.0、`git rev-parse --show-toplevel`和`git status`均正常。CodeRabbit doctor仍为7 pass、1 warning、1 fail；唯一失败是`Git repository: Git is not available`（退出码1）。随后命令`coderabbit review --agent --base-commit 577924bc0c2af06044b77c065eea769c465ff2fe -c AGENTS.md`在审阅启动前立即返回`No Git repository found. Run inside a Git repository or use --dir to specify one.`（退出码1）。没有候选审阅结果；未改动候选文件，未手工替代CodeRabbit审阅。CLI Git发现故障原因未明，待解决后再启动候选审阅；PR范围及兼容性门禁保持开放。
+
+安装完成后的本次续接中，当前shell未解析用户PATH里的`coderabbit`命令，因此改用已安装二进制的绝对路径；版本和agent认证正常。再次从候选仓库运行`review --agent --base-commit 577924bc0c2af06044b77c065eea769c465ff2fe --dir <candidate> -c AGENTS.md --include-untracked`仍在审阅启动前返回相同的`No Git repository found`错误；随后在候选仓库根目录直接运行不带`--dir`的同范围命令，也得到相同错误。候选`git status`、`git rev-parse`正常，PowerShell解析到Git 2.40.0；`doctor`仍为7 pass、1 warning、Git检查失败。GitHub只读状态复核确认PR #17仍为Open Draft，base/head分别为`577924bc0c2af06044b77c065eea769c465ff2fe`和`c9455d577fc08c1e51663eed079f166d282ab61c`。对候选当前差异进行常见凭据模式扫描为0命中，`git diff --check`通过；此扫描不是完整秘密检测。候选42个已修改文件和1个未跟踪计划文件均未被本次修改或暂存，没有CodeRabbit候选审阅结果。
+
+## 2026-11-10 W1-H3.2-2b-2确认性复核
+
+对当前主工作树中已完成的accepting持久化后、freeze开始前合成进程终止窗口进行确认性复核；本次没有修改源码。测试仍在测试专用子进程中运行，父进程认证持久化链后终止子进程，并使用真实目录锁和恢复路径验证仅追加一次`unknown`、无任务/报告/可领取工作，以及第二次重开不再增长修订且材料字节稳定。该结果只确认此合成窗口，不扩展为其他H3调度、逐系统调用、断电/介质故障或真实执行资格。
+
+- `cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo --lib workbench_analysis::durable::operation_tests::h3_2b_cross_chain_windows_recover_after_process_kill -- --exact --nocapture --test-threads=1`：1 passed，110 filtered。
+- `cargo test -p ygo-cli --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`：136 passed、0 failed、0 ignored；该包内没有命中被排除的测试。
+- `cargo test --workspace --offline --locked --target-dir target/h3-2b-2-cargo -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`：92个测试结果组，495 passed、0 failed、36 ignored、1 filtered。过滤项为`doctor_reports_missing_worker_and_assets`；36项ignored仍是各测试声明的opt-in/环境依赖项，不计作通过。
+- `cargo clippy --workspace --all-targets --offline --locked --target-dir target/h3-2b-2-cargo -- -D warnings`、`cargo fmt --all -- --check`及`py -m pytest tests/test_workbench_analysis_http_schema.py tests/test_workbench_analysis_operation_schema.py tests/test_workbench_analysis_job_schema.py -q -ra --tb=short -p no:cacheprovider --basetemp target/h3-2b-2-cargo/pytest-final`均通过；schema为16 passed，并有pytest既有`cache_dir`未知配置warning。
+
+离线锁定构建日志保存在忽略目录`target/h3-2b-2-cargo/`：`focused.log`（404 bytes，SHA-256 `B5416BFCC1BC703F13E0D26FE7F755F91535002CFE5E8C1A9F497E4259E0065F`）；`cli-full.log`（16,620 bytes，`7C189B07F8BD2AB49ED8429EDC97AAB4719F0D794EBF775EBD8B56C005FC64F5`）；`workspace-serial.log`（70,089 bytes，`C7F36C885C8E65B1A2828B439D3CF26B5A554E036B7F54CD21167198D9074743`）；`clippy.log`（817 bytes，`C5CB6E37D0BA3ECF156F9DFAEBB2491C0757F4ACE180C91362CEF1DCD49EC156`）；`schema.log`（612 bytes，`F489EE6B7C025519A75DD89BFBEBB0401A0A3F6E18E558C27E9A48312E1D5C19`）。格式检查无输出并以退出码0完成。本条是对先前窗口验收的当前复核，不表示其他H3余项关闭。
+
+## 2026-11-10 PR #17本地审阅就绪诊断
+
+隔离候选`D:\PUBLIC\Program\AI\Yu-Gi-Oh!_AIBot\pr17-remediation-20261109`仍基于PR发布head `c9455d577fc08c1e51663eed079f166d282ab61c`，已有42个文件的未提交改动，本次未修改候选文件。CodeRabbit CLI `0.9.3`通过官方自更新命令检查后报告已是最新版本。对该候选工作树执行`coderabbit doctor`时，CLI runtime、用户存储、服务URL、认证、backend及WebSocket共7项通过；更新策略检查1项warning；Git repository检查失败并报告`Git is not available`，退出码1。
+
+同一PowerShell进程中显式设置`PROCESSOR_ARCHITECTURE=AMD64`，并将Git安装目录`D:\PUBLIC\Program\GIT\git\Git\cmd`置于PATH前端后，CodeRabbit诊断结果不变。`GIT_DIR`、`GIT_WORK_TREE`、`GIT_EXEC_PATH`及相关Git配置环境变量均未设置；`where.exe git`可找到两个可执行文件。直接运行Git则可用：`git version 2.40.0.windows.1`，`git status`及`git rev-parse --show-toplevel`在该候选目录成功。再设置`GIT_TRACE=1`和`GIT_TRACE_SETUP=1`后，直接Git检查输出正常trace，但doctor输出中没有Git trace，且仍报告Git不可用；这将问题限定在CLI的Git发现/调用阶段，尚不能确定具体原因。此次未启动候选CodeRabbit review，也未把针对远端发布head的审阅算作候选审阅。已记录的远端结果只覆盖原始发布head，不覆盖这42个未提交文件。
+
+诊断日志位于忽略目录`target/pr17-review-readiness-20261110/`：`coderabbit-doctor.log`（793 bytes，SHA-256 `A963867B68AF0B061A97BE0CF58FA3BA024824C1F0B6AFD4EA1B8B6000AE1BD1`）；`coderabbit-doctor-git-trace.log`（1,328 bytes，SHA-256 `607BFEBDE019C0975C8B9419FFE213B3FCD7806CC9C8C41DF44974F890F25AB0`）。没有安装或修改Git、没有更改持久PATH、没有修改PR候选、没有提交或推送。PR #17的候选自动审阅与28提交范围/兼容性门禁仍开放。
+
+## 2026-11-10 PR #17第六轮远端审阅
+
+经用户明确授权，下载并运行CodeRabbit官方Windows安装脚本`https://cli.coderabbit.ai/install.ps1`，安装至用户环境`%LOCALAPPDATA%\Programs\coderabbit`。安装脚本SHA-256为`2108A2647C76373327C72363495F73AE2E1E753C9AF7597237D0D991D4D4CD1A`；安装器验证二进制Authenticode签名及版本后报告安装成功，版本0.9.3，`auth status --agent`为authenticated。PowerShell当前进程缺少Git架构变量；确认运行时为X64后补齐`PROCESSOR_ARCHITECTURE=AMD64`才完成安装。
+
+CodeRabbit本地`review --agent --uncommitted`、显式`--dir`及设置`GIT_DIR`/`GIT_WORK_TREE`仍在审阅开始前返回`No Git repository found`。随后使用支持的`review --deep --remote AscAed/Yu-Gi-Oh-_AIBot --base main --source-branch codex/w1c-worker-ffi-ack-stream --agent`完成远端Deep Review：对PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`返回12项（5 major、7 minor）。该审阅只覆盖远端发布head，不包含隔离候选未提交修改；不能称为候选的CodeRabbit复审。
+
+逐项对照隔离候选源码和文档后，11项已有候选修复或合同修正；剩余的WORKBENCH启动示例仍使用普通`cargo run`，与生产准入要求的`target/w1c-executor/cargo`隔离CLI/worker及同目录约束不符。候选文档已补充匹配snapshot ID、隔离构建和CLI启动示例。该修正仅更新使用说明，没有运行示例命令或真实分析。候选定向回归：FFI回执失败停派1 passed、adapter `process_failures` 19 passed、Ground Collapse探针模块5 passed、probe示例5 passed、CLI临时发布文件恢复1 passed；fmt、双工作区`git diff --check`及合同链接/错误码核对通过。
+
+PR远端head仍为`c9455d577fc08c1e51663eed079f166d282ab61c`且保持Open；候选仍未提交/推送，因此没有候选自动审阅或新CI结果。未运行doctor、生产worker、ocgcore/FFI、runner、真实分析或部署。
+
+## 2026-11-10 PR #17第五轮审阅候选回归
+
+CodeRabbit CLI 0.9.3远端Deep Review针对GitHub PR #17原始发布head `c9455d577fc08c1e51663eed079f166d282ab61c`返回11项（5 major、6 minor）；该结果不覆盖隔离克隆的未提交候选。候选补修planner fixture路径检查、Ground Collapse stage intent时间门禁，并移除环境审计中的机器卷路径和账户名，详细问题映射见[PR #17审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+隔离候选命令使用`--offline --locked --target-dir target/pr17-review`：
+
+- `cargo test -p ygo-engine-adapter ground_collapse_probe::tests`：5 passed。
+- `cargo test -p ygo-planner --test p4_r1b3_harness`：3 passed、0 failed、3 ignored；忽略项依赖本机冻结赛事资产与仓库内worker构建。
+- harness新增符号链接断言在此Windows主机因创建链接返回Win32错误1314而走测试内的显式权限跳过分支；该结果没有验证实际符号链接拒绝逻辑，需在允许创建符号链接的环境复验。
+- `cargo clippy -p ygo-engine-adapter -p ygo-planner --all-targets --offline --locked --target-dir target/pr17-review -- -D warnings`、workspace fmt及候选`git diff --check`通过。
+
+以上仅是隔离候选的聚焦回归；没有运行全workspace测试或Clippy、CodeRabbit候选复审、doctor、生产worker、ocgcore/FFI、真实分析、runner或部署。PR远端head未更新，候选未提交/推送。真实分析、来源、消费及部署资格不变。
+
+## 2026-11-10 PR #17 contracts CI失败定位与候选修复
+
+只读GitHub诊断绑定PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`：required check `contracts`已完成但结论为failure（check run `129159346918`，Actions run `42617032368`）。单条annotation仅报告`.github`步骤以exit code 1结束；job日志定位到`workbench_analysis::admission::tests::package_recheck_detects_config_worker_and_snapshot_drift`在准备fixture时无法复制`data/snapshots/<id>.json`，Windows返回路径不存在。测试依赖的数据由`.gitignore`排除，干净GitHub checkout没有这些文件。远端head及失败检查均未重跑或改写。
+
+在隔离候选中作最小修复：真实`W1cAdmission::load()`继续要求catalog和banlist快照摘要等于固定pin，再将已验证摘要存入运行时身份；包复核比较该身份保存的摘要。合成漂移测试在临时目录创建自包含快照字节并绑定其摘要，不再依赖本机资产。未改公开API、schema、资产pin或自动重试语义。
+
+候选验证使用`target/pr17-remediation`：聚焦准入漂移测试1 passed；默认串行workspace测试92组、524 passed、0 failed、39 ignored、1项过滤（仅`doctor_reports_missing_worker_and_assets`）；workspace全目标离线/locked Clippy、`cargo fmt --all -- --check`和`git diff --check`通过。Python运行显式设置候选`PYTHONPATH=python`，schema与execution receipt测试为32 passed、2 skipped；pytest有既有`cache_dir`未知配置警告。首次遗漏`PYTHONPATH`时误导入主工作区已安装模块并出现1项失败；按CI环境修正路径后候选测试通过。
+
+用户明确批准安装CodeRabbit CLI；检查发现用户目录已有0.9.3且`auth status --agent`为authenticated，因此本轮未重复覆盖安装。当前PowerShell进程PATH未加载用户目录，使用绝对路径调用。候选本地审阅标准调用及显式`--dir`调用均在启动前返回`No Git repository found`，没有候选审阅结果；不得把人工源码核对称为CodeRabbit结果。远端`contracts`仍记录失败，因为本地未提交候选未推送且没有新CI运行。候选和主工作区均未提交或推送；未运行项目doctor、生产worker、ocgcore/FFI、runner、真实分析或部署。PR的28提交范围/兼容性审阅与集成决定仍开放。
+
+## 2026-11-10 PR #17六项远端发现候选回归
+
+在隔离PR克隆中核验CodeRabbit针对已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`返回的6项major；远端PR head仍未改变，本地候选仍未提交/推送。候选回归：adapter库67 passed（包含worker失败结果版本兼容单测）；`ground-collapse-probe`示例5 passed；P4-R1b3默认harness 2 passed、3 ignored（需缺失的冻结赛事资产及仓库内worker）；`ygo-cli --lib`首次运行116 passed、1项因缺少本机snapshot fixture失败，显式跳过该环境依赖项后116 passed、1 filtered；`process_failures`首次18 passed、1项3秒阻塞管道时限失败，单独复跑通过、随后整组19 passed；`beam_execution` 10 passed。相关适配器/CLI/搜索/规划器all-target Clippy、workspace fmt及`git diff --check`通过。完整CLI库回归中的attempt receipt旧格式跨20,000事件追加、未发布临时文件恢复等测试均在通过项内。隔离日志位于`target/pr17-remediation/`。
+
+本轮CodeRabbit远端审阅只针对原始PR head，不覆盖未提交候选；本地CLI模式仍在启动审阅前返回`No Git repository found`。因此以上是六项发现与本地修复的对照及定向测试，不是候选的CodeRabbit复审，也不是28提交的完整逐提交审阅。没有运行全workspace测试、doctor、生产worker、engine/FFI、真实分析、runner或部署；PR仍为Open Draft。详情见[PR #17审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+## 2026-11-10 PR #17隔离修复回归
+
+在可写隔离克隆中基于PR #17原head `c9455d577fc08c1e51663eed079f166d282ab61c`验证未提交候选修复；远端分支未变。此前`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/pr17-remediation -- --test-threads=1`通过；`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/pr17-remediation --test process_failures -- --test-threads=1`为18 passed；`cargo test -p ygo-search --offline --locked --target-dir target/pr17-remediation --test beam_execution -- --test-threads=1`为8 passed。第二轮问题核验后，`cargo test -p ygo-engine-adapter --example ground-collapse-probe --offline --locked --target-dir target/pr17-remediation -- --test-threads=1`为3 passed；`cargo test -p ygo-planner --test p4_r1b3_harness --offline --locked --target-dir target/pr17-remediation -- --test-threads=1`为2 passed、0 failed、3 ignored，忽略原因为冻结赛事资产与仓库内worker构建缺失；首次未忽略运行因缺少`data/runtime/tournament-2026/frozen/manifest.json`而3项失败，故不能视为覆盖。
+
+CLI库完整运行因隔离克隆缺少本机`data/snapshots/<id>.json`，唯一失败为`workbench_analysis::admission::tests::package_recheck_detects_config_worker_and_snapshot_drift`无法复制fixture。明确过滤该用例后，`cargo test -p ygo-cli --lib --offline --locked --target-dir target/pr17-remediation -- --test-threads=1 --skip package_recheck_detects_config_worker_and_snapshot_drift`退出码0：113 passed、0 failed、1 filtered。缺失fixture的用例没有被计作通过。`cargo clippy -p ygo-engine-adapter -p ygo-planner -p ygo-cli --all-targets --offline --locked --target-dir target/pr17-remediation -- -D warnings`、`cargo fmt --all -- --check`及`git diff --check`通过；本条未运行全workspace默认测试。
+
+CodeRabbit CLI 0.9.3已安装且认证成功；本地模式对隔离bundle克隆仍返回`No Git repository found`。此前远端Deep Review分别返回9项及15项，第二轮完整输出SHA-256为`B9ADC81E902D6343F065C6A19F3CB9575B17091BBFFB18032716660F094D7344`。随后一次远端Deep Review在未变化的PR head上完成并返回12项（4 major、8 minor）；第三轮问题逐项核验及候选处置见[PR #17审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。本地候选修复尚未推送，因此没有远端复审结论；截至第三轮记录时20,000事件硬上限仍未解决，后续隔离候选修复见下段。没有运行项目doctor、生产worker、ocgcore/FFI、真实分析、研究scope或部署。
+
+2026-11-10随后在隔离候选中移除20,000事件硬上限，改为每段4,096条的分段写入，并保留旧版最多20,000条平铺历史读取。旧格式20,000事件冷加载后追加至新分段的聚焦回归通过；完整CLI crate为141 passed、1个缺失本机snapshot用例过滤，workspace全目标Clippy、fmt及diff检查通过。尝试使用CLI本地Deep Review时，无参数和显式`--dir`两种方式均立即返回`No Git repository found`；usage报告billing inactive，未启用付费额度，未获得候选审阅结果。该候选没有推送，故远端审阅仍只覆盖原始head；PR整体兼容审查和W1-C执行/消费合同继续开放。详细边界见[审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+同日继续验证隔离候选中只读账本检查修复：`cargo test -p ygo-engine-adapter --offline --locked --target-dir target/pr17-review -- --test-threads=1`退出码0，67个库单元测试及所有启用的集成测试通过；两个opt-in用例（冻结研究资产和真实引擎）保持忽略。`cargo test -p ygo-engine-adapter --example ground-collapse-probe --offline --locked --target-dir target/pr17-review -- --test-threads=1`为5 passed。`cargo clippy -p ygo-engine-adapter --all-targets --offline --locked --target-dir target/pr17-review -- -D warnings`、`cargo fmt --all -- --check`及候选`git diff --check`通过。新增只读API测试验证撕裂账本不修复、缺失checkpoint不创建；源码复核确认CLI的`--stats`/`--verify-recorded`路径使用该API。此验证不构成全workspace测试或PR最终候选复审。另修正文档对私有归档范围、首次202与后台准备失败时序的描述。
+
+## 2026-11-09 项目现状与路线文档复核
+
+基线为干净的本地`main / ec83bad`；较本地`origin/main / 577924b`领先27个提交。源码测试基线仍为`8c7afe6`，`ec83bad`只记录该批离线自检。只读复核Git分支、当前任务/路线、H3证据映射、部署目录与PR #17：PR为open Draft、28 commits、189 changed files，head `c9455d5`直接基于本地main；PR分支上的worker确认流未合入当前checkout。旧dist CLI/worker实际hash匹配包内清单，但包无manifest或workbench入口。没有重新运行测试、doctor、worker、engine、FFI、真实分析、Deep Scan或部署；未更改scope、资产或接口。
+
+文档验收：`git diff --check`及新增链接/锚点检查通过；本轮变更仅限Markdown。11月9日默认离线Rust/Python测试结果见本页顶部记录，不作为本轮代码复验；PR分支验证按PR描述及其独立日志理解，不转记为main验证。
 
 ## 2026-11-09 HEAD默认离线自检
 

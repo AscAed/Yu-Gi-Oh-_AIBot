@@ -1,21 +1,29 @@
 # 实施任务与验收状态
 
-当前实施路线：[2026-11-04复核的项目评估与双轨路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
+当前实施路线：[2026-11-09项目现状评估与双轨路线](docs/superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
 2026-11-09在隔离worktree实施W1-C worker FFI宿主确认流；协议实现与合成worker矩阵通过，完整提交前验证及其资产过滤项见[本次验证记录](docs/TESTING.md#2026-11-09-w1-c-worker-ffi-宿主确认流)。此结果不认证真实worker/ocgcore/FFI、报告来源、消费或发布。更早HEAD默认离线自检仍见[记录](docs/TESTING.md#2026-11-09-head默认离线自检)。
 
-2026-11-10 CodeRabbit对PR #17已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`的远端Deep Review返回15项（7 major、8 minor）。逐项核对后，15项均已映射到隔离候选中的代码修正或合同/文档修正；workspace串行测试、Clippy、格式和相关schema回归已通过。候选级独立审阅与28提交范围/兼容性集成决定仍开放。远端PR head未变，候选未提交、未推送，审查结果不覆盖候选工作树。逐项处置和验证范围见[PR #17第七轮审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)及[TESTING](docs/TESTING.md)。
+发布前历史记录：2026-11-10 CodeRabbit对PR #17当时已发布head `c9455d577fc08c1e51663eed079f166d282ab61c`的远端Deep Review返回15项（7 major、8 minor）。逐项核对后，15项均已映射到隔离候选中的代码修正或合同/文档修正；workspace串行测试、Clippy、格式和相关schema回归已通过。候选级独立审阅与当时28提交范围/兼容性集成决定仍开放。该记录早于候选推送；审查结果不覆盖候选工作树。逐项处置和验证范围见[PR #17第七轮审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)及[TESTING](docs/TESTING.md)。
 
-2026-11-10 PR #17隔离候选移除attempt receipt总事件数硬上限：新写入按每段4096条分目录，兼容读取旧版最多20000条平铺历史；单事件256 KiB限制及完整历史内存校验保留。旧格式20,000条读取并追加到新分段的回归通过。CodeRabbit第六轮远端审阅针对原发布head返回12项（5 major、7 minor），候选11项已有对应修复，剩余固定W1-C启动示例已在`docs/WORKBENCH.md`改为隔离target构建与启动。CLI本地审阅仍因`No Git repository found`在开始前失败，未提交候选没有自动审阅结果；远端head未更新。聚焦回归和审阅边界见[TESTING](docs/TESTING.md)。
+发布前历史记录：2026-11-10 PR #17隔离候选移除attempt receipt总事件数硬上限：新写入按每段4096条分目录，兼容读取旧版最多20000条平铺历史；单事件256 KiB限制及完整历史内存校验保留。旧格式20,000条读取并追加到新分段的回归通过。CodeRabbit第六轮远端审阅针对原发布head返回12项（5 major、7 minor），候选11项已有对应修复，剩余固定W1-C启动示例已在`docs/WORKBENCH.md`改为隔离target构建与启动。CLI本地审阅仍因`No Git repository found`在开始前失败；该候选当时未提交，未有自动审阅结果。聚焦回归和审阅边界见[TESTING](docs/TESTING.md)。
+
+2026-11-10文档同步前快照：PR #17 head为`887e3430cff88704e8b8e183a3df1b94dfbb6960`，GitHub Actions `contracts` run `42767483602`通过；PR当时为Open Draft。最终head的CodeRabbit check因Draft被跳过，GitHub reviews列表为空，因此尚无PR review。该快照的远端比较为30个提交、190个文件；后续分支提交会改变head和比较统计，完整范围/兼容性审阅仍开放。先前关于`c9455d5`、28提交和189文件的文字是更早的推送前快照。详见[PR审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)。
+
+2026-11-09默认离线Rust/Python回归和格式/Clippy复核对应代码基线`8c7afe6`；随后`ec83bad`仅补记审计文档。默认测试结果不认证生产worker、ocgcore/FFI、报告来源、消费或部署。W1-C worker宿主确认流已在独立Draft PR #17分支，不在当前main；PR范围和状态见[本次项目路线](docs/superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。
+
+较早记录（2026-11-10，推送修复前）：隔离PR候选修复attempt receipt 20,000事件硬上限，并逐项核验CodeRabbit远端审阅；远端第六轮针对原始head返回12项（5 major、7 minor），候选源码/文档对照发现1项启动示例仍用普通target，已在隔离候选补充W1-C隔离target构建与启动说明。远端`contracts`失败起因是准入测试依赖被`.gitignore`排除的snapshot，候选测试已改用自包含快照夹具；候选离线workspace串行测试92组、524 passed、39 ignored，仅过滤doctor诊断1项；workspace Clippy、fmt、diff及相关Python schema/receipt测试通过。远端失败检查未重跑；CLI本地复审仍返回`No Git repository found`。进一步诊断发现CodeRabbit 0.9.3的doctor报告Git不可用，但同一进程中PowerShell可执行Git 2.40.0；自更新确认该CLI已是最新，矛盾原因未明。远端审阅不覆盖当时未提交候选。后续推送及CI状态见本文件顶部更新和[PR #17审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)。
+
+较早记录（2026-11-10，推送修复前）：经本地代理安装用户级CodeRabbit CLI 0.9.3；Authenticode状态为Valid，签名主体为CodeRabbit Inc.，安装二进制SHA-256为`9853E9A9BE139D1782BE0AF244937B6C82418C9EEFCC7A88FB2EF5EC5C120F59`。安装后改用CLI绝对路径及显式`--dir`、`AGENTS.md`和base commit重试，并从候选仓库根目录直接运行不带`--dir`的命令，均立即失败于`No Git repository found`；候选和主工作树的`coderabbit doctor`都报告Git不可用，但PowerShell中的Git 2.40.0可正常识别仓库。GitHub只读复核当时确认PR #17仍为Open Draft，base/head分别为`577924bc0c2af06044b77c065eea769c465ff2fe`和`c9455d577fc08c1e51663eed079f166d282ab61c`。CLI问题在后续再次复现，PR head和CI后来更新，当前状态见本文件顶部。凭据有效；常见密钥模式扫描为0命中（不等于完整秘密审计）。
 
 H3恢复的逻辑窗口、证据层级和未覆盖边界见[H3.1证据门禁映射](docs/superpowers/plans/2026-11-02-h3-evidence-gate-map.md)及[HISTORY_INDEX](docs/HISTORY_INDEX.md)。所有窗口验收均按具体提交点限定；它们不关闭其他调度、逐syscall、断电或介质故障门禁。
 
 部署身份、隔离候选和本机资产权限见[DEPLOYMENT](docs/DEPLOYMENT.md)与[ENVIRONMENT_AUDIT](docs/ENVIRONMENT_AUDIT.md)。普通启动保持`analysis_not_configured`；局部测试或预算截断运行不表示完整搜索、全局最优或发布通过。
 
 
-## 当前状态（2026-11-04）：W1-H3.2-2b-1/-2、allocated保存后协调器返回前、显式mark_unknown终态保存后及多个running领取细分窗口（含两条AssetMismatch路径）已分别验收；W1-C单次有限分析已完成，安全审计整改已复核，其他门禁仍开放
+## 当前状态（2026-11-10）：限定H3恢复窗口和一次W1-C有限分析已有证据；来源/计量、其他H3门禁、研究完整性及发布仍开放
 
-下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。2026-11-04安全扫描发现、修复、未处理的ACL风险和残余边界见[SECURITY_AUDIT](docs/SECURITY_AUDIT.md)；本轮不改变产品、研究、原生验真或发布门禁。
+下方任务表维护当前能力与开放门禁；具体验证证据统一见[TESTING](docs/TESTING.md)。截至本状态日期，本地main为`ec83bad`，较本地`origin/main`领先27个提交；PR #17仍为Draft且未合并，不能把其worker确认流算作main能力。PR分支状态以本文件顶部的2026-11-10更新及审阅记录为准。旧dist身份、未决ACL风险和安全扫描范围见[DEPLOYMENT](docs/DEPLOYMENT.md)与[SECURITY_AUDIT](docs/SECURITY_AUDIT.md)。
 
 E1 只读诊断已完成：Tenki 归档的 `codec.rs` pin 为 `224…`；`e8…` 可认证到 Ground Collapse 工具包，但未认证为 Curry scope 的实际执行源码。当前 `6233…` 与 HEAD 内容按 CRLF→LF 规范化后相同。原失败和 pin 保留；后续 pin 处置需独立建立 Curry 来源链。详见[E1诊断](docs/superpowers/plans/2026-10-30-e1-tenki-codec-anchor-diagnostic.md)和[本轮记录](docs/TESTING.md#2026-10-30-e1-tenki历史保护锚点只读诊断)。
 
@@ -57,7 +65,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-H3.2-1：共享认证、完整候选清单、关联修复/分类及重复重开通过合成验收，具体范围见本批TESTING。
 - [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。
 - [x] W1-H3.2-2b-1：四个跨链提交窗口的子进程强杀、完整认证恢复、重复重开稳定和绑定冲突负例通过；workspace 444通过、36忽略，见本批交接和TESTING。
-- [x] W1-H3.2-2b-2（accepting保存后、冻结前）：子进程在原子握手点终止；父进程认证完整操作修订链、命令摘要、前驱与记录哈希及状态迁移后确认freeze/claim均为0。恢复仅追加一次unknown，无任务、报告、冻结或可领取工作；再次重开字节和修订稳定。2026-11-02验收为workspace 445通过、36忽略；2026-11-04按当前HEAD复核聚焦用例1通过、workspace 480通过、36忽略。忽略项为默认关闭的冻结资产/原生研究/人工准备opt-in，逐项原因见[TESTING](docs/TESTING.md)。这是合成协调器窗口，不是原生引擎、系统故障或全矩阵认证。
+- [x] W1-H3.2-2b-2（accepting保存后、冻结前）：子进程在原子握手点终止；父进程认证完整操作修订链、命令摘要、前驱与记录哈希及状态迁移后确认freeze/claim均为0。恢复仅追加一次unknown，无任务、报告、冻结或可领取工作；再次重开字节和修订稳定。2026-11-02验收为workspace 445通过、36忽略；2026-11-04按当前HEAD复核聚焦用例1通过、workspace 480通过、36忽略；2026-11-10确认性复核为聚焦1通过、CLI 136通过、workspace 495通过/36忽略/1过滤、schema 16通过，格式及Clippy通过，详见[TESTING](docs/TESTING.md)。忽略项为默认关闭的冻结资产/原生研究/人工准备opt-in，逐项原因见[TESTING](docs/TESTING.md)。这是合成协调器窗口，不是原生引擎、系统故障或全矩阵认证。
 - [x] W1-H3 allocated保存后、协调器响应返回前：限定合成子进程强杀后，两次重开材料字节稳定；显式再次分配生成新ID，不承诺找回客户端未收到的ID。该检查点不模拟独立HTTP响应传输强杀；详情见[TESTING](docs/TESTING.md#2026-11-02-allocated保存后协调器返回前限定合成验收)。
 - [x] W1-H3补充K窗口（假执行器进入后、返回前）：合成进程强杀后真实目录锁重开只追加一次`unknown`；操作/报告/队列/领取及第二次重开稳定。见[交接](docs/superpowers/plans/2026-11-03-running-executor-crash-handoff.md)。
 - [x] W1-H3补充K窗口（假执行器返回`Ok(report)`后、报告发布前）：父进程认证operation/job修订链、命令摘要和输入绑定后终止子进程；恢复仅追加job revision 3=`unknown`，无报告/队列/可领取工作，第二次重开稳定。聚焦1 passed，完整ygo-cli 121 passed，workspace默认串行测试退出码0；Python schema 24 passed、2 skipped。机器证据及范围见[交接](docs/superpowers/plans/2026-11-03-executor-return-crash-handoff.md)与[TESTING](docs/TESTING.md)。
@@ -105,7 +113,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [x] W1-C单次Rabbit本机有限分析：固定profile、隔离候选包及单次执行范围已按固定输入和停止条件验收；2026-11-03唯一operation `d9c94519880097bb0ef5213580f14e68` / job `70e9a8f132e88ff2334b269603363ab6`以`time_budget`得到`budget_limited`，报告Schema与受控重开稳定性通过。160 nodes、165 engine_calls、5条报告线路均标记engine_verified/replay_verified；该状态不代表独立原生重放、来源认证、完整搜索或全局最优。FFI调用及消费未独立计量，未知不等于0。2026-11-04只读审计确认运行产物与资产哈希清单相符，但历史构建输入未能完整重建；详见[TESTING](docs/TESTING.md)及[单次范围](docs/superpowers/plans/2026-11-03-w1c-single-rabbit-execution-scope.md)。普通启动仍`analysis_not_configured`；H3余项、R1b-3及P4发布门禁继续分别开放。
 - [x] W1-C源码来源字节包v1：新增Schema、自摘要清单、确定性ZIP、原子目录发布及离线逐成员校验；源树范围限HEAD工作树的跟踪/非忽略文件字节。Python全套790 passed、9 skipped、219 subtests passed；真实当前树来源包存于忽略目录`target/w1c-provenance-20261104/source-bundle`。该工具不提供构建重现、资产归档或执行/报告/消费认证，见[部署合同](docs/DEPLOYMENT.md)与[验证记录](docs/TESTING.md)。
 - [x] W1-C当前源码离线构建绑定v1：在新来源包上记录Cargo命令/profile与Python/Rust工具链，离线构建CLI和worker产物，并绑定固定Rabbit请求、牌组、配置、快照、CDB、core及两份资产manifest的9项哈希。隔离构建和记录校验通过，来源包/记录身份及产物哈希见[TESTING](docs/TESTING.md)；只证明观测到的构建输入和字节身份，`reproducible_build_proven=false`，不表示执行worker或认证分析。
-- [ ] W1-C执行来源与计量合同：workspace-state-bundle、观察式构建记录、多attempt合成回执v1及`ffi-receipt-stream-v1`宿主确认通道已实现。stream模式下每次FFI entry/return均须经job绑定日志持久化后由host确认；legacy单行协议保持可用。隔离PR #17候选将回执存储改为每段4096条分目录并兼容旧版20,000条平铺日志，移除人工总数上限；单事件大小限制、整条历史内存校验及实际资源耗尽失败停派保留。CLI库117 passed；workspace串行离线测试退出0；相关Python schema/receipt/stage-driver回归51 passed；workspace全目标Clippy、格式和差异检查通过。CodeRabbit已审阅远端已发布head，但未审隔离候选；候选级独立审阅及28提交范围/兼容性集成决定仍开放。source/build身份仍为null；生产worker/ocgcore/FFI执行、报告producer来源、ResearchBatch消费和unknown消费仍开放。此候选不授予真实执行、部署或最优性资格。详情见[PR审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)、[TESTING](docs/TESTING.md)及[实施记录](docs/superpowers/plans/2026-11-04-w1c-worker-ffi-ack-stream-plan.md)。
+- [ ] W1-C执行来源与计量合同：workspace-state-bundle、观察式构建记录、host attempt日志和合成FFI事件已在main交付。日志调用前保存Started、返回后保存HostResult；job日志和Python离线验证器校验attempt绑定、唯一call ID、连续ordinal及嵌套LIFO，未返回entry保留为unknown。worker宿主确认流位于Draft PR #17；截至2026-11-10，head为`887e3430cff88704e8b8e183a3df1b94dfbb6960`，共30个提交、190个文件，CI run `42767483602`通过，PR仍Open Draft。远端CodeRabbit历史审阅只覆盖早期已发布提交；最终head的本地CLI审阅在启动前报`No Git repository found`，故完整PR审阅仍开放。隔离候选移除attempt receipt每job 20,000事件硬上限，改为每段4,096条分目录写入并兼容旧平铺历史；准入包复核测试改用自包含快照夹具，生产`load()`仍校验固定snapshot pin。隔离候选workspace离线串行测试92组、524 passed、0 failed、39 ignored、1个doctor诊断测试过滤；workspace全目标Clippy、格式检查及相关Python schema/receipt测试32 passed、2 skipped；PR CI通过。早期远端`contracts`失败对应旧head，修复随新head推送后CI通过。PR整体范围、兼容性与最终审阅仍开放。此局部修复不等于恢复已unknown消费；部分结果/消费记录、report producer来源、ResearchBatch消费单位和unknown消费仍开放。合成测试不认证生产worker、ocgcore/FFI执行、研究消费或部署。详见[PR #17审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)和[TESTING](docs/TESTING.md)。
 - [x] W1-H3补充K窗口：父进程认证operation/job revision链后，在子进程已持久化`running`并进入测试专用假执行器、尚未返回时终止进程。持真实目录锁重开后仅将job追加一次`unknown`；operation、报告、队列、领取与第二次重开均稳定。该合成窗口不认证真实执行器/引擎；其余调度和系统/介质故障继续开放。证据见[交接](docs/superpowers/plans/2026-11-03-running-executor-crash-handoff.md)及[TESTING](docs/TESTING.md)。
 - [x] W1-H3补充K窗口：持久`running`领取票据返回并通过准入核对后、调用假执行器前终止子进程。父进程认证operation/job链、命令摘要与冻结输入绑定；真实目录锁重开只追加一次`unknown`，第二次重开和文件字节稳定，假执行器调用数为0。该K仅覆盖单一派发间隙，不代表其他调度、生产worker、真实引擎或消费证据。见[交接](docs/superpowers/plans/2026-11-03-ticket-return-crash-handoff.md)和[TESTING](docs/TESTING.md)。
 - [ ] L1中文数据复核：逐批审阅39卡候选名称/正文语义、别名、字段、语言类别及来源/使用/再分发依据；截至2026-11-02已人工对照39/39张zh-CN候选，其中38张有官方简中详情页可直接比较：29张候选标题不同，21张正文类别称谓映射未确认；人偶之锤（44088353）目前仅有可用官方日文详情页。2026-11-03单卡来源审计定位到MyCard上游提交，但未发现本项目使用/再分发许可，C1状态继续unknown；zh-SC已人工对照38/38张有候选值的记录，卡号44088353缺字段。全部语言类别、别名/本地化映射和权利依据仍开放，未知项不提升为正式数据资格。见[单卡来源与使用依据复核](docs/superpowers/plans/2026-11-03-l1-44088353-source-basis-review.md)、[双locale来源权利复核](docs/superpowers/plans/2026-11-03-l1-mycards-locale-source-rights-review.md)、[zh-CN批次1](docs/superpowers/plans/2026-11-02-l1-card-review-batch-1.md)至[zh-CN批次13](docs/superpowers/plans/2026-11-02-l1-card-review-batch-13.md)、[zh-SC批次1](docs/superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-1.md)至[zh-SC批次13](docs/superpowers/plans/2026-11-02-l1-zh-sc-card-review-batch-13.md)及[字段核验说明](docs/LANGUAGE_REVIEW.md)。
@@ -118,7 +126,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 - [ ] P4-R2：86项场景内规则完整语义与逐项原生认证；现有12项成对规则、1项实际Scythe灰点，仍缺74项规则资格。
 - [ ] P4-R3：正式v6规划/报告/CLI及v1–v5完整兼容回归。
 - [ ] P4-R4：冻结独立人工基准，完成16+32手可续跑评估及汇总验真。
-- [ ] P4-R5：已在隔离目录从`a21d587`重建当前源码候选；普通/赛事doctor、身份均通过，smoke及独立replay各3/3通过。主工作区普通dist未切换。smoke均因30秒`time_budget`截断，且未找到可比研究账本，故发布门禁仍开放；完整哈希、资产身份和边界见[TESTING](docs/TESTING.md)。
+- [ ] P4-R5：历史隔离候选`a21d587`的普通/赛事doctor、身份及smoke/replay诊断仅适用于该源码和资产；smoke因30秒`time_budget`截断，且没有可比研究账本。当前`main / ec83bad`及2026-10-19旧`dist/ygo-local`未因此完成最新源码双资产验收或发布切换；门禁保持开放，见[部署记录](docs/DEPLOYMENT.md)和[TESTING](docs/TESTING.md)。
 - [ ] P0/P1/P5–P8：全卡发行分母、完整信息/概率与证明、通用知识/构筑反馈及最终产品验收，按阶段依赖继续。
 - [ ] M1：比较研究关口与工作台用户流程的实际改善，按成本与证据选择下一个独立小批。
 

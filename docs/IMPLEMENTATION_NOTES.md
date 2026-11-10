@@ -1,5 +1,7 @@
 # 实施取舍与交付边界
 
+**2026-11-09 交付与来源边界：**PR分支、main、远端main及dist是不同对象；大型Draft PR先核对完整提交范围再决定集成。主线持久attempt/合成FFI日志不证明worker实际执行；worker ACK必须与宿主持久化事件一一对应，失败就停派，未决事件保持unknown。`engine_calls`只表示adapter尝试数，不能推导worker spawn、真实FFI或ResearchBatch消费。报告结构/hash与输入绑定也不认证producer。详见[当前路线](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)、[测试记录](TESTING.md)及[部署记录](DEPLOYMENT.md)。
+
 **2026-11-04复核：**预算截断可产生有限线路，不证明搜索完整；未知调用或消费不能继承上一阶段的零值。R1b-3旧见证遗漏对手牌组/手牌计数，修正后须重新绑定冻结输入、driver及worker，旧run不能续跑。跨链恢复先认证再追加；报告临时文件窗口说明未发布临时件应按合同保留，不可误当终态。扫描和安全处置的范围、三个未证实路径竞态及用户选择保留ACL见[安全审计](SECURITY_AUDIT.md)；partial扫描不证明全仓安全。上述证据见[测试记录](TESTING.md)。
 
 2b-2复核：父进程必须先认证完整链与握手，再终止子进程；freeze/claim事件只证明合成路径所观测调用。最终版本补充断言后须重新验证，不能沿用更早结果；Windows同一测试程序仍运行时并发链接曾失败，须等待占用释放并重跑，不能当作行为红测。详见[验证记录](TESTING.md)和[当前路线](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。

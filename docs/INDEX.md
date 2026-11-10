@@ -7,6 +7,7 @@
 | 问题 | 事实源 | 阅读规则 |
 |---|---|---|
 | 当前能力、开放任务、验收门槛 | [TASKS.md](../TASKS.md) | 当前状态只在此维护 |
+| 当前小步实施顺序与方案比较 | [2026-11-09项目现状评估与双轨路线](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md) | 推荐顺序不替代任务状态或运行授权 |
 | 某次验证的范围、结果和限制 | [TESTING.md](TESTING.md)；较早批次的详细归档见[TESTING_HISTORY.md](TESTING_HISTORY.md) | 按日期、commit、资产和执行范围读取 |
 | 安全扫描发现、处置和残余风险 | [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | 扫描覆盖范围与主机ACL状态分开判断 |
 | 当前部署与本机环境 | [DEPLOYMENT.md](DEPLOYMENT.md)、[ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md) | 区分源码、隔离候选、旧发布包和冻结资产 |

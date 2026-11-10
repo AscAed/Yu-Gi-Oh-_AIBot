@@ -17,7 +17,7 @@ H3.1仅设计交付：[跨链恢复与响应丢失设计](superpowers/plans/2026
 | 方法/路径 | 必填输入及来源 | 成功响应（kind） | 失败与重试 |
 |---|---|---|---|
 | POST /api/analysis-operations | schema_version=1，kind=analysis_operation_allocate；无其他字段 | 201 analysis_operation：服务operation_id、revision、allocated状态、时间及可空指令/任务绑定 | 503配置/存储不可用；丢失分配响应可重新分配，旧空操作不产生任务 |
-| PUT /api/analysis-operations/{id} | schema_version=1，kind=analysis_submit；draft_id、draft_revision、opening_hand、seed、rules、catalog_id（可空）、banlist_id、as_of、search | 首次有效提交先返回202 analysis_operation（accepting）；后台冻结后以GET观察accepted或rejected；已接受重复200，同一job_id | 400格式；409指令冲突/容量；422用于allocated阶段同步拒绝（如固定profile不符）；后台冻结失败保存在rejected及原错误码，后续GET返回状态，重复PUT重放已保存拒绝；503停派发/提交不确定。先查询原ID，不生成替代任务 |
+| PUT /api/analysis-operations/{id} | schema_version=1，kind=analysis_submit；draft_id、draft_revision、opening_hand、seed、rules、catalog_id（可空）、banlist_id、as_of、search | 首次接受202 analysis_operation；已接受重复200，同一job_id | 同步：400格式；409指令冲突/revision/容量；422显式W1-C profile不符；503停派发/提交不确定。首次202表示`accepting`已持久化，后续后台冻结/准备失败通过GET看到持久化`rejected`，不是原始PUT的同步409/422。先查询原ID，不生成替代任务 |
 | GET /api/analysis-operations/{id} | ID；无body | 200 analysis_operation：allocated/accepting/accepted/rejected/unknown及绑定 | 404明确不存在；503不能认证。404不推定旧调用消费为0 |
 | GET /api/analysis-jobs/{id} | ID；无body | 200 analysis_job_status：已认证保存记录的白名单 | 404不存在；503存储不可认证，不能返回空成功 |
 | GET /api/analysis-jobs/{id}/result | ID；无body | 200 analysis_job_result：完成或预算截断报告投影 | 409 job_result_unavailable（未完成或其他终态）；503报告损坏/不可认证 |

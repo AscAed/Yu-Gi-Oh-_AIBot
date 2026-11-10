@@ -1,6 +1,8 @@
 # 本机环境与资产审计
 
-## 当前现场（2026-11-04）
+## 历史现场（2026-11-04）
+
+该节记录2026-11-04的源码/安全审计基线，不是当前checkout或运行资产的重新核验。当前源码、PR和部署包关系见[DEPLOYMENT](DEPLOYMENT.md)；ACL保留决定和扫描覆盖见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
 
 本轮开始时HEAD为`b35b12dec226b3b71eb36896e27452ec7fd12015`；在该基线上完成安全整改与Rust复核。Codex Security Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`检查的是旧基线`50c279b`，715文件清单中完成12个独立审阅并报告5项发现；覆盖按部分记录。扫描与整改结果、五项处置、验证和残余风险见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
 

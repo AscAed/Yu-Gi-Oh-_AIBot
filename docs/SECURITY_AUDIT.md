@@ -2,6 +2,12 @@
 
 本页是本机安全扫描发现及其处置状态的当前事实源。逐次执行证据见[TESTING](TESTING.md)；主机ACL和部署现场见[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)与[DEPLOYMENT](DEPLOYMENT.md)。
 
+## 2026-11-09 状态复核
+
+本次只读项目路线复核没有运行或启动新的安全扫描。11月5日quota-limited Deep Scan未完成；最近差异扫描为partial，三项本地路径竞态候选仍deferred。D盘ACL仍按用户既有决定保留。默认离线workspace测试通过不覆盖这些安全边界；当前风险与项目路线见[TESTING](TESTING.md)及[路线快照](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。
+
+11月5日最终Diff Scan早于main上的W1-C来源/回执代码及Draft PR #17，因此不覆盖这些后续差异。PR集成前按其实际源码变更和路径/进程边界做定向审阅；本记录不把旧扫描结论外推到新代码。
+
 ## 2026-11-05 全仓扫描重试未完成
 
 用户提供的扫描界面截图显示：以`622546c`为目标、覆盖731个文件的Deep Scan因Responses API返回HTTP 403 `insufficient_user_quota`，连续3个discovery worker失败后停止；结果为0项。该结果表示扫描未完成，不表示无发现，也没有可恢复的scanId/handoff token。用户要求后续仅在必要时使用Deep Scan，以减少耗时和token开销。

@@ -1,6 +1,6 @@
 # 项目现状
 
-当前路线：[2026-11-03更新的项目评估与双轨安排](superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。截至2026-11-03，W1-C固定Rabbit配置完成一次本机有限分析，结果为`budget_limited/time_budget`；FFI/消费未独立计量，报告来源未独立认证、搜索不完整。allocated保存后协调器返回前及多个其他H3细分窗口已分别按合成范围验收；其他H3逻辑窗口/调度及逐syscall、断电、介质故障仍开放；P4-R5未通过。普通`workbench serve`未配置分析后端。当前D盘继承ACL允许Authenticated Users修改项目路径；用户选择保留现状并记录风险，见[DEPLOYMENT](DEPLOYMENT.md)和[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)。具体任务见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。
+当前评估及路线：[2026-11-09项目现状评估与双轨路线](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)，已补记2026-11-10 PR状态。项目仍为有限场景研究原型；草稿工作台和一次固定Rabbit有限分析已存在，后者因`time_budget`截断，报告来源/FFI/消费未独立认证。PR #17中的worker宿主确认流尚未进入main；PR仍为Draft且最终head没有review。普通`workbench serve`仍为`analysis_not_configured`；H3余项、P4-R2–R5及通用能力仍开放。当前ACL与安全残余风险见[SECURITY_AUDIT](SECURITY_AUDIT.md)、[DEPLOYMENT](DEPLOYMENT.md)和[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)。唯一当前任务状态见[TASKS](../TASKS.md)，验证范围见[TESTING](TESTING.md)，阶段依赖见[ROADMAP](ROADMAP.md)。
 
 ## 产品目标
 
