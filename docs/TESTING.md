@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-10 PR #17两项增量审查修复
+
+对远端 `c9455d577fc08c1e51663eed079f166d282ab61c` 至 `0aaf04b85f44e3cf72e87a5b1f30e779b922b74a` 的增量变更进行只读 CodeRabbit 审阅，发现两项并发/后台任务生命周期问题。候选修复分别让 job 初始 revision 发布与同一 store 的扫描互斥，避免扫描看到刚创建但尚未发布首条 revision 的目录；回收已结束的后台线程时显式 `join`，若线程 panic 则停止 dispatch，避免吞掉 panic 后继续接收任务。
+
+新增回归 `scan_waits_for_initial_job_revision_publication` 和 `reaping_panicked_background_job_stops_dispatch` 各 1 passed。`cargo test --workspace --offline --locked --target-dir target/pr17-final -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets` 退出码 0；只过滤需要本机 worker/assets 的 doctor 诊断。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/pr17-final -- -D warnings` 通过。首次格式检查发现两处 rustfmt 差异，执行 `cargo fmt --all` 后需复验 `cargo fmt --all -- --check` 与 `git diff --check`。
+
+本次只是对上个候选 head 的增量审阅和代码修复，并非对 PR 全部 190 个变更文件的完整独立审查。没有运行 Deep Scan；没有新增真实 worker、ocgcore/FFI、runner、真实分析、部署或 native 资格证据。候选当前尚未提交或推送，PR #17 对应 CI 和审阅需要在新 head 发布后更新。
+
 ## 2026-11-10 PR #17隔离候选完整workspace复核
 
 针对当前42文件隔离候选，在修正Windows目录symlink回归的跳过语义后执行 `cargo test --workspace --offline --locked --target-dir target/pr17-final -- --test-threads=1 --skip doctor_reports_missing_worker_and_assets`，退出码0。该命令只过滤会执行本机doctor诊断的单项；赛事冻结资产用例和Windows symlink权限用例均由测试自身明确标为ignored。快照独立回归`package_recheck_detects_config_worker_and_snapshot_drift`另以定向命令执行，1 passed。`cargo clippy --workspace --all-targets --offline --locked --target-dir target/pr17-final -- -D warnings`、`cargo fmt --all -- --check`及`git diff --check`通过。

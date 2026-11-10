@@ -443,7 +443,7 @@ impl AnalysisHttpService {
                             }
                         }) {
                         Ok(job) => {
-                            jobs.retain(|handle| !handle.is_finished());
+                            reap_finished_background(&self.coordinator, &mut jobs);
                             jobs.push(job);
                         }
                         Err(_) => {
@@ -530,6 +530,22 @@ impl AnalysisHttpService {
                     .unwrap_or_else(map_error)
             }
             _ => failure(404, "route_not_found", None, None),
+        }
+    }
+}
+
+fn reap_finished_background(
+    coordinator: &DurableAnalysisCoordinator,
+    jobs: &mut Vec<JoinHandle<()>>,
+) {
+    let mut index = 0;
+    while index < jobs.len() {
+        if jobs[index].is_finished() {
+            if jobs.swap_remove(index).join().is_err() {
+                let _ = coordinator.stop_dispatch();
+            }
+        } else {
+            index += 1;
         }
     }
 }
@@ -627,6 +643,25 @@ mod tests {
         net::TcpStream,
         sync::Barrier,
     };
+
+    #[test]
+    fn reaping_panicked_background_job_stops_dispatch() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/analysis-http-background-reap")
+            .join(ygo_storage::secure_random_hex(16).unwrap());
+        std::fs::create_dir_all(&root).unwrap();
+        let coordinator = DurableAnalysisCoordinator::open_operations(root).unwrap();
+        let mut jobs = vec![std::thread::spawn(|| panic!("injected background panic"))];
+        while !jobs[0].is_finished() {
+            std::thread::yield_now();
+        }
+
+        reap_finished_background(&coordinator, &mut jobs);
+
+        assert!(jobs.is_empty());
+        assert!(coordinator.is_stopped().unwrap());
+    }
+
     pub(super) fn request(
         addr: std::net::SocketAddr,
         token: &str,

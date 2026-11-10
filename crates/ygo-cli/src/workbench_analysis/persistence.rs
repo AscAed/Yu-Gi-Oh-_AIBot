@@ -96,6 +96,14 @@ pub struct PersistentAnalysisJobStore {
     #[cfg(test)]
     pub(super) logical_fault_hits: std::sync::Arc<AtomicUsize>,
     pub(super) root: PathBuf,
+    initial_publish_lock: std::sync::RwLock<()>,
+    #[cfg(test)]
+    initial_publish_gate: std::sync::Mutex<
+        Option<(
+            std::sync::Arc<std::sync::Barrier>,
+            std::sync::Arc<std::sync::Barrier>,
+        )>,
+    >,
     pub(super) attempt_receipt_states:
         std::sync::Mutex<BTreeMap<String, super::attempt_receipts::AttemptReceiptAppendState>>,
     #[cfg(test)]
@@ -129,6 +137,18 @@ impl std::fmt::Debug for PersistentAnalysisJobStore {
 }
 
 impl PersistentAnalysisJobStore {
+    #[cfg(test)]
+    pub(super) fn pause_initial_publish_for_test(
+        &self,
+        entered: std::sync::Arc<std::sync::Barrier>,
+        release: std::sync::Arc<std::sync::Barrier>,
+    ) {
+        *self
+            .initial_publish_gate
+            .lock()
+            .expect("initial publish gate") = Some((entered, release));
+    }
+
     #[cfg(test)]
     pub(crate) fn inject_logical_fault(
         &self,
@@ -204,6 +224,9 @@ impl PersistentAnalysisJobStore {
             #[cfg(test)]
             logical_fault_hits: std::sync::Arc::new(AtomicUsize::new(0)),
             root,
+            initial_publish_lock: std::sync::RwLock::new(()),
+            #[cfg(test)]
+            initial_publish_gate: std::sync::Mutex::new(None),
             attempt_receipt_states: std::sync::Mutex::new(BTreeMap::new()),
             #[cfg(test)]
             attempt_receipt_history_reads: AtomicUsize::new(0),
@@ -251,6 +274,10 @@ impl PersistentAnalysisJobStore {
     }
 
     pub fn append_initial(&self, record: AnalysisJobRecordV1) -> Result<(), PersistenceError> {
+        let _publish_guard = self
+            .initial_publish_lock
+            .write()
+            .map_err(|_| PersistenceError::CommitUncertain)?;
         record
             .validate()
             .map_err(|_| PersistenceError::RecordInvalid)?;
@@ -270,6 +297,16 @@ impl PersistentAnalysisJobStore {
         if ygo_storage::prepare_store_directory(&revisions).is_err() {
             self.remove_empty_job(record.job_id());
             return Err(PersistenceError::InvalidPath);
+        }
+        #[cfg(test)]
+        if let Some((entered, release)) = self
+            .initial_publish_gate
+            .lock()
+            .map_err(|_| PersistenceError::CommitUncertain)?
+            .take()
+        {
+            entered.wait();
+            release.wait();
         }
         let result = self.write_envelope(&record, None);
         if result.is_err() && !self.revision_path(record.job_id(), 1).exists() {
@@ -524,6 +561,10 @@ impl PersistentAnalysisJobStore {
     pub(super) fn scan(
         &self,
     ) -> Result<BTreeMap<String, Vec<AnalysisJobRecordV1>>, PersistenceError> {
+        let _publish_guard = self
+            .initial_publish_lock
+            .read()
+            .map_err(|_| PersistenceError::CommitUncertain)?;
         self.validate_root_layout()?;
         let jobs = self.root.join("jobs");
         let mut result = BTreeMap::new();
