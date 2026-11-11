@@ -2,9 +2,11 @@
 
 当前实施路线：[2026-11-09项目现状评估与双轨路线](docs/superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
-## 当前状态（2026-11-11）：PR #17已合入；来源与计量、独立审阅、运行及部署资格仍开放
+## 当前状态（2026-11-12）：PR #18审计文档已合入；产品与执行资格仍开放
 
-远端`main`当前为合并提交`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，PR #17已于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`。`contracts`工作流通过；CodeRabbit在PR关闭后取消，未完成最终审阅，GitHub无正式review记录。因此，合并及CI不等同于完整独立审阅、生产执行认证或部署验收。PR变更191个文件；详见[PR审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)与[当日验证](docs/TESTING.md#2026-11-11-pr-17合并后状态复核)。
+远端`main`当前为PR #18的合并提交`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`（2026-11-11 16:57:08 UTC）。PR #17于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`；其`contracts`工作流通过，但CodeRabbit最终检查因PR关闭而取消，GitHub无正式review记录。PR #18合入14份审计文档；其合并后`contracts` run `43062300211`发现deck-draft临时目录竞争和假worker提前退出两项测试夹具问题。PR #19首轮CI又在`stream_supervisor_deadline_covers_a_blocked_request_pipe_write`的3秒时间上界处失败；目前候选改为唯一目录分配、非流式假worker先读完请求再回包，并保留该时间断言的实际耗时诊断。deck-draft聚焦5/5、process_failures本地重复验证通过；PR #19最新完整CI仍待验证。PR合并和合成测试记录不等于真实执行认证或部署验收。
+
+只读GitHub API检查显示`main`分支保护返回404、仓库rulesets为空；PR #18 contracts失败后仍被合并。没有更改仓库设置。是否要求main强制通过`contracts`和PR审阅是待决的仓库治理事项；PR #19在全部检查成功前不自动合并。
 
 PR #17的worker宿主确认流现已在main源码中；`dist/ygo-local`仍是2026-10-19旧包，当前源码未因此发布。W1-C来源与计量合同仍开放：部分结果/消费记录、report producer来源、ResearchBatch消费单位及unknown消费仍未解决。普通启动保持`analysis_not_configured`；不将合成测试或CI结果外推为真实worker、ocgcore/FFI执行、研究消费或部署资格。
 
@@ -67,6 +69,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 
 ### 当前开放任务
 
+- [ ] 仓库治理：决定是否为`main`配置必需的`contracts`状态检查和PR review门槛。当前无保护规则；本轮不擅自改变仓库策略。
 - [x] W1-H3.1：跨链恢复与响应丢失设计已交付；仅静态审阅，不代表H3运行验收通过。
 - [x] W1-H3.2-1：共享认证、完整候选清单、关联修复/分类及重复重开通过合成验收，具体范围见本批TESTING。
 - [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。

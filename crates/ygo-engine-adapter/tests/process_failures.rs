@@ -357,7 +357,11 @@ fn stream_supervisor_deadline_covers_a_blocked_request_pipe_write() {
         adapter.run_process_observed_with_ffi(&request, "9".repeat(32).as_str(), &mut |_| Ok(()));
 
     assert_eq!(outcome.result.unwrap_err().code, "timeout");
-    assert!(start.elapsed().as_secs() < 3);
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed.as_secs() < 3,
+        "blocked request-pipe deadline returned after {elapsed:?}"
+    );
     assert_eq!(outcome.observation.request_status, ProcessIoStatus::Unknown);
     assert_eq!(
         outcome.observation.termination,
