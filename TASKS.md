@@ -4,7 +4,9 @@
 
 ## 当前状态（2026-11-12）：PR #18审计文档已合入；产品与执行资格仍开放
 
-远端`main`当前为PR #18的合并提交`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`（2026-11-11 16:57:08 UTC）。PR #17于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`；其`contracts`工作流通过，但CodeRabbit最终检查因PR关闭而取消，GitHub无正式review记录。PR #18合入14份审计文档；其合并后`contracts` run `43062300211`发现两项Windows `deck_draft`测试的临时目录竞争，后续修复见[验证记录](docs/TESTING.md#2026-11-12-pr-18合并后临时目录竞争修复)。当前本地候选已加唯一目录分配和并发回归，聚焦测试通过；follow-up完整CI仍待验证。PR合并和测试记录不等于真实执行认证或部署验收。
+远端`main`当前为PR #18的合并提交`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`（2026-11-11 16:57:08 UTC）。PR #17于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`；其`contracts`工作流通过，但CodeRabbit最终检查因PR关闭而取消，GitHub无正式review记录。PR #18合入14份审计文档；其合并后`contracts` run `43062300211`发现两项Windows `deck_draft`测试的临时目录竞争，后续修复见[验证记录](docs/TESTING.md#2026-11-12-pr-18合并后临时目录竞争修复)。当前本地候选已加唯一目录分配和并发回归，聚焦测试通过；PR #19完整CI仍待验证。PR合并和测试记录不等于真实执行认证或部署验收。
+
+只读GitHub API检查显示`main`分支保护返回404、仓库rulesets为空；PR #18 contracts失败后仍被合并。没有更改仓库设置。是否要求main强制通过`contracts`和PR审阅是待决的仓库治理事项；PR #19在全部检查成功前不自动合并。
 
 PR #17的worker宿主确认流现已在main源码中；`dist/ygo-local`仍是2026-10-19旧包，当前源码未因此发布。W1-C来源与计量合同仍开放：部分结果/消费记录、report producer来源、ResearchBatch消费单位及unknown消费仍未解决。普通启动保持`analysis_not_configured`；不将合成测试或CI结果外推为真实worker、ocgcore/FFI执行、研究消费或部署资格。
 
@@ -67,6 +69,7 @@ A3及P4-R1b离线实现现包含planner单次调用检查点和可恢复语义�
 
 ### 当前开放任务
 
+- [ ] 仓库治理：决定是否为`main`配置必需的`contracts`状态检查和PR review门槛。当前无保护规则；本轮不擅自改变仓库策略。
 - [x] W1-H3.1：跨链恢复与响应丢失设计已交付；仅静态审阅，不代表H3运行验收通过。
 - [x] W1-H3.2-1：共享认证、完整候选清单、关联修复/分类及重复重开通过合成验收，具体范围见本批TESTING。
 - [x] W1-H3.2-2a：真实TCP零字节丢失、正文截断、幂等查询及受控重开通过合成验收；workspace 442通过、36忽略，范围见本批交接。

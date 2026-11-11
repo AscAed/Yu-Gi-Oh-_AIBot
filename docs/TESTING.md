@@ -8,6 +8,8 @@ PR #18为文档审计提交，于2026-11-11 16:57:08 UTC合入，merge commit为
 
 修复只改测试夹具：用进程内`AtomicU64`分配序号，并以独占`create_dir`创建目录，仅在路径已存在时重试。当前本地聚焦验证为`cargo test -p ygo-cli --offline --locked --target-dir target/deck-draft-race-repro --test deck_draft -- --test-threads=8 --nocapture`，结果5 passed、0 failed；`cargo fmt --all -- --check`通过。PR #19 follow-up的workspace完整CI仍待验证，不能用聚焦结果替代。
 
+同日只读仓库设置检查：`GET /repos/AscAed/Yu-Gi-Oh-_AIBot/branches/main/protection`返回404 `Branch not protected`，`/repos/AscAed/Yu-Gi-Oh-_AIBot/rulesets`返回空列表。PR #18的contracts run在16:53:55 UTC失败，PR随后在16:57:08 UTC合入；GitHub没有强制失败检查阻止合并。未更改仓库设置，main必需检查/PR review门槛留待用户决定。PR #19不会自动合并；需先等contracts及CodeRabbit完成并验证通过。
+
 ## 分阶段审计与成本控制
 
 审计按风险逐级扩大范围：先确认仓库身份、工作区差异、事实源和工具/资产可用性；再对本次变更执行低成本静态检查；随后只运行直接覆盖变更行为的聚焦测试或本机探针。只有发现跨模块影响、聚焦验证失败或关键性质仍无证据时，才扩大到workspace测试、跨边界审阅或安全扫描。文档变更不默认触发全量代码测试；代码变更按影响面增加验证。
