@@ -2,9 +2,9 @@
 
 当前实施路线：[2026-11-09项目现状评估与双轨路线](docs/superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
-## 当前状态（2026-11-11）：PR #17已合入；来源与计量、独立审阅、运行及部署资格仍开放
+## 当前状态（2026-11-12）：PR #18审计文档已合入；产品与执行资格仍开放
 
-远端`main`当前为合并提交`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，PR #17已于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`。`contracts`工作流通过；CodeRabbit在PR关闭后取消，未完成最终审阅，GitHub无正式review记录。因此，合并及CI不等同于完整独立审阅、生产执行认证或部署验收。PR变更191个文件；详见[PR审阅记录](docs/superpowers/plans/2026-11-09-pr17-review.md)与[当日验证](docs/TESTING.md#2026-11-11-pr-17合并后状态复核)。
+远端`main`当前为PR #18的合并提交`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`（2026-11-11 16:57:08 UTC）。PR #17于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`；其`contracts`工作流通过，但CodeRabbit最终检查因PR关闭而取消，GitHub无正式review记录。PR #18合入14份审计文档；其合并后`contracts` run `43062300211`发现两项Windows `deck_draft`测试的临时目录竞争，后续修复见[验证记录](docs/TESTING.md#2026-11-12-pr-18合并后临时目录竞争修复)。当前本地候选已加唯一目录分配和并发回归，聚焦测试通过；follow-up完整CI仍待验证。PR合并和测试记录不等于真实执行认证或部署验收。
 
 PR #17的worker宿主确认流现已在main源码中；`dist/ygo-local`仍是2026-10-19旧包，当前源码未因此发布。W1-C来源与计量合同仍开放：部分结果/消费记录、report producer来源、ResearchBatch消费单位及unknown消费仍未解决。普通启动保持`analysis_not_configured`；不将合成测试或CI结果外推为真实worker、ocgcore/FFI执行、研究消费或部署资格。
 

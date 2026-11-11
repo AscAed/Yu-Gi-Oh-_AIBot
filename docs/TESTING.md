@@ -1,5 +1,13 @@
 # 本机验证记录
 
+## 2026-11-12 PR #18合并后临时目录竞争修复
+
+PR #18为文档审计提交，于2026-11-11 16:57:08 UTC合入，merge commit为`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`。合并后`contracts` run `43062300211`的`cargo test --workspace --locked`在`ygo-cli/tests/deck_draft.rs`失败：`creates_edits_shows_and_exports_an_incomplete_draft`收到`deck_draft_output_exists`，`import_and_export_round_trip_ydk_and_refuse_implicit_overwrite`随后导出失败。
+
+根因是集成测试临时目录名仅由进程ID和纳秒时间戳构成，并以`create_dir_all`允许并发调用复用同一目录；测试`TempDir::drop`可能在另一用例仍使用该路径时删除目录。回归测试同时释放32个线程、每线程分配16次：旧实现只产生480个唯一目录（512次申请），按预期失败。
+
+修复只改测试夹具：用进程内`AtomicU64`分配序号，并以独占`create_dir`创建目录，仅在路径已存在时重试。当前本地聚焦验证为`cargo test -p ygo-cli --offline --locked --target-dir target/deck-draft-race-repro --test deck_draft -- --test-threads=8 --nocapture`，结果5 passed、0 failed；`cargo fmt --all -- --check`通过。PR #19 follow-up的workspace完整CI仍待验证，不能用聚焦结果替代。
+
 ## 分阶段审计与成本控制
 
 审计按风险逐级扩大范围：先确认仓库身份、工作区差异、事实源和工具/资产可用性；再对本次变更执行低成本静态检查；随后只运行直接覆盖变更行为的聚焦测试或本机探针。只有发现跨模块影响、聚焦验证失败或关键性质仍无证据时，才扩大到workspace测试、跨边界审阅或安全扫描。文档变更不默认触发全量代码测试；代码变更按影响面增加验证。

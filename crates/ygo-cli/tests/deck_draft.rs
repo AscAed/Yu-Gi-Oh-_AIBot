@@ -4,6 +4,7 @@ use std::{
     ops::Deref,
     path::{Path, PathBuf},
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
 };
 use ygo_domain::DeckDocumentV1;
 
@@ -24,16 +25,50 @@ impl Drop for TempDir {
 }
 
 fn temp_dir() -> TempDir {
-    let path = std::env::temp_dir().join(format!(
-        "ygo-deck-draft-test-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-    fs::create_dir_all(&path).unwrap();
-    TempDir(path)
+    static NEXT_TEMP_DIR_ID: AtomicU64 = AtomicU64::new(0);
+    loop {
+        let id = NEXT_TEMP_DIR_ID.fetch_add(1, Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("ygo-deck-draft-test-{}-{id}", std::process::id()));
+        match fs::create_dir(&path) {
+            Ok(()) => return TempDir(path),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("create test temp directory failed: {error}"),
+        }
+    }
+}
+
+#[test]
+fn temp_dirs_are_unique_when_allocated_concurrently() {
+    const THREADS: usize = 32;
+    const ROUNDS: usize = 16;
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(THREADS));
+    let directories = std::thread::scope(|scope| {
+        let handles = (0..THREADS)
+            .map(|_| {
+                let barrier = std::sync::Arc::clone(&barrier);
+                scope.spawn(move || {
+                    let mut directories = Vec::with_capacity(ROUNDS);
+                    for _ in 0..ROUNDS {
+                        barrier.wait();
+                        directories.push(temp_dir());
+                    }
+                    directories
+                })
+            })
+            .collect::<Vec<_>>();
+
+        handles
+            .into_iter()
+            .flat_map(|handle| handle.join().unwrap())
+            .collect::<Vec<_>>()
+    });
+    let unique_paths = directories
+        .iter()
+        .map(|directory| directory.0.clone())
+        .collect::<std::collections::HashSet<_>>();
+
+    assert_eq!(unique_paths.len(), THREADS * ROUNDS);
 }
 
 fn cli(args: &[&str]) -> std::process::Output {
