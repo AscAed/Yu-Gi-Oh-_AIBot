@@ -1,10 +1,12 @@
 # 本机环境与资产审计
 
-## 当前环境现场（2026-11-11）
+## 当前环境与审计快照（更新至2026-11-12）
 
 2026-11-11前三个缓存处置批次及审计日志写入后，D:整卷可用空间曾为220,818,591,744字节；第四批之后复读`Get-PSDrive D`：总容量644,245,090,304字节，已用400,334,929,920字节，可用243,910,160,384字节。卷级数字会随本机其它活动变化，不等同项目目录大小或本次精确回收量。
 
-当前主checkout为`codex/post-merge-project-audit-20261111`，HEAD与`origin/main`同为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`；14项未提交更改均为Markdown。`git worktree list`另列三个干净的链接worktree：`p4-r5-audit`（detached `e684f4e`）、`pr3-review-async-fixes`（`42c1080`）及`w1c-worker-ffi-ack-stream`（`c9455d5`，其远端跟踪引用已删除）。另有单独checkout`pr17-remediation-20261109`，干净地停在`887e343`，不属于主仓库的linked-worktree清单。这些目录是不同时间点的源码快照；本轮没有删除或重置任何一个。
+本段checkout状态是2026-11-11审计开始时的初始快照：主checkout为`codex/post-merge-project-audit-20261111`，HEAD与`origin/main`同为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，有14项未提交Markdown。它不是当前状态。`git worktree list`当时另列三个干净的链接worktree：`p4-r5-audit`（detached `e684f4e`）、`pr3-review-async-fixes`（`42c1080`）及`w1c-worker-ffi-ack-stream`（`c9455d5`，其远端跟踪引用已删除）；另有单独checkout `pr17-remediation-20261109`，当时干净地停在`887e343`，不属于主仓库linked-worktree清单。这些目录是不同时间点的源码快照；本轮没有删除或重置任何一个。
+
+后续checkout检查点按时间区分：`259773a`提交首批14份文档；`5b882e3`提交两份工具可用性记录，并在当时核验工作区干净；`aa78a15`补充推送路径记录。`5b882e3`是中间干净检查点；`aa78a15`是PR #18首次审阅时最新核验的HEAD，远端功能分支与本地HEAD相同且工作区干净。PR #18当时仍开放。由于本地无法写入`.git/refs/remotes/origin/...`，本地分支仍跟踪`origin/main`并显示ahead 3；这不表示远端功能分支落后。该检查点早于本次CodeRabbit文档评论修复。
 
 2026-11-11 ACL只读复核：`icacls D:\`仍显示直接`NT AUTHORITY\Authenticated Users:(M)`，并带对象/容器继承标记；`scripts/deploy-local.ps1`继承该Modify权限，同时仍有四个未映射SID的继承Modify ACE。部署脚本第36–37行会把CLI和worker可执行文件复制到`dist/ygo-local`。本轮没有更改ACL、枚举账户或验证另一账户是否可实际登录/运行这些文件；用户此前选择保留ACL，现记录为已接受环境风险，跨账户影响仍需复核。
 

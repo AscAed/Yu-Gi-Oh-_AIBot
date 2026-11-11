@@ -8,7 +8,7 @@
 
 ## 2026-11-11 PR #17合并后状态复核
 
-只读核对GitHub PR、检查结果及本地同步：PR #17于2026-11-10 12:28:44 UTC合入，merge commit为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`，共191个文件。`contracts`工作流run `42782589031`在该head通过；job实际执行Rust fmt、workspace全目标Clippy、workspace tests、engine-adapter examples及Python editable install。PR head与merge commit tree SHA相同，因此这些CI步骤覆盖当前main的同一源代码树。workflow没有执行当前`dist`包、真实worker/ocgcore/FFI、真实分析或部署。CodeRabbit check run `129829236729`显示因PR关闭而取消；最终分析/反馈/发布步骤被跳过，GitHub reviews为空。结论：CI合同检查通过，但最终head没有独立CodeRabbit审阅或正式review决策。该次状态复核没有运行本地项目测试、worker、engine、doctor或部署检查。
+只读核对GitHub PR、检查结果及本地同步：PR #17于2026-11-10 12:28:44 UTC合入，merge commit为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`，共191个文件。`contracts`工作流run `42782589031`在该head通过；job执行Rust fmt、workspace全目标Clippy、workspace tests、engine-adapter examples、Python editable install、按`.github/workflows/ci.yml`从`tests/`收集的`test_*.py` pytest用例，以及`python -m ygo_data.cli validate --input tests/fixtures/cards.sample.json`样例校验。PR head与merge commit tree SHA相同，因此这些CI步骤覆盖当前main的同一源代码树。workflow没有执行当前`dist`包、真实worker/ocgcore/FFI、真实分析或部署。CodeRabbit check run `129829236729`显示因PR关闭而取消；最终分析/反馈/发布步骤被跳过，GitHub reviews为空。结论：CI合同检查通过，但最终head没有独立CodeRabbit审阅或正式review决策。该次状态复核没有运行本地项目测试、worker、engine、doctor或部署检查。
 
 本地`main`和`origin/main`引用均指向merge commit。源码已包含PR #17变更；这不证明旧`dist/ygo-local`已更新，也不补足来源/消费认证、生产worker/ocgcore/FFI资格或完整兼容性审阅。参见[TASKS](../TASKS.md)、[部署状态](DEPLOYMENT.md)和[PR审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
 
