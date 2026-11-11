@@ -8,6 +8,12 @@
 
 在用户授权下，下方目录表格列出的54个唯一源文件中，51个非空文件共750,733字节已上传至Google Drive专用私有归档。上传后逐个回读并核对字节数和SHA-256，校验通过后删除对应本机源文件；3个零字节日志保留本机。2026-11-02再次列出归档目录并逐个回读当前云端对象：索引中的51个对象全部存在，字节数与SHA-256均匹配，合计750,733字节；云端目录及文件权限均为仅所有者可访问。5份重试产生的重复副本已删除。对回读内容作凭证/私钥模式检查未发现匹配项。一次Drive对象标题与索引显示名差异已在本机忽略索引中更正，文件ID、字节数和哈希未变。文件ID、源路径、哈希及校验结果只记录在被Git忽略的`data/runtime/cleanup-audit/drive-archive-index.json`。普通克隆无法访问该私有归档；表格路径表示归档时的源位置。
 
+2026-11-11只读复核：Drive连接器再次列出51个目录子项，文件索引数量一致；目录权限元数据仅列所有者，子项未标记为共享。读取一份文本日志正文成功，证明当前连接可访问归档内容；本次没有下载或重算全部对象内容哈希。逐文件SHA-256完整性结论仍以2026-11-02全量回读记录和本机忽略索引为准。
+
+2026-11-11前三批清理五个隔离Cargo构建缓存子树：`target/w1c-ffi-journal/debug`、`target/w1c-process-observation/debug`、`target/w1c-attempt-journal/debug`、`target/w1c-ffi-final/debug`和`target/h3-time-budget-recovery/debug`，不删除父目录日志或合成状态数据。共删除67,957个文件、43,479,517,473字节逻辑大小；63个mtime变化但SHA一致的`.rmeta`保留。逐文件SHA清单、操作日志和分批对账摘要位于忽略目录`data/runtime/cleanup-audit/`；五个子树合并统计见`target-isolated-debug-cache-20261111-final-reconciliation.json`，残余metadata及父目录测试日志SHA复核见`target-isolated-debug-cache-retained-rmeta-20261111-reconciliation.json`。引用到的workspace/Clippy日志哈希均复核匹配；幂等重试未额外删除。只删隔离Cargo debug编译缓存，不触及默认/发布构建目录、W1-C执行器候选、报告、账本或运行资产。
+
+同日第四批逐项清理`target/h3-2b-2-cargo/debug`、`target/audit-20261109/rust/debug`和`target/audit-20261105/rust/debug`，删除37,916个文件、24,425,236,725字节逻辑大小；27个mtime变化但SHA与manifest匹配的`.rmeta`文件保留。其37,943项manifest、操作日志及reconciled summary均保留在忽略目录。四批共覆盖八个明确指定的debug子树，删除105,873个文件、67,904,754,198字节逻辑内容，保留90个哈希匹配但mtime变化的`.rmeta`；八树汇总见`target-isolated-debug-cache-20261111-all-batches-reconciliation.json`。没有删除父目录日志、测试状态、默认/发布构建目录、W1-C执行器候选、报告、账本或运行资产。操作日志中的失败尝试与后续成功清理均保留；只读回算确认本批删除37,916项、错误0、剩余27项哈希一致。
+
 下方表格是归档前的路径与引用盘点，不表示每个列出的目标都在上述54个源文件中或已上传。归档范围仅由忽略索引中的51个对象确认；尤其是2026-11-03生成的三份当前Ground报告晚于该次归档，未包含在该归档操作中。
 
 2026-11-03为Ground Collapse固定来源离线准备，从该私有归档恢复13份文件到原有忽略路径，合计141,493字节。每份恢复字节数和SHA-256均与索引中的上传源及回读值匹配；归档副本未修改。恢复项为Curry revalidation交付；Curry recovery v1、v2、v3报告及v3交付；Curry ledger handoff v3审计报告、v4审计报告及交付；consumption reservation v3 acceptance；V5 saved-input审计的JSON/stderr/stdout三件记录；以及V5测试`audit-command.log`。这些文件目前在本机原路径可用。Ground 2026-10-27历史`preparation.json`仍缺失；2026-11-03新准备报告单独保存在`data/runtime/p1-ground-collapse-preparation-current-2026-11-03-archive-recovered-2/`。

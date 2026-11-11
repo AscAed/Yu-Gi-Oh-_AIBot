@@ -319,5 +319,5 @@
 
 - **问题：**只记录host结果无法说明某个ocgcore入口是否已经返回，尤其是回调嵌套或进程中断。
 - **处理：**attempt日志新增`ffi_entered`和`ffi_returned`。call ID在job内唯一，entered序号连续，returned必须对应未返回入口；HostResult会拒绝仍有未返回入口的attempt。孤立entered保留为unknown现场，并在重开后保持稳定。
-- **代价：**PR #17分支已加入可选的合成worker宿主确认流，但尚未集成进main，也没有认证生产worker/ocgcore执行、回调完整性或硬件结果；报告producer来源和ResearchBatch消费仍开放。
+- **代价（2026-11-10合并前记录）：**当时PR #17候选已加入可选的合成worker宿主确认流，尚未集成进main；该协议没有认证生产worker/ocgcore执行、回调完整性或硬件结果。该流随后随PR #17合入（merge commit `1197976`），但报告producer来源和ResearchBatch消费仍开放。
 - **范围与证据：**7项CLI FFI/回执聚焦回归覆盖嵌套LIFO配对、外层提前返回、孤立入口重开、错误关闭、跨attempt重复ID、写前失败和磁盘历史链唯一性；外层提前返回测试先RED再GREEN。Rust receipt Schema与Python离线验证器同步检查两类事件及嵌套LIFO顺序。Python回归18 passed；真实分析和FFI运行仍不在本批范围，workspace为494 passed/36 ignored，详见[验证记录](TESTING.md)。

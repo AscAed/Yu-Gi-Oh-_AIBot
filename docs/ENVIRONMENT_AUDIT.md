@@ -1,5 +1,29 @@
 # 本机环境与资产审计
 
+## 当前环境现场（2026-11-11）
+
+2026-11-11前三个缓存处置批次及审计日志写入后，D:整卷可用空间曾为220,818,591,744字节；第四批之后复读`Get-PSDrive D`：总容量644,245,090,304字节，已用400,334,929,920字节，可用243,910,160,384字节。卷级数字会随本机其它活动变化，不等同项目目录大小或本次精确回收量。
+
+当前主checkout为`codex/post-merge-project-audit-20261111`，HEAD与`origin/main`同为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`；14项未提交更改均为Markdown。`git worktree list`另列三个干净的链接worktree：`p4-r5-audit`（detached `e684f4e`）、`pr3-review-async-fixes`（`42c1080`）及`w1c-worker-ffi-ack-stream`（`c9455d5`，其远端跟踪引用已删除）。另有单独checkout`pr17-remediation-20261109`，干净地停在`887e343`，不属于主仓库的linked-worktree清单。这些目录是不同时间点的源码快照；本轮没有删除或重置任何一个。
+
+2026-11-11 ACL只读复核：`icacls D:\`仍显示直接`NT AUTHORITY\Authenticated Users:(M)`，并带对象/容器继承标记；`scripts/deploy-local.ps1`继承该Modify权限，同时仍有四个未映射SID的继承Modify ACE。部署脚本第36–37行会把CLI和worker可执行文件复制到`dist/ygo-local`。本轮没有更改ACL、枚举账户或验证另一账户是否可实际登录/运行这些文件；用户此前选择保留ACL，现记录为已接受环境风险，跨账户影响仍需复核。
+
+同日首五处debug缓存清理前对`target/`使用Robocopy `/L /E /BYTES /XJ`作只读元数据枚举，耗时7分05秒，列出1,489,356个文件、119,042,069,965字节逻辑大小和478,541个目录，其中30个目录失败。该命令未复制或删除文件；结果不是NTFS实际分配空间，且因目录失败只能作为当时可访问范围的下界。后续八处清理完成后没有重做整个`target/`或项目树的枚举。11月1日清理后D:可用空间记录为304,439,128,064字节；当前值比该快照少60,528,967,680字节，但卷级变化可能来自本机其它目录，不能归因于本项目。
+
+随后对未被文档单独引用的隔离Cargo缓存`target/w1c-ffi-journal/debug`做逐路径审计：该路径由`#[test]`调用的`--target-dir`生成；同级5份日志和22个随机ID合成测试状态目录均保留。已验证解析路径在仓库`target/`内、无重解析点、无只读文件、无活动构建进程后，按11,439项SHA-256清单逐文件复核并移除11,430个未变化文件，共8,034,534,063字节逻辑大小。9个`metadata.rmeta`文件mtime相对清单发生变化，虽SHA-256一致仍保留；当前余9文件、6,740,125字节。删除循环的汇总语句发生PowerShell参数绑定错误，但逐文件日志与独立回读完成对账，无逐文件删除错误；本次D:可用空间读数不作为精确回收量。清单、逐文件日志和重建摘要位于忽略目录`data/runtime/cleanup-audit/target-w1c-ffi-journal-debug-20261111.jsonl`、`cleanup-target-w1c-ffi-journal-debug-20261111-retry.jsonl`及`target-w1c-ffi-journal-debug-20261111-reconciled-summary.json`。
+
+同日另清理有文档引用日志的隔离构建目录`target/w1c-process-observation/debug`，保留父目录`workspace-test.log`、`tmp`和目录结构。删除20,902个文件，共11,503,194,600字节逻辑大小；18个`metadata.rmeta`因mtime与清单不同而保留，SHA-256一致；逐文件删除错误为0。`workspace-test.log`哈希仍与文档记录一致。该批的SHA清单、操作日志和重建摘要见`data/runtime/cleanup-audit/target-w1c-process-observation-debug-20261111.jsonl`、`cleanup-target-w1c-process-observation-debug-20261111.jsonl`及`target-w1c-process-observation-debug-20261111-reconciled-summary.json`。D:可用空间操作前后读取增量约10.38 GB，但属于卷级变化，不全部归因于删除。
+
+第三批清理`target/w1c-attempt-journal/debug`、`target/w1c-ffi-final/debug`和`target/h3-time-budget-recovery/debug`。按SHA-256清单删除35,625个Cargo编译文件、23,941,788,810字节逻辑大小；36个mtime变化文件的哈希均与清单匹配，故保留。三处父目录测试/Clippy日志的记录哈希均匹配。逐文件manifest、操作日志和实际删除summary在`target-isolated-debug-cache-20261111.jsonl`、`cleanup-target-isolated-debug-cache-20261111.jsonl`、`target-isolated-debug-cache-20261111-reconciled-summary.json`；36个保留文件及日志核对见`target-isolated-debug-cache-retained-rmeta-20261111-reconciliation.json`。后续幂等重试发现35,625个删除路径均已缺失，没有额外删除；首次辅助汇总误比对`clippy.log`与`clippy-final.log`，更正记录已另行保存。前三批合计删除67,957个文件、43,479,517,473字节逻辑大小，保留63个哈希匹配但mtime变化的`.rmeta`。
+
+第四批清理`target/h3-2b-2-cargo/debug`、`target/audit-20261109/rust/debug`和`target/audit-20261105/rust/debug`。清单包含37,943个文件、24,445,469,616字节逻辑大小；操作日志记录删除37,916个文件、24,425,236,725字节，错误0。27个`metadata.rmeta`因mtime与清单不同而保留；对这27项逐个重算SHA-256，均与操作日志和原manifest匹配。三个候选树当前共剩27个文件、20,232,891字节。父目录测试日志保留标记为已核验；卷可用空间前后增加23,117,742,080字节，但不能将该卷级差值完全归因于删除。前三批加第四批合计八个debug子树删除105,873个文件、67,904,754,198字节逻辑大小，保留90个哈希匹配但mtime变化的`.rmeta`。汇总和完整性限制见忽略目录`target-isolated-debug-cache-20261111-all-batches-reconciliation.json`；第四批manifest、SHA摘要和逐文件结果也分别保存在该目录下的batch2文件中。
+
+2026-11-01缓存清理的独立逐路径汇总仍记录441,183个manifest候选全部不存在、清单内剩余0个，D:可用空间净增283,102,781,440字节；同一汇总保留66个最初遍历错误，因此不能据此证明清单之外或当时无法读取的目录已完整检查。归档索引记录51个非空文件共750,733字节，3个零字节文件留在本机；索引中的51项哈希/字节验证均通过。2026-11-11 Drive目录列表再次返回51个子项，权限元数据仅列所有者，子项标记为未共享；本轮读取一份样本文本，没有重算全部51项内容哈希。逐项清理和归档证据见被Git忽略的`data/runtime/cleanup-audit/`及[证据保留清单](EVIDENCE_RETENTION.md)。
+
+本轮只对`target/`作了一次只读逻辑体积采样，并按逐文件清单清理八个已确认的隔离Cargo `debug/`缓存子树，合计删除67,904,754,198字节逻辑内容；保留90个mtime变化但哈希匹配的`.rmeta`及所有测试日志、合成状态数据。没有对整个项目或所有缓存子树重复遍历；Robocopy采样仍报告30个目录失败，清理后`target/`和当前项目目录的精确占用量均未知。若后续需要更精确分解，应只针对高体积子树进行独立盘点，并将无法访问项作为未覆盖路径记录。
+
+2026-11-11工具可用性复核：Git 2.40.0、Cargo/rustc 1.98.1、rustfmt 1.9.0、Clippy 0.1.98、Python 3.14.7、pytest 9.1.1、GitHub CLI 2.96.0和CodeRabbit CLI 0.9.3均可报告版本；本轮未运行项目测试或CodeRabbit审阅。代理端口`127.0.0.1:7897`本机连通；显式设置代理后GitHub CLI认证及REST只读请求成功，GitHub连接器也能读取PR #17。Drive连接器成功列出归档中的单个请求条目并读取其文本内容。Codex Security能读取既有Diff Scan上下文，但扫描仍停留在discovery阶段；它不表示源发现已完成。具体范围、未验证能力和技能入口见[TESTING](TESTING.md#2026-11-11-增量工具可用性与旧包探针)。未测试未代理外网访问、Git push或PR写入权限；因此当前连通不能证明此前认证失败的根因。
+
 ## 历史现场（2026-11-04）
 
 该节记录2026-11-04的源码/安全审计基线，不是当前checkout或运行资产的重新核验。当前源码、PR和部署包关系见[DEPLOYMENT](DEPLOYMENT.md)；ACL保留决定和扫描覆盖见[SECURITY_AUDIT](SECURITY_AUDIT.md)。

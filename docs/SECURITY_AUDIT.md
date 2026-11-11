@@ -2,6 +2,46 @@
 
 本页是本机安全扫描发现及其处置状态的当前事实源。逐次执行证据见[TESTING](TESTING.md)；主机ACL和部署现场见[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)与[DEPLOYMENT](DEPLOYMENT.md)。
 
+## 2026-11-11 PR #17限定差异扫描（未完成）
+
+启动Codex Security Diff Scan `613608ec-6e91-4e6e-babc-49afe0bc55e1`，范围固定为`577924bc0c2af06044b77c065eea769c465ff2fe..119797620b42815d7c3e55f4b16f8e0e1be8e3df`，即PR #17最终合并差异，不是全仓Deep Scan。差异共191个文件；按扩展名含44个Rust、15个Python、16个JSON、3个TOML文件，JSON计数包含合同/数据/夹具，不代表源文件审阅数。
+
+只读配置preflight返回`ready`，3项能力检查通过；已保存初步架构模型，覆盖仍为`partial`。`prepare_codex_security_review_items`三次均在读取合并提交blob时失败，错误指向`configs/w1c-analysis.example.toml`；同一仓库中的`git cat-file`和`git show <merge>:configs/w1c-analysis.example.toml`可成功读取该对象。失败发生在变更文件清单生成阶段，尚未开始源代码发现；扫描器当前`findingCount=0`不代表已审查或无发现。保留原scanId和提交范围，不创建替代扫描。若工具恢复，须续接同一扫描；否则将此项作为未完成的独立审阅缺口。
+
+扫描只针对PR差异，不读取或执行部署包，不运行真实worker/ocgcore/FFI，也不验证当前主机ACL。未启动Deep Scan。该状态及调用证据见[2026-11-11验证记录](TESTING.md#2026-11-11-增量工具可用性与旧包探针)。
+
+2026-11-11续查成功读取同一scanId的Codex Security上下文；状态仍为`running / discovery`，未产生发现阶段进度或报告。先前的变更清单生成错误仍是未解决阻塞；此状态读取只证明安全扫描控制面可达，不代表扫描完成或无发现。没有重试清单生成，也未创建新扫描。
+
+## 2026-11-11 ACL只读复核与保留决定
+
+当前`icacls`读数再次确认`D:\`根有直接`Authenticated Users: Modify`并继承到项目；`scripts/deploy-local.ps1`还继承四个未映射SID的Modify ACE。第36–37行复制CLI/worker到旧部署包路径。既有用户决定为保留ACL，本轮遵循该决定，没有修改权限。分诊结论为`needs_review`（medium confidence）：宽泛写权限本身已由当前ACL确认，但其他低权限账户能否访问以及这些账户是否会在更高权限上下文执行该包尚未建立；跨账户影响仍是证明缺口。仓库未找到适用的`SECURITY.md`，边界参考当前部署文档、此前ACL记录和用户的保留决定。复核命令及完整限制见[TESTING](TESTING.md#2026-11-11-acl只读复核与保留决定)；此项不是PR代码Diff Scan的审阅结果。
+
+## 2026-11-11 FFI/HostAck有界源码核对
+
+因扫描器未能生成PR变更清单，另对关键回执路径作只读、定向源码核对：worker端`ffi_call_shared`先发送入口事件并等待绑定attempt/sequence/call ID的HostAck，返回事件使用LIFO栈；host限制帧大小并验证attempt/序号/方向/名称，调用持久回执回调成功后才写HostAck，回执失败、超时或非法帧时终止worker（`crates/ygo-engine-adapter/src/stream_protocol.rs:77-95`、`:197-234`、`crates/ygo-engine-adapter/src/process.rs:458-540`）。workbench回调先追加attempt receipt，再交给adapter继续；result到达时要求没有未决FFI入口且之后不能再有数据（`crates/ygo-cli/src/workbench/analysis_http.rs:218-232`、`crates/ygo-engine-adapter/src/process.rs:609-645`）。该有界源码切片未确认实现漏洞；没有本地重跑测试或运行worker。GitHub `contracts` CI对同一tree的Rust tests/Clippy通过，也不等同完整安全审阅。此核对不替代191文件差异审查；其他文件和调用路径仍未完成扫描。
+
+## 2026-11-11 历史research journal链接发现静态分诊
+
+输入为2026-11-03部分Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`及用户截图中“Research journal follows a pre-existing link in its derived …”的低危主张；截图未保留完整标题/occurrence ID。当前静态分诊为`needs_review`、medium confidence，而不是确认当前可利用漏洞。
+
+在已交付的`research-audit`示例路径中，入口从操作员提供的JSON读取账本路径后，先调用`safe_output`；该函数限制目标位于工作区`data/runtime`下，拒绝`..`并检查每个现存路径组件的symlink/reparse属性，再调用`ResearchBatch::open`（`crates/ygo-engine-adapter/examples/research-audit.rs:46-59,259-292`）。`CallJournal::open`也检查账本文件最终组件及派生`.blobs`根和已知子目录；已有测试拒绝预先存在的直接sidecar链接和非目录sidecar（`crates/ygo-engine-adapter/src/journal.rs:204-297,642-645,784-821`；`crates/ygo-engine-adapter/tests/journal.rs:63-108`）。安全策略解析未找到适用`SECURITY.md`；既有扫描威胁模型把独立研究示例视为操作员控制的本机表面，未发现远程入口。
+
+剩余证明缺口：`CallJournal::open`是公开库API，本身不把调用者给定的账本路径限制到`data/runtime/research`或检查全部祖先；其他消费者是否允许低信任主体提供路径尚未确立。静态代码也不能证明目录链接测试在当前Windows账户可运行。并发路径替换的TOCTOU是独立的历史候选，不并入“预先存在链接”主张。下一步应明确公共库调用者的信任边界；在边界确定前，不把示例CLI上的防护外推为所有API调用都安全。
+
+## 2026-11-11 历史Deep Scan五项发现当前源码分诊
+
+对2026-11-03部分Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`及用户截图所列五项作有限静态复核；报告目标为`50c279b`且coverage为partial，当前源码为`1197976`。该工作只重验这些历史候选，不是全仓或PR #17完整差异审阅；未运行测试、PoC或应用。截图中前四个标题被截断，未根据标题补造occurrence ID。
+
+| 原始候选（按截图顺序） | 当前静态分诊 | 当前证据与边界 |
+|---|---|---|
+| 未认证慢速读取可占满workbench连接槽 | `needs_review`，medium，队列排名2 | `workbench.rs`在读HTTP头前计入32槽；绝对期限为15秒，Bearer/Origin在完整头后、body前校验。一个本机进程可以暂时占满所有槽至期限，单连接受限但重复饱和及多用户威胁边界未验证。旧表中的“修复”仅表示加了有界等待，不表示消除槽饱和。 |
+| 继承的`Authenticated Users: Modify`暴露可执行文件 | `needs_review`，medium，队列排名1 | 当前ACL复核确认D盘根直接Modify并继承；其他低权限账户能否访问及是否存在更高权限运行场景未证实。用户选择保留，详见本页ACL小节。 |
+| caller-controlled Banlist版本可越出快照目录 | `not_actionable`，high | `JsonSnapshotStore::path`将版本限制为单段ASCII标识，不能包含路径分隔符；读写均从固定前缀文件名构造。现有回归夹具覆盖`x/../../…`并验证外部哨兵不变（`crates/ygo-storage/src/lib.rs:53-112`、`crates/ygo-storage/tests/snapshot.rs:19-50`）。根目录配置和独立文件替换竞态不属于此版本穿越主张；本轮未重跑该测试。 |
+| Research journal跟随其派生路径中的预存链接 | `needs_review`，medium，队列排名3 | `research-audit`入口对ledger路径逐组件拒绝链接/reparse；`CallJournal`检查直接ledger、`.blobs`及已知子目录。公开库API的调用者信任和路径范围仍未定义，见上一节。 |
+| 导入卡名向终端注入控制序列 | `not_actionable`，high | 当前人类可读CLI路径在卡名和步骤标签的报告输出处调用`escape_terminal_controls`；实现把控制字符变成可见转义，现有测试覆盖ESC/BEL/换行及中文（`crates/ygo-cli/src/main.rs:731-769,790-833`）。本轮未执行终端运行时测试。 |
+
+本表是对历史结果的逐项当前源码分诊，不将原扫描的部分覆盖升级为完整安全认证。需要产品/环境边界判断的两项保留为`needs_review`；本机 ACL 的保留决定不等同于认定跨账户风险不存在。
+
 ## 2026-11-09 状态复核
 
 本次只读项目路线复核没有运行或启动新的安全扫描。11月5日quota-limited Deep Scan未完成；最近差异扫描为partial，三项本地路径竞态候选仍deferred。D盘ACL仍按用户既有决定保留。默认离线workspace测试通过不覆盖这些安全边界；当前风险与项目路线见[TESTING](TESTING.md)及[路线快照](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。

@@ -1,8 +1,8 @@
 # 项目评估与双轨路线（2026-11-04更新）
 
-## 2026-11-10 PR #17审阅续接
+## 2026-11-10 PR #17审阅续接（历史快照）
 
-当前事实以[TASKS](../../../TASKS.md)为准。PR #17仍为Open Draft，远端head为`c9455d577fc08c1e51663eed079f166d282ab61c`；CodeRabbit对该已发布head的第七轮远端Deep Review返回15项（7 major、8 minor）。15项均已逐条映射到隔离候选的代码或文档处置，但审阅结果不包含候选未提交改动。当前下一步是完成候选级代码复核和约定的离线回归，再据范围、兼容性与剩余证据决定如何集成；不自动合并或推送。
+截至2026-11-10，PR #17仍为Open Draft，远端head为`c9455d577fc08c1e51663eed079f166d282ab61c`；CodeRabbit对该已发布head的第七轮远端Deep Review返回15项（7 major、8 minor）。15项均已逐条映射到隔离候选的代码或文档处置，但审阅结果不包含候选未提交改动。此历史时点的下一步是完成候选级代码复核和约定的离线回归，再据范围、兼容性与剩余证据决定如何集成；不自动合并或推送。当前状态以[TASKS](../../../TASKS.md)为准。
 
 host-ack合成通道已在PR分支实现，但真实worker/ocgcore事件、源码与构建身份、报告producer来源、ResearchBatch消费及unknown消费仍开放。候选审阅不授予真实执行、研究或发布资格；普通启动仍`analysis_not_configured`，P4-R5继续开放。逐项审查和验证数字见[PR #17审阅交接](2026-11-09-pr17-review.md)与[TESTING](../../TESTING.md)。
 
