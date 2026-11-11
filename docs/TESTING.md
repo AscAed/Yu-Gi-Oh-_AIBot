@@ -4,7 +4,7 @@
 
 PR #18为文档审计提交，于2026-11-11 16:57:08 UTC合入，merge commit为`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`。合并后`contracts` run `43062300211`的`cargo test --workspace --locked`失败：`ygo-cli/tests/deck_draft.rs`中的`creates_edits_shows_and_exports_an_incomplete_draft`收到`deck_draft_output_exists`，`import_and_export_round_trip_ydk_and_refuse_implicit_overwrite`随后导出失败；同一workspace run中`ygo-engine-adapter/tests/process_failures.rs::observed_run_preserves_distinct_exit_and_response_failures`收到`write_failed`而预期`protocol_version`。
 
-deck-draft根因是集成测试临时目录名仅由进程ID和纳秒时间戳构成，并以`create_dir_all`允许并发调用复用同一目录；测试`TempDir::drop`可能在另一用例仍使用该路径时删除目录。回归测试同时释放32个线程、每线程16轮：旧实现512次申请只产生480个唯一目录，按预期失败。
+deck-draft根因是集成测试临时目录名仅由进程ID和纳秒时间戳构成，并以`create_dir_all`允许并发调用复用同一目录；测试`TempDir::drop`可能在另一用例仍使用该路径时删除目录。回归测试同时释放32个线程、每线程16轮：旧实现512次申请只产生480个唯一目录，按预期失败。每轮使用独立scope/barrier，并join该轮全部worker后再进入下一轮；若某次临时目录创建panic，其他worker不会被遗留在后续barrier中。
 
 第一个失败的修复只改测试夹具：用进程内`AtomicU64`分配序号，并以独占`create_dir`创建目录，仅在路径已存在时重试。随后PR #19首轮CI run `43070301365`在`stream_supervisor_deadline_covers_a_blocked_request_pipe_write`的`start.elapsed() < 3s`上界失败；测试已先确认结果分类为`timeout`，故失败发生在墙钟上界断言。该情况在本地8线程整文件回归中间歇出现；随后多次重复均通过，仍需以当前candidate的CI确认。
 

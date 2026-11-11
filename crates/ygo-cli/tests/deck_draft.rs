@@ -42,27 +42,32 @@ fn temp_dir() -> TempDir {
 fn temp_dirs_are_unique_when_allocated_concurrently() {
     const THREADS: usize = 32;
     const ROUNDS: usize = 16;
-    let barrier = std::sync::Arc::new(std::sync::Barrier::new(THREADS));
-    let directories = std::thread::scope(|scope| {
-        let handles = (0..THREADS)
-            .map(|_| {
-                let barrier = std::sync::Arc::clone(&barrier);
-                scope.spawn(move || {
-                    let mut directories = Vec::with_capacity(ROUNDS);
-                    for _ in 0..ROUNDS {
+    let mut directories = Vec::with_capacity(THREADS * ROUNDS);
+    for _ in 0..ROUNDS {
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(THREADS));
+        let round_results = std::thread::scope(|scope| {
+            let handles = (0..THREADS)
+                .map(|_| {
+                    let barrier = std::sync::Arc::clone(&barrier);
+                    scope.spawn(move || {
                         barrier.wait();
-                        directories.push(temp_dir());
-                    }
-                    directories
+                        temp_dir()
+                    })
                 })
-            })
-            .collect::<Vec<_>>();
+                .collect::<Vec<_>>();
 
-        handles
-            .into_iter()
-            .flat_map(|handle| handle.join().unwrap())
-            .collect::<Vec<_>>()
-    });
+            handles
+                .into_iter()
+                .map(|handle| handle.join())
+                .collect::<Vec<_>>()
+        });
+        directories.extend(
+            round_results
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap(),
+        );
+    }
     let unique_paths = directories
         .iter()
         .map(|directory| directory.0.clone())
