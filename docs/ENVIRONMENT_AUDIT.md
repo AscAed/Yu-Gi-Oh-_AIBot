@@ -8,6 +8,8 @@
 
 后续checkout检查点按时间区分：`259773a`提交首批14份文档；`5b882e3`提交两份工具可用性记录，并在当时核验工作区干净；`aa78a15`补充推送路径记录。`5b882e3`是中间干净检查点；`aa78a15`是PR #18首次审阅时最新核验的HEAD，远端功能分支与本地HEAD相同且工作区干净。PR #18当时仍开放。由于本地无法写入`.git/refs/remotes/origin/...`，本地分支仍跟踪`origin/main`并显示ahead 3；这不表示远端功能分支落后。该检查点早于本次CodeRabbit文档评论修复。
 
+2026-11-12父目录只读盘点发现三个未列入主仓库`git worktree list`的独立checkout：`ash-recovery-clean-20261016`（detached `782eca9`）、`ash-strategy-clean-20261016`（`codex/combo-mvp` / `88d485f`）和`pr17-remediation-20261109`（`codex/w1c-worker-ffi-ack-stream` / `887e343`）。三个checkout的Git状态均无未提交文件；三个提交均可在主仓库对象库中找到且为当前`origin/main`的祖先，主仓库本地`codex/combo-mvp`分支也不含main以外的独有提交。它们仍各自包含被忽略的`data/`、`dist/`、`target/`目录；旧Ash checkout的`target`含debug、release和tmp，PR17 checkout还报告若干pytest临时目录访问拒绝。由于这些非Git数据的大小、reparse point、资产用途和证据保留需求尚未逐项核验，本轮保留三个checkout及其目录，没有递归删除。
+
 2026-11-11 ACL只读复核：`icacls D:\`仍显示直接`NT AUTHORITY\Authenticated Users:(M)`，并带对象/容器继承标记；`scripts/deploy-local.ps1`继承该Modify权限，同时仍有四个未映射SID的继承Modify ACE。部署脚本第36–37行会把CLI和worker可执行文件复制到`dist/ygo-local`。本轮没有更改ACL、枚举账户或验证另一账户是否可实际登录/运行这些文件；用户此前选择保留ACL，现记录为已接受环境风险，跨账户影响仍需复核。
 
 同日首五处debug缓存清理前对`target/`使用Robocopy `/L /E /BYTES /XJ`作只读元数据枚举，耗时7分05秒，列出1,489,356个文件、119,042,069,965字节逻辑大小和478,541个目录，其中30个目录失败。该命令未复制或删除文件；结果不是NTFS实际分配空间，且因目录失败只能作为当时可访问范围的下界。后续八处清理完成后没有重做整个`target/`或项目树的枚举。11月1日清理后D:可用空间记录为304,439,128,064字节；当前值比该快照少60,528,967,680字节，但卷级变化可能来自本机其它目录，不能归因于本项目。
