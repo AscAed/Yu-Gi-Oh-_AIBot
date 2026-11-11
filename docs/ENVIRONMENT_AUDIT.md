@@ -26,7 +26,9 @@
 
 2026-11-11后续代理与凭据复核：当前工作区工具探测确认`gh auth status`为`AscAed`已认证，token含`repo`范围；GitHub连接器对`AscAed/Yu-Gi-Oh-_AIBot`返回`push=true`。`Test-NetConnection 127.0.0.1 -Port 7897`成功；在同一终端显式设置HTTP/HTTPS/SOCKS代理后，`gh api repos/AscAed/Yu-Gi-Oh-_AIBot`和强制指定该HTTP代理的`git ls-remote origin main`均成功，远端`main`为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`。GitHub REST及连接器读取成功，不能据此将此前失败唯一归因于代理缺失。
 
-本地提交`259773a5934a22c3164df1595a765b739a4d1499`已包含14份Markdown，提交前后`git diff --check`通过。代理可达时`git push`仍失败：Git for Windows启动`sh.exe`/`bash.exe`时报告Win32 error 5，随后Git无法读取HTTPS用户名。此前本地和全局均未配置Git credential helper；将`gh auth setup-git`限制在临时全局配置后，`git credential fill`仍返回128且未产生凭据。临时配置已删除，全局Git配置未改动。故当前证据指向Git凭据助手/提示子进程路径未打通；它不能证明此前无代理是唯一原因。PR分支尚未通过本地Git推送建立。
+本地提交`259773a5934a22c3164df1595a765b739a4d1499`包含首批14份Markdown；后续提交`5b882e33432d7b502eeb2a435cbd61f730d62644`补入两份工具审计记录。两批提交前`git diff --check`通过。首次代理可达的`git push`因Git for Windows启动`sh.exe`/`bash.exe`报告Win32 error 5而无法读取HTTPS用户名。此前本地和全局均未配置Git credential helper；将`gh auth setup-git`限制在临时全局配置后，`git credential fill`仍返回128且未产生凭据。临时配置已删除，全局Git配置未改动。
+
+随后从已认证的`gh`进程读取token到内存，仅为一次Git进程设置HTTP Authorization头，再通过同一代理推送成功；没有输出或持久化token。该次推送后读回的远端分支`codex/post-merge-project-audit-20261111`与当时本地HEAD均为`5b882e33432d7b502eeb2a435cbd61f730d62644`。服务端创建分支成功后，本地Git因无权创建`.git/refs/remotes/origin/...`而未更新远端跟踪引用；当时本地分支仍跟踪`origin/main`并显示ahead 2，工作区干净。由此可区分当前代理链路可用与常规Git凭据助手/本地ref写入受限；此前失败不能唯一归因于缺少代理。
 
 Google Drive搜索和目录读取成功；当前探测列出归档目录前8项，并成功读取一份小型文本日志。该项证明连接器可搜索、列目录和读取文本，不是对51个归档对象的完整性复核。Codex Security的现有Diff Scan上下文读取成功，状态仍为`running / discovery`、报告不可用；Standard与Deep Scan启动工具在当前工具目录可见，但本轮未启动新扫描。相关技能文件可读取不等同于扫描执行成功；本轮实际读取的技能文件见[TESTING](TESTING.md#2026-11-11-增量工具可用性与旧包探针)。
 
