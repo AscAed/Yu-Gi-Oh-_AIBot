@@ -1,6 +1,8 @@
 # Windows 本机部署与验收
 
-2026-11-10文档同步前状态快照：本地`main`为`ec83bad`，较本地`origin/main`的`577924b`领先27个提交；最近默认离线代码验证对应`8c7afe6`，之后main仅增加审计文档。PR #17当时为Open Draft，head `887e3430cff88704e8b8e183a3df1b94dfbb6960`、base `577924bc0c2af06044b77c065eea769c465ff2fe`，共30个提交/190个文件，尚未合入main；contracts CI通过，最终head CodeRabbit因Draft被跳过，GitHub reviews列表为空。该PR统计是同步前快照，后续分支提交会改变head和比较结果。现有`dist/ygo-local`仍是2026-10-19包；CLI/worker各自SHA-256匹配`build-hashes.json`，但包没有完整manifest或workbench入口。本轮未运行包内程序、doctor或部署，因此文件身份不表示当前源码已发布。详情见[项目路线快照](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)、[PR审阅记录](superpowers/plans/2026-11-09-pr17-review.md)与[验证记录](TESTING.md)。
+2026-11-11状态：PR #17已于2026-11-10合入，当前main源码包含worker宿主确认流；这不是部署记录。`dist/ygo-local`仍为2026-10-19包，未重建或切换部署。本轮运行旧包`ygo.cmd engine doctor`，返回`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`；CLI/worker哈希与旧包自己的清单一致。该结果只描述旧包及其本机配置资产，不证明PR #17源码已部署或真实决斗smoke通过。PR的`contracts` CI通过，但最终CodeRabbit检查因PR关闭取消，GitHub无正式review，完整独立审阅仍开放。详见[项目路线快照](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)、[PR审阅记录](superpowers/plans/2026-11-09-pr17-review.md)与[验证记录](TESTING.md)。
+
+2026-11-10文档同步前状态快照（历史）：本地`main`为`ec83bad`，较本地`origin/main`的`577924b`领先27个提交；PR #17当时为Open Draft，head `887e3430cff88704e8b8e183a3df1b94dfbb6960`、base `577924bc0c2af06044b77c065eea769c465ff2fe`，共30个提交/190个文件，尚未合入main。该状态已被上方2026-11-11复核取代。
 
 历史状态（2026-11-09）：W1-C `ffi-receipt-stream-v1`在隔离worktree完成验证并提交；未部署。`dist/ygo-local`未切换，其既有2026-10-19身份记录继续适用。合成worker协议测试不证明发布包包含新代码、生产worker映像身份或真实ocgcore/FFI执行。完整范围见[本次验证](TESTING.md#2026-11-09-w1-c-worker-ffi-宿主确认流)。
 

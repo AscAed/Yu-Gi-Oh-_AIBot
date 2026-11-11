@@ -1,5 +1,65 @@
 # 本机验证记录
 
+## 分阶段审计与成本控制
+
+审计按风险逐级扩大范围：先确认仓库身份、工作区差异、事实源和工具/资产可用性；再对本次变更执行低成本静态检查；随后只运行直接覆盖变更行为的聚焦测试或本机探针。只有发现跨模块影响、聚焦验证失败或关键性质仍无证据时，才扩大到workspace测试、跨边界审阅或安全扫描。文档变更不默认触发全量代码测试；代码变更按影响面增加验证。
+
+每个阶段记录目标提交/快照、实际覆盖、结果、耗时或预算限制、跳过项和停止条件。零发现、部分覆盖、未完成或未运行都不得写成“全仓无问题”。Deep Scan仅在广泛或高风险变更且定向证据不足以覆盖风险时采用；避免为复核已知边界重复扫描整仓。修复后先复跑直接回归，再根据差异和失败信号决定是否扩大。
+
+## 2026-11-11 PR #17合并后状态复核
+
+只读核对GitHub PR、检查结果及本地同步：PR #17于2026-11-10 12:28:44 UTC合入，merge commit为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`，共191个文件。`contracts`工作流run `42782589031`在该head通过；job执行Rust fmt、workspace全目标Clippy、workspace tests、engine-adapter examples、Python editable install、按`.github/workflows/ci.yml`从`tests/`收集的`test_*.py` pytest用例，以及`python -m ygo_data.cli validate --input tests/fixtures/cards.sample.json`样例校验。PR head与merge commit tree SHA相同，因此这些CI步骤覆盖当前main的同一源代码树。workflow没有执行当前`dist`包、真实worker/ocgcore/FFI、真实分析或部署。CodeRabbit check run `129829236729`显示因PR关闭而取消；最终分析/反馈/发布步骤被跳过，GitHub reviews为空。结论：CI合同检查通过，但最终head没有独立CodeRabbit审阅或正式review决策。该次状态复核没有运行本地项目测试、worker、engine、doctor或部署检查。
+
+本地`main`和`origin/main`引用均指向merge commit。源码已包含PR #17变更；这不证明旧`dist/ygo-local`已更新，也不补足来源/消费认证、生产worker/ocgcore/FFI资格或完整兼容性审阅。参见[TASKS](../TASKS.md)、[部署状态](DEPLOYMENT.md)和[PR审阅记录](superpowers/plans/2026-11-09-pr17-review.md)。
+
+## 2026-11-11 工作区与文档静态复核
+
+首次静态复核阶段（后续文档修正前），工作区相对`119797620b42815d7c3e55f4b16f8e0e1be8e3df`有9份Markdown修改；当时`git diff --check`与`cargo fmt --all -- --check`通过。对这9份变更文档检查748个本地链接及其标题锚点，缺失目标和无效锚点均为0。之后新增的文档修正另做了差异与相对链接目标检查。
+
+`cargo metadata --no-deps --offline`解析出9个workspace crate。`cargo tree --workspace --duplicates --offline --locked`仍只显示`hashbrown` 0.14.5（`rusqlite/hashlink`链）和0.17.1（`toml/indexmap`链）两条不同传递路径；未据此强制统一版本或删除依赖。`cargo-machete`未安装，本轮没有执行机器化未用依赖扫描；直接依赖逐crate源码引用筛查的历史范围见[环境审计](ENVIRONMENT_AUDIT.md)。
+
+该静态复核阶段未运行Rust/Python项目测试、Clippy、doctor、worker、engine、FFI、真实分析或部署；同日后续的增量部署探针另见下节。PR CI通过仅适用于其合并前head。该静态复核不关闭来源/消费、生产执行、兼容性或部署门禁。
+
+## 2026-11-11 增量工具可用性与旧包探针
+
+首次工具可用性检查时工作区仍为9份Markdown差异，随后又补充环境、保留及文档事实修正。Git 2.40.0、Cargo 1.98.1、Python 3.14.7及GitHub CLI 2.96.0可用。按仓库要求设置`127.0.0.1:7897`代理后，`gh auth status`为已认证，`gh api user`返回`AscAed`；GitHub连接器成功读取PR #17并确认已合并。没有进行未代理的对照请求，因此不能断定此前凭据失败一定由缺少代理造成。
+
+2026-11-11后续探测再次确认代理端口本机可连，代理环境下GitHub CLI认证与`gh api user`成功；PR #17只读状态为`closed/merged`，合并时间`2026-11-10 12:28:44 UTC`，GitHub连接器的PR读取也成功。REST只读能力已验证；本轮没有推送、创建PR或测试写权限，故不据此宣称push可用。Google Drive `list_folder`按`top_k=1`成功返回一个归档条目，随后对该条目的`fetch`成功返回可读文本；这验证了当前列目录和读文件能力，不是51个对象的全量哈希复核。此前归档目录51项核对见[环境审计](ENVIRONMENT_AUDIT.md)。
+
+本轮本地命令探测通过：`rustc 1.98.1`、`cargo fmt 1.9.0`、`cargo clippy 0.1.98`、`pytest 9.1.1`及`coderabbit 0.9.3`均可报告版本。仅探测执行器，没有运行项目测试或CodeRabbit审阅。当前可读的相关技能文件包括`using-superpowers`、`plugin-management`、Google Drive、Codex Security `security-diff-scan`/`deep-security-scan`及`yeet`；本轮实际按需读取前述技能指引。Skill文件可读取不等于其目标服务/操作成功；CodeRabbit CLI此前的同日审阅调用仍因`No Git repository found`在开始前失败，本轮未重试。
+
+Codex Security上下文读取调用成功，但PR #17 Diff Scan仍为`running / discovery`、发现阶段进度为`0/0`且报告不可用。此前清单生成在同一提交blob上三次失败；本次只读状态检查没有重试清单生成，因此扫描依然未完成，`findingCount=0`不能解释为无漏洞。Standard和Deep Scan启动工具在当前工具目录可用；为控制成本，本轮没有启动新扫描。工具可调用或技能文件可读取不等于扫描执行成功。
+
+后续代理与写路径探测：`gh auth status`确认`AscAed`已认证且令牌含`repo`范围；GitHub连接器确认目标仓库`push=true`。本机代理端口`127.0.0.1:7897`连通，显式代理环境下的GitHub REST读取和强制指定代理的`git ls-remote origin main`均成功。当前远端`main`与审计基线一致为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，GitHub当前无开放PR，PR #17已合并。
+
+常规本地Git推送失败于Git for Windows启动`sh.exe`/`bash.exe`时的Win32 error 5，随后无法读取HTTPS用户名。检查未发现本地或全局Git credential helper；使用临时全局配置调用`gh auth setup-git`后，凭据探针仍退出128。临时文件已清除，未修改全局Git配置。随后仅在本次进程中从已认证的`gh`读取token并设置HTTP Authorization头，沿同一代理推送成功；该次推送后读回的远端分支`codex/post-merge-project-audit-20261111`与当时本地HEAD均为`5b882e33432d7b502eeb2a435cbd61f730d62644`。服务端创建分支成功后，本地无法创建`.git/refs/remotes/origin/...`，故远端跟踪引用未更新；当时工作区干净。该结果证明当前可经代理进行授权写入；原常规push故障来自本地Git凭据/提示与ref写入路径，不能归因于代理缺失。
+
+Google Drive连接器已成功搜索项目归档、列出部分目录项，并读取一份小型文本日志。它证明当前搜索、列目录、读文本可用，不覆盖完整51项回读哈希。`using-superpowers`、`google-drive`、`plugin-management`、`source-command-commit`、`verification-before-completion`和`finishing-a-development-branch`技能文件均能读取；技能文件可读不代表外部写入成功。本轮实际未运行Rust/Python项目测试、未运行CodeRabbit，也未启动Deep Scan。
+
+## 2026-11-11 ACL只读复核与保留决定
+
+只读执行`icacls D:\`和`icacls <repo>\scripts\deploy-local.ps1`。D盘根仍有直接`NT AUTHORITY\Authenticated Users:(M)`以及对象/容器继承标记；部署脚本继承该ACE，另列四个未映射SID的继承Modify ACE。`scripts/deploy-local.ps1:36-37`将CLI及worker复制到`dist/ygo-local`。仓库安全策略查找未发现`SECURITY.md`；当前边界记录参考部署文档、既有安全审计与用户的保留决定。
+
+本轮不枚举账户、不切换用户、不尝试写入或执行部署产物，也不更改ACL。宽泛写权限由当前ACL确认，但不能证明存在其他可登录低权限账户或更高权限执行路径；分诊保持`needs_review`，不宣称已证实可利用。此为主机环境风险，与PR #17代码Diff Scan范围分开记录。
+
+## 2026-11-11 历史research journal链接发现复核
+
+静态对照部分Deep Scan `ec88f465-70e1-478a-a555-f8087bc8a567`的research journal派生链接主张与当前HEAD：`research-audit`入口对操作员提供的ledger路径先执行`safe_output`，拒绝工作区`data/runtime`之外的路径、`..`和沿途symlink/reparse；`CallJournal`另检查直接journal/sidecar组件。现有测试覆盖直接sidecar链接拒绝，但Windows因目录链接权限错误1314跳过动态用例。当前分诊为`needs_review`，原因是公开`CallJournal::open` API不自带调用者路径范围，且其低信任消费者尚未建立；未做运行时复现、没有修改源码。具体source/control/boundary与proof gap见[安全分诊记录](SECURITY_AUDIT.md#2026-11-11-历史research-journal链接发现静态分诊)。这不是原扫描的完整复审。
+
+对同一历史扫描其余候选作只读源码复核：Banlist版本路径穿越当前有单段标识门禁，历史回归夹具覆盖越界版本；终端控制序列在CLI报告输出处转义；慢速HTTP连接受32槽和15秒绝对期限限制，但本机未经认证连接仍可在该期限内暂时占槽。ACL条件以当前`icacls`读数另行核对。分诊和边界证据见[安全审计](SECURITY_AUDIT.md#2026-11-11-历史deep-scan五项发现当前源码分诊)。本轮只阅读源码和既有测试定义，没有执行测试、PoC、应用或新扫描。
+
+Google Drive技能文件可读取，Drive连接器能列出既有归档目录中的51个子项，且读取`047__target__workspace-audit-current-2026-10-28__clippy-after-temp-cleanup.log`正文成功。当前目录权限元数据仅列所有者，子项标记为未共享；本轮只取样一份文件，没有重算全部51份归档对象。历史逐文件哈希结果见[证据保留清单](EVIDENCE_RETENTION.md)。Codex Security的Diff Scan工具/技能可用；因PR #17合并后的独立审阅仍开放，启动了限定该PR差异的扫描。preflight就绪，但变更文件清单生成失败，未进入源发现；当前扫描状态和限制见[安全审计](SECURITY_AUDIT.md)。本轮没有启动全仓Deep Scan。
+
+本机`dist/ygo-local`仍是2026-10-19包。运行其文档指定命令`.\dist\ygo-local\ygo.cmd engine doctor`返回`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`。`ygo.exe` SHA-256为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`，worker为`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与旧包自身`build-hashes.json`一致。该结果限定于旧包及其配置指向的本机资产；`smoke_ok=null`表示没有真实决斗smoke，不证明PR #17源码已部署、真实分析/FFI执行或P4-R5通过。未运行Rust/Python全量测试，因为本次改动仅为文档，合并源码树已有PR CI记录；当前未提交文档的验收只覆盖文档静态检查。
+
+PR #17架构映射发现两处文档表述与源码不一致，已在当前工作区修正：[WORKBENCH](WORKBENCH.md)将访问令牌改为按服务实例存续的描述；[持久化合同](WORKBENCH_ANALYSIS_PERSISTENCE.md)说明FFI事件帧、adapter/search回执和HostAck已接通源码路径，同时保留合成验证与无真实worker/ocgcore运行证据的边界。另对`target/`完成一次Robocopy `/L`只读枚举：该采样在下述两批缓存删除前，报告119,042,069,965字节逻辑文件、30个目录失败，耗时7分05秒；采样本身无文件被复制或删除。代码未修改；PR差异中的文档不一致存在于固定审计head，后续若扫描器恢复，应保持head范围不变并将当前文档修复作为独立工作树差异处理。
+
+按同一环境清理边界，逐项移除八个隔离Cargo debug缓存。前三批五处路径为`target/w1c-ffi-journal/debug`、`target/w1c-process-observation/debug`、`target/w1c-attempt-journal/debug`、`target/w1c-ffi-final/debug`和`target/h3-time-budget-recovery/debug`，删除67,957个文件、43,479,517,473字节逻辑大小；63个mtime变化但SHA-256匹配的`.rmeta`文件保留。第四批三处路径为`target/h3-2b-2-cargo/debug`、`target/audit-20261109/rust/debug`和`target/audit-20261105/rust/debug`，删除37,916个文件、24,425,236,725字节；27个时间戳变化的`.rmeta`保留，逐个当前哈希与原清单一致。总计删除105,873个文件、67,904,754,198字节逻辑内容，保留90个哈希匹配但mtime变化的`.rmeta`。根目录测试日志、合成测试状态目录和其他target子树保留。操作过程中的时间解析、摘要写入和日志核对问题均保留并已对账；已核实后续幂等重试没有额外删除。清理不改源码，也未运行测试或重建。汇总及覆盖限制见[环境审计](ENVIRONMENT_AUDIT.md)和忽略清理记录`data/runtime/cleanup-audit/target-isolated-debug-cache-20261111-all-batches-reconciliation.json`。
+
+最终工作区文档复核：14份Markdown变更、0份非Markdown变更、相对链接目标缺失0；`git diff --check`通过。该检查不表示安全Diff Scan完成，也不替代Rust/Python或真实部署验证。
+
+同日CodeRabbit CLI `0.9.3`已认证，主仓库Git识别正常，但`review --committed --base-commit ...`及CLI建议的`--dir`重试均立即报`No Git repository found`；没有产生CodeRabbit审阅结果。详见[PR #17审阅交接](superpowers/plans/2026-11-09-pr17-review.md)。
+
 ## 2026-11-10 PR #17两项增量审查修复
 
 对远端 `c9455d577fc08c1e51663eed079f166d282ab61c` 至 `0aaf04b85f44e3cf72e87a5b1f30e779b922b74a` 的增量变更进行只读 CodeRabbit 审阅，发现两项并发/后台任务生命周期问题。候选修复分别让 job 初始 revision 发布与同一 store 的扫描互斥，避免扫描看到刚创建但尚未发布首条 revision 的目录；回收已结束的后台线程时显式 `join`，若线程 panic 则停止 dispatch，避免吞掉 panic 后继续接收任务。

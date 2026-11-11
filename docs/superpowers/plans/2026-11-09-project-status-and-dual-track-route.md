@@ -1,6 +1,10 @@
 # 项目现状评估与双轨实施路线（2026-11-09）
 
-本页记录2026-11-09项目评估路线及2026-11-10补充状态。当前能力、开放门禁以[TASKS](../../../TASKS.md)为准；每项验证的日期、源码和资产身份以[TESTING](../../TESTING.md)为准；产品目标以[PRODUCT_VISION](../../PRODUCT_VISION.md)为准。历史路线和逐日更新保留为审计轨迹。
+本页记录2026-11-09项目评估路线及后续状态更新。当前能力、开放门禁以[TASKS](../../../TASKS.md)为准；每项验证的日期、源码和资产身份以[TESTING](../../TESTING.md)为准；产品目标以[PRODUCT_VISION](../../PRODUCT_VISION.md)为准。历史路线和逐日更新保留为审计轨迹。
+
+## 2026-11-11状态更新
+
+PR #17于2026-11-10 12:28:44 UTC合入，merge commit为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`，变更191个文件。`contracts` CI通过；CodeRabbit最终check因PR关闭而取消，GitHub reviews为空。故最终head的独立审阅及完整兼容性复核仍开放。PR代码已进入main源码，不代表已部署：`dist/ygo-local`仍是2026-10-19旧包，P4-R5保持开放。W1-C来源与计量、生产worker/ocgcore/FFI资格、报告来源与消费认证仍开放。上方2026-11-10和下方原路线中的未合并描述均为历史快照。
 
 ## 2026-11-10状态更新
 
@@ -8,13 +12,13 @@
 
 新增提交`887e343`修复首次任务修订发布与并发扫描之间的竞态，并在后台线程panic后停止派发、回收线程；定向回归、CLI与workspace测试、Clippy、fmt均通过，CI亦通过。CodeRabbit最近已完成的远端审阅仅覆盖`c9455d5..0aaf04b`增量，不覆盖最终head，也不构成完整PR审阅。PR整体30提交范围、跨批次兼容性和部署/生产worker门禁仍未关闭，因此保持Draft，不合并。
 
-## 评估定位
+## 项目定位与状态
 
-项目仍是**具备牌组草稿工作台的有限场景研究原型**。主线`main`为`ec83bad`，较本地`origin/main`的`577924b`领先27个提交；`ec83bad`只补记11月9日审计，最近默认离线代码验证基线为其父提交`8c7afe6`。该验证为Rust workspace 495 passed/36 ignored、Python 821 passed/9 skipped/219 subtests passed，格式与Clippy通过；它没有运行doctor、worker、ocgcore/FFI、研究runner、真实分析或部署。
+项目仍是**具备牌组草稿工作台的有限场景研究原型**。2026-11-11本地`main`与`origin/main`同步于`1197976`。下述`ec83bad`、`8c7afe6`及测试数字均为2026-11-09的历史验证快照，不是合并后main的重新验证；它没有运行doctor、worker、ocgcore/FFI、研究runner、真实分析或部署。
 
-本机已有牌组草稿CLI及loopback工作台，支持草稿保存和YDK/JSON往返。源码可经显式配置运行固定Rabbit分析；唯一已记录的本机有限运行以`budget_limited/time_budget`结束，160个搜索节点、165次应用层`engine_calls`。它没有证明搜索完整、全局最优或FFI/消费数量；报告来源仍为未认证。普通`workbench serve`保持`analysis_not_configured`。
+本机已有牌组草稿CLI及loopback工作台，支持草稿保存和YDK/JSON往返。源码可经显式配置运行固定Rabbit分析；唯一已记录的本机有限运行以`budget_limited/time_budget`结束，160个搜索节点、165次应用层`engine_calls`。它没有证明搜索完整、全局最优或FFI/消费数量；报告来源仍为未认证。PR #17 worker宿主确认流已进入当前main源码，但无生产运行资格。普通`workbench serve`保持`analysis_not_configured`。
 
-PR #17承载W1-C worker宿主确认流。截至2026-11-10，PR head为`887e3430cff88704e8b8e183a3df1b94dfbb6960`，base为`577924bc0c2af06044b77c065eea769c465ff2fe`，共30个提交、190个文件；CI run `42767483602`通过。PR仍为Open Draft。最终head的CodeRabbit check因Draft被跳过，GitHub reviews列表为空；此前远端审阅不覆盖最终head，本地CLI审阅也未能启动，因此完整PR审阅及兼容性复核仍开放。attempt receipt每job 20,000事件上限已在候选中移除，按每段4,096条分目录写入并兼容旧平铺历史；准入包测试改用自包含快照夹具。PR保持独立分支，未合入当前`main`。部分结果/消费记录、report producer来源、ResearchBatch消费单位和unknown消费仍开放；合成测试不认证生产worker、ocgcore/FFI执行、研究消费或部署。详见[PR #17审阅记录](2026-11-09-pr17-review.md)与[验证记录](../../TESTING.md)。
+历史路线快照（2026-11-10）：PR #17承载W1-C worker宿主确认流。当时head为`887e3430cff88704e8b8e183a3df1b94dfbb6960`，base为`577924bc0c2af06044b77c065eea769c465ff2fe`，共30个提交、190个文件；CI run `42767483602`通过，PR为Open Draft。最终head的CodeRabbit check因Draft被跳过，GitHub reviews列表为空；此前远端审阅不覆盖最终head，本地CLI审阅也未能启动。attempt receipt每job 20,000事件上限已在候选中移除，按每段4,096条分目录写入并兼容旧平铺历史；准入包测试改用自包含快照夹具。此时PR尚未合入main。该状态由上方2026-11-11更新取代；部分结果/消费记录、report producer来源、ResearchBatch消费单位和unknown消费仍开放，合成测试不认证生产worker、ocgcore/FFI执行、研究消费或部署。详见[PR #17审阅记录](2026-11-09-pr17-review.md)与[验证记录](../../TESTING.md)。
 
 本机`dist/ygo-local`仍为2026-10-19旧包。CLI与worker哈希匹配包内`build-hashes.json`，但包无完整`manifest.json`且不含workbench入口；这只确认旧包与自身清单一致，不表示当前源码已部署。P4-R5仍开放。
 
@@ -42,10 +46,10 @@ PR #17承载W1-C worker宿主确认流。截至2026-11-10，PR head为`887e3430c
 
 | 批次 | 工作与退出条件 |
 |---|---|
-| 0. PR #17交付审阅 | 截至2026-11-10，head `887e343`、30个提交、190个文件，contracts CI通过，PR保持Open Draft。最终head的CodeRabbit check因Draft跳过，GitHub reviews列表为空；此前CodeRabbit结果不覆盖最终head，本地CLI也未能启动候选审阅。完整范围、跨批次依赖、验证声明与兼容性复核仍开放；PR不集成。部分结果/消费记录和恢复合同仍需另行定义，unknown不代表零消费。 |
-| 1. W1-C宿主确认流 | 复核opt-in协议、旧单行协议兼容、假worker双向握手、持久化先于ACK、超时/写失败停派和子进程回收。通过只证明协议与假worker矩阵，不认证生产worker、ocgcore或真实消费。 |
+| 0. PR #17交付审阅（历史状态） | 2026-11-10快照曾为head `887e343`、30个提交、190个文件，contracts CI通过且PR为Open Draft；该PR已于2026-11-10合入。最终head CodeRabbit检查因关闭取消，GitHub reviews为空。完整范围、跨批次依赖、验证声明与兼容性复核仍开放；部分结果/消费记录和恢复合同仍需另行定义，unknown不代表零消费。 |
+| 1. W1-C宿主确认流复核 | 该实现已随PR #17进入main。按风险审查协议兼容、持久化先于ACK、超时/写失败停派及子进程回收；CI合同通过，但最终独立审阅取消。协议/假worker证据不认证生产worker、ocgcore或真实消费。 |
 | 2. W1-C来源与计量 | 先定义可认证的源码/构建/资产身份、报告producer来源和ResearchBatch消费单位；身份缺失、事件不完整或消费单位未定时保持unknown。若要真实运行，另立固定输入、预算、停止条件和scope。 |
-| 3. H3按需门禁 | PR审阅后将worker ACK失败/未决事件与H3持久job状态映射；仅当某个尚无证据的恢复/调度边界阻塞W1-C验收时，才选取该单点，记录相邻证据、持久状态、握手及重开断言。若没有H3边界构成W1-C前置条件，就不为填满矩阵而扩测。H2.2-B的16次取消/领取竞争均观察到claim胜出，cancel先完成目前只有顺序用例；这是已知调度覆盖缺口，但是否优先由独立用户流程需求决定。 |
+| 3. H3按需门禁 | 将worker ACK失败/未决事件与H3持久job状态映射；仅当某个尚无证据的恢复/调度边界阻塞W1-C验收时，才选取该单点，记录相邻证据、持久状态、握手及重开断言。若没有H3边界构成W1-C前置条件，就不为填满矩阵而扩测。H2.2-B的16次取消/领取竞争均观察到claim胜出，cancel先完成目前只有顺序用例；这是已知调度覆盖缺口，但是否优先由独立用户流程需求决定。 |
 | 4. 并行研究与数据 | L1分别审阅语义/别名与使用和再分发依据；Ground opcode24继续hold，先核对精确来源、资产和单次准入条件；R1b-3不续跑见证输入不一致的旧attempt，重新设计scope、暂停恢复和独立replay。每项缺证都保留unknown。 |
 | 5. 产品与发布 | W2需独立Windows用户或虚拟机验收启动、草稿往返、升级和回滚；P4依R2规则资格→R3 v6及兼容→R4冻结16+32手基准→R5双资产和可比账本推进。缺少独立环境、预算或来源时保持开放。 |
 

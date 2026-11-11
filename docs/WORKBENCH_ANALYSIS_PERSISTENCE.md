@@ -54,7 +54,11 @@ job/report ID均为服务生成的32位小写十六进制；不接受浏览器�
 
 2026-11-04新增两项测试观察：`time_budget`报告原因作为既有`budget_limited`保存后K点的第二个输入场景；它与`node_budget`共用同一物理回调，不形成新逻辑窗口。显式`mark_unknown`另有独立K：`CompletionUncertain`终态revision已落盘、内存running槽尚未结算时终止，重开保留原终态且不再追加revision。此测试不代表真实worker或不确定调用已被证明；消费仍保持unknown。结果见[窗口交接](superpowers/plans/2026-11-04-unknown-terminal-persisted-before-queue-update.md)、[原因分类交接](superpowers/plans/2026-11-04-time-budget-recovery-handoff.md)与[TESTING](TESTING.md)。
 
-2026-11-04 W1-C在job目录增加可选的`attempt_receipts`私有追加日志，不改变job revision、HTTP或报告schema。每个事件绑定operation ID、job ID、running revision、command摘要、job input binding、input与冻结资产摘要；source bundle/build record身份由当前workbench执行器标为null。adapter调用前先同步发布`Started`，返回后再发布host观察结果；事件按序号、前驱摘要和事件摘要组成链。新写入的序号1–4,096仍使用`<sequence>.json`，之后写入`segments/segment-<index>/<sequence>.json`，每段最多4,096条；读取器继续接受旧版序号1–20,000的平铺文件。单事件仍限制为256 KiB，没有固定的总事件数上限；实际存储或完整链读取/校验失败时协调器停止派发，重开将仍处于running的job分类为unknown，不自动重试。当前读取器将整条历史载入内存校验，因此超大日志仍受可用磁盘、内存和运行时间限制。未完成的末尾`Started`是可认证的崩溃现场；跨链重开同时验证receipt与accepted operation及历史running job revision的绑定。该日志已接受合成`ffi_entered`/`ffi_returned`事件；同一attempt内按连续序号和job级唯一call ID配对，嵌套调用按LIFO返回，未返回入口保留为未决记录，HostResult拒绝关闭未决FFI调用。追加校验和整条磁盘历史重验均检查call ID唯一性，损坏或伪造链拒绝恢复。当前workbench和worker transport尚未产生这些真实FFI事件，因此该合同不证明OS worker/ocgcore调用、报告生产来源或消费；详见[W1-C验证记录](TESTING.md)及[来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+历史记录（2026-11-04 W1-C）：在job目录增加可选的`attempt_receipts`私有追加日志，不改变job revision、HTTP或报告schema。事件绑定operation/job/running revision/command/input/冻结资产摘要；adapter调用前持久化`Started`，返回后记录host观察。序号1–4,096使用平铺文件，之后每段最多4,096条；读取器兼容旧版平铺序号至20,000；单事件上限256 KiB，无固定总事件数上限。存储或完整链读取/校验失败时停止派发，重开将running分类为unknown且不自动重试；读取器会将整条历史载入内存。FFI entered/returned按连续序号、唯一call ID和嵌套LIFO配对；未返回入口保留为未决，HostResult拒绝关闭未决调用。当时的验证只接受合成FFI事件，尚未证明OS worker/ocgcore调用、报告生产来源或消费。详见[W1-C验证记录](TESTING.md)及[来源与调用计量计划](superpowers/plans/2026-11-04-w1c-provenance-accounting-plan.md)。
+
+## 2026-11-11源码集成复核
+
+PR #17于2026-11-10合入后，当前源码已将worker FFI事件帧接入adapter、搜索attempt日志和workbench持久回执路径；host持久化回执后才发送HostAck（`crates/ygo-search/src/combo.rs:832-889`、`crates/ygo-engine-adapter/src/process.rs:458-540`、`crates/ygo-cli/src/workbench/analysis_http.rs:218-232`）。attempt receipt context中的`source_bundle_identity`和`build_record_identity`仍为`null`（`crates/ygo-cli/src/workbench_analysis/attempt_receipts.rs:54-76`）。这是源码实现能力，不表示当前`dist/ygo-local`包含该代码，也不代表真实worker/ocgcore运行、报告producer来源或ResearchBatch消费已认证。合并后验证记录仍限于合成worker协议测试。
 
 | 操作 | 必须先提交 | 然后允许 |
 |---|---|---|
