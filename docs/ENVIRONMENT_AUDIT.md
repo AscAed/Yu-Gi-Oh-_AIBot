@@ -24,6 +24,12 @@
 
 2026-11-11工具可用性复核：Git 2.40.0、Cargo/rustc 1.98.1、rustfmt 1.9.0、Clippy 0.1.98、Python 3.14.7、pytest 9.1.1、GitHub CLI 2.96.0和CodeRabbit CLI 0.9.3均可报告版本；本轮未运行项目测试或CodeRabbit审阅。代理端口`127.0.0.1:7897`本机连通；显式设置代理后GitHub CLI认证及REST只读请求成功，GitHub连接器也能读取PR #17。Drive连接器成功列出归档中的单个请求条目并读取其文本内容。Codex Security能读取既有Diff Scan上下文，但扫描仍停留在discovery阶段；它不表示源发现已完成。具体范围、未验证能力和技能入口见[TESTING](TESTING.md#2026-11-11-增量工具可用性与旧包探针)。未测试未代理外网访问、Git push或PR写入权限；因此当前连通不能证明此前认证失败的根因。
 
+2026-11-11后续代理与凭据复核：当前工作区工具探测确认`gh auth status`为`AscAed`已认证，token含`repo`范围；GitHub连接器对`AscAed/Yu-Gi-Oh-_AIBot`返回`push=true`。`Test-NetConnection 127.0.0.1 -Port 7897`成功；在同一终端显式设置HTTP/HTTPS/SOCKS代理后，`gh api repos/AscAed/Yu-Gi-Oh-_AIBot`和强制指定该HTTP代理的`git ls-remote origin main`均成功，远端`main`为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`。GitHub REST及连接器读取成功，不能据此将此前失败唯一归因于代理缺失。
+
+本地提交`259773a5934a22c3164df1595a765b739a4d1499`已包含14份Markdown，提交前后`git diff --check`通过。代理可达时`git push`仍失败：Git for Windows启动`sh.exe`/`bash.exe`时报告Win32 error 5，随后Git无法读取HTTPS用户名。此前本地和全局均未配置Git credential helper；将`gh auth setup-git`限制在临时全局配置后，`git credential fill`仍返回128且未产生凭据。临时配置已删除，全局Git配置未改动。故当前证据指向Git凭据助手/提示子进程路径未打通；它不能证明此前无代理是唯一原因。PR分支尚未通过本地Git推送建立。
+
+Google Drive搜索和目录读取成功；当前探测列出归档目录前8项，并成功读取一份小型文本日志。该项证明连接器可搜索、列目录和读取文本，不是对51个归档对象的完整性复核。Codex Security的现有Diff Scan上下文读取成功，状态仍为`running / discovery`、报告不可用；Standard与Deep Scan启动工具在当前工具目录可见，但本轮未启动新扫描。相关技能文件可读取不等同于扫描执行成功；本轮实际读取的技能文件见[TESTING](TESTING.md#2026-11-11-增量工具可用性与旧包探针)。
+
 ## 历史现场（2026-11-04）
 
 该节记录2026-11-04的源码/安全审计基线，不是当前checkout或运行资产的重新核验。当前源码、PR和部署包关系见[DEPLOYMENT](DEPLOYMENT.md)；ACL保留决定和扫描覆盖见[SECURITY_AUDIT](SECURITY_AUDIT.md)。

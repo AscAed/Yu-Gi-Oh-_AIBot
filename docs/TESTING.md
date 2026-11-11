@@ -28,7 +28,13 @@
 
 本轮本地命令探测通过：`rustc 1.98.1`、`cargo fmt 1.9.0`、`cargo clippy 0.1.98`、`pytest 9.1.1`及`coderabbit 0.9.3`均可报告版本。仅探测执行器，没有运行项目测试或CodeRabbit审阅。当前可读的相关技能文件包括`using-superpowers`、`plugin-management`、Google Drive、Codex Security `security-diff-scan`/`deep-security-scan`及`yeet`；本轮实际按需读取前述技能指引。Skill文件可读取不等于其目标服务/操作成功；CodeRabbit CLI此前的同日审阅调用仍因`No Git repository found`在开始前失败，本轮未重试。
 
-Codex Security上下文读取调用成功，但原Diff Scan仍为`running / discovery`、无发现阶段进度且报告不可用。此前清单生成在同一提交blob上三次失败；本次只读状态检查没有重试清单生成，因此扫描依然未完成，`findingCount=0`不能解释为无漏洞。安全扫描工具可读取状态，不代表审计流程成功。Deep Scan没有启动；本轮工具发现未返回Deep Scan启动工具，技能文件可读不等于启动端点可用。
+Codex Security上下文读取调用成功，但PR #17 Diff Scan仍为`running / discovery`、发现阶段进度为`0/0`且报告不可用。此前清单生成在同一提交blob上三次失败；本次只读状态检查没有重试清单生成，因此扫描依然未完成，`findingCount=0`不能解释为无漏洞。Standard和Deep Scan启动工具在当前工具目录可用；为控制成本，本轮没有启动新扫描。工具可调用或技能文件可读取不等于扫描执行成功。
+
+后续代理与写路径探测：`gh auth status`确认`AscAed`已认证且令牌含`repo`范围；GitHub连接器确认目标仓库`push=true`。本机代理端口`127.0.0.1:7897`连通，显式代理环境下的GitHub REST读取和强制指定代理的`git ls-remote origin main`均成功。当前远端`main`与审计基线一致为`119797620b42815d7c3e55f4b16f8e0e1be8e3df`，GitHub当前无开放PR，PR #17已合并。
+
+对本地Git推送的实际尝试失败于Git for Windows启动`sh.exe`/`bash.exe`时的Win32 error 5，继而未能读取HTTPS用户名。检查未发现本地或全局Git credential helper；使用临时全局配置调用`gh auth setup-git`后，凭据探针仍退出128。临时文件已清除，未修改全局Git配置。结论仅为本地Git的凭据助手/提示启动链路当前不可用；代理和GitHub CLI/API读取已证实可用，不能把旧失败单独归因于缺少代理。
+
+Google Drive连接器已成功搜索项目归档、列出部分目录项，并读取一份小型文本日志。它证明当前搜索、列目录、读文本可用，不覆盖完整51项回读哈希。`using-superpowers`、`google-drive`、`plugin-management`、`source-command-commit`、`verification-before-completion`和`finishing-a-development-branch`技能文件均能读取；技能文件可读不代表外部写入成功。本轮实际未运行Rust/Python项目测试、未运行CodeRabbit，也未启动Deep Scan。
 
 ## 2026-11-11 ACL只读复核与保留决定
 
