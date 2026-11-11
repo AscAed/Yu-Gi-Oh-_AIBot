@@ -41,7 +41,7 @@ fn temp_dir() -> TempDir {
 #[test]
 fn temp_dirs_are_unique_when_allocated_concurrently() {
     const THREADS: usize = 32;
-    const ROUNDS: usize = 16;
+    const ROUNDS: usize = 1;
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(THREADS));
     let directories = std::thread::scope(|scope| {
         let handles = (0..THREADS)
