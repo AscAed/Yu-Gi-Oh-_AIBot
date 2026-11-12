@@ -6,7 +6,7 @@
 
 **能力边界：**当前不是自动构筑器，也不支持任意卡效、任意手坑、后攻或完整对局。新首回合模块的局部实验不代表正式 v6；符合规则的行为仍以真实引擎和独立重放为准。评分是启发式；有界搜索不能证明全局最优。
 
-产品方向是中文本机浏览器卡组工作台，以及构筑与Combo评估反馈闭环。当前源码CLI提供`deck draft`与`workbench serve`，支持草稿编辑和YDK/JSON往返；H2.2六个分析HTTP端点及无路径DTO已接入源码，另有固定Rabbit的W1-C单次分析路径。普通启动保持`analysis_not_configured`；该单次运行以`budget_limited/time_budget`结束，不构成通用或完整生产分析能力。D盘普通发布包仍是2026-10-19旧包，未包含当前工作台分析接入。基础功能离线、大模型可选；最终AI要求冻结版本全部正式OCG与明确首回合情景的全局最优证明，该研究可行性尚未建立。当前双轨路线见[产品愿景](docs/PRODUCT_VISION.md)、[差距评估](docs/PROJECT_ASSESSMENT.md)和[2026-11-03更新的实施路线](docs/superpowers/plans/2026-11-01-post-w1h322b1-project-route.md)。编辑器等预览成果不能替代最终验收。
+产品方向是中文本机浏览器卡组工作台，以及构筑与Combo评估反馈闭环。当前源码CLI提供`deck draft`与`workbench serve`，支持草稿编辑和YDK/JSON往返；H2.2六个分析HTTP端点及无路径DTO已接入源码，另有固定Rabbit的W1-C单次分析路径。普通启动保持`analysis_not_configured`；该单次运行以`budget_limited/time_budget`结束，不构成通用或完整生产分析能力。D盘普通发布包仍是2026-10-19旧包，未包含当前工作台分析接入。基础功能离线、大模型可选；最终AI要求冻结版本全部正式OCG与明确首回合情景的全局最优证明，该研究可行性尚未建立。当前双轨路线见[产品愿景](docs/PRODUCT_VISION.md)、[差距评估](docs/PROJECT_ASSESSMENT.md)和[2026-11-09项目现状与双轨路线](docs/superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。编辑器等预览成果不能替代最终验收。
 
 ## 本机快速运行
 
