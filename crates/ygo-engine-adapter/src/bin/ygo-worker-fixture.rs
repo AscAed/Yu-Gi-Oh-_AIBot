@@ -14,7 +14,7 @@ fn main() {
         let mut request = String::new();
         std::io::stdin().lock().read_line(&mut request).unwrap();
         if name.contains("hang") {
-            std::thread::sleep(std::time::Duration::from_secs(60));
+            std::thread::sleep(std::time::Duration::from_secs(10));
         } else if name.ends_with("-valid") {
             let mut result = ygo_engine_adapter::DuelResult::failure(
                 ygo_engine_adapter::WorkerError::new("fixture", "test", ""),
@@ -48,7 +48,7 @@ fn stream_fixture(name: &str) {
         WorkerFrameKind, MAX_EVENT_FRAME_BYTES, STREAM_VERSION,
     };
     if name.contains("stream-no-read") {
-        std::thread::sleep(std::time::Duration::from_secs(60));
+        std::thread::sleep(std::time::Duration::from_secs(10));
         return;
     }
     let stdin = std::io::stdin();
