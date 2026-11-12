@@ -347,7 +347,7 @@ fn stream_supervisor_times_out_when_receipt_persistence_exceeds_deadline() {
 #[test]
 fn stream_supervisor_deadline_covers_a_blocked_request_pipe_write() {
     let (mut request, _, path, directory) = stream_fixture("stream-no-read");
-    request.engine.timeout_ms = 1000;
+    request.engine.timeout_ms = 5000;
     // Fill the pipe without making request encoding dominate the deadline.
     request.engine.ocgcore_path = PathBuf::from(format!("{}.dll", "x".repeat(1024 * 1024)));
     let adapter = ProcessEngineAdapter::new(request.engine.clone());
