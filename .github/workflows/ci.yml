@@ -6,6 +6,15 @@ on:
     branches: [main]
   workflow_dispatch:
 jobs:
+  msrv:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.78.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo +1.78.0 test --workspace --locked
   contracts:
     runs-on: windows-latest
     steps:

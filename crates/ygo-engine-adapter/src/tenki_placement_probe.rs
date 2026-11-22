@@ -60,6 +60,7 @@ const VALIDATION_SPEC: BatchSpec = BatchSpec {
     full_window_result: true,
 };
 
+#[allow(dead_code)] // Used by compile-time assertions below.
 const fn is_sha256_hex(value: &str) -> bool {
     let bytes = value.as_bytes();
     if bytes.len() != 64 {

@@ -465,8 +465,8 @@ fn checkpoint(
         let raw = buffer(ptr, len)?;
         let mut r = Reader::new(&raw);
         r.u32()?;
-        for p in 0..2 {
-            state.lp[p] = r.u32()?;
+        for lp in &mut state.lp {
+            *lp = r.u32()?;
             for _ in 0..7 {
                 if r.u8()? != 0 {
                     r.u8()?;
