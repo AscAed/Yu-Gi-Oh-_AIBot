@@ -4,7 +4,7 @@
 
 基线为干净checkout `codex/project-audit-20261123 / d81f2eee636432751cb874c2ae30ceaa21235126`，与`origin/main`一致；该tree与PR #21最终head的tree SHA相同。PR #21于2026-11-23 06:02:05 +08:00合入，修复Windows牌组草稿测试临时目录竞争，并加入Rust 1.78 MSRV验证。
 
-GitHub Actions push run `45075391526`的`contracts`及`msrv` job均通过。`contracts`运行格式、workspace全目标Clippy、workspace测试、adapter示例和Python editable install；`msrv`运行`cargo +1.78.0 test --workspace --locked`。该push workflow没有运行pytest。与当前相同tree的本地Python套件结果为**881 passed、10 skipped、225 subtests passed**；跳过项和本地资产限制按当次日志解释，不将其视为通过。
+GitHub Actions push run `45075391526`的`contracts`及`msrv` job均通过。`contracts`运行格式、workspace全目标Clippy、workspace测试、adapter示例；最后一个Python步骤依次执行editable install、完整pytest收集和运行、样例卡数据CLI校验，整个步骤成功。`msrv`运行`cargo +1.78.0 test --workspace --locked`。与当前相同tree的本地Python套件结果为**881 passed、10 skipped、225 subtests passed**；跳过项和本地资产限制按当次日志解释，不将其视为通过。
 
 受管Codex Security helper首次尝试`613608ec-6e91-4e6e-babc-49afe0bc55e1`因读取提交blob失败，未生成清单。随后将`CODEX_SECURITY_GIT`配置为兼容Git `2.56.0.windows.4`（PATH Git为`2.40.0.windows.1`），受管调用`d5cf9c75-d5f8-4051-a0ba-abb1a1effa8c`成功重新生成当前main精确范围inventory：`119797620b42815d7c3e55f4b16f8e0e1be8e3df..d81f2eee636432751cb874c2ae30ceaa21235126`，19个提交、25个路径。helper清单与独立兼容Git diff精确集合一致，inventory SHA-256为`7A8922E4DEDAA7B57A7AC21655929143643DD30486394252881BF2AFFAB1F138`；因helper未提供子进程实际Git绝对路径遥测，只能确认配置值、产物成功及集合一致。`d5...`本身是inventory-only调用，仍为`running / preflight`、0 review rows。
 
