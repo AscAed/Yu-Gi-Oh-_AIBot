@@ -2,11 +2,16 @@ use std::{
     fs,
     ops::Deref,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     thread,
 };
 use ygo_domain::DeckDocumentV1;
 use ygo_storage::DeckDraftStore;
+
+static NEXT_TEMP_DIR: AtomicU64 = AtomicU64::new(0);
 
 struct TempDir(PathBuf);
 
@@ -25,16 +30,23 @@ impl Drop for TempDir {
 }
 
 fn temp_dir() -> TempDir {
-    let root = std::env::temp_dir().join(format!(
-        "ygo-workbench-store-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-    fs::create_dir_all(&root).unwrap();
-    TempDir(root)
+    let base = std::env::temp_dir();
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    loop {
+        let sequence = NEXT_TEMP_DIR.fetch_add(1, Ordering::Relaxed);
+        let root = base.join(format!(
+            "ygo-workbench-store-{}-{timestamp}-{sequence}",
+            std::process::id()
+        ));
+        match fs::create_dir(&root) {
+            Ok(()) => return TempDir(root),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("failed to create isolated test directory: {error}"),
+        }
+    }
 }
 
 fn draft(title: &str, main: Vec<u32>) -> DeckDocumentV1 {

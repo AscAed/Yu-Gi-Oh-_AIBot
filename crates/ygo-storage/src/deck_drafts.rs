@@ -587,13 +587,25 @@ impl Drop for DirectoryLock {
 
 #[cfg(windows)]
 #[repr(C)]
-#[derive(Default)]
 struct Overlapped {
     internal: usize,
     internal_high: usize,
     offset: u32,
     offset_high: u32,
     event: *mut std::ffi::c_void,
+}
+
+#[cfg(windows)]
+impl Default for Overlapped {
+    fn default() -> Self {
+        Self {
+            internal: 0,
+            internal_high: 0,
+            offset: 0,
+            offset_high: 0,
+            event: std::ptr::null_mut(),
+        }
+    }
 }
 
 #[cfg(windows)]

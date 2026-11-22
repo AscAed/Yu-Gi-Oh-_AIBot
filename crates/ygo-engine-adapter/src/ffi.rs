@@ -7,7 +7,6 @@ use std::{
 };
 pub type Duel = *mut c_void;
 #[repr(C)]
-#[derive(Default)]
 pub struct CardData {
     pub code: u32,
     pub alias: u32,
@@ -22,6 +21,26 @@ pub struct CardData {
     pub rscale: u32,
     pub link_marker: u32,
 }
+
+impl Default for CardData {
+    fn default() -> Self {
+        Self {
+            code: 0,
+            alias: 0,
+            setcodes: std::ptr::null_mut(),
+            type_flags: 0,
+            level: 0,
+            attribute: 0,
+            race: 0,
+            attack: 0,
+            defense: 0,
+            lscale: 0,
+            rscale: 0,
+            link_marker: 0,
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Player {
@@ -164,5 +183,10 @@ mod tests {
         assert_eq!(std::mem::offset_of!(CardData, race), 32);
         assert_eq!(std::mem::offset_of!(Options, reader), 64);
         assert_eq!(std::mem::size_of::<Options>(), 136);
+    }
+
+    #[test]
+    fn default_card_data_has_null_setcodes() {
+        assert!(CardData::default().setcodes.is_null());
     }
 }
