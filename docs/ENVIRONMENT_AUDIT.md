@@ -2,7 +2,7 @@
 
 ## 当前环境与审计快照（更新至2026-11-23）
 
-当前审计checkout为`C:\Users\AscAed\.codex\worktrees\fix-windows-draft-temp-race\Yu-Gi-Oh!_AIBot`，分支`codex/project-audit-20261123`，HEAD与`origin/main`同为`d81f2eee636432751cb874c2ae30ceaa21235126`。该工作树开始时干净。本机普通部署仍在独立D盘checkout，`dist/ygo-local`为2026-10-19旧包；2026-11-23只读哈希复核与doctor结果见[DEPLOYMENT](DEPLOYMENT.md)和[TESTING](TESTING.md)。
+本次源码与部署审计基线checkout为`C:\Users\AscAed\.codex\worktrees\fix-windows-draft-temp-race\Yu-Gi-Oh!_AIBot`，分支`codex/project-audit-20261123`，检查时HEAD与`origin/main`同为`d81f2eee636432751cb874c2ae30ceaa21235126`；该工作树开始时干净。本机普通部署仍在独立D盘checkout，`dist/ygo-local`为2026-10-19旧包；2026-11-23只读哈希复核与doctor结果见[DEPLOYMENT](DEPLOYMENT.md)和[TESTING](TESTING.md)。
 
 D盘主checkout `codex/post-merge-pr19-status-20261112 / e3add2afa0f6ebc78c3fbdb02fd090b1a1583f12`保有约50项已跟踪修改及4项未跟踪文件，包含暂存和未暂存的交叠文档变更；其HEAD不是当前main祖先。本次仅只读检查并保留该工作区，未在其中修改、清理或提交。两个checkout的源码和状态不可合并推断。
 

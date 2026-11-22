@@ -4,7 +4,7 @@
 
 ## 当前状态（2026-11-23）：PR #21已合入；产品与执行资格仍开放
 
-当前审计checkout为`codex/project-audit-20261123 / d81f2eee636432751cb874c2ae30ceaa21235126`，与`origin/main`一致；PR #21已于2026-11-23 06:02:05 +08:00合入。该PR修复Windows牌组草稿测试临时目录竞争，并加入Rust 1.78 MSRV CI。合并后GitHub Actions run `45075391526`的`contracts`与`msrv`两个job均通过；精确步骤和本地Python结果见[TESTING](docs/TESTING.md#2026-11-23-pr-21合并与当前主线验证)。
+本次源码与部署审计基线为`codex/project-audit-20261123 / d81f2eee636432751cb874c2ae30ceaa21235126`；检查时该提交与`origin/main`一致。PR #21已于2026-11-23 06:02:05 +08:00合入，修复Windows牌组草稿测试临时目录竞争，并加入Rust 1.78 MSRV CI。合并后GitHub Actions run `45075391526`的`contracts`与`msrv`两个job均通过；精确步骤和本地Python结果见[TESTING](docs/TESTING.md#2026-11-23-pr-21合并与当前主线验证)。
 
 当前main的Codex Security inventory `d5cf9c75-d5f8-4051-a0ba-abb1a1effa8c`已针对`119797620b42815d7c3e55f4b16f8e0e1be8e3df..d81f2eee636432751cb874c2ae30ceaa21235126`生成并独立核对，共25项；该次调用仍为inventory-only preflight。另一次同范围语义扫描`932e092a-07cf-4901-b58d-46a892e16106`已完成25/25路径审阅，未产生可报告发现，仅适用于该精确差异。PR #17原差异另有2026-11-17完成的历史扫描。范围和证据边界见[SECURITY_AUDIT](docs/SECURITY_AUDIT.md)与[TESTING](docs/TESTING.md)。
 
