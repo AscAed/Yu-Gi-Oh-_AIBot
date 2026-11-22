@@ -1,5 +1,17 @@
 # 本机验证记录
 
+## 2026-11-23 PR #21合并与当前主线验证
+
+基线为干净checkout `codex/project-audit-20261123 / d81f2eee636432751cb874c2ae30ceaa21235126`，与`origin/main`一致；该tree与PR #21最终head的tree SHA相同。PR #21于2026-11-23 06:02:05 +08:00合入，修复Windows牌组草稿测试临时目录竞争，并加入Rust 1.78 MSRV验证。
+
+GitHub Actions push run `45075391526`的`contracts`及`msrv` job均通过。`contracts`运行格式、workspace全目标Clippy、workspace测试、adapter示例和Python editable install；`msrv`运行`cargo +1.78.0 test --workspace --locked`。该push workflow没有运行pytest。与当前相同tree的本地Python套件结果为**881 passed、10 skipped、225 subtests passed**；跳过项和本地资产限制按当次日志解释，不将其视为通过。
+
+受管Codex Security helper首次尝试`613608ec-6e91-4e6e-babc-49afe0bc55e1`因读取提交blob失败，未生成清单。随后将`CODEX_SECURITY_GIT`配置为兼容Git `2.56.0.windows.4`（PATH Git为`2.40.0.windows.1`），受管调用`d5cf9c75-d5f8-4051-a0ba-abb1a1effa8c`成功重新生成当前main精确范围inventory：`119797620b42815d7c3e55f4b16f8e0e1be8e3df..d81f2eee636432751cb874c2ae30ceaa21235126`，19个提交、25个路径。helper清单与独立兼容Git diff精确集合一致，inventory SHA-256为`7A8922E4DEDAA7B57A7AC21655929143643DD30486394252881BF2AFFAB1F138`；因helper未提供子进程实际Git绝对路径遥测，只能确认配置值、产物成功及集合一致。`d5...`本身是inventory-only调用，仍为`running / preflight`、0 review rows。
+
+同范围语义扫描`932e092a-07cf-4901-b58d-46a892e16106`另行完成：25/25个路径经语义审阅，结构化结果为0个可报告发现；扫描元数据标记`coverage=partial`，故仅记录为该固定差异的有限审阅结果。规范`report.md`及SARIF保存在Codex Security本机状态目录。完成元数据显示5,046,257 tokens（input 5,018,219；cached input 4,868,992；output 28,038；reasoning 17,400），观测窗口为2026-11-22 22:59:48至23:10:58 UTC；元数据带有`turn_in_progress`警告，使用量不保证是完整最终账单，账户剩余额度未取得。该结论只适用于上述精确差异，不是全仓、部署包、主机ACL或真实worker/ocgcore/FFI认证。因受管工具新建独立scan而未能接管inventory调用，本记录保留两个scan ID及各自用途，不将其状态合并。
+
+实际部署仍位于独立的D盘checkout。只读复核确认`dist/ygo-local`二进制时间戳为2026-10-19，CLI与worker SHA-256分别匹配旧包`build-hashes.json`；运行包内`ygo.cmd engine doctor`得到`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`。这是旧包自洽及ABI/资产探针结果，不是当前源码部署、决斗smoke或P4-R5验收。当前资产身份与部署门禁见[DEPLOYMENT](DEPLOYMENT.md)。
+
 ## 2026-11-12 PR #18合并后临时目录竞争修复
 
 PR #18为文档审计提交，于2026-11-11 16:57:08 UTC合入，merge commit为`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`。合并后`contracts` run `43062300211`的`cargo test --workspace --locked`失败：`ygo-cli/tests/deck_draft.rs`中的`creates_edits_shows_and_exports_an_incomplete_draft`收到`deck_draft_output_exists`，`import_and_export_round_trip_ydk_and_refuse_implicit_overwrite`随后导出失败；同一workspace run中`ygo-engine-adapter/tests/process_failures.rs::observed_run_preserves_distinct_exit_and_response_failures`收到`write_failed`而预期`protocol_version`。

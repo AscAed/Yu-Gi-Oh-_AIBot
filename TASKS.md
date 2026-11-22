@@ -2,13 +2,19 @@
 
 当前实施路线：[2026-11-09项目现状评估与双轨路线](docs/superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)。本文件后续表格是当前任务与开放门禁的唯一清单；每次验证的范围和结果见[TESTING](docs/TESTING.md)。
 
-## 当前状态（2026-11-12）：PR #18审计文档已合入；产品与执行资格仍开放
+## 当前状态（2026-11-23）：PR #21已合入；产品与执行资格仍开放
 
-远端`main`当前为PR #18的合并提交`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`（2026-11-11 16:57:08 UTC）。PR #17于2026-11-10 12:28:44 UTC合入，合并前head为`6dbae6ceb39f3fd7265cb0ead8ecf084960ae6e1`；其`contracts`工作流通过，但CodeRabbit最终检查因PR关闭而取消，GitHub无正式review记录。PR #18合入14份审计文档；其合并后`contracts` run `43062300211`发现deck-draft临时目录竞争和假worker提前退出两项测试夹具问题。PR #19首轮CI又在`stream_supervisor_deadline_covers_a_blocked_request_pipe_write`的3秒时间上界处失败；目前候选改为唯一目录分配、非流式假worker先读完请求再回包，并保留该时间断言的实际耗时诊断。deck-draft聚焦5/5、process_failures本地重复验证通过；PR #19最新完整CI仍待验证。PR合并和合成测试记录不等于真实执行认证或部署验收。
+当前审计checkout为`codex/project-audit-20261123 / d81f2eee636432751cb874c2ae30ceaa21235126`，与`origin/main`一致；PR #21已于2026-11-23 06:02:05 +08:00合入。该PR修复Windows牌组草稿测试临时目录竞争，并加入Rust 1.78 MSRV CI。合并后GitHub Actions run `45075391526`的`contracts`与`msrv`两个job均通过；精确步骤和本地Python结果见[TESTING](docs/TESTING.md#2026-11-23-pr-21合并与当前主线验证)。
 
-只读GitHub API检查显示`main`分支保护返回404、仓库rulesets为空；PR #18 contracts失败后仍被合并。没有更改仓库设置。是否要求main强制通过`contracts`和PR审阅是待决的仓库治理事项；PR #19在全部检查成功前不自动合并。
+当前main的Codex Security inventory `d5cf9c75-d5f8-4051-a0ba-abb1a1effa8c`已针对`119797620b42815d7c3e55f4b16f8e0e1be8e3df..d81f2eee636432751cb874c2ae30ceaa21235126`生成并独立核对，共25项；该次调用仍为inventory-only preflight。另一次同范围语义扫描`932e092a-07cf-4901-b58d-46a892e16106`已完成25/25路径审阅，未产生可报告发现，仅适用于该精确差异。PR #17原差异另有2026-11-17完成的历史扫描。范围和证据边界见[SECURITY_AUDIT](docs/SECURITY_AUDIT.md)与[TESTING](docs/TESTING.md)。
 
-PR #17的worker宿主确认流现已在main源码中；`dist/ygo-local`仍是2026-10-19旧包，当前源码未因此发布。W1-C来源与计量合同仍开放：部分结果/消费记录、report producer来源、ResearchBatch消费单位及unknown消费仍未解决。普通启动保持`analysis_not_configured`；不将合成测试或CI结果外推为真实worker、ocgcore/FFI执行、研究消费或部署资格。
+`dist/ygo-local`仍是2026-10-19旧包，未从当前main重建或切换；旧包doctor就绪只说明旧包及其配置资产，不证明当前源码已部署或真实决斗smoke通过。W1-C来源与计量合同、P4-R5最新源码双资产验收、真实worker/ocgcore/FFI资格及其他阶段门禁仍开放。普通启动保持`analysis_not_configured`；不得把合成测试或CI外推为真实执行、研究消费或部署资格。
+
+## 历史快照（2026-11-12）：PR #18后、PR #21前
+
+当时远端`main`为PR #18合并提交`1698e4ab4b76e512fbcda4298a72e3c3e6ce7f58`。PR #18合入14份审计文档；合并后`contracts` run `43062300211`发现deck-draft临时目录竞争和假worker提前退出两项测试夹具问题。PR #19首轮CI又在`stream_supervisor_deadline_covers_a_blocked_request_pipe_write`的3秒时间上界处失败；当时正在验证唯一目录分配、非流式假worker先读完请求再回包，以及实际耗时诊断。该快照的本地聚焦测试通过，但PR #19完整CI仍待验证。后续修复随PR #21合入，当前验证见上方与[TESTING](docs/TESTING.md)。
+
+截至该历史快照，只读GitHub API检查显示`main`分支保护返回404、仓库rulesets为空；PR #18 contracts失败后仍被合并。没有更改仓库设置。是否要求main强制通过`contracts`和PR审阅仍是仓库治理待决事项。
 
 2026-11-09在隔离worktree实施W1-C worker FFI宿主确认流；协议实现与合成worker矩阵通过，完整提交前验证及其资产过滤项见[本次验证记录](docs/TESTING.md#2026-11-09-w1-c-worker-ffi-宿主确认流)。此结果不认证真实worker/ocgcore/FFI、报告来源、消费或发布。更早HEAD默认离线自检仍见[记录](docs/TESTING.md#2026-11-09-head默认离线自检)。
 
