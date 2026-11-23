@@ -1,6 +1,8 @@
 # Windows 本机部署与验收
 
-2026-11-11状态：PR #17已于2026-11-10合入，当前main源码包含worker宿主确认流；这不是部署记录。`dist/ygo-local`仍为2026-10-19包，未重建或切换部署。本轮运行旧包`ygo.cmd engine doctor`，返回`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`；CLI/worker哈希与旧包自己的清单一致。该结果只描述旧包及其本机配置资产，不证明PR #17源码已部署或真实决斗smoke通过。PR的`contracts` CI通过，但最终CodeRabbit检查因PR关闭取消，GitHub无正式review，完整独立审阅仍开放。详见[项目路线快照](superpowers/plans/2026-11-09-project-status-and-dual-track-route.md)、[PR审阅记录](superpowers/plans/2026-11-09-pr17-review.md)与[验证记录](TESTING.md)。
+2026-11-23现场复核：当前main源码为`d81f2eee636432751cb874c2ae30ceaa21235126`，PR #21合并后的CI通过；这不是部署记录。独立D盘checkout中的`dist/ygo-local`仍为2026-10-19包，未从当前main重建或切换。包内CLI与worker SHA-256分别为`54804730B3A507C0143C627D5E5C61B2ACC03964C9A7CDA7C803B6101432A89F`和`AD4A592981535144190EC44E0DD8C4ACA951EC21C0206A1346961484F37FD11C`，均与包内`build-hashes.json`匹配。运行旧包`ygo.cmd engine doctor`返回`ready=true`、`assets_ok=true`、`abi_ok=true`、`issues=[]`、`smoke_ok=null`；结果只描述旧包及其本机配置资产，不证明当前源码已部署或真实决斗smoke通过。P4-R5最新源码双资产验收仍开放，详见[TASKS](../TASKS.md)与[TESTING](TESTING.md)。
+
+2026-11-11状态（历史）：PR #17已合入，main源码包含worker宿主确认流；旧包doctor就绪但未证明PR #17源码已部署或真实决斗smoke通过。独立审阅当时仍开放；其后完成的PR #17限定扫描及当前main inventory状态见[SECURITY_AUDIT](SECURITY_AUDIT.md)。
 
 2026-11-10文档同步前状态快照（历史）：本地`main`为`ec83bad`，较本地`origin/main`的`577924b`领先27个提交；PR #17当时为Open Draft，head `887e3430cff88704e8b8e183a3df1b94dfbb6960`、base `577924bc0c2af06044b77c065eea769c465ff2fe`，共30个提交/190个文件，尚未合入main。该状态已被上方2026-11-11复核取代。
 

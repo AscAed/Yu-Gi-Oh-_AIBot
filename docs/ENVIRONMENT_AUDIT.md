@@ -1,6 +1,12 @@
 # 本机环境与资产审计
 
-## 当前环境与审计快照（更新至2026-11-12）
+## 当前环境与审计快照（更新至2026-11-23）
+
+本次源码与部署审计基线为分支`codex/project-audit-20261123`、提交`d81f2eee636432751cb874c2ae30ceaa21235126`；检查时该提交与`origin/main`一致，审计checkout开始时干净。本机普通部署仍在独立D盘checkout，`dist/ygo-local`为2026-10-19旧包；2026-11-23只读哈希复核与doctor结果见[DEPLOYMENT](DEPLOYMENT.md)和[TESTING](TESTING.md)。
+
+D盘主checkout `codex/post-merge-pr19-status-20261112 / e3add2afa0f6ebc78c3fbdb02fd090b1a1583f12`保有约50项已跟踪修改及4项未跟踪文件，包含暂存和未暂存的交叠文档变更；其HEAD不是当前main祖先。本次仅只读检查并保留该工作区，未在其中修改、清理或提交。两个checkout的源码和状态不可合并推断。
+
+当前main依赖复核：`cargo tree --workspace --duplicates --offline --locked`发现`hashbrown` 0.14.5（`rusqlite`/`hashlink`链）和0.16.1（`toml`/`indexmap`链）两条传递版本路径；没有证据支持强制统一或升级。`cargo machete`不可用（Cargo未识别该子命令），因此未完成专用未用依赖检查；未移除用途不明的依赖或兼容组件。
 
 2026-11-11前三个缓存处置批次及审计日志写入后，D:整卷可用空间曾为220,818,591,744字节；第四批之后复读`Get-PSDrive D`：总容量644,245,090,304字节，已用400,334,929,920字节，可用243,910,160,384字节。卷级数字会随本机其它活动变化，不等同项目目录大小或本次精确回收量。
 

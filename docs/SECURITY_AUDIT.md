@@ -2,15 +2,21 @@
 
 本页是本机安全扫描发现及其处置状态的当前事实源。逐次执行证据见[TESTING](TESTING.md)；主机ACL和部署现场见[ENVIRONMENT_AUDIT](ENVIRONMENT_AUDIT.md)与[DEPLOYMENT](DEPLOYMENT.md)。
 
-## 2026-11-11 PR #17限定差异扫描（未完成）
+## 2026-11-23 当前main差异审阅（25个路径）
 
-启动Codex Security Diff Scan `613608ec-6e91-4e6e-babc-49afe0bc55e1`，范围固定为`577924bc0c2af06044b77c065eea769c465ff2fe..119797620b42815d7c3e55f4b16f8e0e1be8e3df`，即PR #17最终合并差异，不是全仓Deep Scan。差异共191个文件；按扩展名含44个Rust、15个Python、16个JSON、3个TOML文件，JSON计数包含合同/数据/夹具，不代表源文件审阅数。
+受管Codex Security inventory调用`d5cf9c75-d5f8-4051-a0ba-abb1a1effa8c`绑定当前main从PR #17合并提交`119797620b42815d7c3e55f4b16f8e0e1be8e3df`到PR #21合并提交`d81f2eee636432751cb874c2ae30ceaa21235126`的19个提交差异。范围两端均为当前main祖先；helper生成25个路径，分页清单25项、无重复。
 
-只读配置preflight返回`ready`，3项能力检查通过；已保存初步架构模型，覆盖仍为`partial`。`prepare_codex_security_review_items`三次均在读取合并提交blob时失败，错误指向`configs/w1c-analysis.example.toml`；同一仓库中的`git cat-file`和`git show <merge>:configs/w1c-analysis.example.toml`可成功读取该对象。失败发生在变更文件清单生成阶段，尚未开始源代码发现；扫描器当前`findingCount=0`不代表已审查或无发现。保留原scanId和提交范围，不创建替代扫描。若工具恢复，须续接同一扫描；否则将此项作为未完成的独立审阅缺口。
+首次helper调用`613608ec-6e91-4e6e-babc-49afe0bc55e1`曾因读取提交blob失败而未生成inventory。为兼容helper所需Git行为，本次配置`CODEX_SECURITY_GIT`指向Git `2.56.0.windows.4`，而PATH Git为`2.40.0.windows.1`；重新生成的inventory与独立使用兼容Git计算的固定范围逐项比较为25/25一致，无缺失或额外项。inventory SHA-256为`7A8922E4DEDAA7B57A7AC21655929143643DD30486394252881BF2AFFAB1F138`。helper没有暴露子进程实际启动的Git绝对路径，因此兼容性通过配置值、helper成功产物及独立集合一致核验，不声称取得进程级执行遥测。
 
-扫描只针对PR差异，不读取或执行部署包，不运行真实worker/ocgcore/FFI，也不验证当前主机ACL。未启动Deep Scan。该状态及调用证据见[2026-11-11验证记录](TESTING.md#2026-11-11-增量工具可用性与旧包探针)。
+inventory调用`d5cf9c75-d5f8-4051-a0ba-abb1a1effa8c`保持`running / preflight`且review item为0；这是清单生成调用，没有承载语义结论。为完成审阅另启动同范围调用`932e092a-07cf-4901-b58d-46a892e16106`，其25/25路径均完成语义审阅，扫描已完成，`findingCount=0`且无可报告发现；扫描元数据仍将整体coverage标为`partial`，因此按有限差异审阅结果记录，不外推为扫描器全覆盖。该结论仅限上述19个提交的25路径差异；不代表更早提交、全仓Deep Scan、部署包执行、真实worker/ocgcore/FFI或主机ACL审计均无问题。语义扫描的规范报告由Codex Security保存在本机状态目录，按scan ID及`report.md`检索；逐次执行证据见[TESTING](TESTING.md#2026-11-23-pr-21合并与当前主线验证)。
 
-2026-11-11续查成功读取同一scanId的Codex Security上下文；状态仍为`running / discovery`，未产生发现阶段进度或报告。先前的变更清单生成错误仍是未解决阻塞；此状态读取只证明安全扫描控制面可达，不代表扫描完成或无发现。没有重试清单生成，也未创建新扫描。
+另一次扫描`0b63333c-baa3-4674-939c-43d23a27bb37`覆盖相邻checkout的`119797620b42815d7c3e55f4b16f8e0e1be8e3df..e3add2afa0f6ebc78c3fbdb02fd090b1a1583f12`并生成128项inventory；该head不是当前main祖先，不能覆盖本节main范围。PR #17早先blob读取失败仍保留为工具诊断史；后续独立扫描`a4601d94-d815-4a74-be54-74f6e9d4be9c`完成了PR #17的限定差异审阅，见下方历史小节。
+
+## 2026-11-17 PR #17限定差异扫描（已完成；历史范围）
+
+Codex Security Diff Scan `a4601d94-d815-4a74-be54-74f6e9d4be9c`审阅范围固定为`577924bc0c2af06044b77c065eea769c465ff2fe..119797620b42815d7c3e55f4b16f8e0e1be8e3df`，即PR #17最终合并差异。该次扫描已封存完成：49个受管非Markdown路径加29个补充路径，共78个非Markdown路径完成审阅；113个Markdown路径排除在代码审阅范围外；未报告可报告发现。此结论仅限该精确差异的静态审阅，不覆盖PR #17之后提交、运行时、部署、worker/FFI执行或ACL。
+
+早先扫描`613608ec-6e91-4e6e-babc-49afe0bc55e1`在helper读取`configs/w1c-analysis.example.toml`的提交blob时无法生成清单；同仓库的`git cat-file`和`git show`可读取该对象。此失败记录仍保留为工具诊断史，但后续已完成的`a460...`是独立扫描，不把早期失败调用改写为成功。
 
 ## 2026-11-11 ACL只读复核与保留决定
 
